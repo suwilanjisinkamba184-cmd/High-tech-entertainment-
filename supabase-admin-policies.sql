@@ -16,7 +16,7 @@ create policy "HTE admin can upload audio" on storage.objects
 for insert to authenticated
 with check (
   bucket_id = 'hte-audio'
-  and (auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com'
+  and (select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com'
 );
 
 drop policy if exists "HTE admin can update audio" on storage.objects;
@@ -24,11 +24,11 @@ create policy "HTE admin can update audio" on storage.objects
 for update to authenticated
 using (
   bucket_id = 'hte-audio'
-  and (auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com'
+  and (select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com'
 )
 with check (
   bucket_id = 'hte-audio'
-  and (auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com'
+  and (select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com'
 );
 
 drop policy if exists "HTE admin can delete audio" on storage.objects;
@@ -36,37 +36,37 @@ create policy "HTE admin can delete audio" on storage.objects
 for delete to authenticated
 using (
   bucket_id = 'hte-audio'
-  and (auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com'
+  and (select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com'
 );
 
 drop policy if exists "HTE admin can insert tracks" on public.tracks;
 create policy "HTE admin can insert tracks" on public.tracks
 for insert to authenticated
-with check ((auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
+with check ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
 
 drop policy if exists "HTE admin can update tracks" on public.tracks;
 create policy "HTE admin can update tracks" on public.tracks
 for update to authenticated
-using ((auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com')
-with check ((auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
+using ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com')
+with check ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
 
 drop policy if exists "HTE admin can delete tracks" on public.tracks;
 create policy "HTE admin can delete tracks" on public.tracks
 for delete to authenticated
-using ((auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
+using ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
 
 -- Optional admin management for artists and releases (same email restriction).
 drop policy if exists "HTE admin manages artists" on public.artists;
 create policy "HTE admin manages artists" on public.artists
 for all to authenticated
-using ((auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com')
-with check ((auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
+using ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com')
+with check ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
 
 drop policy if exists "HTE admin manages releases" on public.releases;
 create policy "HTE admin manages releases" on public.releases
 for all to authenticated
-using ((auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com')
-with check ((auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
+using ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com')
+with check ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
 
 -- Required SQL privileges for authenticated admin actions; RLS policies above still enforce the email restriction.
 grant insert, update, delete on public.tracks to authenticated;
