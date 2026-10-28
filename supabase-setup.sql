@@ -7,6 +7,7 @@ create extension if not exists pgcrypto;
 create table if not exists public.artists (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  slug text not null unique default ('artist-' || gen_random_uuid()::text),
   bio text not null default '',
   image_url text,
   is_published boolean not null default false,
@@ -16,6 +17,7 @@ create table if not exists public.artists (
 create table if not exists public.releases (
   id uuid primary key default gen_random_uuid(),
   title text not null,
+  slug text not null unique default ('release-' || gen_random_uuid()::text),
   artist_id uuid references public.artists(id) on delete set null,
   cover_url text,
   release_date date,
@@ -82,7 +84,7 @@ grant insert on public.contact_messages to anon, authenticated;
 -- Storage bucket for public audio. Upload policy is intentionally not opened to everyone.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('hte-audio', 'hte-audio', true, 104857600,
-  array['audio/mpeg','audio/mp4','audio/aac','audio/wav','audio/x-wav','audio/ogg','audio/webm'])
+  array['audio/mpeg','audio/mp3','audio/mp4','audio/x-m4a','audio/aac','audio/wav','audio/x-wav','audio/ogg','audio/flac','audio/webm'])
 on conflict (id) do update set public = true, file_size_limit = 104857600,
   allowed_mime_types = excluded.allowed_mime_types;
 
