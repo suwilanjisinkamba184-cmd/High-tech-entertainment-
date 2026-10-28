@@ -55,18 +55,36 @@ create policy "HTE admin can delete tracks" on public.tracks
 for delete to authenticated
 using ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
 
--- Optional admin management for artists and releases (same email restriction).
+-- Admin writes for artists/releases are separate from public SELECT policies.
 drop policy if exists "HTE admin manages artists" on public.artists;
-create policy "HTE admin manages artists" on public.artists
-for all to authenticated
+drop policy if exists "HTE admin inserts artists" on public.artists;
+create policy "HTE admin inserts artists" on public.artists
+for insert to authenticated
+with check ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
+drop policy if exists "HTE admin updates artists" on public.artists;
+create policy "HTE admin updates artists" on public.artists
+for update to authenticated
 using ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com')
 with check ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
+drop policy if exists "HTE admin deletes artists" on public.artists;
+create policy "HTE admin deletes artists" on public.artists
+for delete to authenticated
+using ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
 
 drop policy if exists "HTE admin manages releases" on public.releases;
-create policy "HTE admin manages releases" on public.releases
-for all to authenticated
+drop policy if exists "HTE admin inserts releases" on public.releases;
+create policy "HTE admin inserts releases" on public.releases
+for insert to authenticated
+with check ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
+drop policy if exists "HTE admin updates releases" on public.releases;
+create policy "HTE admin updates releases" on public.releases
+for update to authenticated
 using ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com')
 with check ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
+drop policy if exists "HTE admin deletes releases" on public.releases;
+create policy "HTE admin deletes releases" on public.releases
+for delete to authenticated
+using ((select auth.jwt() ->> 'email') = 'suwilanjisinkamba184@gmail.com');
 
 -- Required SQL privileges for authenticated admin actions; RLS policies above still enforce the email restriction.
 grant insert, update, delete on public.tracks to authenticated;
