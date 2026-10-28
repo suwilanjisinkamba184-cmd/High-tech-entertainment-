@@ -7,13 +7,15 @@
 -- Do NOT enable open/public INSERT or UPDATE policies for catalog tables.
 
 -- Remove unnecessary client privileges from the unused, empty public.public table if present.
-DO $
+DO $do$
 BEGIN
   IF to_regclass('public.public') IS NOT NULL THEN
     REVOKE ALL PRIVILEGES ON TABLE public.public FROM anon, authenticated, PUBLIC;
+    EXECUTE 'DROP POLICY IF EXISTS "Deny client access to unused public table" ON public.public';
+    EXECUTE 'CREATE POLICY "Deny client access to unused public table" ON public.public FOR ALL TO anon, authenticated USING (false) WITH CHECK (false)';
   END IF;
 END
-$;
+$do$;
 
 -- Ensure the bucket used by the website exists; this is safe to rerun.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
