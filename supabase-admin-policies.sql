@@ -101,3 +101,16 @@ using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
 grant insert, update, delete on public.tracks to authenticated;
 grant insert, update, delete on public.artists to authenticated;
 grant insert, update, delete on public.releases to authenticated;
+
+-- Founder can read incoming contact enquiries; visitors cannot read messages.
+drop policy if exists "HTE founder can read contact messages" on public.contact_messages;
+create policy "HTE founder can read contact messages" on public.contact_messages
+for select to authenticated
+using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+grant select on public.contact_messages to authenticated;
+
+-- The extra "HT Storage" bucket is not used by the website. Keep it private if empty.
+update storage.buckets
+set public = false
+where id = 'ht storage'
+  and not exists (select 1 from storage.objects where bucket_id = 'ht storage');
