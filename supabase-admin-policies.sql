@@ -6,6 +6,15 @@
 -- The website uses the bucket ID hte-audio. A separately created HT Storage bucket is not used by this code.
 -- Do NOT enable open/public INSERT or UPDATE policies for catalog tables.
 
+-- Remove unnecessary client privileges from the unused, empty public.public table if present.
+DO $
+BEGIN
+  IF to_regclass('public.public') IS NOT NULL THEN
+    REVOKE ALL PRIVILEGES ON TABLE public.public FROM anon, authenticated, PUBLIC;
+  END IF;
+END
+$;
+
 -- Ensure the bucket used by the website exists; this is safe to rerun.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('hte-audio', 'hte-audio', true, 104857600, array['audio/mpeg','audio/mp4','audio/aac','audio/wav','audio/x-wav','audio/ogg','audio/webm'])
