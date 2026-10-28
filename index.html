@@ -21,7 +21,7 @@ section{padding:64px 0}.section-head{display:flex;align-items:end;justify-conten
 </style>
 </head>
 <body>
-<header><div class="wrap nav"><a class="brand" href="#top" aria-label="High Tech Entertainment home"><img src="/assets/high-tech-logo.svg" alt="High Tech Entertainment logo"><span>HIGH TECH ENT.</span></a><nav aria-label="Main navigation"><a href="#music">Music</a><a href="#upload">Upload</a><a href="#artists">Artists</a><a href="#contact">Contact</a><a href="#about">About</a></nav></div></header>
+<header><div class="wrap nav"><a class="brand" href="#top" aria-label="High Tech Entertainment home"><img src="./high-tech-logo.svg" alt="High Tech Entertainment logo"><span>HIGH TECH ENT.</span></a><nav aria-label="Main navigation"><a href="#music">Music</a><a href="#upload">Upload</a><a href="#artists">Artists</a><a href="#contact">Contact</a><a href="#about">About</a></nav></div></header>
 <main id="top">
 <section class="hero"><div class="wrap"><div class="kicker">// MUSIC PROMOTION & ARTIST MANAGEMENT</div><h1>The sound of what's <span class="grad">next</span>.</h1><p>Discover music, upload releases and keep every track connected to the High Tech Entertainment brand.</p><div class="actions"><a class="btn primary" href="#music">Hear the latest</a><a class="btn" href="#upload">Upload a track</a></div></div></section>
 <section id="music"><div class="wrap"><div class="section-head"><div><h2>Music library</h2><p>Every catalog entry carries the High Tech Entertainment music mark.</p></div><button class="btn" id="refresh-btn" type="button">Refresh library</button></div><div id="featured" class="player-card" hidden></div><div id="track-grid" class="track-grid" aria-live="polite"><div class="empty">Loading music library…</div></div></div></section>
@@ -35,14 +35,14 @@ section{padding:64px 0}.section-head{display:flex;align-items:end;justify-conten
 <footer><div class="wrap footer-row"><span>© <span id="year"></span> High Tech Entertainment</span><span>Music uploads · releases · artist promotion</span></div></footer>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/supabase-config.js"></script>
+<script src="./supabase-config.js"></script>
 <script>
 (() => {
   'use strict';
   const $ = s => document.querySelector(s);
   const cfg = window.HTE_SUPABASE_CONFIG || {};
   const grid = $('#track-grid'), featured = $('#featured'), toastEl = $('#toast');
-  const logo = '/assets/high-tech-logo.svg';
+  const logo = './high-tech-logo.svg';
   let currentTrack = null, supabase = null, session = null;
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const toast = m => { toastEl.textContent=m; toastEl.classList.add('show'); clearTimeout(toastEl._t); toastEl._t=setTimeout(()=>toastEl.classList.remove('show'),2800); };
