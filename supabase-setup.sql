@@ -34,6 +34,7 @@ create table if not exists public.tracks (
   release_id uuid references public.releases(id) on delete set null,
   audio_url text,
   cover_url text,
+  genre text,
   uploader text not null default 'High Tech Entertainment',
   duration_seconds integer,
   is_published boolean not null default false,
@@ -48,6 +49,9 @@ create table if not exists public.contact_messages (
   message text not null check (char_length(message) between 1 and 5000),
   created_at timestamptz not null default now()
 );
+
+-- Keep this baseline safe to rerun against existing projects.
+alter table public.tracks add column if not exists genre text;
 
 alter table public.artists enable row level security;
 alter table public.releases enable row level security;
