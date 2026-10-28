@@ -54,6 +54,10 @@ alter table public.releases enable row level security;
 alter table public.tracks enable row level security;
 alter table public.contact_messages enable row level security;
 
+-- Index catalog foreign keys used for joins and deletes.
+create index if not exists tracks_artist_id_idx on public.tracks (artist_id);
+create index if not exists tracks_release_id_idx on public.tracks (release_id);
+
 -- Public visitors can only read published content.
 drop policy if exists "Public can read published artists" on public.artists;
 create policy "Public can read published artists" on public.artists for select to anon, authenticated using (is_published = true);
