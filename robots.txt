@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Sitemap: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/sitemap.xml
