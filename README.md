@@ -1,46 +1,39 @@
-# High-Tech Entertainment Music Platform
+# High Tech Entertainment
 
-Responsive High-Tech Entertainment music website integrated with Supabase Auth, Postgres tables, Storage audio uploads, and contact submissions.
+Premium, responsive music and artist platform for High Tech Entertainment, hosted on GitHub Pages and connected to Supabase.
 
-## Requirements
-- Node.js 18 or newer
-- npm
+## Website pages
+- Public website: `/` — music catalogue, artist profiles, releases, about and contact form.
+- Founder studio: `/admin/` — founder-only music uploads, publish/unpublish controls, artist and release management, and private contact inbox.
+- Account profile: `/account/` — private display name, biography, phone and profile photo.
 
-## Run locally
-1. Extract this project folder.
-2. Run `npm install`.
-3. Copy `.env.example` to `.env` and set `ADMIN_UPLOAD_TOKEN` to a random secret of at least 32 characters. Never commit `.env`.
-4. Set the environment variables in your shell or hosting provider. Node does not load `.env` automatically unless you configure a dotenv loader; for local development you can use `node --env-file=.env server.js` on supported Node versions.
-5. Run `npm start` (or `node --env-file=.env server.js`).
-6. Open `http://localhost:3000`.
+## Stack
+- Static HTML/CSS/JavaScript deployed by GitHub Actions to GitHub Pages.
+- Supabase Auth for email/password and Google sign-in.
+- Supabase Postgres with Row Level Security for catalogue, profile and contact data.
+- Supabase Storage: `hte-audio` for public published music and `hte-avatars` for private profile photos.
 
-## Security changes
-- Uploads require the `X-Admin-Token` header matching the server-only `ADMIN_UPLOAD_TOKEN`; uploads are disabled if the token is not configured.
-- Upload endpoint and signup endpoint have basic per-IP rate limits.
-- Audio uploads are limited to 100 MB, restricted by extension and MIME type, then checked for basic file signatures. Uploads remain disabled unless the server token is at least 32 characters long.
-- JSON writes use a temporary file and atomic rename; server responses include security headers, a restrictive Content Security Policy, and central error handling. The upload token is not retained in the page after upload.
+## Deployment
+GitHub Pages is built by `.github/workflows/deploy-pages.yml`. The previous competing Pages workflow has been removed. The build copies `index.html`, `supabase-config.js`, `assets/`, `admin/`, and `account/` into the Pages artifact.
 
-## Important production limitations
-- The upload token is a lightweight single-admin gate, not a user-management system. For a public launch, use Supabase Auth with admin role checks and Row Level Security.
-- Local JSON files and `public/uploads` are not durable storage on ephemeral hosts and are not suitable for multi-instance deployments. Migrate tracks and signups to Supabase Database and audio to Supabase Storage before production.
-- Add HTTPS at the hosting layer, backups, monitoring, and abuse protection. Rate limiting in this starter is in-memory and resets on restart.
-- Validate that you have distribution rights for every track you publish.
+## Supabase configuration
+The browser config in `supabase-config.js` contains only the project URL and browser-safe publishable key. Never put a Supabase service-role or `sb_secret_` key in frontend files.
 
-## API
-- `GET /api/health` — health check
-- `GET /api/tracks` — public track catalogue
-- `POST /api/upload` — administrator-only multipart upload (`audio`, `uploader`, optional `artist`, optional `title` fields; send `X-Admin-Token` header)
-- `POST /api/signup` — email signup
+Founder authorization is restricted to the confirmed Supabase Auth UID in the SQL policies. The founder email is `suwilanjisinkamba184@gmail.com`. Authorization is enforced by Supabase Row Level Security, not by hiding frontend controls.
 
+SQL files:
+- `supabase-setup.sql` — baseline tables and storage setup.
+- `supabase-admin-policies.sql` — founder-only catalogue and audio permissions.
+- `SUPABASE-REDESIGN-MIGRATION.sql` — private profile table and avatar bucket policies.
 
-## Supabase connection
-- Browser config is in `public/supabase-config.js` and contains only the project URL and browser-safe publishable key. Never add a service-role or `sb_secret_` key to browser code.
-- The public catalogue reads published rows from `public.tracks`; audio files use the `hte-audio` Storage bucket.
-- Admin sign-in uses Supabase Auth. Contact submissions insert into `public.contact_messages`.
-- Run `supabase-setup.sql` first, then `supabase-admin-policies.sql`. The admin policy file is preconfigured for `suwilanjisinkamba184@gmail.com`.
-- Ensure the admin account exists with that exact email. Disable public sign-ups if this is a single-admin site.
-- The separately created `HT Storage` bucket is not used by this version. The SQL creates the `hte-audio` bucket expected by the website; you may leave `HT Storage` in place.
-- Existing local audio files in `public/uploads/` are not automatically copied into Supabase Storage. Upload them through the admin form after the database setup.
-- Serve the website over HTTPS and test sign-in, upload, playback, and contact submissions before public launch.
+## Important launch checks
+1. In Supabase Authentication URL Configuration, allow the live Pages URL as the Site URL and add these Redirect URLs:
+   - `https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/admin/`
+   - `https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account/`
+2. If this remains a single-founder admin system, disable public user signups in Supabase Auth settings. Existing users can still sign in.
+3. Test Google sign-in, password sign-in, profile save/photo upload, track upload/playback, publish/unpublish, artist/release creation and contact inbox.
+4. Upload your actual cover artwork and published tracks. The catalogue tables currently have no entries, so empty-state messages are expected until content is added.
+5. Review Supabase Security Advisor. Leaked-password protection is currently reported as disabled; enable it if available on your project plan.
 
-See `SUPABASE-CONNECTION.md` for the exact setup order and verification checklist.
+## Local preview
+Serve the repository root with any static web server. Opening files directly as `file://` is not a reliable test for Supabase OAuth redirects.
