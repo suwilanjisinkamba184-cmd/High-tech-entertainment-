@@ -211,3 +211,12 @@ body{background-color:#07090e;background-image:radial-gradient(ellipse at 12% 12
 .hte-player-timeline label input{width:62px}
 @media(max-width:850px){.hte-stream-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hte-now-playing{grid-template-columns:1fr auto}.hte-player-timeline{grid-column:1/-1}}
 @media(max-width:600px){.hte-stream-hero{padding:22px}.hte-stream-orb{width:90px;height:90px;font-size:1.7rem}.hte-stream-toolbar{grid-template-columns:1fr 1fr}.hte-search{grid-column:1/-1}.hte-stream-count{grid-column:1/-1}.hte-stream-grid{grid-template-columns:1fr 1fr;gap:9px}.hte-stream-meta{padding:10px}.hte-stream-meta h3{font-size:.88rem}.hte-stream-actions .btn{padding:7px 9px;font-size:.7rem}.hte-playlist-panel{padding:15px}.hte-now-playing{grid-template-columns:1fr;gap:9px;bottom:5px}.hte-player-controls{justify-content:flex-start}.hte-player-timeline{grid-column:auto;grid-template-columns:minmax(60px,1fr) auto}.hte-player-timeline label{grid-column:1/-1}.hte-player-timeline label input{width:100%}}
+
+
+/* Clear service overview and unified music-library navigation */
+.service-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:22px}
+.service-card{padding:15px 16px;border:1px solid var(--line);border-radius:15px;background:linear-gradient(145deg,rgba(24,32,42,.88),rgba(12,16,22,.92))}
+.service-card h3{font:700 .98rem Manrope,sans-serif;margin:0 0 6px;color:var(--gold2)}
+.service-card p{margin:0;color:var(--muted);font-size:.86rem;line-height:1.55}
+.music-secondary-link{margin:16px 0 0}
+@media(max-width:600px){.service-grid{grid-template-columns:1fr}.service-card{padding:13px}}
