@@ -99,22 +99,25 @@ create policy "HTE admin deletes releases" on public.releases
 for delete to authenticated
 using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
 
--- Founder SELECT policies are required to manage unpublished drafts and to make UPDATEs
--- work under Row Level Security. Public SELECT policies above remain limited to published rows.
-drop policy if exists "HTE founder can read all tracks" on public.tracks;
-create policy "HTE founder can read all tracks" on public.tracks
-for select to authenticated
-using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+-- One SELECT policy per catalog table: public visitors see published rows;
+-- the founder can also see unpublished drafts.
+DROP POLICY IF EXISTS "HTE founder can read all tracks" ON public.tracks;
+DROP POLICY IF EXISTS "Public can read published tracks" ON public.tracks;
+CREATE POLICY "Public and founder can read tracks" ON public.tracks
+FOR SELECT TO anon, authenticated
+USING (is_published = true OR (SELECT auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
 
-drop policy if exists "HTE founder can read all artists" on public.artists;
-create policy "HTE founder can read all artists" on public.artists
-for select to authenticated
-using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+DROP POLICY IF EXISTS "HTE founder can read all artists" ON public.artists;
+DROP POLICY IF EXISTS "Public can read published artists" ON public.artists;
+CREATE POLICY "Public and founder can read artists" ON public.artists
+FOR SELECT TO anon, authenticated
+USING (is_published = true OR (SELECT auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
 
-drop policy if exists "HTE founder can read all releases" on public.releases;
-create policy "HTE founder can read all releases" on public.releases
-for select to authenticated
-using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+DROP POLICY IF EXISTS "HTE founder can read all releases" ON public.releases;
+DROP POLICY IF EXISTS "Public can read published releases" ON public.releases;
+CREATE POLICY "Public and founder can read releases" ON public.releases
+FOR SELECT TO anon, authenticated
+USING (is_published = true OR (SELECT auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
 
 grant select on public.tracks, public.artists, public.releases to authenticated;
 
