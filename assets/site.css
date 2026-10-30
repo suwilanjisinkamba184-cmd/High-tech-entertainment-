@@ -220,3 +220,74 @@ body{background-color:#07090e;background-image:radial-gradient(ellipse at 12% 12
 .service-card p{margin:0;color:var(--muted);font-size:.86rem;line-height:1.55}
 .music-secondary-link{margin:16px 0 0}
 @media(max-width:600px){.service-grid{grid-template-columns:1fr}.service-card{padding:13px}}
+
+
+/* HTE SINGLE-PAGE EXPANSION · desktop, tablet and mobile */
+:root{--hte-max:1360px}
+html{scroll-padding-top:116px}
+.wrap{width:min(var(--hte-max),calc(100% - 56px))}
+main>.section{position:relative}
+main>.section:not(.hero):before{content:"";position:absolute;top:0;left:max(28px,calc((100% - var(--hte-max))/2));right:max(28px,calc((100% - var(--hte-max))/2));height:1px;background:linear-gradient(90deg,transparent,rgba(115,220,255,.22),rgba(226,189,112,.22),transparent)}
+main>.section .wrap{max-width:var(--hte-max)}
+.section{padding-top:clamp(76px,8vw,116px);padding-bottom:clamp(76px,8vw,116px)}
+.hero{min-height:min(820px,calc(100svh - 82px));padding-top:clamp(76px,9vw,130px);padding-bottom:clamp(76px,9vw,130px)}
+.hero-grid{grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr);gap:clamp(36px,6vw,100px)}
+.hero-art{min-height:540px}
+.section-head{max-width:100%;margin-bottom:38px}
+.section-head>div{max-width:780px}
+.section-head p{font-size:1.02rem;line-height:1.8;max-width:680px}
+.cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+.music-card,.artist-card,.release-card,.video-card{min-width:0}
+.contact-grid{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(24px,4vw,58px);align-items:start}
+.contact-copy{position:relative}
+.service-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.service-card{padding:19px;min-height:118px}
+.panel{padding:clamp(22px,3vw,36px)}
+#spotify .panel{padding:18px!important}
+#spotify iframe{height:420px!important}
+#about .feature-band{min-height:280px}
+.footer{padding:38px 0}
+.navlinks{gap:clamp(12px,1.5vw,22px)}
+@media(max-width:1000px){
+  .wrap{width:calc(100% - 40px)}
+  .hero-grid{grid-template-columns:1fr .82fr;gap:28px}
+  .hero-art{min-height:410px}
+  .navlinks{gap:13px;font-size:.82rem}
+  .cards{gap:15px}
+}
+@media(max-width:760px){
+  .wrap{width:calc(100% - 30px)}
+  .hero{min-height:auto}
+  .hero-grid{grid-template-columns:1fr}
+  .hero-art{min-height:330px;max-width:none}
+  .section{padding:68px 0}
+  .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .contact-grid{display:grid;grid-template-columns:1fr;gap:24px}
+  .contact-copy{position:static}
+  .nav{align-items:center}
+  .navlinks{order:3;width:100%;overflow-x:auto;white-space:nowrap;padding:8px 2px 12px}
+  .nav-actions{margin-left:auto}
+  #spotify iframe{height:352px!important}
+}
+@media(max-width:480px){
+  .wrap{width:calc(100% - 24px)}
+  .hero{padding:48px 0 38px}
+  .hero-art{min-height:250px}
+  .section{padding:58px 0}
+  .cards{grid-template-columns:1fr;gap:13px}
+  .service-grid{grid-template-columns:1fr}
+  .service-card{min-height:0}
+  .form-grid{grid-template-columns:1fr}
+  .field.full{grid-column:auto}
+  .hte-stream-grid{grid-template-columns:1fr 1fr}
+  .hte-stream-hero{align-items:flex-start}
+  .hte-stream-orb{width:72px;height:72px;font-size:1.35rem}
+  .hte-stream-toolbar{grid-template-columns:1fr}
+  .hte-search,.hte-stream-count{grid-column:auto}
+  .hte-playlist-heading{align-items:flex-start;flex-direction:column}
+  .footer-row{flex-direction:column;gap:8px}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .btn,.music-card,.artist-card,.release-card,.video-card{transition:none!important}
+}
