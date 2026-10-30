@@ -1,1 +1,159 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0a0a0b"><meta name="robots" content="noindex,nofollow,noarchive"><title>Founder Studio · High Tech Entertainment</title><link rel="stylesheet" href="../assets/site.css"></head><body><a class="skip" href="#main">Skip to content</a><header class="topbar"><div class="wrap nav"><a class="brand" href="../"><span class="brand-mark">HT</span><span>HIGH TECH <small>ENTERTAINMENT</small></span></a><div class="nav-actions"><a class="btn ghost" href="../">Public website</a><a class="btn" href="../account/">My account</a><button class="btn" data-logout data-signed-in hidden>Sign out</button></div></div></header><div id="admin-login" class="wrap section"><div class="panel" style="max-width:560px;margin:30px auto"><div class="eyebrow">Founder access</div><h1 class="page-title">Welcome back.</h1><p class="muted">Sign in with the authorised founder account to manage the music catalogue.</p><form id="login-form"><div class="form-grid"><div class="field full"><label>Email</label><input name="email" type="email" required autocomplete="username"></div><div class="field full"><label>Password</label><input name="password" type="password" required autocomplete="current-password"></div></div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px"><button class="btn gold">Sign in</button><button class="btn" type="button" id="google-login">Continue with Google</button></div><div class="status" id="login-status" role="status"></div></form></div></div><div id="admin-app" hidden><div class="app-layout"><aside class="sidebar"><div class="side-label">Workspace</div><button class="side-link active" data-tab="overview">◫　Overview</button><button class="side-link" data-tab="tracks">♫　Music manager</button><button class="side-link" data-tab="artists">♙　Artists</button><button class="side-link" data-tab="releases">▣　Releases</button><button class="side-link" data-tab="inbox">✉　Inbox</button><button class="side-link" data-tab="settings">⚙　Settings</button><div class="side-label">Account</div><a class="side-link" href="../account/">◉　Profile & account</a><a class="side-link" href="../">↗　Public website</a></aside><main id="main" class="app-main"><div class="eyebrow">Founder studio</div><h1 class="page-title" id="view-title">Overview</h1><p class="page-intro">Manage music, artists, releases and enquiries in one place.</p><div class="status" id="admin-status" role="status"></div><section data-view="overview"><div class="stats"><article class="stat"><div class="value" id="stat-tracks">—</div><div class="label">Music tracks</div></article><article class="stat"><div class="value" id="stat-artists">—</div><div class="label">Artist profiles</div></article><article class="stat"><div class="value" id="stat-releases">—</div><div class="label">Releases</div></article></div><div class="feature-band"><div><div class="eyebrow">Studio status</div><h2>Your music. Your platform.</h2><p>Founder-only database rules protect uploads and catalogue management.</p></div><button class="btn gold" data-tab="tracks">Manage music →</button></div></section><section data-view="tracks" hidden><div class="panel" style="margin-bottom:20px"><h2>Add a music track</h2><form id="track-form"><div class="form-grid"><div class="field"><label>Track title</label><input name="title" required maxlength="140"></div><div class="field"><label>Artist</label><input name="artist" required maxlength="180"></div><div class="field"><label>Uploader / producer</label><input name="uploader" value="High Tech Entertainment" maxlength="80"></div><div class="field"><label>Genre</label><input name="genre" maxlength="80" placeholder="Afrobeats, Dancehall, Drill"></div><div class="field full"><label>Cover artwork URL (optional)</label><input name="cover_url" type="url" placeholder="https://…"></div><div class="field full"><label>Audio file (max 100 MB)</label><input name="audio" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.webm" required></div><div class="field full"><label><input name="is_published" type="checkbox" checked style="width:auto"> Publish immediately</label></div></div><button class="btn gold" style="margin-top:15px">Upload track</button><div class="status" id="track-status"></div></form></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Track</th><th>Artist</th><th>Status</th><th>Actions</th></tr></thead><tbody id="admin-tracks"></tbody></table></div></section><section data-view="artists" hidden><div class="panel" style="margin-bottom:20px"><h2>Add artist</h2><form id="artist-form"><div class="form-grid"><div class="field"><label>Artist name</label><input name="name" required maxlength="120"></div><div class="field"><label>Image URL (optional)</label><input name="image_url" type="url"></div><div class="field full"><label>Biography</label><textarea name="bio" maxlength="2000"></textarea></div><div class="field full"><label><input name="is_published" type="checkbox" checked style="width:auto"> Publish profile</label></div></div><button class="btn gold" style="margin-top:15px">Add artist</button><div id="artist-status" class="status"></div></form></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Artist</th><th>Status</th><th>Actions</th></tr></thead><tbody id="admin-artists"></tbody></table></div></section><section data-view="releases" hidden><div class="panel" style="margin-bottom:20px"><h2>Add release</h2><form id="release-form"><div class="form-grid"><div class="field"><label>Release title</label><input name="title" required maxlength="160"></div><div class="field"><label>Release date</label><input name="release_date" type="date"></div><div class="field full"><label>Cover image URL (optional)</label><input name="cover_url" type="url"></div><div class="field full"><label><input name="is_published" type="checkbox" checked style="width:auto"> Publish release</label></div></div><button class="btn gold" style="margin-top:15px">Add release</button><div id="release-status" class="status"></div></form></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Release</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="admin-releases"></tbody></table></div></section><section data-view="inbox" hidden><h2>Contact enquiries</h2><div id="admin-inbox"><div class="empty">Loading inbox…</div></div></section><section data-view="settings" hidden><div class="panel"><h2>Site settings</h2><p class="muted">Founder access is restricted by the authorised Supabase user ID and Row Level Security. Keep public signups disabled for this single-founder website.</p><a class="btn" href="../account/">Manage profile</a> <button class="btn" id="refresh-admin">Refresh dashboard</button></div></section></main></div></div><div id="toast" class="toast" role="status"></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="../supabase-config.js"></script><script src="../assets/app.js"></script><script src="../assets/admin-upload.js?v=1"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#070b12">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Founder Studio · High Tech Entertainment</title>
+  <link rel="stylesheet" href="../assets/site.css">
+  <link rel="stylesheet" href="../assets/admin.css?v=1">
+</head>
+<body class="admin-page">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar admin-topbar">
+  <div class="admin-topbar-inner">
+    <a class="brand" href="../" aria-label="High Tech Entertainment public website">
+      <span class="brand-mark">HT</span>
+      <span>HIGH TECH <small>ENTERTAINMENT · FOUNDER STUDIO</small></span>
+    </a>
+    <div class="admin-top-actions">
+      <span class="admin-live"><i></i> PRIVATE WORKSPACE</span>
+      <a class="btn ghost" href="../">View website ↗</a>
+      <a class="btn ghost" href="../account/">Account</a>
+      <button class="btn" data-logout data-signed-in hidden>Sign out</button>
+    </div>
+  </div>
+</header>
+
+<section id="admin-login" class="admin-login-wrap" hidden>
+  <div class="admin-login-visual">
+    <div class="admin-login-orbit"></div>
+    <div class="admin-login-copy">
+      <div class="eyebrow">HIGH TECH ENTERTAINMENT · CONTROL ROOM</div>
+      <h1>Build the<br><span>sound of tomorrow.</span></h1>
+      <p>Your private workspace for music, artists, releases and enquiries.</p>
+      <div class="admin-login-tags"><span>CATALOGUE</span><span>ARTISTS</span><span>STUDIO</span></div>
+    </div>
+  </div>
+  <div class="panel admin-login-card">
+    <div class="eyebrow">Founder authentication</div>
+    <h2>Welcome back.</h2>
+    <p class="muted">Sign in with the authorised founder account to access your studio.</p>
+    <form id="login-form">
+      <div class="field"><label for="login-email">Email address</label><input id="login-email" name="email" type="email" required autocomplete="username" placeholder="Founder email"></div>
+      <div class="field"><label for="login-password">Password</label><input id="login-password" name="password" type="password" required autocomplete="current-password" placeholder="Your password"></div>
+      <div class="admin-login-actions"><button class="btn gold" type="submit">Enter Founder Studio →</button><button class="btn" type="button" id="google-login">Continue with Google</button></div>
+      <div class="status" id="login-status" role="status" aria-live="polite"></div>
+    </form>
+    <div class="admin-secure-note">🔒 Protected by Supabase authentication and founder-only database policies.</div>
+  </div>
+</section>
+
+<div id="admin-app" class="admin-workspace" hidden>
+  <aside class="admin-sidebar" aria-label="Founder studio navigation">
+    <div class="admin-side-heading">WORKSPACE</div>
+    <button class="admin-nav-item active" data-tab="overview"><span class="admin-nav-icon">⌂</span><span>Overview</span><b>01</b></button>
+    <button class="admin-nav-item" data-tab="tracks"><span class="admin-nav-icon">♫</span><span>Music manager</span><b>02</b></button>
+    <button class="admin-nav-item" data-tab="artists"><span class="admin-nav-icon">♙</span><span>Artists</span><b>03</b></button>
+    <button class="admin-nav-item" data-tab="releases"><span class="admin-nav-icon">▣</span><span>Releases</span><b>04</b></button>
+    <button class="admin-nav-item" data-tab="inbox"><span class="admin-nav-icon">✉</span><span>Inbox</span><b>05</b></button>
+    <div class="admin-side-heading admin-side-gap">SYSTEM</div>
+    <button class="admin-nav-item" data-tab="settings"><span class="admin-nav-icon">⚙</span><span>Settings</span><b>06</b></button>
+    <a class="admin-nav-item" href="../account/"><span class="admin-nav-icon">◉</span><span>Profile & account</span><b>↗</b></a>
+    <a class="admin-nav-item" href="../"><span class="admin-nav-icon">↗</span><span>Public website</span><b>↗</b></a>
+    <div class="admin-sidebar-bottom"><div class="admin-status-orb"></div><div><strong>STUDIO SECURE</strong><small>Founder access only</small></div></div>
+  </aside>
+
+  <main id="main" class="admin-main">
+    <div class="admin-main-top">
+      <div><div class="eyebrow">HIGH TECH ENTERTAINMENT / CONTROL ROOM</div><h1 id="view-title">Overview</h1><p id="admin-date" class="admin-date">Your creative operations, in one place.</p></div>
+      <div class="admin-main-actions"><span class="admin-user-chip"><span class="admin-user-avatar">HT</span><span><strong data-user-name>Founder</strong><small>Founder account</small></span></span><button class="btn" id="refresh-admin" type="button">↻ Refresh data</button></div>
+    </div>
+    <div class="status admin-global-status" id="admin-status" role="status" aria-live="polite"></div>
+
+    <section class="admin-view" data-view="overview">
+      <div class="admin-welcome-banner">
+        <div><div class="eyebrow">YOUR CREATIVE COMMAND CENTRE</div><h2>Make moves. Make music.</h2><p>Manage your catalogue, showcase your talent and stay on top of every enquiry.</p><button class="btn gold" data-tab="tracks" type="button">Upload new music <span>↗</span></button></div>
+        <div class="admin-banner-art"><div class="admin-banner-ring"></div><strong>HT<span>E</span></strong><small>MUSIC · PRODUCTION · BEYOND</small></div>
+      </div>
+      <div class="admin-section-label"><div><span>01 / OVERVIEW</span><h2>Studio statistics</h2></div><p>Live totals from your Supabase catalogue</p></div>
+      <div class="admin-stat-grid">
+        <article class="admin-stat-card"><div class="admin-stat-top"><span class="admin-stat-icon">♫</span><span>CATALOGUE</span></div><div class="value" id="stat-tracks">—</div><div class="label">Music tracks</div><div class="admin-stat-foot">Manage audio and publishing</div></article>
+        <article class="admin-stat-card"><div class="admin-stat-top"><span class="admin-stat-icon">♙</span><span>ROSTER</span></div><div class="value" id="stat-artists">—</div><div class="label">Artist profiles</div><div class="admin-stat-foot">Build your artist directory</div></article>
+        <article class="admin-stat-card"><div class="admin-stat-top"><span class="admin-stat-icon">▣</span><span>DISCOGRAPHY</span></div><div class="value" id="stat-releases">—</div><div class="label">Official releases</div><div class="admin-stat-foot">Singles, EPs and albums</div></article>
+      </div>
+      <div class="admin-section-label"><div><span>02 / QUICK ACCESS</span><h2>What would you like to do?</h2></div></div>
+      <div class="admin-quick-grid">
+        <button class="admin-quick-card" data-tab="tracks" type="button"><span>♫</span><strong>Upload music</strong><small>Add a track to your catalogue</small><b>Open manager →</b></button>
+        <button class="admin-quick-card" data-tab="artists" type="button"><span>♙</span><strong>Add an artist</strong><small>Grow your creative roster</small><b>Manage artists →</b></button>
+        <button class="admin-quick-card" data-tab="releases" type="button"><span>▣</span><strong>Publish a release</strong><small>Showcase a new project</small><b>Manage releases →</b></button>
+        <button class="admin-quick-card" data-tab="inbox" type="button"><span>✉</span><strong>Check enquiries</strong><small>Review booking and contact messages</small><b>Open inbox →</b></button>
+      </div>
+      <div class="admin-bottom-note"><span class="admin-note-icon">✓</span><div><strong>Your studio is protected</strong><p>Founder access is restricted by the authorised Supabase account and database Row Level Security policies. Keep your password and private keys confidential.</p></div></div>
+    </section>
+
+    <section class="admin-view" data-view="tracks" hidden>
+      <div class="admin-section-label"><div><span>02 / AUDIO LIBRARY</span><h2>Music manager</h2><p>Upload, publish or remove tracks from your public catalogue.</p></div></div>
+      <div class="admin-content-grid">
+        <div class="panel admin-form-panel"><div class="admin-panel-heading"><span class="admin-panel-icon">♫</span><div><h3>Add a music track</h3><p>Audio files up to 100 MB</p></div></div>
+          <form id="track-form">
+            <div class="form-grid">
+              <div class="field"><label>Track title</label><input name="title" required maxlength="140" placeholder="Enter track title"></div>
+              <div class="field"><label>Artist</label><input name="artist" required maxlength="180" placeholder="Artist name"></div>
+              <div class="field"><label>Uploader / producer</label><input name="uploader" value="High Tech Entertainment" maxlength="80"></div>
+              <div class="field"><label>Genre</label><input name="genre" maxlength="80" placeholder="Afrobeats, Dancehall, Drill"></div>
+              <div class="field full"><label>Cover artwork URL <span class="optional">OPTIONAL</span></label><input name="cover_url" type="url" placeholder="https://…"></div>
+              <div class="field full"><label>Audio file</label><input name="audio" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.webm,.flac" required><small class="admin-field-help">Supported: MP3, M4A, AAC, WAV, OGG, FLAC and WebM. Maximum 100 MB.</small></div>
+              <div class="field full admin-checkbox-field"><label><input name="is_published" type="checkbox" checked style="width:auto"> Publish immediately on the public website</label></div>
+            </div>
+            <button class="btn gold admin-submit" type="submit">Upload track <span>↑</span></button><div class="status" id="track-status" role="status" aria-live="polite"></div>
+          </form>
+        </div>
+        <div class="admin-side-info"><div class="admin-info-card"><span class="admin-info-icon">01</span><h3>Upload safely</h3><p>Files are stored in your private-managed HTE audio bucket. Only the authorised founder can upload.</p></div><div class="admin-info-card"><span class="admin-info-icon">02</span><h3>Publish with control</h3><p>Uncheck “Publish immediately” to save a track as a draft before making it public.</p></div><div class="admin-info-card"><span class="admin-info-icon">03</span><h3>Public catalogue</h3><p>Published tracks appear in the Music section of your main website after refresh.</p></div></div>
+      </div>
+      <div class="admin-table-heading"><div><span>YOUR LIBRARY</span><h3>Uploaded tracks</h3></div><input class="admin-table-search" type="search" data-table-search="admin-tracks" placeholder="Search tracks…" aria-label="Search tracks"></div>
+      <div class="table-wrap admin-table-wrap"><table class="data-table"><thead><tr><th>Track</th><th>Artist</th><th>Status</th><th>Actions</th></tr></thead><tbody id="admin-tracks"></tbody></table></div>
+    </section>
+
+    <section class="admin-view" data-view="artists" hidden>
+      <div class="admin-section-label"><div><span>03 / CREATIVE ROSTER</span><h2>Artist management</h2><p>Add and manage the artists represented on your website.</p></div></div>
+      <div class="panel admin-form-panel admin-compact-form"><div class="admin-panel-heading"><span class="admin-panel-icon">♙</span><div><h3>Add an artist</h3><p>Create a public artist profile</p></div></div><form id="artist-form"><div class="form-grid"><div class="field"><label>Artist name</label><input name="name" required maxlength="120" placeholder="Artist or stage name"></div><div class="field"><label>Image URL <span class="optional">OPTIONAL</span></label><input name="image_url" type="url" placeholder="https://…"></div><div class="field full"><label>Biography</label><textarea name="bio" maxlength="2000" placeholder="Tell visitors about this artist…"></textarea></div><div class="field full admin-checkbox-field"><label><input name="is_published" type="checkbox" checked style="width:auto"> Publish artist profile</label></div></div><button class="btn gold admin-submit" type="submit">Add artist →</button><div id="artist-status" class="status" role="status"></div></form></div>
+      <div class="admin-table-heading"><div><span>ARTIST DIRECTORY</span><h3>Artists on your platform</h3></div><input class="admin-table-search" type="search" data-table-search="admin-artists" placeholder="Search artists…" aria-label="Search artists"></div>
+      <div class="table-wrap admin-table-wrap"><table class="data-table"><thead><tr><th>Artist</th><th>Status</th><th>Actions</th></tr></thead><tbody id="admin-artists"></tbody></table></div>
+    </section>
+
+    <section class="admin-view" data-view="releases" hidden>
+      <div class="admin-section-label"><div><span>04 / DISCOGRAPHY</span><h2>Release management</h2><p>Showcase albums, EPs and singles on your public website.</p></div></div>
+      <div class="panel admin-form-panel admin-compact-form"><div class="admin-panel-heading"><span class="admin-panel-icon">▣</span><div><h3>Add a release</h3><p>Publish a new music project</p></div></div><form id="release-form"><div class="form-grid"><div class="field"><label>Release title</label><input name="title" required maxlength="160" placeholder="Project or single title"></div><div class="field"><label>Release date</label><input name="release_date" type="date"></div><div class="field full"><label>Cover image URL <span class="optional">OPTIONAL</span></label><input name="cover_url" type="url" placeholder="https://…"></div><div class="field full admin-checkbox-field"><label><input name="is_published" type="checkbox" checked style="width:auto"> Publish release</label></div></div><button class="btn gold admin-submit" type="submit">Add release →</button><div id="release-status" class="status" role="status"></div></form></div>
+      <div class="admin-table-heading"><div><span>RELEASE ARCHIVE</span><h3>Your releases</h3></div><input class="admin-table-search" type="search" data-table-search="admin-releases" placeholder="Search releases…" aria-label="Search releases"></div>
+      <div class="table-wrap admin-table-wrap"><table class="data-table"><thead><tr><th>Release</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="admin-releases"></tbody></table></div>
+    </section>
+
+    <section class="admin-view" data-view="inbox" hidden>
+      <div class="admin-section-label"><div><span>05 / COMMUNICATIONS</span><h2>Enquiry inbox</h2><p>Booking requests and messages submitted through your website.</p></div></div>
+      <div class="admin-inbox-toolbar"><span>PRIVATE FOUNDER INBOX</span><button class="btn" type="button" id="refresh-admin-inbox" onclick="document.getElementById('refresh-admin')?.click()">↻ Refresh inbox</button></div>
+      <div id="admin-inbox"><div class="empty">Loading enquiries…</div></div>
+    </section>
+
+    <section class="admin-view" data-view="settings" hidden>
+      <div class="admin-section-label"><div><span>06 / SYSTEM</span><h2>Studio settings</h2><p>Information about your account, access and platform setup.</p></div></div>
+      <div class="admin-settings-grid">
+        <article class="panel admin-setting-card"><span class="admin-setting-icon">◉</span><h3>Founder account</h3><p>Your workspace is tied to the authorised founder identity.</p><a class="btn" href="../account/">Manage account ↗</a></article>
+        <article class="panel admin-setting-card"><span class="admin-setting-icon">▤</span><h3>Database protection</h3><p>Supabase Row Level Security policies protect private management operations.</p><span class="admin-setting-state">● ACCESS RESTRICTED</span></article>
+        <article class="panel admin-setting-card"><span class="admin-setting-icon">↗</span><h3>Public website</h3><p>Visit the public-facing High Tech Entertainment experience.</p><a class="btn" href="../">Open website ↗</a></article>
+      </div>
+      <div class="panel admin-danger-zone"><div><h3>Session controls</h3><p class="muted">Sign out when you finish managing your catalogue, especially on a shared device.</p></div><button class="btn danger" data-logout>Sign out of founder studio</button></div>
+    </section>
+
+    <footer class="admin-footer"><span>HIGH TECH ENTERTAINMENT <b>·</b> FOUNDER STUDIO</span><span>Music. Beats. Production. Beyond.</span></footer>
+  </main>
+</div>
+<div id="toast" class="toast" role="status"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../supabase-config.js"></script>
+<script src="../assets/app.js"></script>
+<script src="../assets/admin-upload.js?v=2"></script>
+<script src="../assets/admin-ui.js?v=1"></script>
+</body>
+</html>
