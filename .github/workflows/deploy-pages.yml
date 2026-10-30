@@ -22,6 +22,7 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html supabase-config.js robots.txt sitemap.xml _site/
+          cp googled2aa97c2eb951371.html _site/
           cp -R assets admin account _site/
       - name: Upload website artifact
         uses: actions/upload-pages-artifact@v3
