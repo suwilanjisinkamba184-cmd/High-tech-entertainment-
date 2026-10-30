@@ -22,7 +22,7 @@ root.addEventListener('click',e=>{let b=e.target.closest('button');if(!b)return;
 $('[data-player-toggle]')?.addEventListener('click',()=>{if(!audio.src)return;if(audio.paused)audio.play().then(()=>{$('[data-player-toggle]').textContent='Ⅱ'});else{audio.pause();$('[data-player-toggle]').textContent='▶'}});
 $('[data-player-progress]')?.addEventListener('input',e=>{audio.currentTime=Number(e.target.value)});
 $('[data-player-volume]')?.addEventListener('input',e=>{audio.volume=Number(e.target.value)});
-$('[data-player-next]')?.addEventListener('click',next);
+$('[data-player-next]')?.addEventListener('click',()=>{let ids=playlist.map(id=>catalogue.findIndex(x=>x.id===id)).filter(i=>i>=0);let at=ids.indexOf(current);queue=at>=0?ids.slice(at+1):ids.filter(i=>i!==current);if(!queue.length)queue=ids.filter(i=>i!==current);next()});
 $('[data-stream-clear]')?.addEventListener('click',()=>{playlist=[];save();drawPlaylist()});
 audio.addEventListener('timeupdate',sync);audio.addEventListener('loadedmetadata',sync);audio.addEventListener('play',()=>{$('[data-player-toggle]').textContent='Ⅱ'});audio.addEventListener('pause',()=>{$('[data-player-toggle]').textContent='▶'});audio.addEventListener('ended',next);
 load();
