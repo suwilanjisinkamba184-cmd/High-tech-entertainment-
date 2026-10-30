@@ -54,6 +54,7 @@
   <aside class="admin-sidebar" aria-label="Founder studio navigation">
     <div class="admin-side-heading">WORKSPACE</div>
     <button class="admin-nav-item active" data-tab="overview"><span class="admin-nav-icon">⌂</span><span>Overview</span><b>01</b></button>
+    <button class="admin-nav-item" data-tab="videos"><span class="admin-nav-icon">▶</span><span>Video manager</span><b>03</b></button>
     <button class="admin-nav-item" data-tab="tracks"><span class="admin-nav-icon">♫</span><span>Music manager</span><b>02</b></button>
     <button class="admin-nav-item" data-tab="artists"><span class="admin-nav-icon">♙</span><span>Artists</span><b>03</b></button>
     <button class="admin-nav-item" data-tab="releases"><span class="admin-nav-icon">▣</span><span>Releases</span><b>04</b></button>
@@ -93,6 +94,21 @@
       <div class="admin-bottom-note"><span class="admin-note-icon">✓</span><div><strong>Your studio is protected</strong><p>Founder access is restricted by the authorised Supabase account and database Row Level Security policies. Keep your password and private keys confidential.</p></div></div>
     </section>
 
+    <section class="admin-view" data-view="videos" hidden>
+      <div class="admin-section-label"><div><span>03 / VIDEO LIBRARY</span><h2>Video manager</h2><p>Upload and publish official music videos and visual content.</p></div></div>
+      <div class="panel admin-form-panel admin-compact-form"><div class="admin-panel-heading"><span class="admin-panel-icon">▶</span><div><h3>Upload a video</h3><p>MP4, WebM or MOV · maximum 100 MB</p></div></div>
+        <form id="video-form"><div class="form-grid">
+          <div class="field"><label>Video title</label><input name="title" required maxlength="160" placeholder="Enter video title"></div>
+          <div class="field"><label>Artist / creator</label><input name="artist" maxlength="180" placeholder="Artist or creator"></div>
+          <div class="field full"><label>Description <span class="optional">OPTIONAL</span></label><textarea name="description" maxlength="3000" placeholder="About this video…"></textarea></div>
+          <div class="field full"><label>Thumbnail image URL <span class="optional">OPTIONAL</span></label><input name="thumbnail_url" type="url" placeholder="https://…"></div>
+          <div class="field full"><label>Video file</label><input name="video" type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" required><small class="admin-field-help">Videos are stored in Supabase Storage and their details are saved in the videos database table.</small></div>
+          <div class="field full admin-checkbox-field"><label><input name="is_published" type="checkbox" checked style="width:auto"> Publish on the main website immediately</label></div>
+        </div><button class="btn gold admin-submit" type="submit">Upload video ↑</button><div class="status" id="video-status" role="status" aria-live="polite"></div></form>
+      </div>
+      <div class="admin-table-heading"><div><span>YOUR VIDEO LIBRARY</span><h3>Stored videos</h3></div><button class="btn" type="button" id="refresh-videos">↻ Refresh</button></div>
+      <div class="table-wrap admin-table-wrap"><table class="data-table"><thead><tr><th>Video</th><th>Artist</th><th>Status</th><th>Actions</th></tr></thead><tbody id="admin-videos"><tr><td colspan="4">Loading videos…</td></tr></tbody></table></div>
+    </section>
     <section class="admin-view" data-view="tracks" hidden>
       <div class="admin-section-label"><div><span>02 / AUDIO LIBRARY</span><h2>Music manager</h2><p>Upload, publish or remove tracks from your public catalogue.</p></div></div>
       <div class="admin-content-grid">
@@ -154,6 +170,7 @@
 <script src="../supabase-config.js"></script>
 <script src="../assets/app.js"></script>
 <script src="../assets/admin-upload.js?v=2"></script>
+<script src="../assets/admin-video.js?v=1"></script>
 <script src="../assets/admin-ui.js?v=1"></script>
 </body>
 </html>
