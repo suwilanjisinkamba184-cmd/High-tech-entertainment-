@@ -23,6 +23,16 @@ jobs:
           mkdir -p _site
           cp index.html supabase-config.js robots.txt sitemap.xml _site/
           cp googled2aa97c2eb951371.html _site/
+          if [ -f google31fdb4754075f7bd.html ]; then cp google31fdb4754075f7bd.html _site/; fi
+          test -s _site/index.html
+          test -s _site/robots.txt
+          test -s _site/sitemap.xml
+          test -s _site/supabase-config.js
+          test -s _site/assets/app.js
+          test -s _site/assets/site.css
+          test -s _site/admin/index.html
+          test -s _site/account/index.html
+          python -c "import xml.etree.ElementTree as ET; ET.parse('_site/sitemap.xml'); print('Sitemap XML is valid')"
           cp -R assets admin account _site/
       - name: Upload website artifact
         uses: actions/upload-pages-artifact@v3
