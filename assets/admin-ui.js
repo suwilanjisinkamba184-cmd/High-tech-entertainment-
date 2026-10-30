@@ -1,0 +1,8 @@
+(()=>{'use strict';
+const date=document.getElementById('admin-date');
+if(date){const now=new Date();const hour=now.getHours();const greeting=hour<12?'Good morning':hour<18?'Good afternoon':'Good evening';date.textContent=greeting+' · '+now.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'})+' · Your creative operations, in one place.';}
+function filterTable(input){const id=input.dataset.tableSearch,body=document.getElementById(id);if(!body)return;const query=input.value.trim().toLowerCase();let shown=0;[...body.querySelectorAll('tr')].forEach(row=>{const match=!query||row.textContent.toLowerCase().includes(query);row.hidden=!match;if(match)shown++;});input.setAttribute('aria-description',shown+' matching rows');}
+document.querySelectorAll('[data-table-search]').forEach(input=>{input.addEventListener('input',()=>filterTable(input));const body=document.getElementById(input.dataset.tableSearch);if(body)new MutationObserver(()=>filterTable(input)).observe(body,{childList:true,subtree:true});});
+const title=document.getElementById('view-title');
+document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{if(title){const names={overview:'Overview',tracks:'Music manager',artists:'Artist management',releases:'Release management',inbox:'Enquiry inbox',settings:'Studio settings'};title.textContent=names[button.dataset.tab]||'Founder Studio';}}));
+})();
