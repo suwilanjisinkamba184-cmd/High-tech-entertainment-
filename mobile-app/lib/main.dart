@@ -136,7 +136,7 @@ class ArtistList extends StatelessWidget {
   Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
     future: rows('artists', 'name'),
     builder: (context, snapshot) {
-      if (snapshot.hasError) return const Notice('Unable to load artists: ${snapshot.error}. Check connection, Data API access and RLS.');
+      if (snapshot.hasError) return Notice('Unable to load artists: ${snapshot.error}. Check connection, Data API access and RLS.');
       if (!snapshot.hasData) return const Busy();
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published artist profiles will appear here.');
@@ -187,7 +187,7 @@ class ReleaseList extends StatelessWidget {
   Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
     future: rows('releases', 'created_at'),
     builder: (context, snapshot) {
-      if (snapshot.hasError) return const Notice('Unable to load releases: ${snapshot.error}.');
+      if (snapshot.hasError) return Notice('Unable to load releases: ${snapshot.error}.');
       if (!snapshot.hasData) return const Busy();
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published releases will appear here.');
@@ -227,13 +227,14 @@ class MusicTab extends StatelessWidget {
 }
 
 class TrackList extends StatelessWidget {
-  const TrackList({super.key, this.compact = false});
+  const TrackList({super.key, this.compact = false, this.items});
   final bool compact;
+  final List<Map<String, dynamic>>? items;
   @override
   Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
-    future: rows('tracks', 'created_at'),
+    future: items == null ? rows('tracks', 'created_at') : Future.value(items),
     builder: (context, snapshot) {
-      if (snapshot.hasError) return const Notice('Unable to load tracks: ${snapshot.error}. Check connection, Data API access and RLS.');
+      if (snapshot.hasError) return Notice('Unable to load tracks: ${snapshot.error}. Check connection, Data API access and RLS.');
       if (!snapshot.hasData) return const Busy();
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published tracks will appear here.');
