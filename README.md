@@ -14,7 +14,7 @@ Premium, responsive music and artist platform for High Tech Entertainment, hoste
 - Supabase Storage: `hte-audio` for public published music and `hte-avatars` for private profile photos.
 
 ## Deployment
-GitHub Pages is built by `.github/workflows/deploy-pages.yml`. The previous competing Pages workflow has been removed. The build copies `index.html`, `supabase-config.js`, `assets/`, `admin/`, and `account/` into the Pages artifact.
+GitHub Pages is built by `.github/workflows/deploy-pages.yml`. The previous competing Pages workflow has been removed. 
 
 ## Supabase configuration
 The browser config in `supabase-config.js` contains only the project URL and browser-safe publishable key. Never put a Supabase service-role or `sb_secret_` key in frontend files.
@@ -28,8 +28,8 @@ SQL files:
 
 ## Important launch checks
 1. In Supabase Authentication URL Configuration, allow the live Pages URL as the Site URL and add these Redirect URLs:
-   - `https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/admin/`
-   - `https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account/`
+   - `https://high-techmedia.netlify.app/admin/`
+   - `https://high-techmedia.netlify.app/account/`
 2. If this remains a single-founder admin system, disable public user signups in Supabase Auth settings. Existing users can still sign in.
 3. Test Google sign-in, password sign-in, profile save/photo upload, track upload/playback, publish/unpublish, artist/release creation and contact inbox.
 4. Upload your actual cover artwork and published tracks. The catalogue tables currently have no entries, so empty-state messages are expected until content is added.
