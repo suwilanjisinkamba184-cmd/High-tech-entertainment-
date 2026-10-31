@@ -481,7 +481,7 @@ class _AccountTabState extends State<AccountTab> {
         const Padding(padding: EdgeInsets.symmetric(vertical: 10), child: Text('OR CONTINUE WITH', textAlign: TextAlign.center, style: TextStyle(color: Colors.white54, letterSpacing: 1.5, fontSize: 11))),
         OutlinedButton.icon(onPressed: busy ? null : () => socialSignIn(OAuthProvider.google), icon: const Icon(Icons.g_mobiledata), label: const Text('Continue with Google')),
         OutlinedButton.icon(onPressed: busy ? null : () => socialSignIn(OAuthProvider.facebook), icon: const Icon(Icons.facebook), label: const Text('Continue with Facebook')),
-        OutlinedButton.icon(onPressed: busy ? null : () => socialSignIn(OAuthProvider.twitter), icon: const Icon(Icons.alternate_email), label: const Text('Continue with X / Twitter')),
+        OutlinedButton.icon(onPressed: busy ? null : () => socialSignIn(OAuthProvider.x), icon: const Icon(Icons.alternate_email), label: const Text('Continue with X / Twitter')),
         const Text('Instagram is not a Supabase sign-in provider. The app can link to the official Instagram profile, but Instagram login cannot be enabled as a Supabase provider.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white54, fontSize: 11)),
         TextButton.icon(
           onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication),
