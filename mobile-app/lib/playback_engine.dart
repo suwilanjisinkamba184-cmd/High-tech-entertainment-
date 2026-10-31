@@ -10,7 +10,7 @@ class HtePlayback {
   final ValueNotifier<List<Map<String,dynamic>>> queueView = ValueNotifier([]);
   List<Map<String,dynamic>> _queue = [];
   int _index = -1, _tracksSinceAd = 0;
-  bool autoplay = true, shuffle = false, _handlingCompletion = false;
+  bool autoplay = true, shuffle = false, audioAdsEnabled = true, _handlingCompletion = false;
   int adEvery = 3;
 
   HtePlayback() {
@@ -48,7 +48,7 @@ class HtePlayback {
   Future<void> _advanceAfterCompletion() async {
     if (adPlaying.value) { adPlaying.value = false; await _playNextTrack(); return; }
     _tracksSinceAd++;
-    if (_tracksSinceAd >= adEvery) {
+    if (audioAdsEnabled && _tracksSinceAd >= adEvery) {
       _tracksSinceAd = 0;
       if (await _playAd()) return;
     }
