@@ -234,7 +234,6 @@ class MusicTab extends StatelessWidget {
     const Brand(),
     const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Music library', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)))),
     const Expanded(child: TrackList()),
-    const PlayerBar(),
   ]);
 }
 
@@ -600,7 +599,7 @@ class _SettingsPageState extends State<SettingsPage> {
     shuffleSetting=prefs.getBool('hte_shuffle')??false;
     audioAdsSetting=prefs.getBool('hte_audio_ads')??true;
     adFrequency=prefs.getInt('hte_ad_frequency')??3;
-    playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting; playback.adEvery=adFrequency;
+    playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting; playback.audioAdsEnabled=audioAdsSetting; playback.adEvery=adFrequency;
     if(mounted)setState((){});
   }
   Future<void> _savePlaybackSetting(String key,Object value) async {
