@@ -42,7 +42,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int tab = 0;
-  final pages = const [HomeTab(), ArtistsTab(), MusicTab(), VideosTab(), AccountTab()];
+  final pages = const [HomeTab(), DiscoverTab(), ArtistsTab(), MusicTab(), SavedTab(), VideosTab(), AccountTab()];
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(child: IndexedStack(index: tab, children: pages)),
@@ -51,8 +51,10 @@ class _MainScreenState extends State<MainScreen> {
       onDestinationSelected: (value) => setState(() => tab = value),
       destinations: const [
         NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
+        NavigationDestination(icon: Icon(Icons.search), label: 'Discover'),
         NavigationDestination(icon: Icon(Icons.people_outline), label: 'Artists'),
         NavigationDestination(icon: Icon(Icons.music_note_outlined), label: 'Music'),
+        NavigationDestination(icon: Icon(Icons.favorite_border), label: 'Saved'),
         NavigationDestination(icon: Icon(Icons.video_library_outlined), label: 'Videos'),
         NavigationDestination(icon: Icon(Icons.person_outline), label: 'Account'),
       ],
@@ -247,6 +249,7 @@ class TrackList extends StatelessWidget {
             title: Text((item['title'] ?? 'Track').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
             subtitle: Text((item['artist'] ?? 'High-Tech Entertainment').toString()),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              IconButton(tooltip: 'Save favourite', onPressed: () async { await toggleFavourite((item['id'] ?? '').toString()); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your favourites have been updated.'))); }, icon: const Icon(Icons.favorite_border, size: 20, color: Colors.pinkAccent)),
               IconButton(tooltip: 'Share track', onPressed: () => Share.share('${item['title']} — ${item['artist']}\nHigh-Tech Entertainment'), icon: const Icon(Icons.share_outlined, size: 20)),
               IconButton(
               icon: const Icon(Icons.play_circle_fill, color: Color(0xFFD4AF37), size: 34),
@@ -336,6 +339,75 @@ class MediaCover extends StatelessWidget {
     return Image.network(url!, height: height, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, __, ___) =>
       const Center(child: Icon(Icons.album, color: Color(0xFFD4AF37))));
   }
+}
+
+
+Future<void> toggleFavourite(String id) async {
+  final prefs = await SharedPreferences.getInstance();
+  final ids = prefs.getStringList('hte_favourites') ?? <String>[];
+  if (ids.contains(id)) { ids.remove(id); } else { ids.add(id); }
+  await prefs.setStringList('hte_favourites', ids);
+}
+
+class DiscoverTab extends StatefulWidget {
+  const DiscoverTab({super.key});
+  @override
+  State<DiscoverTab> createState() => _DiscoverTabState();
+}
+class _DiscoverTabState extends State<DiscoverTab> {
+  final controller = TextEditingController();
+  List<Map<String,dynamic>> results = [];
+  bool loading = true;
+  String? error;
+  @override
+  void initState() { super.initState(); search(''); }
+  Future<void> search(String term) async {
+    setState(() { loading = true; error = null; });
+    try {
+      final q = db.from('tracks').select().eq('is_published', true);
+      final data = term.trim().isEmpty
+        ? await q.order('created_at', ascending: false).limit(100)
+        : await q.ilike('title', '%${term.trim()}%').order('created_at', ascending: false).limit(100);
+      results = List<Map<String,dynamic>>.from(data);
+    } catch (e) { error = e.toString(); }
+    if (mounted) setState(() => loading = false);
+  }
+  @override
+  void dispose() { controller.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    const Brand(),
+    Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: TextField(controller: controller, onChanged: search, decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search tracks by title'))),
+    Expanded(child: loading ? const Busy() : error != null ? Notice('Search failed: $error') : TrackList(items: results)),
+  ]);
+}
+
+class SavedTab extends StatefulWidget {
+  const SavedTab({super.key});
+  @override
+  State<SavedTab> createState() => _SavedTabState();
+}
+class _SavedTabState extends State<SavedTab> {
+  List<Map<String,dynamic>> saved = [];
+  bool loading = true;
+  @override
+  void initState() { super.initState(); load(); }
+  Future<void> load() async {
+    setState(() => loading = true);
+    final prefs = await SharedPreferences.getInstance();
+    final ids = prefs.getStringList('hte_favourites') ?? <String>[];
+    try {
+      if (ids.isEmpty) { saved = []; }
+      else { saved = List<Map<String,dynamic>>.from(await db.from('tracks').select().inFilter('id', ids)); }
+    } catch (_) { saved = []; }
+    if (mounted) setState(() => loading = false);
+  }
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    const Brand(),
+    const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Your favourites', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)))),
+    Expanded(child: loading ? const Busy() : saved.isEmpty ? const Notice('No saved tracks yet. Tap the heart beside a track to add it here.') : TrackList(items: saved)),
+  ]);
 }
 
 class AccountTab extends StatefulWidget {
