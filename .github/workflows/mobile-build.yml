@@ -32,10 +32,10 @@ jobs:
           rm -rf "$RUNNER_TEMP/hte_app/lib"
           cp -R mobile-app/lib "$RUNNER_TEMP/hte_app/lib"
       - name: Install dependencies
-        working-directory: \${{ runner.temp }}/hte_app
+        working-directory: ${{ runner.temp }}/hte_app
         run: flutter pub get
       - name: Build APK and Play Store bundle
-        working-directory: \${{ runner.temp }}/hte_app
+        working-directory: ${{ runner.temp }}/hte_app
         run: |
           flutter build apk --release
           flutter build appbundle --release
@@ -43,8 +43,8 @@ jobs:
         with:
           name: high-tech-entertainment-android
           path: |
-            \${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/app-release.apk
-            \${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/app-release.aab
+            ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/app-release.apk
+            ${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
 
   windows:
@@ -64,7 +64,7 @@ jobs:
           Copy-Item mobile-app\lib "$env:RUNNER_TEMP\hte_app\lib" -Recurse
       - name: Build Windows app
         shell: pwsh
-        working-directory: \${{ runner.temp }}\hte_app
+        working-directory: ${{ runner.temp }}\hte_app
         run: |
           flutter pub get
           flutter build windows --release
@@ -74,7 +74,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: high-tech-entertainment-windows
-          path: \${{ runner.temp }}/high-tech-entertainment-windows.zip
+          path: ${{ runner.temp }}/high-tech-entertainment-windows.zip
           if-no-files-found: error
 
   ios:
@@ -92,7 +92,7 @@ jobs:
           rm -rf "$RUNNER_TEMP/hte_app/lib"
           cp -R mobile-app/lib "$RUNNER_TEMP/hte_app/lib"
       - name: Build unsigned iOS app
-        working-directory: \${{ runner.temp }}/hte_app
+        working-directory: ${{ runner.temp }}/hte_app
         run: |
           flutter pub get
           flutter build ios --release --no-codesign
@@ -101,5 +101,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: high-tech-entertainment-ios-unsigned
-          path: \${{ runner.temp }}/high-tech-entertainment-ios-unsigned.zip
+          path: ${{ runner.temp }}/high-tech-entertainment-ios-unsigned.zip
           if-no-files-found: error
