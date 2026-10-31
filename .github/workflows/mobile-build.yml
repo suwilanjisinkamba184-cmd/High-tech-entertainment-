@@ -45,12 +45,22 @@ jobs:
               if not path.exists():
                   continue
               text = path.read_text()
-              text = re.sub(r'(?m)^(\s*targetSdk\s*=\s*)[^\n]+', r'\g<1>36', text)
-              text = re.sub(r'(?m)^(\s*targetSdkVersion\s*=\s*)[^\n]+', r'\g<1>36', text)
-              text = re.sub(r'(?m)^(\s*targetSdkVersion\s+)[^\n]+', r'\g<1>36', text)
+              if path.name == "build.gradle.kts":
+                  text, n = re.subn(r'(?m)^(\s*minSdk\s*=\s*)[^\n]+', r'\g<1>26', text)
+              else:
+                  text, n = re.subn(r'(?m)^(\s*minSdkVersion\s+)[^\n]+', r'\g<1>26', text)
+              if n == 0:
+                  raise SystemExit(f"Could not set Android 8 minimum SDK in {path}")
+              text, n = re.subn(r'(?m)^(\s*targetSdk\s*=\s*)[^\n]+', r'\g<1>36', text)
+              if n == 0:
+                  text, n = re.subn(r'(?m)^(\s*targetSdkVersion\s*=\s*)[^\n]+', r'\g<1>36', text)
+              if n == 0:
+                  text, n = re.subn(r'(?m)^(\s*targetSdkVersion\s+)[^\n]+', r'\g<1>36', text)
+              if n == 0:
+                  raise SystemExit(f"Could not set Android 16 target SDK in {path}")
               path.write_text(text)
           PY
-          grep -R "targetSdk" android/app/build.gradle*
+          grep -R -E "minSdk|targetSdk" android/app/build.gradle*
       - name: Configure Android upload-key signing
         working-directory: ${{ runner.temp }}/hte_app
         env:
@@ -119,7 +129,7 @@ jobs:
       - name: Build APK and Play Store bundle
         working-directory: ${{ runner.temp }}/hte_app
         run: |
-          flutter build apk --release
+          flutter build apk --release --target-platform android-arm,android-arm64
           flutter build appbundle --release
       - uses: actions/upload-artifact@v4
         with:
