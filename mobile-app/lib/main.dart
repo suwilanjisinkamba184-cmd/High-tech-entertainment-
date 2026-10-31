@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
@@ -460,6 +463,13 @@ class _AccountTabState extends State<AccountTab> {
     final user = db.auth.currentUser;
     return ListView(padding: const EdgeInsets.all(20), children: [
       const Brand(),
+      Card(child: ListTile(
+        leading: const Icon(Icons.settings_outlined, color: Color(0xFFD4AF37)),
+        title: const Text('App settings'),
+        subtitle: const Text('Updates, app information and support'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsPage())),
+      )),
       if (user != null) ...[
         const Icon(Icons.account_circle, color: Color(0xFFD4AF37), size: 80),
         Center(child: Text(user.email ?? 'Signed in')),
@@ -496,6 +506,134 @@ class _AccountTabState extends State<AccountTab> {
       ],
     ]);
   }
+}
+
+
+class SettingsPage extends StatefulWidget {
+  const SettingsPage({super.key});
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  String version = 'Loading…';
+  bool checking = false;
+
+  @override
+  void initState() { super.initState(); _loadVersion(); }
+
+  Future<void> _loadVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (mounted) setState(() => version = '${info.version} (${info.buildNumber})');
+    } catch (_) {
+      if (mounted) setState(() => version = 'Version unavailable');
+    }
+  }
+
+  List<int> _versionParts(String value) => value.replaceFirst(RegExp(r'^[vV]'), '')
+      .split('+').first.split('.')
+      .map((part) => int.tryParse(part.replaceAll(RegExp(r'[^0-9].*'), '')) ?? 0).toList();
+
+  int _compareVersions(String a, String b) {
+    final left = _versionParts(a), right = _versionParts(b);
+    for (var i = 0; i < (left.length > right.length ? left.length : right.length); i++) {
+      final x = i < left.length ? left[i] : 0, y = i < right.length ? right[i] : 0;
+      if (x != y) return x.compareTo(y);
+    }
+    return 0;
+  }
+
+  Future<void> _checkForUpdates() async {
+    setState(() => checking = true);
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final response = await http.get(
+        Uri.https('api.github.com', '/repos/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest'),
+        headers: {'Accept': 'application/vnd.github+json', 'User-Agent': 'High-Tech-Entertainment-App'},
+      ).timeout(const Duration(seconds: 15));
+      if (!mounted) return;
+      if (response.statusCode == 404) {
+        _message('No official app update has been published yet. Please check again later.');
+        return;
+      }
+      if (response.statusCode != 200) {
+        _message('Update check could not be completed (HTTP ${response.statusCode}). Please try again.');
+        return;
+      }
+      final release = jsonDecode(response.body) as Map<String, dynamic>;
+      final latest = (release['tag_name'] ?? '').toString().replaceFirst(RegExp(r'^[vV]'), '');
+      if (latest.isEmpty || _compareVersions(latest, info.version) <= 0) {
+        _message('You are using the latest published version ($version).');
+        return;
+      }
+      final assets = release['assets'] as List<dynamic>? ?? [];
+      String? apkUrl;
+      for (final item in assets) {
+        final asset = item as Map<String, dynamic>;
+        if ((asset['name'] ?? '').toString().toLowerCase().endsWith('.apk')) {
+          apkUrl = (asset['browser_download_url'] ?? '').toString();
+          break;
+        }
+      }
+      final releaseUrl = (release['html_url'] ?? 'https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest').toString();
+      final hasApk = apkUrl != null && apkUrl.startsWith('https://');
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Update available'),
+          content: Text('Version $latest is available. You have $version installed. ${hasApk ? 'Download the new APK to update the app.' : 'Open the release page for update details.'}'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Later')),
+            FilledButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                final uri = Uri.tryParse(hasApk ? apkUrl! : releaseUrl);
+                if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
+              },
+              child: Text(hasApk ? 'Download APK' : 'View release'),
+            ),
+          ],
+        ),
+      );
+    } catch (_) {
+      if (mounted) _message('Could not check for updates. Check your internet connection and try again.');
+    } finally {
+      if (mounted) setState(() => checking = false);
+    }
+  }
+
+  void _message(String value) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Settings')),
+    body: ListView(padding: const EdgeInsets.all(18), children: [
+      const Brand(tagline: 'APP PREFERENCES & INFORMATION'),
+      Card(child: Column(children: [
+        ListTile(
+          leading: const Icon(Icons.system_update_alt, color: Color(0xFFD4AF37)),
+          title: const Text('App updates'),
+          subtitle: const Text('Check for the latest official Android version'),
+          trailing: checking ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.chevron_right),
+          onTap: checking ? null : _checkForUpdates,
+        ),
+        const Divider(height: 1),
+        ListTile(leading: const Icon(Icons.info_outline), title: const Text('App version'), subtitle: Text(version)),
+      ])),
+      const SizedBox(height: 12),
+      Card(child: Column(children: [
+        ListTile(leading: const Icon(Icons.language), title: const Text('High-Tech Entertainment website'), trailing: const Icon(Icons.open_in_new),
+          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/'), mode: LaunchMode.externalApplication)),
+        ListTile(leading: const Icon(Icons.privacy_tip_outlined), title: const Text('Privacy policy'), trailing: const Icon(Icons.open_in_new),
+          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication)),
+        ListTile(leading: const Icon(Icons.delete_outline), title: const Text('Request account deletion'), trailing: const Icon(Icons.open_in_new),
+          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html'), mode: LaunchMode.externalApplication)),
+      ])),
+      const Padding(padding: EdgeInsets.all(20), child: Text('Quality Sound, Global Vibes.\nMusic. Beats. Production. Beyond.',
+        textAlign: TextAlign.center, style: TextStyle(color: Colors.white54))),
+    ]),
+  );
 }
 
 Future<List<Map<String, dynamic>>> rows(String table, String orderBy) async {
