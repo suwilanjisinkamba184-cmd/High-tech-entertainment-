@@ -27,10 +27,30 @@ jobs:
           cache: true
       - name: Create Flutter platform scaffold
         run: |
-          flutter create --platforms=android --org com.hightechentertainment --project-name high_tech_entertainment "$RUNNER_TEMP/hte_app"
+          flutter create --platforms=android --org com.hightechentertainment --project-name app "$RUNNER_TEMP/hte_app"
           cp mobile-app/pubspec.yaml "$RUNNER_TEMP/hte_app/pubspec.yaml"
           rm -rf "$RUNNER_TEMP/hte_app/lib"
           cp -R mobile-app/lib "$RUNNER_TEMP/hte_app/lib"
+      - name: Set Play Store Android identity and target API
+        working-directory: ${{ runner.temp }}/hte_app
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          text = manifest.read_text()
+          text = re.sub(r'android:label="[^"]*"', 'android:label="High-Tech Entertainment"', text)
+          manifest.write_text(text)
+          for path in (Path("android/app/build.gradle"), Path("android/app/build.gradle.kts")):
+              if not path.exists():
+                  continue
+              text = path.read_text()
+              text = re.sub(r'targetSdk\\s*=\\s*flutter\\.targetSdkVersion', 'targetSdk = 36', text)
+              text = re.sub(r'targetSdkVersion\\s*=\\s*flutter\\.targetSdkVersion', 'targetSdkVersion = 36', text)
+              text = re.sub(r'targetSdkVersion\\s+flutter\\.targetSdkVersion', 'targetSdkVersion 36', text)
+              path.write_text(text)
+          PY
+          grep -R "targetSdk" android/app/build.gradle*
       - name: Install dependencies
         working-directory: ${{ runner.temp }}/hte_app
         run: flutter pub get
@@ -58,7 +78,7 @@ jobs:
       - name: Create Flutter platform scaffold
         shell: pwsh
         run: |
-          flutter create --platforms=windows --org com.hightechentertainment --project-name high_tech_entertainment "$env:RUNNER_TEMP\hte_app"
+          flutter create --platforms=windows --org com.hightechentertainment --project-name app "$env:RUNNER_TEMP\hte_app"
           Copy-Item mobile-app\pubspec.yaml "$env:RUNNER_TEMP\hte_app\pubspec.yaml" -Force
           Remove-Item "$env:RUNNER_TEMP\hte_app\lib" -Recurse -Force
           Copy-Item mobile-app\lib "$env:RUNNER_TEMP\hte_app\lib" -Recurse
@@ -87,7 +107,7 @@ jobs:
           cache: true
       - name: Create Flutter platform scaffold
         run: |
-          flutter create --platforms=ios --org com.hightechentertainment --project-name high_tech_entertainment "$RUNNER_TEMP/hte_app"
+          flutter create --platforms=ios --org com.hightechentertainment --project-name app "$RUNNER_TEMP/hte_app"
           cp mobile-app/pubspec.yaml "$RUNNER_TEMP/hte_app/pubspec.yaml"
           rm -rf "$RUNNER_TEMP/hte_app/lib"
           cp -R mobile-app/lib "$RUNNER_TEMP/hte_app/lib"
