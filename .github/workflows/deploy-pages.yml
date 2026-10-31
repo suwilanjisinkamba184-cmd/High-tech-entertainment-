@@ -1,52 +1,40 @@
-name: Deploy High-Tech Entertainment website to GitHub Pages
+name: Validate High-Tech Entertainment website
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
+
 permissions:
   contents: read
-  pages: write
-  id-token: write
+
 concurrency:
-  group: github-pages
+  group: hte-validation-${{ github.ref }}
   cancel-in-progress: true
+
 jobs:
-  build:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-      - name: Prepare complete static website
+      - name: Validate required website files
         run: |
-          mkdir -p _site
-          cp index.html supabase-config.js robots.txt sitemap.xml privacy-policy.html account-deletion.html _site/
-          cp googled2aa97c2eb951371.html _site/
-          if [ -f google31fdb4754075f7bd.html ]; then cp google31fdb4754075f7bd.html _site/; fi
-          cp -R assets admin account _site/
-          test -s _site/index.html
-          test -s _site/robots.txt
-          test -s _site/sitemap.xml
-          test -s _site/privacy-policy.html
-          test -s _site/account-deletion.html
-          test -s _site/supabase-config.js
-          test -s _site/assets/app.js
-          test -s _site/assets/site.css
-          test -s _site/admin/index.html
-          test -s _site/account/index.html
-          python -c "import xml.etree.ElementTree as ET; ET.parse('_site/sitemap.xml'); print('Sitemap XML is valid')"
-      - name: Upload website artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          test -s index.html
+          test -s supabase-config.js
+          test -s robots.txt
+          test -s sitemap.xml
+          test -s assets/app.js
+          test -s assets/site.css
+          test -s assets/videos.js
+          test -s assets/streaming.js
+          test -s account/index.html
+          test -s admin/index.html
+          grep -q 'https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/' index.html
+          grep -q 'https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/sitemap.xml' robots.txt
+      - name: Validate sitemap XML
+        run: python -c "import xml.etree.ElementTree as ET; ET.parse('sitemap.xml'); print('Sitemap XML is valid')"
+      - name: Check JavaScript syntax
+        run: |
+          find assets -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
