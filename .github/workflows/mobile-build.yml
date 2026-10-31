@@ -1,0 +1,105 @@
+name: Build High-Tech Entertainment App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile-app/**'
+      - '.github/workflows/mobile-build.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'mobile-app/**'
+      - '.github/workflows/mobile-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Create Flutter platform scaffold
+        run: |
+          flutter create --platforms=android --org com.hightechentertainment --project-name high_tech_entertainment "$RUNNER_TEMP/hte_app"
+          cp mobile-app/pubspec.yaml "$RUNNER_TEMP/hte_app/pubspec.yaml"
+          rm -rf "$RUNNER_TEMP/hte_app/lib"
+          cp -R mobile-app/lib "$RUNNER_TEMP/hte_app/lib"
+      - name: Install dependencies
+        working-directory: \${{ runner.temp }}/hte_app
+        run: flutter pub get
+      - name: Build APK and Play Store bundle
+        working-directory: \${{ runner.temp }}/hte_app
+        run: |
+          flutter build apk --release
+          flutter build appbundle --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: high-tech-entertainment-android
+          path: |
+            \${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/app-release.apk
+            \${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Create Flutter platform scaffold
+        shell: pwsh
+        run: |
+          flutter create --platforms=windows --org com.hightechentertainment --project-name high_tech_entertainment "$env:RUNNER_TEMP\hte_app"
+          Copy-Item mobile-app\pubspec.yaml "$env:RUNNER_TEMP\hte_app\pubspec.yaml" -Force
+          Remove-Item "$env:RUNNER_TEMP\hte_app\lib" -Recurse -Force
+          Copy-Item mobile-app\lib "$env:RUNNER_TEMP\hte_app\lib" -Recurse
+      - name: Build Windows app
+        shell: pwsh
+        working-directory: \${{ runner.temp }}\hte_app
+        run: |
+          flutter pub get
+          flutter build windows --release
+      - name: Package Windows app
+        shell: pwsh
+        run: Compress-Archive -Path "$env:RUNNER_TEMP\hte_app\build\windows\x64\runner\Release\*" -DestinationPath "$env:RUNNER_TEMP\high-tech-entertainment-windows.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: high-tech-entertainment-windows
+          path: \${{ runner.temp }}/high-tech-entertainment-windows.zip
+          if-no-files-found: error
+
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Create Flutter platform scaffold
+        run: |
+          flutter create --platforms=ios --org com.hightechentertainment --project-name high_tech_entertainment "$RUNNER_TEMP/hte_app"
+          cp mobile-app/pubspec.yaml "$RUNNER_TEMP/hte_app/pubspec.yaml"
+          rm -rf "$RUNNER_TEMP/hte_app/lib"
+          cp -R mobile-app/lib "$RUNNER_TEMP/hte_app/lib"
+      - name: Build unsigned iOS app
+        working-directory: \${{ runner.temp }}/hte_app
+        run: |
+          flutter pub get
+          flutter build ios --release --no-codesign
+      - name: Package unsigned iOS app
+        run: ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/hte_app/build/ios/iphoneos/Runner.app" "$RUNNER_TEMP/high-tech-entertainment-ios-unsigned.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: high-tech-entertainment-ios-unsigned
+          path: \${{ runner.temp }}/high-tech-entertainment-ios-unsigned.zip
+          if-no-files-found: error
