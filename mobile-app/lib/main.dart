@@ -58,7 +58,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(child: IndexedStack(index: tab, children: pages)),
-    bottomNavigationBar: NavigationBar(
+    bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [const PlayerBar(), NavigationBar(
       selectedIndex: tab,
       onDestinationSelected: (value) => setState(() => tab = value),
       destinations: const [
@@ -70,7 +70,7 @@ class _MainScreenState extends State<MainScreen> {
         NavigationDestination(icon: Icon(Icons.video_library_outlined), label: 'Videos'),
         NavigationDestination(icon: Icon(Icons.person_outline), label: 'Account'),
       ],
-    ),
+    )]),
   );
 }
 
