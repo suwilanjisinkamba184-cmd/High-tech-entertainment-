@@ -107,7 +107,7 @@ class HtePlayback {
   Future<void> previous() async {
     if (player.position > const Duration(seconds:3)) { await player.seek(Duration.zero); return; }
     if (_queue.isEmpty) return;
-    _index = (_index-1).clamp(0,_queue.length-1);
+    _index = (_index-1).clamp(0,_queue.length-1).toInt();
     await _startTrack(_queue[_index]);
   }
   Future<void> toggleShuffle() async { shuffle=!shuffle; await player.setShuffleModeEnabled(shuffle); }
