@@ -60,6 +60,7 @@
     <button class="admin-nav-item" data-tab="releases"><span class="admin-nav-icon">▣</span><span>Releases</span><b>04</b></button>
     <button class="admin-nav-item" data-tab="inbox"><span class="admin-nav-icon">✉</span><span>Inbox</span><b>05</b></button>
     <div class="admin-side-heading admin-side-gap">SYSTEM</div>
+    <button class="admin-nav-item" data-tab="ads"><span class="admin-nav-icon">🎙</span><span>AI Ad Studio</span><b>07</b></button>
     <button class="admin-nav-item" data-tab="settings"><span class="admin-nav-icon">⚙</span><span>Settings</span><b>06</b></button>
     <a class="admin-nav-item" href="../account/"><span class="admin-nav-icon">◉</span><span>Profile & account</span><b>↗</b></a>
     <a class="admin-nav-item" href="../"><span class="admin-nav-icon">↗</span><span>Public website</span><b>↗</b></a>
@@ -152,6 +153,32 @@
       <div id="admin-inbox"><div class="empty">Loading enquiries…</div></div>
     </section>
 
+    <section class="admin-view" data-view="ads" hidden>
+      <div class="admin-section-label"><div><span>07 / AI AUDIO PRODUCTION</span><h2>ElevenLabs AI Ad Studio</h2><p>Create professional advertisement voiceovers and save them as drafts for review.</p></div></div>
+      <div class="admin-content-grid">
+        <div class="panel admin-form-panel">
+          <div class="admin-panel-heading"><span class="admin-panel-icon">🎙</span><div><h3>Generate a voice advertisement</h3><p>ElevenLabs text-to-speech · MP3 output</p></div></div>
+          <form id="ai-ad-form">
+            <div class="form-grid">
+              <div class="field full"><label>Advertisement title</label><input name="title" required maxlength="120" placeholder="e.g. High-Tech Entertainment station promo"></div>
+              <div class="field full"><label>Advertisement script</label><textarea name="script" required maxlength="2500" rows="7" placeholder="Write the exact words you want the AI presenter to speak…"></textarea><small class="admin-field-help">Maximum 2,500 characters. Listen to the generated MP3 before publishing.</small></div>
+              <div class="field full"><label>AI presenter voice</label><div style="display:flex;gap:8px"><select id="ai-ad-voice" name="voice_id" required style="flex:1"><option value="">Loading voices…</option></select><button class="btn" type="button" id="ai-ad-reload-voices">↻</button></div></div>
+              <div class="field full"><label>Voice model</label><select name="model_id"><option value="eleven_multilingual_v2">Multilingual v2 — expressive, multilingual</option><option value="eleven_turbo_v2_5">Turbo v2.5 — faster generation</option></select></div>
+            </div>
+            <button class="btn gold admin-submit" type="submit">Generate AI voice →</button>
+            <div class="status" id="ai-ad-status" role="status" aria-live="polite"></div>
+          </form>
+        </div>
+        <div class="admin-side-info">
+          <div class="admin-info-card"><span class="admin-info-icon">01</span><h3>Write your script</h3><p>Use a concise radio advert, station ident or promotional message.</p></div>
+          <div class="admin-info-card"><span class="admin-info-icon">02</span><h3>Generate and review</h3><p>The MP3 is saved in Supabase Storage. Preview it before publishing.</p></div>
+          <div class="admin-info-card"><span class="admin-info-icon">03</span><h3>Publish when ready</h3><p>New adverts are saved as drafts. Publishing makes them eligible for playback between tracks when HT Audio Ads is enabled.</p></div>
+        </div>
+      </div>
+      <div class="admin-table-heading"><div><span>YOUR AD CAMPAIGNS</span><h3>Generated advertisements</h3></div><button class="btn" id="ai-ad-refresh" type="button">↻ Refresh</button></div>
+      <div id="ai-ad-list"><div class="empty">Loading advertisements…</div></div>
+      <p class="admin-field-help">Note: Your ElevenLabs plan's terms and usage limits apply. Free-plan output is for non-commercial use only; obtain a commercial licence before using generated voices in public business advertising.</p>
+    </section>
     <section class="admin-view" data-view="settings" hidden>
       <div class="admin-section-label"><div><span>06 / SYSTEM</span><h2>Studio settings</h2><p>Information about your account, access and platform setup.</p></div></div>
       <div class="admin-settings-grid">
@@ -171,6 +198,7 @@
 <script src="../assets/app.js?v=5"></script>
 <script src="../assets/admin-upload.js?v=3"></script>
 <script src="../assets/admin-video.js?v=3"></script>
-<script src="../assets/admin-ui.js?v=3"></script>
+<script src="../assets/admin-ui.js?v=4"></script>
+<script src="../assets/ai-ad-studio.js?v=1"></script>
 </body>
 </html>
