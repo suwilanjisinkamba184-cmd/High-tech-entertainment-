@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const supabaseUrl = 'https://wqrxacjbsldbnoekbkbf.supabase.co';
 const supabaseKey = 'sb_publishable_hB_aRh-dnicpRQq3wiRtWg_JTdhmMda';
+const authRedirect = 'com.hightechentertainment.app://login-callback';
 final db = Supabase.instance.client;
 final player = AudioPlayer();
 
@@ -63,7 +67,7 @@ class Brand extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.all(20),
     child: Row(children: [
-      const CircleAvatar(radius: 25, backgroundColor: Color(0xFFD4AF37), child: Icon(Icons.graphic_eq, color: Colors.black, size: 30)),
+      SvgPicture.asset('assets/high-tech-logo.svg', width: 52, height: 52),
       const SizedBox(width: 12),
       const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('HIGH-TECH', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, letterSpacing: 2)),
@@ -130,7 +134,7 @@ class ArtistList extends StatelessWidget {
   Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
     future: rows('artists', 'name'),
     builder: (context, snapshot) {
-      if (snapshot.hasError) return const Notice('Unable to load artists. Check published artist records and RLS.');
+      if (snapshot.hasError) return const Notice('Unable to load artists: ${snapshot.error}. Check connection, Data API access and RLS.');
       if (!snapshot.hasData) return const Busy();
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published artist profiles will appear here.');
@@ -181,7 +185,7 @@ class ReleaseList extends StatelessWidget {
   Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
     future: rows('releases', 'created_at'),
     builder: (context, snapshot) {
-      if (snapshot.hasError) return const Notice('Unable to load releases.');
+      if (snapshot.hasError) return const Notice('Unable to load releases: ${snapshot.error}.');
       if (!snapshot.hasData) return const Busy();
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published releases will appear here.');
@@ -227,7 +231,7 @@ class TrackList extends StatelessWidget {
   Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
     future: rows('tracks', 'created_at'),
     builder: (context, snapshot) {
-      if (snapshot.hasError) return const Notice('Unable to load tracks. Check published tracks and RLS.');
+      if (snapshot.hasError) return const Notice('Unable to load tracks: ${snapshot.error}. Check connection, Data API access and RLS.');
       if (!snapshot.hasData) return const Busy();
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published tracks will appear here.');
@@ -242,15 +246,22 @@ class TrackList extends StatelessWidget {
             leading: SizedBox(width: 48, height: 48, child: MediaCover(url: item['cover_url']?.toString(), height: 48)),
             title: Text((item['title'] ?? 'Track').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
             subtitle: Text((item['artist'] ?? 'High-Tech Entertainment').toString()),
-            trailing: IconButton(
+            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              IconButton(tooltip: 'Share track', onPressed: () => Share.share('${item['title']} — ${item['artist']}\nHigh-Tech Entertainment'), icon: const Icon(Icons.share_outlined, size: 20)),
+              IconButton(
               icon: const Icon(Icons.play_circle_fill, color: Color(0xFFD4AF37), size: 34),
               onPressed: () async {
                 final audio = (item['audio_url'] ?? '').toString();
                 if (audio.startsWith('http')) {
-                  try { await player.setUrl(audio); await player.play(); } catch (_) {}
+                  if (audio.contains('spotify.com')) {
+                    final uri = Uri.tryParse(audio.replaceFirst('/embed/', '/'));
+                    if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  } else {
+                    try { await player.setUrl(audio); await player.play(); } catch (error) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Playback failed: $error'))); }
+                  }
                 }
               },
-            ),
+            )]),
           ));
         },
       );
@@ -342,6 +353,18 @@ class _AccountTabState extends State<AccountTab> {
   @override
   void dispose() { email.dispose(); password.dispose(); super.dispose(); }
 
+
+  Future<void> socialSignIn(OAuthProvider provider) async {
+    try {
+      final opened = await db.auth.signInWithOAuth(provider, redirectTo: authRedirect);
+      if (!opened && mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to open the sign-in page.')));
+    } on AuthException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Social sign-in is not configured: $error')));
+    }
+  }
+
   Future<void> authenticate() async {
     setState(() => busy = true);
     try {
@@ -383,6 +406,11 @@ class _AccountTabState extends State<AccountTab> {
         const SizedBox(height: 14),
         FilledButton(onPressed: busy ? null : authenticate, child: Text(busy ? 'Please wait' : (signup ? 'Create account' : 'Sign in'))),
         TextButton(onPressed: () => setState(() => signup = !signup), child: Text(signup ? 'Already registered? Sign in' : 'Create a new account')),
+        const Padding(padding: EdgeInsets.symmetric(vertical: 10), child: Text('OR CONTINUE WITH', textAlign: TextAlign.center, style: TextStyle(color: Colors.white54, letterSpacing: 1.5, fontSize: 11))),
+        OutlinedButton.icon(onPressed: busy ? null : () => socialSignIn(OAuthProvider.google), icon: const Icon(Icons.g_mobiledata), label: const Text('Continue with Google')),
+        OutlinedButton.icon(onPressed: busy ? null : () => socialSignIn(OAuthProvider.facebook), icon: const Icon(Icons.facebook), label: const Text('Continue with Facebook')),
+        OutlinedButton.icon(onPressed: busy ? null : () => socialSignIn(OAuthProvider.twitter), icon: const Icon(Icons.alternate_email), label: const Text('Continue with X / Twitter')),
+        const Text('Instagram is not a Supabase sign-in provider. The app can link to the official Instagram profile, but Instagram login cannot be enabled as a Supabase provider.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white54, fontSize: 11)),
         TextButton.icon(
           onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication),
           icon: const Icon(Icons.privacy_tip_outlined),
