@@ -44,7 +44,7 @@ jobs:
           manifest = Path("android/app/src/main/AndroidManifest.xml")
           text = manifest.read_text()
           if "android.permission.INTERNET" not in text:
-              text = text.replace("</manifest>", '    <uses-permission android:name="android.permission.INTERNET" />\\n</manifest>')
+              text = text.replace("</manifest>", '    <uses-permission android:name="android.permission.INTERNET" />\n</manifest>')
           if "com.hightechentertainment.app" not in text:
               intent = '''<intent-filter>
                           <action android:name="android.intent.action.VIEW" />
