@@ -7,17 +7,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
+import 'playback_engine.dart';
+import 'video_player_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const supabaseUrl = 'https://wqrxacjbsldbnoekbkbf.supabase.co';
 const supabaseKey = 'sb_publishable_hB_aRh-dnicpRQq3wiRtWg_JTdhmMda';
 const authRedirect = 'com.hightechentertainment.app://login-callback';
 final db = Supabase.instance.client;
-final player = AudioPlayer();
+final playback = HtePlayback();
+final player = playback.player;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(url: supabaseUrl, publishableKey: supabaseKey);
+  await JustAudioBackground.init(
+    androidNotificationChannelId: 'com.hightechentertainment.app.audio',
+    androidNotificationChannelName: 'High-Tech Music Playback',
+    androidNotificationOngoing: true,
+  );
   runApp(const HteApp());
 }
 
@@ -258,15 +267,8 @@ class TrackList extends StatelessWidget {
               IconButton(
               icon: const Icon(Icons.play_circle_fill, color: Color(0xFFD4AF37), size: 34),
               onPressed: () async {
-                final audio = (item['audio_url'] ?? '').toString();
-                if (audio.startsWith('http')) {
-                  if (audio.contains('spotify.com')) {
-                    final uri = Uri.tryParse(audio.replaceFirst('/embed/', '/'));
-                    if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  } else {
-                    try { await player.setUrl(audio); await player.play(); } catch (error) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Playback failed: $error'))); }
-                  }
-                }
+                try { await playback.playTrack(item, items); }
+                catch (error) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Playback failed: $error'))); }
               },
             )]),
           ));
@@ -279,21 +281,83 @@ class TrackList extends StatelessWidget {
 class PlayerBar extends StatelessWidget {
   const PlayerBar({super.key});
   @override
-  Widget build(BuildContext context) => StreamBuilder<PlayerState>(
-    stream: player.playerStateStream,
-    builder: (context, snapshot) {
-      final active = snapshot.data?.playing ?? false;
-      return Container(
-        color: const Color(0xFF171717),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Row(children: [
-          const Icon(Icons.graphic_eq, color: Color(0xFFD4AF37)),
-          const Expanded(child: Text('High-Tech Player')),
-          IconButton(onPressed: () => active ? player.pause() : player.play(), icon: Icon(active ? Icons.pause : Icons.play_arrow, color: const Color(0xFFD4AF37))),
-          IconButton(onPressed: () => player.stop(), icon: const Icon(Icons.stop)),
-        ]),
+  Widget build(BuildContext context) => ValueListenableBuilder<Map<String,dynamic>?>(
+    valueListenable: playback.currentTrack,
+    builder: (context, track, _) {
+      if (track == null) return const SizedBox.shrink();
+      return Material(
+        color: const Color(0xFF1B1B1B),
+        child: InkWell(
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FullPlayerPage())),
+          child: Padding(padding: const EdgeInsets.symmetric(horizontal:12,vertical:6),child:Row(children:[
+            SizedBox(width:42,height:42,child:MediaCover(url:track['cover_url']?.toString(),height:42)),
+            const SizedBox(width:10),
+            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+              Text((track['title']??'High-Tech Player').toString(),maxLines:1,overflow:TextOverflow.ellipsis),
+              Text((track['artist']??'').toString(),style:const TextStyle(color:Colors.white54,fontSize:12),maxLines:1),
+            ])),
+            StreamBuilder<PlayerState>(stream:player.playerStateStream,builder:(context,s){
+              final playing=s.data?.playing??false;
+              return IconButton(onPressed:()=>playing?player.pause():player.play(),icon:Icon(playing?Icons.pause:Icons.play_arrow,color:const Color(0xFFD4AF37)));
+            }),
+            IconButton(onPressed:()=>playback.next(),icon:const Icon(Icons.skip_next)),
+          ])),
+        ),
       );
     },
+  );
+}
+
+class FullPlayerPage extends StatelessWidget {
+  const FullPlayerPage({super.key});
+  String _time(Duration d) => '${d.inMinutes.toString().padLeft(2,'0')}:${(d.inSeconds%60).toString().padLeft(2,'0')}';
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar:AppBar(title:const Text('Now playing'),actions:[IconButton(tooltip:'Queue',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const QueuePage())),icon:const Icon(Icons.queue_music))]),
+    body:ValueListenableBuilder<Map<String,dynamic>?>(
+      valueListenable:playback.currentTrack,
+      builder:(context,track,_)=>track==null?const Notice('Choose a track to start listening.'):Padding(
+        padding:const EdgeInsets.all(24),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+          ClipRRect(borderRadius:BorderRadius.circular(22),child:SizedBox(width:260,height:260,child:MediaCover(url:track['cover_url']?.toString(),height:260))),
+          const SizedBox(height:24),
+          Text((track['title']??'Now playing').toString(),style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold),textAlign:TextAlign.center),
+          Text((track['artist']??'High-Tech Entertainment').toString(),style:const TextStyle(color:Colors.white60)),
+          const SizedBox(height:20),
+          StreamBuilder<Duration>(stream:player.positionStream,initialData:Duration.zero,builder:(context,pos){
+            final duration=player.duration??Duration.zero;
+            final value=duration.inMilliseconds==0?0.0:pos.data!.inMilliseconds.clamp(0,duration.inMilliseconds).toDouble();
+            return Column(children:[
+              Slider(value:value,max:duration.inMilliseconds==0?1:duration.inMilliseconds.toDouble(),onChanged:(v)=>player.seek(Duration(milliseconds:v.round()))),
+              Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text(_time(pos.data??Duration.zero)),Text(_time(duration))]),
+            ]);
+          }),
+          const SizedBox(height:12),
+          Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+            IconButton(onPressed:()=>playback.toggleShuffle(),icon:Icon(playback.shuffle?Icons.shuffle_on:Icons.shuffle)),
+            IconButton(iconSize:38,onPressed:()=>playback.previous(),icon:const Icon(Icons.skip_previous)),
+            StreamBuilder<PlayerState>(stream:player.playerStateStream,builder:(context,s){
+              final playing=s.data?.playing??false;
+              return IconButton(iconSize:64,color:const Color(0xFFD4AF37),onPressed:()=>playing?player.pause():player.play(),icon:Icon(playing?Icons.pause_circle_filled:Icons.play_circle_fill));
+            }),
+            IconButton(iconSize:38,onPressed:()=>playback.next(),icon:const Icon(Icons.skip_next)),
+            IconButton(onPressed:()=>playback.setRepeat(true),icon:const Icon(Icons.repeat_one)),
+          ]),
+          ValueListenableBuilder<bool>(valueListenable:playback.adPlaying,builder:(context,isAd,_)=>Text(isAd?'Sponsored audio • High-Tech Entertainment':'Quality Sound, Global Vibes',style:const TextStyle(color:Colors.white54,fontSize:12))),
+        ]),
+      ),
+    ),
+  );
+}
+
+class QueuePage extends StatelessWidget {
+  const QueuePage({super.key});
+  @override
+  Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:const Text('Up next')),
+    body:ValueListenableBuilder<List<Map<String,dynamic>>>(valueListenable:playback.queueView,builder:(context,items,_)=>items.isEmpty?const Notice('Your queue is empty.'):ListView.builder(itemCount:items.length,itemBuilder:(context,i){
+      final item=items[i];
+      return ListTile(leading:SizedBox(width:48,height:48,child:MediaCover(url:item['cover_url']?.toString(),height:48)),title:Text((item['title']??'Track').toString()),subtitle:Text((item['artist']??'').toString()),onTap:()=>playback.playTrack(item,items));
+    })),
   );
 }
 
@@ -320,8 +384,12 @@ class VideosTab extends StatelessWidget {
               subtitle: Text((item['artist'] ?? 'High-Tech Entertainment').toString()),
               trailing: const Icon(Icons.open_in_new, color: Color(0xFFD4AF37)),
               onTap: () async {
-                final link = Uri.tryParse((item['video_url'] ?? '').toString());
-                if (link != null && link.hasScheme) await launchUrl(link, mode: LaunchMode.externalApplication);
+                final raw=(item['video_url']??'').toString();
+                final link=Uri.tryParse(raw);
+                if(link==null||!link.hasScheme)return;
+                final isWebVideo=raw.contains('youtube.com')||raw.contains('youtu.be')||raw.contains('vimeo.com');
+                if(isWebVideo){await launchUrl(link,mode:LaunchMode.externalApplication);return;}
+                if(context.mounted) Navigator.push(context,MaterialPageRoute(builder:(_)=>HteVideoPlayerPage(url:raw,title:(item['title']??'Video').toString())));
               },
             ));
           },
@@ -518,9 +586,28 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   String version = 'Loading…';
   bool checking = false;
+  bool autoplaySetting = true;
+  bool shuffleSetting = false;
+  bool audioAdsSetting = true;
+  int adFrequency = 3;
 
   @override
-  void initState() { super.initState(); _loadVersion(); }
+  void initState() { super.initState(); _loadVersion(); _loadPlaybackSettings(); }
+
+  Future<void> _loadPlaybackSettings() async {
+    final prefs=await SharedPreferences.getInstance();
+    autoplaySetting=prefs.getBool('hte_autoplay')??true;
+    shuffleSetting=prefs.getBool('hte_shuffle')??false;
+    audioAdsSetting=prefs.getBool('hte_audio_ads')??true;
+    adFrequency=prefs.getInt('hte_ad_frequency')??3;
+    playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting; playback.adEvery=adFrequency;
+    if(mounted)setState((){});
+  }
+  Future<void> _savePlaybackSetting(String key,Object value) async {
+    final prefs=await SharedPreferences.getInstance();
+    if(value is bool) await prefs.setBool(key,value);
+    if(value is int) await prefs.setInt(key,value);
+  }
 
   Future<void> _loadVersion() async {
     try {
@@ -620,6 +707,14 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         const Divider(height: 1),
         ListTile(leading: const Icon(Icons.info_outline), title: const Text('App version'), subtitle: Text(version)),
+      ])),
+      const SizedBox(height: 12),
+      const Heading('Playback preferences'),
+      Card(child: Column(children: [
+        SwitchListTile(title:const Text('Smart Autoplay'),subtitle:const Text('Continue with recommended music when the queue ends'),value:autoplaySetting,onChanged:(v){setState(()=>autoplaySetting=v);playback.autoplay=v;_savePlaybackSetting('hte_autoplay',v);}),
+        SwitchListTile(title:const Text('Shuffle'),subtitle:const Text('Play queued tracks in random order'),value:shuffleSetting,onChanged:(v){setState(()=>shuffleSetting=v);playback.shuffle=v;player.setShuffleModeEnabled(v);_savePlaybackSetting('hte_shuffle',v);}),
+        SwitchListTile(title:const Text('HT Audio Ads'),subtitle:const Text('Play promotional audio between tracks'),value:audioAdsSetting,onChanged:(v){setState(()=>audioAdsSetting=v);playback.audioAdsEnabled=v;_savePlaybackSetting('hte_audio_ads',v);}),
+        ListTile(title:const Text('Ad interval'),subtitle:const Text('Play a promotional clip after this many songs'),trailing:DropdownButton<int>(value:adFrequency,items:const [DropdownMenuItem(value:3,child:Text('3 songs')),DropdownMenuItem(value:4,child:Text('4 songs'))],onChanged:(v){if(v!=null){setState(()=>adFrequency=v);playback.adEvery=v;_savePlaybackSetting('hte_ad_frequency',v);}})),
       ])),
       const SizedBox(height: 12),
       Card(child: Column(children: [
