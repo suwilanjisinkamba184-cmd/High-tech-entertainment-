@@ -369,6 +369,11 @@ class _AccountTabState extends State<AccountTab> {
         Center(child: Text(user.email ?? 'Signed in')),
         const SizedBox(height: 18),
         FilledButton(onPressed: () async { await db.auth.signOut(); if (mounted) setState(() {}); }, child: const Text('Sign out')),
+        TextButton.icon(
+          onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html'), mode: LaunchMode.externalApplication),
+          icon: const Icon(Icons.privacy_tip_outlined),
+          label: const Text('Privacy policy & account deletion'),
+        ),
       ] else ...[
         const Text('Your account', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
@@ -378,6 +383,15 @@ class _AccountTabState extends State<AccountTab> {
         const SizedBox(height: 14),
         FilledButton(onPressed: busy ? null : authenticate, child: Text(busy ? 'Please wait' : (signup ? 'Create account' : 'Sign in'))),
         TextButton(onPressed: () => setState(() => signup = !signup), child: Text(signup ? 'Already registered? Sign in' : 'Create a new account')),
+        TextButton.icon(
+          onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication),
+          icon: const Icon(Icons.privacy_tip_outlined),
+          label: const Text('Privacy policy'),
+        ),
+        TextButton(
+          onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html'), mode: LaunchMode.externalApplication),
+          child: const Text('Request account deletion'),
+        ),
       ],
     ]);
   }
