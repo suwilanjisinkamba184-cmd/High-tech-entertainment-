@@ -324,10 +324,11 @@ class FullPlayerPage extends StatelessWidget {
           const SizedBox(height:20),
           StreamBuilder<Duration>(stream:player.positionStream,initialData:Duration.zero,builder:(context,pos){
             final duration=player.duration??Duration.zero;
-            final value=duration.inMilliseconds==0?0.0:pos.data!.inMilliseconds.clamp(0,duration.inMilliseconds).toDouble();
+            final position=pos.data??Duration.zero;
+            final value=duration.inMilliseconds==0?0.0:position.inMilliseconds.clamp(0,duration.inMilliseconds).toDouble();
             return Column(children:[
-              Slider(value:value,max:duration.inMilliseconds==0?1:duration.inMilliseconds.toDouble(),onChanged:(v)=>player.seek(Duration(milliseconds:v.round()))),
-              Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text(_time(pos.data??Duration.zero)),Text(_time(duration))]),
+              Slider(value:value,max:duration.inMilliseconds==0?1.0:duration.inMilliseconds.toDouble(),onChanged:(v)=>player.seek(Duration(milliseconds:v.round()))),
+              Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text(_time(position)),Text(_time(duration))]),
             ]);
           }),
           const SizedBox(height:12),
