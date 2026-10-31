@@ -13,6 +13,10 @@ on:
       - '.github/workflows/mobile-build.yml'
   workflow_dispatch:
 
+concurrency:
+  group: hte-mobile-build-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -204,6 +208,7 @@ jobs:
         working-directory: ${{ runner.temp }}/hte_app
         run: |
           flutter pub get
+          dart run flutter_launcher_icons
           flutter build ios --release --no-codesign
       - name: Package unsigned iOS app
         run: ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/hte_app/build/ios/iphoneos/Runner.app" "$RUNNER_TEMP/high-tech-entertainment-ios-unsigned.zip"
