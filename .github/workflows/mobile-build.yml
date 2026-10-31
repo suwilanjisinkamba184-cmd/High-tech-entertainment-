@@ -33,6 +33,8 @@ jobs:
           cp -R mobile-app/lib "$RUNNER_TEMP/hte_app/lib"
           mkdir -p "$RUNNER_TEMP/hte_app/assets"
           cp -R mobile-app/assets/. "$RUNNER_TEMP/hte_app/assets/"
+          python3 -m pip install --quiet cairosvg
+          python3 -c "import cairosvg; cairosvg.svg2png(url='$RUNNER_TEMP/hte_app/assets/high-tech-logo.svg', write_to='$RUNNER_TEMP/hte_app/assets/high-tech-logo.png', output_width=1024, output_height=1024)"
           mkdir -p "$RUNNER_TEMP/hte_app/assets"
           cp -R mobile-app/assets/. "$RUNNER_TEMP/hte_app/assets/"
       - name: Set Play Store Android identity and target API
