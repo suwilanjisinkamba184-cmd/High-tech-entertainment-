@@ -1,6 +1,6 @@
 # High Tech Entertainment
 
-Premium, responsive music and artist platform for High Tech Entertainment, hosted on GitHub Pages and connected to Supabase.
+Premium, responsive music and artist platform for High Tech Entertainment, hosted on Netlify and connected to Supabase.
 
 ## Website pages
 - Public website: `/` — music catalogue, artist profiles, releases, about and contact form.
@@ -8,13 +8,13 @@ Premium, responsive music and artist platform for High Tech Entertainment, hoste
 - Account profile: `/account/` — private display name, biography, phone and profile photo.
 
 ## Stack
-- Static HTML/CSS/JavaScript deployed by GitHub Actions to GitHub Pages.
+- Static HTML/CSS/JavaScript deployed to Netlify from the `main` branch.
 - Supabase Auth for email/password and Google sign-in.
 - Supabase Postgres with Row Level Security for catalogue, profile and contact data.
 - Supabase Storage: `hte-audio` for public published music and `hte-avatars` for private profile photos.
 
 ## Deployment
-GitHub Pages is built by `.github/workflows/deploy-pages.yml`. The previous competing Pages workflow has been removed. 
+Production website: https://high-techmedia.netlify.app/. Netlify publish directory: `.`; build command: none. The production branch should be `main`. 
 
 ## Supabase configuration
 The browser config in `supabase-config.js` contains only the project URL and browser-safe publishable key. Never put a Supabase service-role or `sb_secret_` key in frontend files.
