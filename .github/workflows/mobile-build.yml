@@ -45,9 +45,9 @@ jobs:
               if not path.exists():
                   continue
               text = path.read_text()
-              text = re.sub(r'targetSdk\\s*=\\s*flutter\\.targetSdkVersion', 'targetSdk = 36', text)
-              text = re.sub(r'targetSdkVersion\\s*=\\s*flutter\\.targetSdkVersion', 'targetSdkVersion = 36', text)
-              text = re.sub(r'targetSdkVersion\\s+flutter\\.targetSdkVersion', 'targetSdkVersion 36', text)
+              text = re.sub(r'targetSdk\s*=\s*flutter\.targetSdkVersion', 'targetSdk = 36', text)
+              text = re.sub(r'targetSdkVersion\s*=\s*flutter\.targetSdkVersion', 'targetSdkVersion = 36', text)
+              text = re.sub(r'targetSdkVersion\s+flutter\.targetSdkVersion', 'targetSdkVersion 36', text)
               path.write_text(text)
           PY
           grep -R "targetSdk" android/app/build.gradle*
