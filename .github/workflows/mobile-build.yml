@@ -51,6 +51,65 @@ jobs:
               path.write_text(text)
           PY
           grep -R "targetSdk" android/app/build.gradle*
+      - name: Configure Android upload-key signing
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_STORE_PASSWORD != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        working-directory: ${{ runner.temp }}/hte_app
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hte-upload-key.jks"
+          cat > android/key.properties <<EOF
+          storePassword=$ANDROID_STORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=$RUNNER_TEMP/hte-upload-key.jks
+          EOF
+          python3 - <<'PY'
+          from pathlib import Path
+          kts = Path("android/app/build.gradle.kts")
+          groovy = Path("android/app/build.gradle")
+          if kts.exists():
+              text = kts.read_text()
+              imports = 'import java.util.Properties\\nimport java.io.FileInputStream\\n\\nval keystoreProperties = Properties()\\nval keystorePropertiesFile = rootProject.file("key.properties")\\nif (keystorePropertiesFile.exists()) { keystoreProperties.load(FileInputStream(keystorePropertiesFile)) }\\n\\n'
+              if "val keystorePropertiesFile" not in text:
+                  text = imports + text
+              block = '''    signingConfigs {
+                  create("release") {
+                      keyAlias = keystoreProperties["keyAlias"] as String
+                      keyPassword = keystoreProperties["keyPassword"] as String
+                      storeFile = file(keystoreProperties["storeFile"] as String)
+                      storePassword = keystoreProperties["storePassword"] as String
+                  }
+              }
+          '''
+              if 'create("release")' not in text:
+                  text = text.replace("    buildTypes {", block + "    buildTypes {")
+              text = text.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
+              kts.write_text(text)
+          elif groovy.exists():
+              text = groovy.read_text()
+              imports = "def keystoreProperties = new Properties()\\ndef keystorePropertiesFile = rootProject.file('key.properties')\\nif (keystorePropertiesFile.exists()) { keystoreProperties.load(new FileInputStream(keystorePropertiesFile)) }\\n\\n"
+              if "keystorePropertiesFile" not in text:
+                  text = imports + text
+              block = """    signingConfigs {
+              release {
+                  keyAlias keystoreProperties['keyAlias']
+                  keyPassword keystoreProperties['keyPassword']
+                  storeFile file(keystoreProperties['storeFile'])
+                  storePassword keystoreProperties['storePassword']
+              }
+          }
+          """
+              if "signingConfigs {" not in text:
+                  text = text.replace("    buildTypes {", block + "    buildTypes {")
+              text = text.replace("signingConfig signingConfigs.debug", "signingConfig signingConfigs.release")
+              groovy.write_text(text)
+          else:
+              raise SystemExit("Android Gradle build file not found")
+          PY
       - name: Install dependencies
         working-directory: ${{ runner.temp }}/hte_app
         run: flutter pub get
