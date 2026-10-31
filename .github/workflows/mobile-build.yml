@@ -39,12 +39,6 @@ jobs:
           cp -R mobile-app/assets/. "$RUNNER_TEMP/hte_app/assets/"
           python3 -m pip install --quiet cairosvg
           python3 -c "import cairosvg; cairosvg.svg2png(url='$RUNNER_TEMP/hte_app/assets/high-tech-logo.svg', write_to='$RUNNER_TEMP/hte_app/assets/high-tech-logo.png', output_width=1024, output_height=1024)"
-          mkdir -p "$RUNNER_TEMP/hte_app/assets"
-          cp -R mobile-app/assets/. "$RUNNER_TEMP/hte_app/assets/"
-          python3 -m pip install --quiet cairosvg
-          python3 -c "import cairosvg; cairosvg.svg2png(url='$RUNNER_TEMP/hte_app/assets/high-tech-logo.svg', write_to='$RUNNER_TEMP/hte_app/assets/high-tech-logo.png', output_width=1024, output_height=1024)"
-          mkdir -p "$RUNNER_TEMP/hte_app/assets"
-          cp -R mobile-app/assets/. "$RUNNER_TEMP/hte_app/assets/"
       - name: Set Play Store Android identity and target API
         working-directory: ${{ runner.temp }}/hte_app
         run: |
@@ -181,8 +175,7 @@ jobs:
           Copy-Item mobile-app\lib "$env:RUNNER_TEMP\hte_app\lib" -Recurse
           New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\hte_app\assets" | Out-Null
           Copy-Item mobile-app\assets\* "$env:RUNNER_TEMP\hte_app\assets" -Recurse -Force
-          python -m pip install --quiet cairosvg
-          python -c "import cairosvg; cairosvg.svg2png(url=r'$env:RUNNER_TEMP\hte_app\assets\high-tech-logo.svg', write_to=r'$env:RUNNER_TEMP\hte_app\assets\high-tech-logo.png', output_width=1024, output_height=1024)"
+          # Windows desktop uses the bundled SVG at runtime; no Cairo native library is required.
       - name: Build Windows app
         shell: pwsh
         working-directory: ${{ runner.temp }}\hte_app
@@ -216,7 +209,7 @@ jobs:
         working-directory: ${{ runner.temp }}/hte_app
         run: |
           flutter pub get
-          dart run flutter_launcher_icons
+          # Build the unsigned simulator/device app without requiring a generated PNG icon.
           flutter build ios --release --no-codesign
       - name: Package unsigned iOS app
         run: ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/hte_app/build/ios/iphoneos/Runner.app" "$RUNNER_TEMP/high-tech-entertainment-ios-unsigned.zip"
