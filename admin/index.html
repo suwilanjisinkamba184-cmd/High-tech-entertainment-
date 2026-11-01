@@ -60,7 +60,7 @@
     <button class="admin-nav-item" data-tab="releases"><span class="admin-nav-icon">▣</span><span>Releases</span><b>04</b></button>
     <button class="admin-nav-item" data-tab="inbox"><span class="admin-nav-icon">✉</span><span>Inbox</span><b>05</b></button>
     <div class="admin-side-heading admin-side-gap">SYSTEM</div>
-    <button class="admin-nav-item" data-tab="ads"><span class="admin-nav-icon">🎙</span><span>AI Ad Studio</span><b>07</b></button>
+    <button class="admin-nav-item hte-ai-nav" data-tab="ads"><span class="admin-nav-icon">🎙</span><span>AI Ad Studio</span><b>07</b></button>
     <button class="admin-nav-item" data-tab="settings"><span class="admin-nav-icon">⚙</span><span>Settings</span><b>06</b></button>
     <a class="admin-nav-item" href="../account/"><span class="admin-nav-icon">◉</span><span>Profile & account</span><b>↗</b></a>
     <a class="admin-nav-item" href="../"><span class="admin-nav-icon">↗</span><span>Public website</span><b>↗</b></a>
@@ -92,6 +92,11 @@
         <button class="admin-quick-card" data-tab="releases" type="button"><span>▣</span><strong>Publish a release</strong><small>Showcase a new project</small><b>Manage releases →</b></button>
         <button class="admin-quick-card" data-tab="inbox" type="button"><span>✉</span><strong>Check enquiries</strong><small>Review booking and contact messages</small><b>Open inbox →</b></button>
       </div>
+      <button class="hte-ai-feature" type="button" data-tab="ads">
+        <span class="hte-ai-feature-icon">✦</span>
+        <span class="hte-ai-feature-copy"><small>NEW · AI-POWERED AUDIO PRODUCTION</small><strong>ElevenLabs AI Ad Studio</strong><span>Create professional voice adverts, preview MP3 drafts and publish approved campaigns directly to your music experience.</span></span>
+        <span class="hte-ai-feature-action">Open AI Studio <b>→</b></span>
+      </button>
       <div class="admin-bottom-note"><span class="admin-note-icon">✓</span><div><strong>Your studio is protected</strong><p>Founder access is restricted by the authorised Supabase account and database Row Level Security policies. Keep your password and private keys confidential.</p></div></div>
     </section>
 
@@ -154,30 +159,38 @@
     </section>
 
     <section class="admin-view" data-view="ads" hidden>
-      <div class="admin-section-label"><div><span>07 / AI AUDIO PRODUCTION</span><h2>ElevenLabs AI Ad Studio</h2><p>Create professional advertisement voiceovers and save them as drafts for review.</p></div></div>
-      <div class="admin-content-grid">
-        <div class="panel admin-form-panel">
-          <div class="admin-panel-heading"><span class="admin-panel-icon">🎙</span><div><h3>Generate a voice advertisement</h3><p>ElevenLabs text-to-speech · MP3 output</p></div></div>
+      <div class="hte-ai-hero">
+        <div class="hte-ai-orb">✦</div>
+        <div><div class="eyebrow">HIGH-TECH ENTERTAINMENT / AI PRODUCTION</div><h2>Make your brand <span>sound unforgettable.</span></h2><p>Create studio-quality voice advertisements with ElevenLabs, save scripts on this device, review generated MP3s and publish only when you're ready.</p></div>
+        <div class="hte-ai-badge"><span></span> AI STUDIO</div>
+      </div>
+      <div class="hte-ai-status-strip"><span>●</span><strong>Founder-only workspace</strong><span>·</span><span>ElevenLabs text-to-speech</span><span>·</span><span>MP3 drafts stored in Supabase</span></div>
+      <div class="admin-section-label"><div><span>01 / CREATE</span><h2>Voice advertisement creator</h2><p>Write or restore your script, select a presenter voice and generate an unpublished draft.</p></div></div>
+      <div class="admin-content-grid hte-ai-layout">
+        <div class="panel admin-form-panel hte-ai-form-panel">
+          <div class="admin-panel-heading"><span class="admin-panel-icon">🎙</span><div><h3>Build your advert</h3><p>Your script is saved locally when you type, and can also be saved manually.</p></div></div>
           <form id="ai-ad-form">
             <div class="form-grid">
-              <div class="field full"><label>Advertisement title</label><input name="title" required maxlength="120" placeholder="e.g. High-Tech Entertainment station promo"></div>
-              <div class="field full"><label>Advertisement script</label><textarea name="script" required maxlength="2500" rows="7" placeholder="Write the exact words you want the AI presenter to speak…"></textarea><small class="admin-field-help">Maximum 2,500 characters. Listen to the generated MP3 before publishing.</small></div>
-              <div class="field full"><label>AI presenter voice</label><div style="display:flex;gap:8px"><select id="ai-ad-voice" name="voice_id" required style="flex:1"><option value="">Loading voices…</option></select><button class="btn" type="button" id="ai-ad-reload-voices">↻</button></div></div>
-              <div class="field full"><label>Voice model</label><select name="model_id"><option value="eleven_multilingual_v2">Multilingual v2 — expressive, multilingual</option><option value="eleven_turbo_v2_5">Turbo v2.5 — faster generation</option></select></div>
+              <div class="field full"><label for="ai-ad-title">Advertisement title</label><input id="ai-ad-title" name="title" required maxlength="120" placeholder="e.g. High-Tech Entertainment station promo"></div>
+              <div class="field full"><label for="ai-ad-script">Advertisement script <span class="hte-ai-char-count" id="ai-ad-char-count">0 / 2,500</span></label><textarea id="ai-ad-script" name="script" required maxlength="2500" rows="8" placeholder="Write the exact words you want your AI presenter to speak…"></textarea><small class="admin-field-help">Tip: short sentences and punctuation help create a natural radio delivery.</small>
+                <div class="hte-ai-script-actions"><button class="btn" type="button" id="ai-ad-save-script">Save script</button><button class="btn" type="button" id="ai-ad-restore-script">Restore saved</button><button class="btn" type="button" id="ai-ad-use-sample">Insert sample</button><button class="btn" type="button" id="ai-ad-clear-script">Clear</button><span id="ai-ad-save-state" aria-live="polite">Auto-save is on</span></div>
+              </div>
+              <div class="field full"><label for="ai-ad-voice">AI presenter voice</label><div class="hte-ai-voice-row"><select id="ai-ad-voice" name="voice_id" required><option value="">Sign in to load voices…</option></select><button class="btn" type="button" id="ai-ad-reload-voices">↻ Reload voices</button></div><small class="admin-field-help" id="ai-ad-voice-help">Your available ElevenLabs voices will appear here.</small></div>
+              <div class="field full"><label for="ai-ad-model">Voice model</label><select id="ai-ad-model" name="model_id"><option value="eleven_multilingual_v2">Multilingual v2 — expressive, multilingual</option><option value="eleven_turbo_v2_5">Turbo v2.5 — faster generation</option></select></div>
             </div>
-            <button class="btn gold admin-submit" type="submit">Generate AI voice →</button>
+            <button class="btn gold admin-submit hte-ai-generate" type="submit" id="ai-ad-generate">✦ Generate AI voice draft</button>
             <div class="status" id="ai-ad-status" role="status" aria-live="polite"></div>
           </form>
         </div>
-        <div class="admin-side-info">
-          <div class="admin-info-card"><span class="admin-info-icon">01</span><h3>Write your script</h3><p>Use a concise radio advert, station ident or promotional message.</p></div>
-          <div class="admin-info-card"><span class="admin-info-icon">02</span><h3>Generate and review</h3><p>The MP3 is saved in Supabase Storage. Preview it before publishing.</p></div>
-          <div class="admin-info-card"><span class="admin-info-icon">03</span><h3>Publish when ready</h3><p>New adverts are saved as drafts. Publishing makes them eligible for playback between tracks when HT Audio Ads is enabled.</p></div>
+        <div class="admin-side-info hte-ai-guide">
+          <div class="admin-info-card"><span class="admin-info-icon">01 / SCRIPT</span><h3>Write once, keep it safe</h3><p>Your script auto-saves in this browser. Use Save script before leaving, or restore it when you return on this device.</p></div>
+          <div class="admin-info-card"><span class="admin-info-icon">02 / GENERATE</span><h3>Create an MP3 draft</h3><p>ElevenLabs generates the presenter voice. The finished audio is uploaded to your Supabase storage bucket.</p></div>
+          <div class="admin-info-card"><span class="admin-info-icon">03 / REVIEW</span><h3>Listen before publishing</h3><p>Every new advert starts unpublished. Preview the audio, then publish it when you're satisfied.</p></div>
+          <div class="admin-info-card hte-ai-notice"><span class="admin-info-icon">IMPORTANT</span><h3>Commercial usage</h3><p>Check your ElevenLabs subscription licence before using generated voices in public business advertising. Free-plan output may be restricted to non-commercial use.</p></div>
         </div>
       </div>
-      <div class="admin-table-heading"><div><span>YOUR AD CAMPAIGNS</span><h3>Generated advertisements</h3></div><button class="btn" id="ai-ad-refresh" type="button">↻ Refresh</button></div>
-      <div id="ai-ad-list"><div class="empty">Loading advertisements…</div></div>
-      <p class="admin-field-help">Note: Your ElevenLabs plan's terms and usage limits apply. Free-plan output is for non-commercial use only; obtain a commercial licence before using generated voices in public business advertising.</p>
+      <div class="admin-table-heading hte-ai-campaign-heading"><div><span>02 / CAMPAIGN LIBRARY</span><h3>Your generated advertisements</h3><p class="admin-field-help">Manage drafts and published audio campaigns.</p></div><button class="btn" id="ai-ad-refresh" type="button">↻ Refresh campaigns</button></div>
+      <div id="ai-ad-list" class="hte-ai-campaign-list"><div class="empty">Your campaigns will appear here after loading.</div></div>
     </section>
     <section class="admin-view" data-view="settings" hidden>
       <div class="admin-section-label"><div><span>06 / SYSTEM</span><h2>Studio settings</h2><p>Information about your account, access and platform setup.</p></div></div>
