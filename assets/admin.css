@@ -157,3 +157,29 @@
 .hte-ai-voice-row .btn{white-space:nowrap}
 @media(max-width:780px){.hte-ai-feature{align-items:flex-start;flex-wrap:wrap;padding:16px}.hte-ai-feature-copy{min-width:0}.hte-ai-feature-action{margin-left:70px}.hte-ai-hero{align-items:flex-start;flex-direction:column}.hte-ai-badge{align-self:flex-start}.hte-ai-orb{right:-80px;top:-60px}.hte-ai-voice-row{align-items:stretch;flex-direction:column}.hte-ai-voice-row .btn{width:100%}}
 @media(max-width:560px){.hte-ai-feature-icon{width:44px;height:44px;flex-basis:44px}.hte-ai-feature-copy strong{font-size:.93rem}.hte-ai-feature-copy>span{font-size:.7rem}.hte-ai-feature-action{margin-left:60px}.hte-ai-hero{padding:22px}.hte-ai-hero h2{font-size:2rem}.hte-ai-script-actions>span{width:100%;margin:3px 0 0}.hte-ai-campaign-top{align-items:flex-start}.hte-ai-campaign .table-actions{width:100%}.hte-ai-campaign .table-actions .btn{flex:1}}
+
+
+/* Founder Studio mobile navigation and AI launch visibility — 2026 refresh */
+@media(max-width:780px){
+  .admin-topbar{position:relative;z-index:40}
+  .admin-topbar-inner{flex-wrap:wrap;justify-content:space-between;padding:10px 0;min-height:unset}
+  .admin-top-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;max-width:58%}
+  .admin-sidebar{top:0;gap:7px;overscroll-behavior-x:contain;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;padding:9px 12px}
+  .admin-nav-item{scroll-snap-align:start;flex:0 0 auto}
+  .hte-ai-nav{order:-1;position:sticky;left:0;z-index:2;box-shadow:8px 0 12px #070c13aa}
+  .hte-ai-feature{display:flex!important;min-height:96px;position:relative;z-index:1;margin:18px 0 22px;box-shadow:0 12px 28px #0004}
+  .hte-ai-feature-copy{flex:1 1 190px}
+  .hte-ai-feature-action{margin-left:60px}
+}
+@media(max-width:560px){
+  .admin-topbar-inner{align-items:center}
+  .admin-topbar .brand{max-width:42%;line-height:1.2}
+  .admin-top-actions{max-width:56%;gap:5px}
+  .admin-top-actions .btn{min-height:38px;padding:7px 9px;font-size:.68rem}
+  .admin-sidebar{padding-inline:9px}
+  .hte-ai-feature{padding:15px;gap:11px}
+  .hte-ai-feature-copy small{font-size:.54rem;letter-spacing:.1em}
+  .hte-ai-feature-copy strong{font-size:.9rem}
+  .hte-ai-feature-copy>span{font-size:.68rem}
+  .hte-ai-feature-action{margin-left:55px;font-size:.7rem}
+}
