@@ -36,6 +36,10 @@ jobs:
           node --check _site/assets/app.js
           node --check _site/assets/streaming.js
           node --check _site/assets/videos.js
+          node --check _site/assets/admin-upload.js
+          node --check _site/assets/admin-video.js
+          node --check _site/assets/admin-ui.js
+          node --check _site/assets/ai-ad-studio.js
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
