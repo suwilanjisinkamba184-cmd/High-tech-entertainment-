@@ -19,7 +19,11 @@ class HtePlayback {
     player.processingStateStream.listen((state) {
       if (state == ProcessingState.completed && !_handlingCompletion) {
         _handlingCompletion = true;
-        _advanceAfterCompletion().whenComplete(() => _handlingCompletion = false);
+        _advanceAfterCompletion()
+            .catchError((error) {
+              debugPrint('HTE queue advance failed: $error');
+            })
+            .whenComplete(() => _handlingCompletion = false);
       }
     });
   }
