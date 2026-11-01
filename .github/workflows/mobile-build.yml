@@ -191,30 +191,3 @@ jobs:
           path: ${{ runner.temp }}/high-tech-entertainment-windows.zip
           if-no-files-found: error
 
-  ios:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - name: Create Flutter platform scaffold
-        run: |
-          flutter create --platforms=ios --org com.hightechentertainment --project-name app "$RUNNER_TEMP/hte_app"
-          cp mobile-app/pubspec.yaml "$RUNNER_TEMP/hte_app/pubspec.yaml"
-          rm -rf "$RUNNER_TEMP/hte_app/lib"
-          cp -R mobile-app/lib "$RUNNER_TEMP/hte_app/lib"
-      - name: Build unsigned iOS app
-        working-directory: ${{ runner.temp }}/hte_app
-        run: |
-          flutter pub get
-          # Build the unsigned simulator/device app without requiring a generated PNG icon.
-          flutter build ios --release --no-codesign
-      - name: Package unsigned iOS app
-        run: ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/hte_app/build/ios/iphoneos/Runner.app" "$RUNNER_TEMP/high-tech-entertainment-ios-unsigned.zip"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: high-tech-entertainment-ios-unsigned
-          path: ${{ runner.temp }}/high-tech-entertainment-ios-unsigned.zip
-          if-no-files-found: error
