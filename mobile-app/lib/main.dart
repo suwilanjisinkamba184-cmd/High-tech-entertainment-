@@ -1064,6 +1064,7 @@ class _AdminConsolePageState extends State<AdminConsolePage> {
     try {
       if (await db.rpc('hte_is_admin') != true) throw Exception('Administrator access required.');
       await db.from(table).update({'is_published': value}).eq('id', id);
+      invalidateCatalogueRows();
       await _load();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Update failed: $e')));
@@ -1273,10 +1274,25 @@ class _SettingsPageState extends State<SettingsPage> {
   );
 }
 
-Future<List<Map<String, dynamic>>> rows(String table, String orderBy) async {
-  final result = await db.from(table).select().eq('is_published', true).order(orderBy, ascending: false);
-  return List<Map<String, dynamic>>.from(result);
+final Map<String, Future<List<Map<String, dynamic>>>> _catalogueRowsCache = {};
+
+Future<List<Map<String, dynamic>>> rows(String table, String orderBy) {
+  final key = '$table::$orderBy';
+  return _catalogueRowsCache.putIfAbsent(key, () async {
+    try {
+      final result = await db.from(table).select()
+          .eq('is_published', true)
+          .order(orderBy, ascending: false);
+      return List<Map<String, dynamic>>.from(result);
+    } catch (_) {
+      // Do not permanently cache a transient network, API or RLS failure.
+      _catalogueRowsCache.remove(key);
+      rethrow;
+    }
+  });
 }
+
+void invalidateCatalogueRows() => _catalogueRowsCache.clear();
 
 class Busy extends StatelessWidget {
   const Busy({super.key});
