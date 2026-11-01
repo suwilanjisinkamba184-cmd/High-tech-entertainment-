@@ -800,20 +800,7 @@ class _AccountTabState extends State<AccountTab> {
   bool busy = false;
 
   @override
-  void dispose() { email.dispose(); password.dispose(); super.dispose(); }
-
-
-  Future<void> socialSignIn(OAuthProvider provider) async {
-    try {
-      final opened = await db.auth.signInWithOAuth(provider, redirectTo: authRedirect);
-      if (!opened && mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to open the sign-in page.')));
-    } on AuthException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
-    } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Social sign-in is not configured: $error')));
-    }
-  }
-
+  void dispose() { email.dispose(); password.dispose(); super.dispose(); } 
   Future<void> authenticate() async {
     setState(() => busy = true);
     try {
@@ -866,11 +853,6 @@ class _AccountTabState extends State<AccountTab> {
         const SizedBox(height: 14),
         FilledButton(onPressed: busy ? null : authenticate, child: Text(busy ? 'Please wait' : (signup ? 'Create account' : 'Sign in'))),
         TextButton(onPressed: () => setState(() => signup = !signup), child: Text(signup ? 'Already registered? Sign in' : 'Create a new account')),
-        const Padding(padding: EdgeInsets.symmetric(vertical: 10), child: Text('OR CONTINUE WITH', textAlign: TextAlign.center, style: TextStyle(color: Colors.white54, letterSpacing: 1.5, fontSize: 11))),
-        OutlinedButton.icon(onPressed: busy ? null : () => socialSignIn(OAuthProvider.google), icon: const Icon(Icons.g_mobiledata), label: const Text('Continue with Google')),
-        OutlinedButton.icon(onPressed: busy ? null : () => socialSignIn(OAuthProvider.facebook), icon: const Icon(Icons.facebook), label: const Text('Continue with Facebook')),
-        OutlinedButton.icon(onPressed: busy ? null : () => socialSignIn(OAuthProvider.x), icon: const Icon(Icons.alternate_email), label: const Text('Continue with X / Twitter')),
-        const Text('Instagram is not a Supabase sign-in provider. The app can link to the official Instagram profile, but Instagram login cannot be enabled as a Supabase provider.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white54, fontSize: 11)),
         TextButton.icon(
           onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication),
           icon: const Icon(Icons.privacy_tip_outlined),
