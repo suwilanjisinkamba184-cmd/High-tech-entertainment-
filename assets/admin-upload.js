@@ -13,11 +13,12 @@ document.addEventListener('submit',async function(event){
     const config=window.HTE_SUPABASE_CONFIG||{};
     if(!window.supabase||!config.url||!config.publishableKey)throw new Error('The upload service did not load. Refresh the page and try again.');
     const client=window.supabase.createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});
-    say('Checking founder access…');
+    say('Checking administrator access…');
     const {data:auth,error:authError}=await client.auth.getSession();
     if(authError)throw authError;
     const user=auth.session?.user;
-    if(!user||user.id!=='b268df9e-eff5-43b9-a38f-869b33add38b'||String(user.email||'').toLowerCase()!=='suwilanjisinkamba184@gmail.com')throw new Error('Founder session not found. Sign out, sign in again, and retry.');
+    const {data:roleAllowed,error:roleError}=await client.rpc('hte_is_admin');
+    if(roleError||roleAllowed!==true||!user)throw new Error('Administrator access is required. Sign in with an authorised HTE admin account.');
     const data=new FormData(form);
     const file=data.get('audio');
     if(!(file instanceof File)||!file.size)throw new Error('Please select an audio file.');

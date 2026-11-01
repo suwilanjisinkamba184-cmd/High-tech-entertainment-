@@ -15,6 +15,7 @@ class HtePlayback {
   List<Map<String, dynamic>> _queue = [];
   int _index = -1, _tracksSinceAd = 0, _requestId = 0;
   bool autoplay = true, shuffle = false, _handlingCompletion = false;
+  Future<void> _sourceOperations = Future<void>.value();
   static const int _adInterval = 3;
 
   HtePlayback() {
@@ -48,30 +49,54 @@ class HtePlayback {
   Future<void> _startTrack(Map<String, dynamic> track, int request) async {
     final raw = (track['audio_url'] ?? '').toString().trim();
     final uri = Uri.tryParse(raw);
-    if (uri == null || !['http', 'https'].contains(uri.scheme)) {
-      throw Exception('This track does not have a valid playable audio URL.');
+    if (uri == null || !['http', 'https'].contains(uri.scheme) || uri.host.isEmpty) {
+      if (request == _requestId) {
+        playbackError.value = 'This track does not have a valid playable audio URL.';
+      }
+      return;
     }
     currentTrack.value = track;
     adPlaying.value = false;
     playbackError.value = null;
     final art = Uri.tryParse((track['cover_url'] ?? '').toString());
-    await player.setAudioSource(AudioSource.uri(uri, tag: MediaItem(
-      id: (track['id'] ?? raw).toString(),
-      title: (track['title'] ?? 'High-Tech Entertainment').toString(),
-      artist: (track['artist'] ?? 'High-Tech Entertainment').toString(),
-      album: 'High-Tech Entertainment',
-      artUri: art != null && art.hasScheme ? art : null,
-    )));
-    if (request != _requestId) return;
-    unawaited(player.play().catchError((Object e) {
-      debugPrint('HTE audio playback error: $e');
-      playbackError.value = 'This track could not be played. Try another track.';
-    }));
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user != null && track['id'] != null) {
-      unawaited(Supabase.instance.client.from('listening_history').insert({
-        'user_id': user.id, 'track_id': track['id'],
-      }).then((_) {}).catchError((_) {}));
+
+    // Serialize source changes so an older, slower request cannot replace
+    // the track most recently selected by the listener.
+    final previous = _sourceOperations;
+    final operationDone = Completer<void>();
+    _sourceOperations = operationDone.future;
+    try {
+      await previous;
+      if (request != _requestId) return;
+      await player.setAudioSource(AudioSource.uri(uri, tag: MediaItem(
+        id: (track['id'] ?? raw).toString(),
+        title: (track['title'] ?? 'High-Tech Entertainment').toString(),
+        artist: (track['artist'] ?? 'High-Tech Entertainment').toString(),
+        album: 'High-Tech Entertainment',
+        artUri: art != null && art.hasScheme ? art : null,
+      )));
+      if (request != _requestId) return;
+      unawaited(player.play().catchError((Object e) {
+        debugPrint('HTE audio playback error: $e');
+        if (request == _requestId) {
+          playbackError.value = 'This track could not be played. Check your connection or try another track.';
+        }
+      }));
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null && track['id'] != null) {
+        unawaited(Supabase.instance.client.from('listening_history').insert({
+          'user_id': user.id, 'track_id': track['id'],
+        }).then((_) {}).catchError((Object e) {
+          debugPrint('HTE listening history write failed: $e');
+        }));
+      }
+    } catch (e) {
+      debugPrint('HTE track source failed: $e');
+      if (request == _requestId) {
+        playbackError.value = 'This track could not be loaded. Check the audio URL and your connection.';
+      }
+    } finally {
+      operationDone.complete();
     }
   }
 
