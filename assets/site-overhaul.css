@@ -1,0 +1,55 @@
+/* HTE public-site refinement: responsive navigation, spacing and accessibility */
+.nav-toggle{display:none;width:44px;height:44px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#111923;color:var(--ink);cursor:pointer;align-items:center;justify-content:center;flex-direction:column;gap:5px}
+.nav-toggle span{display:block;width:19px;height:2px;background:var(--gold2);border-radius:2px;transition:transform .2s,opacity .2s}
+.navlinks{flex-wrap:wrap}
+.navlinks a{white-space:nowrap}
+section[id]{scroll-margin-top:105px}
+#music,#videos,#artists,#releases,#booking,#contact,#ai-support{scroll-margin-top:105px}
+.hte-stream-section,.hte-streaming-section{overflow:hidden}
+.hte-streaming-section .wrap{min-width:0}
+.hte-stream-toolbar{display:grid;grid-template-columns:minmax(0,1fr) 210px auto;gap:12px;align-items:center}
+.hte-search input,.hte-stream-toolbar select{min-width:0;width:100%;height:48px;border:1px solid var(--line);border-radius:13px;background:#0d141d;color:var(--ink);padding:0 14px}
+.hte-stream-grid{align-items:stretch}
+.hte-stream-card{min-width:0}
+.hte-stream-card img,.hte-now-cover img{width:100%;height:100%;object-fit:cover}
+.hte-now-playing{position:sticky;bottom:12px;z-index:15;backdrop-filter:blur(18px);box-shadow:0 18px 55px #0009}
+.hte-player-controls{display:flex;flex-wrap:wrap;gap:8px}
+.hte-player-timeline{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.hte-player-timeline>[data-player-progress]{flex:1;min-width:130px}
+.hte-player-timeline label{display:flex;align-items:center;gap:8px}
+.hte-player-timeline input[type=range]{accent-color:var(--gold)}
+.video-card{min-width:0;padding:14px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,#151e29,#0c1118)}
+.video-card video{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;background:#05070a}
+.video-card h3{font:700 1rem Manrope,sans-serif;margin:12px 0 4px}
+.video-card p{font-size:.84rem;color:var(--muted);margin:0}
+#public-videos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.catalog-tools{display:grid;grid-template-columns:minmax(0,1fr) 190px auto;gap:10px;margin:0 0 16px}
+.catalog-tools input,.catalog-tools select{width:100%;min-width:0;min-height:44px;border:1px solid var(--line);border-radius:12px;background:#0b1119;color:var(--ink);padding:0 12px}
+.catalog-count{color:var(--muted);font-size:.82rem}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--electric);outline-offset:3px}
+[hidden]{display:none!important}
+@media(max-width:1050px){.navlinks{gap:12px;font-size:.82rem}.nav-actions .btn{padding:9px 13px}}
+@media(max-width:760px){
+ .nav{position:relative;min-height:68px;flex-wrap:nowrap}
+ .nav-toggle{display:flex;margin-left:auto;flex:0 0 44px}
+ .nav-actions{margin-left:0}
+ .navlinks{display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:60;padding:12px;border:1px solid var(--line);border-radius:16px;background:rgba(9,14,21,.98);box-shadow:0 18px 45px #000b;align-items:stretch;flex-direction:column;gap:3px}
+ .navlinks.is-open{display:flex}
+ .navlinks a{padding:11px 12px;border-radius:9px}
+ .navlinks a:hover{background:#ffffff0b}
+ .nav-toggle[aria-expanded=true] span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+ .nav-toggle[aria-expanded=true] span:nth-child(2){opacity:0}
+ .nav-toggle[aria-expanded=true] span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+ .hte-stream-toolbar,.catalog-tools{grid-template-columns:1fr}
+ #public-videos{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .hte-now-playing{bottom:6px;margin:0 -4px}
+}
+@media(max-width:480px){
+ .nav-actions .btn{font-size:.76rem;padding:8px 10px}
+ #public-videos{grid-template-columns:1fr}
+ .hte-player-controls .btn{padding:9px 12px;font-size:.78rem}
+ .hte-player-timeline{gap:8px}
+ .hte-player-timeline span{font-size:.76rem}
+ .hte-now-track{min-width:0}
+}
+@media(prefers-reduced-motion:reduce){.nav-toggle span{transition:none}}

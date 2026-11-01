@@ -2,9 +2,9 @@ name: HTE quality checks
 
 on:
   pull_request:
-    branches: [main]
-  push:
     branches: [main, feature/player-ui-deep-overhaul]
+  push:
+    branches: [main, feature/player-ui-deep-overhaul, feature/website-deep-overhaul]
 
 permissions:
   contents: read
@@ -18,8 +18,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Check streaming player syntax
-        run: node --check assets/streaming.js
+      - name: Check all website JavaScript syntax
+        run: |
+          set -e
+          for file in assets/*.js; do
+            echo "Checking $file"
+            node --check "$file"
+          done
 
   android:
     name: Analyze and build Android app
