@@ -197,3 +197,60 @@ for delete to authenticated using (bucket_id='hte-video' and private.hte_has_rol
 
 -- Keep public visitor account data private; partner/promoter roles do not confer admin access.
 -- No SELECT policy or Data API grant is added for private.user_roles.
+
+-- Owner-only account assignment by email; returns no auth.users data.
+create or replace function private.hte_assign_role_by_email(_email text, _role text, _active boolean default true)
+returns void
+language plpgsql security definer
+set search_path = ''
+as $$
+declare target_id uuid;
+begin
+  if auth.uid() is null or not private.hte_has_role(array['owner']) then
+    raise exception 'Owner access required' using errcode = '42501';
+  end if;
+  select u.id into target_id from auth.users u
+    where lower(u.email) = lower(trim(_email)) limit 1;
+  if target_id is null then
+    raise exception 'No registered account matches that email address' using errcode = '22023';
+  end if;
+  perform private.hte_assign_role(target_id, _role, _active);
+end;
+$$;
+revoke all on function private.hte_assign_role_by_email(text,text,boolean) from public, anon;
+grant execute on function private.hte_assign_role_by_email(text,text,boolean) to authenticated;
+
+create or replace function public.hte_assign_role_by_email(_email text, _role text, _active boolean default true)
+returns void
+language sql security invoker
+set search_path = ''
+as $$
+  select private.hte_assign_role_by_email(_email, _role, _active);
+$$;
+revoke all on function public.hte_assign_role_by_email(text,text,boolean) from public, anon;
+grant execute on function public.hte_assign_role_by_email(text,text,boolean) to authenticated;
+
+-- Only the owner can see the private administrator/partner/promoter roster.
+create or replace function private.hte_list_roles()
+returns table(user_id uuid, email text, role text, is_active boolean, created_at timestamptz)
+language sql stable security definer
+set search_path = ''
+as $$
+  select r.user_id, u.email::text, r.role, r.is_active, r.created_at
+  from private.user_roles r
+  join auth.users u on u.id = r.user_id
+  where auth.uid() is not null and private.hte_has_role(array['owner'])
+  order by r.created_at desc;
+$$;
+revoke all on function private.hte_list_roles() from public, anon;
+grant execute on function private.hte_list_roles() to authenticated;
+
+create or replace function public.hte_list_roles()
+returns table(user_id uuid, email text, role text, is_active boolean, created_at timestamptz)
+language sql stable security invoker
+set search_path = ''
+as $$
+  select * from private.hte_list_roles();
+$$;
+revoke all on function public.hte_list_roles() from public, anon;
+grant execute on function public.hte_list_roles() to authenticated;
