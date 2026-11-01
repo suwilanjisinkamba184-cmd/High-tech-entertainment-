@@ -16,7 +16,7 @@
   <div class="admin-topbar-inner">
     <a class="brand" href="../" aria-label="High Tech Entertainment public website">
       <span class="brand-mark">HT</span>
-      <span>HIGH TECH <small>ENTERTAINMENT · FOUNDER STUDIO</small></span>
+      <span>HIGH TECH <small>ENTERTAINMENT · ADMIN CONTROL CENTRE</small></span>
     </a>
     <div class="admin-top-actions">
       <span class="admin-live"><i></i> PRIVATE WORKSPACE</span>
@@ -72,7 +72,7 @@
   <main id="main" class="admin-main">
     <div class="admin-main-top">
       <div><div class="eyebrow">HIGH TECH ENTERTAINMENT / CONTROL ROOM</div><h1 id="view-title">Overview</h1><p id="admin-date" class="admin-date">Your creative operations, in one place.</p></div>
-      <div class="admin-main-actions"><span class="admin-user-chip"><span class="admin-user-avatar">HT</span><span><strong data-user-name>Founder</strong><small>Administrator account</small></span></span><button class="btn" id="refresh-admin" type="button">↻ Refresh data</button></div>
+      <div class="admin-main-actions"><span class="admin-user-chip"><span class="admin-user-avatar">HT</span><span><strong data-user-name>Administrator</strong><small>Administrator account</small></span></span><button class="btn" id="refresh-admin" type="button">↻ Refresh data</button></div>
     </div>
     <div class="status admin-global-status" id="admin-status" role="status" aria-live="polite"></div>
 
@@ -134,7 +134,7 @@
             <button class="btn gold admin-submit" type="submit">Upload track <span>↑</span></button><div class="status" id="track-status" role="status" aria-live="polite"></div>
           </form>
         </div>
-        <div class="admin-side-info"><div class="admin-info-card"><span class="admin-info-icon">01</span><h3>Upload safely</h3><p>Files are stored in your private-managed HTE audio bucket. Only the authorised founder can upload.</p></div><div class="admin-info-card"><span class="admin-info-icon">02</span><h3>Publish with control</h3><p>Uncheck “Publish immediately” to save a track as a draft before making it public.</p></div><div class="admin-info-card"><span class="admin-info-icon">03</span><h3>Public catalogue</h3><p>Published tracks appear in the Music section of your main website after refresh.</p></div></div>
+        <div class="admin-side-info"><div class="admin-info-card"><span class="admin-info-icon">01</span><h3>Upload safely</h3><p>Files are stored in your private-managed HTE audio bucket. Only authorised HTE administrators can upload.</p></div><div class="admin-info-card"><span class="admin-info-icon">02</span><h3>Publish with control</h3><p>Uncheck “Publish immediately” to save a track as a draft before making it public.</p></div><div class="admin-info-card"><span class="admin-info-icon">03</span><h3>Public catalogue</h3><p>Published tracks appear in the Music section of your main website after refresh.</p></div></div>
       </div>
       <div class="admin-table-heading"><div><span>YOUR LIBRARY</span><h3>Uploaded tracks</h3></div><input class="admin-table-search" type="search" data-table-search="admin-tracks" placeholder="Search tracks…" aria-label="Search tracks"></div>
       <div class="table-wrap admin-table-wrap"><table class="data-table"><thead><tr><th>Track</th><th>Artist</th><th>Status</th><th>Actions</th></tr></thead><tbody id="admin-tracks"></tbody></table></div>
@@ -156,7 +156,7 @@
 
     <section class="admin-view" data-view="inbox" hidden>
       <div class="admin-section-label"><div><span>05 / COMMUNICATIONS</span><h2>Enquiry inbox</h2><p>Booking requests and messages submitted through your website.</p></div></div>
-      <div class="admin-inbox-toolbar"><span>PRIVATE FOUNDER INBOX</span><button class="btn" type="button" id="refresh-admin-inbox" onclick="document.getElementById('refresh-admin')?.click()">↻ Refresh inbox</button></div>
+      <div class="admin-inbox-toolbar"><span>PRIVATE ADMIN INBOX</span><button class="btn" type="button" id="refresh-admin-inbox" onclick="document.getElementById('refresh-admin')?.click()">↻ Refresh inbox</button></div>
       <div id="admin-inbox"><div class="empty">Loading enquiries…</div></div>
     </section>
 
@@ -166,7 +166,7 @@
         <div><div class="eyebrow">HIGH-TECH ENTERTAINMENT / AI PRODUCTION</div><h2>Make your brand <span>sound unforgettable.</span></h2><p>Create studio-quality voice advertisements with ElevenLabs, save scripts on this device, review generated MP3s and publish only when you're ready.</p></div>
         <div class="hte-ai-badge"><span></span> AI STUDIO</div>
       </div>
-      <div class="hte-ai-status-strip"><span>●</span><strong>Founder-only workspace</strong><span>·</span><span>ElevenLabs text-to-speech</span><span>·</span><span>MP3 drafts stored in Supabase</span></div>
+      <div class="hte-ai-status-strip"><span>●</span><strong>Administrator-only workspace</strong><span>·</span><span>ElevenLabs text-to-speech</span><span>·</span><span>MP3 drafts stored in Supabase</span></div>
       <div class="admin-section-label"><div><span>01 / CREATE</span><h2>Voice advertisement creator</h2><p>Write or restore your script, select a presenter voice and generate an unpublished draft.</p></div></div>
       <div class="admin-content-grid hte-ai-layout">
         <div class="panel admin-form-panel hte-ai-form-panel">
@@ -197,11 +197,11 @@
     <section class="admin-view" data-view="settings" hidden>
       <div class="admin-section-label"><div><span>06 / SYSTEM</span><h2>Studio settings</h2><p>Information about your account, access and platform setup.</p></div></div>
       <div class="admin-settings-grid">
-        <article class="panel admin-setting-card"><span class="admin-setting-icon">◉</span><h3>Founder account</h3><p>Your workspace is tied to the authorised founder identity.</p><a class="btn" href="../account/">Manage account ↗</a></article>
+        <article class="panel admin-setting-card"><span class="admin-setting-icon">◉</span><h3>Administrator account</h3><p>Your access is controlled by your assigned HTE administrator role.</p><a class="btn" href="../account/">Manage account ↗</a></article>
         <article class="panel admin-setting-card"><span class="admin-setting-icon">▤</span><h3>Database protection</h3><p>Supabase Row Level Security policies protect private management operations.</p><span class="admin-setting-state">● ACCESS RESTRICTED</span></article>
         <article class="panel admin-setting-card"><span class="admin-setting-icon">↗</span><h3>Public website</h3><p>Visit the public-facing High Tech Entertainment experience.</p><a class="btn" href="../">Open website ↗</a></article>
       </div>
-      <div class="panel admin-danger-zone"><div><h3>Session controls</h3><p class="muted">Sign out when you finish managing your catalogue, especially on a shared device.</p></div><button class="btn danger" data-logout>Sign out of founder studio</button></div>
+      <div class="panel admin-danger-zone"><div><h3>Session controls</h3><p class="muted">Sign out when you finish managing your catalogue, especially on a shared device.</p></div><button class="btn danger" data-logout>Sign out of administrator account</button></div>
     </section>
 
     <section class="admin-view" data-view="access" hidden>
@@ -219,7 +219,7 @@
       <div class="admin-table-heading"><div><span>OWNER-ONLY DIRECTORY</span><h3>Assigned HTE accounts</h3><p class="admin-field-help">Administrator identities are not exposed to public visitors, partners or promoters.</p></div><button class="btn" type="button" id="refresh-roles">↻ Refresh</button></div>
       <div class="hte-role-list" id="role-list"><div class="empty">Loading private account roles…</div></div>
     </section>
-    <footer class="admin-footer"><span>HIGH TECH ENTERTAINMENT <b>·</b> FOUNDER STUDIO</span><span>Music. Beats. Production. Beyond.</span></footer>
+    <footer class="admin-footer"><span>HIGH TECH ENTERTAINMENT <b>·</b> ADMIN CONTROL CENTRE</span><span>Music. Beats. Production. Beyond.</span></footer>
   </main>
 </div>
 <div id="toast" class="toast" role="status"></div>
