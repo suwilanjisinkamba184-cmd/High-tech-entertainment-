@@ -53,6 +53,19 @@ Deno.serve(async (req: Request) => {
     if (!serviceKey) return response({ error: "Supabase server secret key is unavailable." }, 503, origin);
     const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
+    // Rate-limit notifications by a one-way hash of the gateway-provided client IP.
+    const clientIp = req.headers.get("cf-connecting-ip") ||
+      req.headers.get("x-real-ip") ||
+      (req.headers.get("x-forwarded-for") || "").split(",")[0].trim();
+    if (!clientIp) return response({ error: "Unable to verify the request source. Please retry later." }, 503, origin);
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(clientIp));
+    const ipHash = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+    const { data: withinLimit, error: rateError } = await admin.rpc("hte_consume_booking_notification_limit", {
+      _ip_hash: ipHash, _max_requests: 5, _window_seconds: 900,
+    });
+    if (rateError) throw rateError;
+    if (withinLimit !== true) return response({ error: "Too many booking notifications from this network. Please wait and try again." }, 429, origin);
+
     const { data: booking, error: bookingError } = await admin
       .from("contact_messages")
       .select("id,name,email,subject,message,created_at")
@@ -61,6 +74,10 @@ Deno.serve(async (req: Request) => {
     if (bookingError) throw bookingError;
     if (!booking || !String(booking.subject || "").startsWith("Booking request")) {
       return response({ error: "Booking request not found." }, 404, origin);
+    }
+    const createdAt = Date.parse(String(booking.created_at || ""));
+    if (!Number.isFinite(createdAt) || Date.now() - createdAt > 30 * 60 * 1000 || createdAt > Date.now() + 60 * 1000) {
+      return response({ error: "This booking notification request has expired." }, 410, origin);
     }
 
     const { data: previous, error: previousError } = await admin
