@@ -38,8 +38,6 @@ class HteApp extends StatelessWidget {
       scaffoldBackgroundColor: const Color(0xFF090909),
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFD4AF37), brightness: Brightness.dark),
     appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF101010), foregroundColor: Colors.white, centerTitle: false),
-    cardTheme: CardThemeData(color: const Color(0xFF151515), elevation: 1, margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Color(0xFF302817)))),
-    navigationBarTheme: const NavigationBarThemeData(backgroundColor: Color(0xFF101010), indicatorColor: Color(0xFF493A16), labelTextStyle: WidgetStatePropertyAll(TextStyle(fontWeight: FontWeight.w600, fontSize: 11))),
     ),
     home: const StartupGate(),
   );
@@ -604,7 +602,7 @@ class _FullPlayerPageState extends State<FullPlayerPage> {
                 width: 280, height: 280,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(26),
-                  boxShadow: [BoxShadow(color: const Color(0xFFD4AF37).withValues(alpha: .12), blurRadius: 34, spreadRadius: 2)],
+                  boxShadow: [BoxShadow(color: const Color(0xFFD4AF37).withOpacity(.12), blurRadius: 34, spreadRadius: 2)],
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: MediaCover(url: track['cover_url']?.toString(), height: 280),
