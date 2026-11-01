@@ -671,10 +671,25 @@ class MediaCover extends StatelessWidget {
 
 
 Future<void> toggleFavourite(String id) async {
-  final prefs = await SharedPreferences.getInstance();
-  final ids = prefs.getStringList('hte_favourites') ?? <String>[];
-  if (ids.contains(id)) { ids.remove(id); } else { ids.add(id); }
-  await prefs.setStringList('hte_favourites', ids);
+  final user = db.auth.currentUser;
+  if (user == null) throw StateError('Sign in to save favourites.');
+  if (id.isEmpty) throw ArgumentError('This track has no valid ID.');
+  final existing = await db.from('user_favorites')
+    .select('track_id')
+    .eq('user_id', user.id)
+    .eq('track_id', id)
+    .maybeSingle();
+  if (existing == null) {
+    await db.from('user_favorites').insert({
+      'user_id': user.id,
+      'track_id': id,
+    });
+  } else {
+    await db.from('user_favorites')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('track_id', id);
+  }
   favouritesRevision.value++;
 }
 
@@ -732,18 +747,34 @@ class _SavedTabState extends State<SavedTab> {
   }
   Future<void> load() async {
     if (mounted) setState(() => loading = true);
-    final prefs = await SharedPreferences.getInstance();
-    final ids = prefs.getStringList('hte_favourites') ?? <String>[];
     try {
-      if (ids.isEmpty) {
+      final user = db.auth.currentUser;
+      if (user == null) {
         saved = [];
       } else {
-        saved = List<Map<String,dynamic>>.from(
-          await db.from('tracks').select().eq('is_published', true).inFilter('id', ids),
-        );
+        final favouriteRows = await db.from('user_favorites')
+          .select('track_id')
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+        final ids = favouriteRows
+          .map((row) => row['track_id'].toString())
+          .toList();
+        if (ids.isEmpty) {
+          saved = [];
+        } else {
+          final tracks = await db.from('tracks')
+            .select()
+            .eq('is_published', true)
+            .inFilter('id', ids);
+          final byId = {
+            for (final track in tracks) track['id'].toString(): Map<String, dynamic>.from(track),
+          };
+          saved = ids.where(byId.containsKey).map((id) => byId[id]!).toList();
+        }
       }
-    } catch (_) {
+    } catch (error) {
       saved = [];
+      debugPrint('Could not load synced favourites: $error');
     }
     if (mounted) setState(() => loading = false);
   }
