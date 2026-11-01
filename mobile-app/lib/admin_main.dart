@@ -54,8 +54,11 @@ class _AdminRoleGateState extends State<AdminRoleGate> {
   Widget build(BuildContext context) => FutureBuilder<bool>(
     future: check,
     builder: (context, snapshot) {
-      if (snapshot.connectionState != ConnectionState.done) return const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFFD4AF37))));
-      if (snapshot.data != true) return Scaffold(
+      if (snapshot.connectionState != ConnectionState.done) {
+        return const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFFD4AF37))));
+      }
+      if (snapshot.data != true) {
+        return Scaffold(
         appBar: AppBar(title: const Text('Administrator access')),
         body: Center(child: Padding(padding: const EdgeInsets.all(28), child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -70,6 +73,7 @@ class _AdminRoleGateState extends State<AdminRoleGate> {
           ],
         ))),
       );
+      }
       return const hte.AdminConsolePage();
     },
   );
