@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main, feature/player-ui-deep-overhaul, feature/website-deep-overhaul, feature/admin-security-app-overhaul]
   push:
-    branches: [main, feature/player-ui-deep-overhaul, feature/website-deep-overhaul]
+    branches: [main, feature/player-ui-deep-overhaul, feature/website-deep-overhaul, feature/admin-security-app-overhaul]
 
 permissions:
   contents: read
