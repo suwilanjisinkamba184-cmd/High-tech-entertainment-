@@ -114,7 +114,7 @@ class _StartupGateState extends State<StartupGate>
 
   @override
   Widget build(BuildContext context) {
-    if (_ready) return const MainScreen();
+    if (_ready) return const AuthGate();
     return Scaffold(
       backgroundColor: const Color(0xFF080808),
       body: SafeArea(
@@ -179,6 +179,75 @@ class _StartupGateState extends State<StartupGate>
                     child: const Text('Try again'),
                   ),
                 ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+/// Keeps the native app behind Supabase authentication. A saved session
+/// opens the app; signing out returns the user to the sign-in screen.
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<AuthState>(
+      stream: db.auth.onAuthStateChange,
+      builder: (context, snapshot) {
+        final session = snapshot.hasData
+            ? snapshot.data!.session
+            : db.auth.currentSession;
+        return session == null ? const LoginPage() : const MainScreen();
+      },
+    );
+  }
+}
+
+class LoginPage extends StatelessWidget {
+  const LoginPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF080808),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(26, 36, 26, 28),
+              shrinkWrap: true,
+              children: [
+                const SizedBox(height: 18),
+                Center(child: SvgPicture.asset(
+                  'assets/high-tech-logo.svg',
+                  width: 116,
+                  height: 116,
+                )),
+                const SizedBox(height: 22),
+                const Text('HIGH-TECH ENTERTAINMENT',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900,
+                    letterSpacing: 2, color: Color(0xFFD4AF37))),
+                const SizedBox(height: 8),
+                const Text('Music. Beats. Production. Beyond.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white70)),
+                const SizedBox(height: 30),
+                const Text('Welcome back',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                const Text('Sign in to continue to High-Tech Entertainment.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white60)),
+                const SizedBox(height: 22),
+                const AccountTab(),
               ],
             ),
           ),
@@ -672,14 +741,18 @@ class _AccountTabState extends State<AccountTab> {
   Widget build(BuildContext context) {
     final user = db.auth.currentUser;
     return ListView(padding: const EdgeInsets.all(20), children: [
-      const Brand(),
-      Card(child: ListTile(
-        leading: const Icon(Icons.settings_outlined, color: Color(0xFFD4AF37)),
-        title: const Text('App settings'),
-        subtitle: const Text('Updates, app information and support'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsPage())),
-      )),
+      if (user != null) ...[
+        const Brand(),
+        Card(child: ListTile(
+          leading: const Icon(Icons.settings_outlined, color: Color(0xFFD4AF37)),
+          title: const Text('App settings'),
+          subtitle: const Text('Updates, app information and support'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsPage())),
+        )),
+      ] else ...[
+        const SizedBox(height: 8),
+      ],
       if (user != null) ...[
         const Icon(Icons.account_circle, color: Color(0xFFD4AF37), size: 80),
         Center(child: Text(user.email ?? 'Signed in')),
