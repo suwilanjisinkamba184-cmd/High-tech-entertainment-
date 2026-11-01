@@ -3,6 +3,7 @@ name: Build High-Tech Entertainment App
 on:
   push:
     branches: [main]
+    tags: ['v*']
     paths:
       - 'mobile-app/**'
       - '.github/workflows/mobile-build.yml'
@@ -18,15 +19,15 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   android:
     runs-on: ubuntu-latest
+    outputs:
+      release_signing_ready: ${{ steps.android_signing.outputs.release_signing_ready }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -112,27 +113,6 @@ jobs:
               path.write_text(text)
           PY
           grep -R -E "minSdk|targetSdk" android/app/build.gradle*
-      - name: Persist the native Android project in Git
-        env:
-          GH_BRANCH: ${{ github.head_ref || github.ref_name }}
-        run: |
-          # The generated Android platform must live in the repository, not only
-          # in a disposable runner directory. This keeps the package identity,
-          # manifest deep link, Gradle configuration and native entry point stable.
-          rm -rf mobile-app/android
-          cp -R "${{ runner.temp }}/hte_app/android" mobile-app/android
-          # Never commit machine-specific Android SDK paths or signing credentials.
-          rm -f mobile-app/android/local.properties
-          git rm --cached --ignore-unmatch mobile-app/android/local.properties
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f mobile-app/android
-          if ! git diff --cached --quiet; then
-            git commit -m "Add permanent native Android platform project"
-            git push origin "HEAD:$GH_BRANCH"
-          else
-            echo "Native Android platform project is already current."
-          fi
       - name: Configure Android upload-key signing
         id: android_signing
         working-directory: ${{ runner.temp }}/hte_app
@@ -222,6 +202,30 @@ jobs:
             ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/app-release.apk
             ${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
+
+
+  publish-android-release:
+    name: Publish permanent Android release
+    needs: android
+    if: ${{ startsWith(github.ref, 'refs/tags/v') && needs.android.outputs.release_signing_ready == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download signed Android build
+        uses: actions/download-artifact@v4
+        with:
+          name: high-tech-entertainment-android
+          path: release-assets
+      - name: Publish APK and Play Store bundle
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: High-Tech Entertainment ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            release-assets/flutter-apk/app-release.apk
+            release-assets/bundle/release/app-release.aab
 
   windows:
     runs-on: windows-latest
