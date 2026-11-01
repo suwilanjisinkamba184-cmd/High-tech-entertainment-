@@ -123,12 +123,13 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_STORE_PASSWORD" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
-            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hte-upload-key.jks"
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hte-upload-key.p12"
             cat > android/key.properties <<EOF
           storePassword=$ANDROID_STORE_PASSWORD
           keyPassword=$ANDROID_KEY_PASSWORD
           keyAlias=$ANDROID_KEY_ALIAS
-          storeFile=$RUNNER_TEMP/hte-upload-key.jks
+          storeFile=$RUNNER_TEMP/hte-upload-key.p12
+storeType=pkcs12
           EOF
             python3 - <<'PY'
           from pathlib import Path
@@ -144,6 +145,7 @@ jobs:
                       keyAlias = keystoreProperties["keyAlias"] as String
                       keyPassword = keystoreProperties["keyPassword"] as String
                       storeFile = file(keystoreProperties["storeFile"] as String)
+                      storeType = keystoreProperties["storeType"] as String
                       storePassword = keystoreProperties["storePassword"] as String
                   }
               }
@@ -162,6 +164,7 @@ jobs:
                   keyAlias keystoreProperties['keyAlias']
                   keyPassword keystoreProperties['keyPassword']
                   storeFile file(keystoreProperties['storeFile'])
+                  storeType keystoreProperties['storeType']
                   storePassword keystoreProperties['storePassword']
               }
           }
