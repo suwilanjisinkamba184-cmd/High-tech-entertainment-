@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
@@ -21,12 +22,6 @@ final player = playback.player;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Supabase.initialize(url: supabaseUrl, publishableKey: supabaseKey);
-  await JustAudioBackground.init(
-    androidNotificationChannelId: 'com.hightechentertainment.app.audio',
-    androidNotificationChannelName: 'High-Tech Music Playback',
-    androidNotificationOngoing: true,
-  );
   runApp(const HteApp());
 }
 
@@ -42,8 +37,155 @@ class HteApp extends StatelessWidget {
       scaffoldBackgroundColor: const Color(0xFF090909),
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFD4AF37), brightness: Brightness.dark),
     ),
-    home: const MainScreen(),
+    home: const StartupGate(),
   );
+}
+
+
+class StartupGate extends StatefulWidget {
+  const StartupGate({super.key});
+
+  @override
+  State<StartupGate> createState() => _StartupGateState();
+}
+
+class _StartupGateState extends State<StartupGate>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _spin;
+  bool _ready = false;
+  bool _starting = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _spin = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    if (mounted) {
+      setState(() {
+        _starting = true;
+        _error = null;
+      });
+    }
+    try {
+      await Supabase.initialize(
+        url: supabaseUrl,
+        publishableKey: supabaseKey,
+      );
+      // Audio notifications are optional: a notification initialisation
+      // failure must not prevent the rest of the app from opening.
+      try {
+        await JustAudioBackground.init(
+          androidNotificationChannelId: 'com.hightechentertainment.app.audio',
+          androidNotificationChannelName: 'High-Tech Music Playback',
+          androidNotificationOngoing: true,
+        );
+      } catch (_) {
+        // Playback remains available in-app even if background controls fail.
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 700));
+      if (mounted) {
+        setState(() {
+          _ready = true;
+          _starting = false;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _error = 'We could not initialise the app services. Check your connection and try again.\\n$error';
+          _starting = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_ready) return const MainScreen();
+    return Scaffold(
+      backgroundColor: const Color(0xFF080808),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedBuilder(
+                  animation: _spin,
+                  builder: (context, child) => Transform.rotate(
+                    angle: _spin.value * 2 * math.pi,
+                    child: child,
+                  ),
+                  child: SvgPicture.asset(
+                    'assets/high-tech-logo.svg',
+                    width: 116,
+                    height: 116,
+                  ),
+                ),
+                const SizedBox(height: 30),
+                const Text(
+                  'HIGH-TECH',
+                  style: TextStyle(
+                    fontSize: 25,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 4,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'ENTERTAINMENT',
+                  style: TextStyle(
+                    color: Color(0xFFD4AF37),
+                    fontSize: 12,
+                    letterSpacing: 5,
+                  ),
+                ),
+                const SizedBox(height: 26),
+                if (_starting)
+                  const CircularProgressIndicator(
+                    color: Color(0xFFD4AF37),
+                    strokeWidth: 2.5,
+                  ),
+                if (_starting) ...[
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Preparing your experience…',
+                    style: TextStyle(color: Colors.white60),
+                  ),
+                ],
+                if (_error != null) ...[
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                  const SizedBox(height: 18),
+                  FilledButton(
+                    onPressed: _starting ? null : _initialize,
+                    child: const Text('Try again'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class MainScreen extends StatefulWidget {
