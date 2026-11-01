@@ -237,3 +237,16 @@ jobs:
           path: ${{ runner.temp }}/high-tech-entertainment-windows.zip
           if-no-files-found: error
 
+      - name: Publish public Windows download
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: windows-latest
+          name: High-Tech Entertainment for Windows
+          target_commitish: ${{ github.sha }}
+          body: |
+            Official High-Tech Entertainment Windows desktop app.
+            Download the ZIP, extract it, and run app.exe.
+          files: ${{ runner.temp }}/high-tech-entertainment-windows.zip
+          overwrite_files: true
+
