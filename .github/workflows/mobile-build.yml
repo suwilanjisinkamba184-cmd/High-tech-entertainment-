@@ -167,8 +167,8 @@ jobs:
           PY
             echo "release_signing_ready=true" >> "$GITHUB_OUTPUT"
           else
-            echo "No upload-key secrets configured; this build will use debug signing and is for testing only."
-            echo "release_signing_ready=false" >> "$GITHUB_OUTPUT"
+            echo "::error::One or more required Android signing secrets are missing or empty. Add all four repository Actions secrets before building a distributable APK."
+            exit 1
           fi
       - name: Install dependencies and generate branded launcher icon
         working-directory: ${{ runner.temp }}/hte_app
