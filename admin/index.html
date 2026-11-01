@@ -8,6 +8,7 @@
   <title>Founder Studio · High Tech Entertainment</title>
   <link rel="stylesheet" href="../assets/site.css?v=20261101-2">
   <link rel="stylesheet" href="../assets/admin.css?v=20261101-2">
+  <link rel="stylesheet" href="../assets/admin-overhaul.css?v=1">
 </head>
 <body class="admin-page">
 <a class="skip" href="#main">Skip to content</a>
@@ -61,6 +62,7 @@
     <button class="admin-nav-item" data-tab="inbox"><span class="admin-nav-icon">✉</span><span>Inbox</span><b>05</b></button>
     <div class="admin-side-heading admin-side-gap">SYSTEM</div>
     <button class="admin-nav-item hte-ai-nav" data-tab="ads"><span class="admin-nav-icon">🎙</span><span>AI Ad Studio</span><b>07</b></button>
+    <button class="admin-nav-item" data-tab="access" data-owner-only hidden><span class="admin-nav-icon">♙</span><span>Access control</span><b>08</b></button>
     <button class="admin-nav-item" data-tab="settings"><span class="admin-nav-icon">⚙</span><span>Settings</span><b>06</b></button>
     <a class="admin-nav-item" href="../account/"><span class="admin-nav-icon">◉</span><span>Profile & account</span><b>↗</b></a>
     <a class="admin-nav-item" href="../"><span class="admin-nav-icon">↗</span><span>Public website</span><b>↗</b></a>
@@ -202,6 +204,21 @@
       <div class="panel admin-danger-zone"><div><h3>Session controls</h3><p class="muted">Sign out when you finish managing your catalogue, especially on a shared device.</p></div><button class="btn danger" data-logout>Sign out of founder studio</button></div>
     </section>
 
+    <section class="admin-view" data-view="access" hidden>
+      <div class="admin-section-label"><div><span>08 / PRIVATE ACCESS</span><h2>Account &amp; role management</h2><p>Assign HTE administrator, partner and music-promoter roles. This directory is visible to the owner only.</p></div></div>
+      <div class="panel admin-form-panel">
+        <div class="admin-panel-heading"><span class="admin-panel-icon">♙</span><div><h3>Assign an account role</h3><p>The person must already have a registered HTE account.</p></div></div>
+        <form id="role-form">
+          <div class="field"><label for="role-email">Registered account email</label><input id="role-email" name="email" type="email" required maxlength="254" autocomplete="off" placeholder="person@example.com"></div>
+          <div class="field"><label for="role-type">Access role</label><select id="role-type" name="role" required><option value="admin">Administrator</option><option value="music_promoter">Music promoter</option><option value="partner">Partner</option></select></div>
+          <div class="field admin-checkbox-field"><label><input type="checkbox" name="active" checked style="width:auto"> Activate this role</label></div>
+          <button class="btn gold admin-submit" type="submit">Save account role</button>
+          <div class="status" id="role-status" role="status" aria-live="polite"></div>
+        </form>
+      </div>
+      <div class="admin-table-heading"><div><span>OWNER-ONLY DIRECTORY</span><h3>Assigned HTE accounts</h3><p class="admin-field-help">Administrator identities are not exposed to public visitors, partners or promoters.</p></div><button class="btn" type="button" id="refresh-roles">↻ Refresh</button></div>
+      <div class="hte-role-list" id="role-list"><div class="empty">Loading private account roles…</div></div>
+    </section>
     <footer class="admin-footer"><span>HIGH TECH ENTERTAINMENT <b>·</b> FOUNDER STUDIO</span><span>Music. Beats. Production. Beyond.</span></footer>
   </main>
 </div>
@@ -212,6 +229,7 @@
 <script src="../assets/admin-upload.js?v=20261101-2"></script>
 <script src="../assets/admin-video.js?v=20261101-2"></script>
 <script src="../assets/admin-ui.js?v=20261101-2"></script>
+<script src="../assets/admin-roles.js?v=1"></script>
 <script src="../assets/ai-ad-studio.js?v=20261101-fix1"></script>
 </body>
 </html>
