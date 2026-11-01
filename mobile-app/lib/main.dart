@@ -327,6 +327,7 @@ class MoreTab extends StatelessWidget {
         trailing: const Icon(Icons.chevron_right),
         onTap: () => _open(context, 'Account', const AccountTab()),
       )),
+      const AdminAccessTile(),
     ],
   );
 }
@@ -1005,6 +1006,123 @@ class _AccountTabState extends State<AccountTab> {
   }
 }
 
+
+
+/// The database role check is authoritative; client-side visibility is not security.
+class AdminAccessTile extends StatefulWidget {
+  const AdminAccessTile({super.key});
+  @override State<AdminAccessTile> createState() => _AdminAccessTileState();
+}
+class _AdminAccessTileState extends State<AdminAccessTile> {
+  late Future<bool> access;
+  @override void initState() { super.initState(); access = _check(); }
+  Future<bool> _check() async {
+    try { return await db.rpc('hte_is_admin') == true; } catch (_) { return false; }
+  }
+  @override Widget build(BuildContext context) => FutureBuilder<bool>(
+    future: access,
+    builder: (context, snapshot) {
+      if (snapshot.data != true) return const SizedBox.shrink();
+      return Card(child: ListTile(
+        leading: const Icon(Icons.admin_panel_settings_outlined, color: Color(0xFFD4AF37)),
+        title: const Text('Administrator console'),
+        subtitle: const Text('Private HTE operations and campaign controls'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminConsolePage())),
+      ));
+    },
+  );
+}
+
+class AdminConsolePage extends StatefulWidget {
+  const AdminConsolePage({super.key});
+  @override State<AdminConsolePage> createState() => _AdminConsolePageState();
+}
+class _AdminConsolePageState extends State<AdminConsolePage> {
+  bool loading = true;
+  String? error;
+  List<Map<String,dynamic>> tracks = [], ads = [], videos = [], messages = [];
+  @override void initState() { super.initState(); _load(); }
+  Future<void> _load() async {
+    if (mounted) setState(() { loading = true; error = null; });
+    try {
+      if (await db.rpc('hte_is_admin') != true) throw Exception('Administrator access is not assigned to this account.');
+      final results = await Future.wait([
+        db.from('tracks').select('id,title,artist,is_published').order('created_at', ascending: false).limit(50),
+        db.from('audio_ads').select('id,title,is_published,starts_at,ends_at').order('created_at', ascending: false).limit(30),
+        db.from('videos').select('id,title,artist,is_published').order('created_at', ascending: false).limit(30),
+        db.from('contact_messages').select('id,name,email,subject,created_at').order('created_at', ascending: false).limit(30),
+      ]);
+      tracks = List<Map<String,dynamic>>.from(results[0]);
+      ads = List<Map<String,dynamic>>.from(results[1]);
+      videos = List<Map<String,dynamic>>.from(results[2]);
+      messages = List<Map<String,dynamic>>.from(results[3]);
+    } catch (e) { error = e.toString(); }
+    if (mounted) setState(() { loading = false; });
+  }
+  Future<void> _publish(String table, String id, bool value) async {
+    try {
+      if (await db.rpc('hte_is_admin') != true) throw Exception('Administrator access required.');
+      await db.from(table).update({'is_published': value}).eq('id', id);
+      await _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Update failed: $e')));
+    }
+  }
+  Widget _metric(String label, int value) => Container(
+    width: 145, padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(color: const Color(0xFF171717), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF51421D))),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(value.toString(), style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w900, color: Color(0xFFD4AF37))),
+      Text(label, style: const TextStyle(color: Colors.white70)),
+    ]),
+  );
+  Widget _section(String title, List<Map<String,dynamic>> items, String table) => Card(
+    margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+    child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 8),
+      if (items.isEmpty) const Text('No records found.', style: TextStyle(color: Colors.white60)),
+      ...items.map((item) => ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text((item['title'] ?? 'Untitled').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Text(item['is_published'] == true ? 'Published' : 'Draft'),
+        trailing: Switch.adaptive(
+          value: item['is_published'] == true,
+          activeColor: const Color(0xFFD4AF37),
+          onChanged: (value) => _publish(table, item['id'].toString(), value),
+        ),
+      )),
+    ])),
+  );
+  @override Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('HTE Administrator'), actions: [
+      IconButton(onPressed: loading ? null : _load, icon: const Icon(Icons.refresh), tooltip: 'Refresh'),
+    ]),
+    body: loading ? const Busy() : error != null
+      ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.lock_outline, size: 48, color: Color(0xFFD4AF37)),
+          const SizedBox(height: 12), Text(error!, textAlign: TextAlign.center),
+          const SizedBox(height: 16), FilledButton(onPressed: _load, child: const Text('Try again')),
+        ])))
+      : RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.only(bottom: 28), children: [
+          const Brand(tagline: 'PRIVATE ADMINISTRATOR CONTROL CENTRE'),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Wrap(spacing: 8, runSpacing: 8, children: [
+            _metric('Tracks', tracks.length), _metric('Campaigns', ads.length), _metric('Videos', videos.length), _metric('Enquiries', messages.length),
+          ])),
+          _section('Music catalogue', tracks, 'tracks'),
+          _section('Promotional campaigns', ads, 'audio_ads'),
+          _section('Video library', videos, 'videos'),
+          Card(margin: const EdgeInsets.all(16), child: ListTile(
+            leading: const Icon(Icons.inbox_outlined, color: Color(0xFFD4AF37)),
+            title: const Text('Private enquiries'),
+            subtitle: Text('${messages.length} recent messages are available in the secure Founder Studio inbox.'),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/admin/'), mode: LaunchMode.externalApplication),
+          )),
+        ])),
+  );
+}
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
