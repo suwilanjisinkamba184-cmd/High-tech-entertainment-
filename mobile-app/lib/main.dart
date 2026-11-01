@@ -935,8 +935,6 @@ class _SettingsPageState extends State<SettingsPage> {
   bool checking = false;
   bool autoplaySetting = true;
   bool shuffleSetting = false;
-  bool audioAdsSetting = true;
-  int adFrequency = 3;
 
   @override
   void initState() { super.initState(); _loadVersion(); _loadPlaybackSettings(); }
@@ -945,9 +943,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs=await SharedPreferences.getInstance();
     autoplaySetting=prefs.getBool('hte_autoplay')??true;
     shuffleSetting=prefs.getBool('hte_shuffle')??false;
-    audioAdsSetting=prefs.getBool('hte_audio_ads')??true;
-    adFrequency=prefs.getInt('hte_ad_frequency')??3;
-    playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting; playback.audioAdsEnabled=audioAdsSetting; playback.adEvery=adFrequency;
+    playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting;
     if(mounted)setState((){});
   }
   Future<void> _savePlaybackSetting(String key,Object value) async {
@@ -1060,8 +1056,7 @@ class _SettingsPageState extends State<SettingsPage> {
       Card(child: Column(children: [
         SwitchListTile(title:const Text('Smart Autoplay'),subtitle:const Text('Continue with published music when your queue ends'),value:autoplaySetting,onChanged:(v){setState(()=>autoplaySetting=v);playback.autoplay=v;_savePlaybackSetting('hte_autoplay',v);}),
         SwitchListTile(title:const Text('Shuffle'),subtitle:const Text('Mix the order of tracks in your queue'),value:shuffleSetting,onChanged:(v){setState(()=>shuffleSetting=v);playback.shuffle=v;player.setShuffleModeEnabled(v);_savePlaybackSetting('hte_shuffle',v);}),
-        SwitchListTile(title:const Text('HT Audio Ads'),subtitle:const Text('Play promotional audio between tracks'),value:audioAdsSetting,onChanged:(v){setState(()=>audioAdsSetting=v);playback.audioAdsEnabled=v;_savePlaybackSetting('hte_audio_ads',v);}),
-        ListTile(title:const Text('Ad interval'),subtitle:const Text('Play a promotional clip after this many songs'),trailing:DropdownButton<int>(value:adFrequency,items:const [DropdownMenuItem(value:3,child:Text('3 songs')),DropdownMenuItem(value:4,child:Text('4 songs'))],onChanged:(v){if(v!=null){setState(()=>adFrequency=v);playback.adEvery=v;_savePlaybackSetting('hte_ad_frequency',v);}})),
+        const ListTile(leading: Icon(Icons.campaign_outlined, color: Color(0xFFD4AF37)), title: Text('Promotional campaigns'), subtitle: Text('Promotional campaigns are managed by High-Tech Entertainment administrators. Listener settings cannot disable them.'), isThreeLine: true),
       ])),
       const SizedBox(height: 12),
       Card(child: Column(children: [
