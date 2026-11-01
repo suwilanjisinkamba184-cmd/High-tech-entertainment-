@@ -37,6 +37,9 @@ class HteApp extends StatelessWidget {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: const Color(0xFF090909),
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFD4AF37), brightness: Brightness.dark),
+    appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF101010), foregroundColor: Colors.white, centerTitle: false),
+    cardTheme: CardThemeData(color: const Color(0xFF151515), elevation: 1, margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Color(0xFF302817)))),
+    navigationBarTheme: const NavigationBarThemeData(backgroundColor: Color(0xFF101010), indicatorColor: Color(0xFF493A16), labelTextStyle: WidgetStatePropertyAll(TextStyle(fontWeight: FontWeight.w600, fontSize: 11))),
     ),
     home: const StartupGate(),
   );
@@ -1053,10 +1056,10 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(leading: const Icon(Icons.info_outline), title: const Text('App version'), subtitle: Text(version)),
       ])),
       const SizedBox(height: 12),
-      const Heading('Playback preferences'),
+      const Heading('Listening experience'),
       Card(child: Column(children: [
-        SwitchListTile(title:const Text('Smart Autoplay'),subtitle:const Text('Continue with recommended music when the queue ends'),value:autoplaySetting,onChanged:(v){setState(()=>autoplaySetting=v);playback.autoplay=v;_savePlaybackSetting('hte_autoplay',v);}),
-        SwitchListTile(title:const Text('Shuffle'),subtitle:const Text('Play queued tracks in random order'),value:shuffleSetting,onChanged:(v){setState(()=>shuffleSetting=v);playback.shuffle=v;player.setShuffleModeEnabled(v);_savePlaybackSetting('hte_shuffle',v);}),
+        SwitchListTile(title:const Text('Smart Autoplay'),subtitle:const Text('Continue with published music when your queue ends'),value:autoplaySetting,onChanged:(v){setState(()=>autoplaySetting=v);playback.autoplay=v;_savePlaybackSetting('hte_autoplay',v);}),
+        SwitchListTile(title:const Text('Shuffle'),subtitle:const Text('Mix the order of tracks in your queue'),value:shuffleSetting,onChanged:(v){setState(()=>shuffleSetting=v);playback.shuffle=v;player.setShuffleModeEnabled(v);_savePlaybackSetting('hte_shuffle',v);}),
         SwitchListTile(title:const Text('HT Audio Ads'),subtitle:const Text('Play promotional audio between tracks'),value:audioAdsSetting,onChanged:(v){setState(()=>audioAdsSetting=v);playback.audioAdsEnabled=v;_savePlaybackSetting('hte_audio_ads',v);}),
         ListTile(title:const Text('Ad interval'),subtitle:const Text('Play a promotional clip after this many songs'),trailing:DropdownButton<int>(value:adFrequency,items:const [DropdownMenuItem(value:3,child:Text('3 songs')),DropdownMenuItem(value:4,child:Text('4 songs'))],onChanged:(v){if(v!=null){setState(()=>adFrequency=v);playback.adEvery=v;_savePlaybackSetting('hte_ad_frequency',v);}})),
       ])),
