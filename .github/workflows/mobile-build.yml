@@ -176,14 +176,17 @@ jobs:
           flutter pub get
           dart run flutter_launcher_icons
           flutter analyze lib
-      - name: Build Android APK only
+      - name: Build Android APK and Google Play App Bundle
         working-directory: ${{ runner.temp }}/hte_app
         run: |
           flutter build apk --release --target-platform android-arm,android-arm64
+          flutter build appbundle --release
       - uses: actions/upload-artifact@v4
         with:
           name: high-tech-entertainment-android
-          path: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/app-release.apk
+          path: |
+            ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/app-release.apk
+            ${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
 
       - name: Publish public Android APK release
