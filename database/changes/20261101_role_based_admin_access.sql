@@ -5,7 +5,7 @@
 
 create schema if not exists private;
 revoke all on schema private from public, anon;
-grant usage on schema private to authenticated;
+grant usage on schema private to anon, authenticated;
 
 create table if not exists private.user_roles (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -34,7 +34,7 @@ as $$
   );
 $$;
 revoke all on function private.hte_has_role(text[]) from public, anon;
-grant execute on function private.hte_has_role(text[]) to authenticated;
+grant execute on function private.hte_has_role(text[]) to anon, authenticated;
 
 create or replace function private.hte_current_role()
 returns text
