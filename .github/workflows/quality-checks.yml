@@ -41,6 +41,9 @@ jobs:
       - name: Analyze Flutter source
         working-directory: mobile-app
         run: flutter analyze
+      - name: Generate Android platform scaffold
+        working-directory: mobile-app
+        run: flutter create --platforms=android --org com.hightechentertainment --project-name app .
       - name: Build debug APK
         working-directory: mobile-app
         run: flutter build apk --debug
