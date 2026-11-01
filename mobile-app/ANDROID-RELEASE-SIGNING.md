@@ -28,7 +28,7 @@ Never put the keystore, passwords, or Base64 value in the repository, an issue, 
 
 ## 3. Build the signed AAB
 
-After all four secrets are saved, open Actions → Build High-Tech Entertainment App → Run workflow. Download the `high-tech-entertainment-android` artifact and use its `bundle/release/app-release.aab` file for Play Console.
+After all four secrets are saved, open Actions → Build High-Tech Entertainment App → Run workflow. Download the `high-tech-entertainment-android` artifact. It contains both `app-release.apk` (device installation/testing) and `app-release.aab` (Google Play upload). Use the AAB for Play Console.
 
 If the secrets are missing, the build is for device testing only and is debug-signed.
 
