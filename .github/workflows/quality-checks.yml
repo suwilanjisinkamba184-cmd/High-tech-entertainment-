@@ -2,7 +2,7 @@ name: HTE quality checks
 
 on:
   pull_request:
-    branches: [main, feature/player-ui-deep-overhaul]
+    branches: [main, feature/player-ui-deep-overhaul, feature/website-deep-overhaul, feature/admin-security-app-overhaul]
   push:
     branches: [main, feature/player-ui-deep-overhaul, feature/website-deep-overhaul]
 
@@ -35,7 +35,6 @@ jobs:
         with:
           channel: stable
           cache: true
-          cache-dependency-path: mobile-app/pubspec.lock
       - name: Install dependencies
         working-directory: mobile-app
         run: flutter pub get
