@@ -19,6 +19,7 @@ const authRedirect = 'com.hightechentertainment.app://login-callback';
 final db = Supabase.instance.client;
 final playback = HtePlayback();
 final player = playback.player;
+final ValueNotifier<int> favouritesRevision = ValueNotifier<int>(0);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -99,7 +100,7 @@ class _StartupGateState extends State<StartupGate>
     } catch (error) {
       if (mounted) {
         setState(() {
-          _error = 'We could not initialise the app services. Check your connection and try again.\\n$error';
+          _error = 'We could not initialise the app services. Check your connection and try again.\n$error';
           _starting = false;
         });
       }
@@ -265,7 +266,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int tab = 0;
-  final pages = const [HomeTab(), DiscoverTab(), ArtistsTab(), MusicTab(), SavedTab(), VideosTab(), AccountTab()];
+  final pages = const [HomeTab(), DiscoverTab(), MusicTab(), SavedTab(), MoreTab()];
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(child: IndexedStack(index: tab, children: pages)),
@@ -275,13 +276,57 @@ class _MainScreenState extends State<MainScreen> {
       destinations: const [
         NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
         NavigationDestination(icon: Icon(Icons.search), label: 'Discover'),
-        NavigationDestination(icon: Icon(Icons.people_outline), label: 'Artists'),
         NavigationDestination(icon: Icon(Icons.music_note_outlined), label: 'Music'),
         NavigationDestination(icon: Icon(Icons.favorite_border), label: 'Saved'),
-        NavigationDestination(icon: Icon(Icons.video_library_outlined), label: 'Videos'),
-        NavigationDestination(icon: Icon(Icons.person_outline), label: 'Account'),
+        NavigationDestination(icon: Icon(Icons.grid_view_rounded), label: 'More'),
       ],
     )]),
+  );
+}
+
+class MoreTab extends StatelessWidget {
+  const MoreTab({super.key});
+
+  void _open(BuildContext context, String title, Widget page) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => Scaffold(
+        appBar: AppBar(title: Text(title)),
+        body: SafeArea(child: page),
+      ),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.only(bottom: 24),
+    children: [
+      const Brand(),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(20, 12, 20, 8),
+        child: Text('Explore more', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
+      ),
+      Card(child: ListTile(
+        leading: const Icon(Icons.people_outline, color: Color(0xFFD4AF37)),
+        title: const Text('Artists'),
+        subtitle: const Text('Discover High-Tech artists and their profiles'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => _open(context, 'Artists', const ArtistsTab()),
+      )),
+      Card(child: ListTile(
+        leading: const Icon(Icons.video_library_outlined, color: Color(0xFFD4AF37)),
+        title: const Text('Videos'),
+        subtitle: const Text('Watch music videos and visual content'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => _open(context, 'Videos', const VideosTab()),
+      )),
+      Card(child: ListTile(
+        leading: const Icon(Icons.person_outline, color: Color(0xFFD4AF37)),
+        title: const Text('Account'),
+        subtitle: const Text('Profile, sign out, privacy and settings'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => _open(context, 'Account', const AccountTab()),
+      )),
+    ],
   );
 }
 
@@ -630,6 +675,7 @@ Future<void> toggleFavourite(String id) async {
   final ids = prefs.getStringList('hte_favourites') ?? <String>[];
   if (ids.contains(id)) { ids.remove(id); } else { ids.add(id); }
   await prefs.setStringList('hte_favourites', ids);
+  favouritesRevision.value++;
 }
 
 class DiscoverTab extends StatefulWidget {
@@ -674,15 +720,31 @@ class _SavedTabState extends State<SavedTab> {
   List<Map<String,dynamic>> saved = [];
   bool loading = true;
   @override
-  void initState() { super.initState(); load(); }
+  void initState() {
+    super.initState();
+    favouritesRevision.addListener(load);
+    load();
+  }
+  @override
+  void dispose() {
+    favouritesRevision.removeListener(load);
+    super.dispose();
+  }
   Future<void> load() async {
-    setState(() => loading = true);
+    if (mounted) setState(() => loading = true);
     final prefs = await SharedPreferences.getInstance();
     final ids = prefs.getStringList('hte_favourites') ?? <String>[];
     try {
-      if (ids.isEmpty) { saved = []; }
-      else { saved = List<Map<String,dynamic>>.from(await db.from('tracks').select().inFilter('id', ids)); }
-    } catch (_) { saved = []; }
+      if (ids.isEmpty) {
+        saved = [];
+      } else {
+        saved = List<Map<String,dynamic>>.from(
+          await db.from('tracks').select().eq('is_published', true).inFilter('id', ids),
+        );
+      }
+    } catch (_) {
+      saved = [];
+    }
     if (mounted) setState(() => loading = false);
   }
   @override
