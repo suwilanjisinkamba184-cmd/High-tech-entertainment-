@@ -37,6 +37,7 @@ class HteApp extends StatelessWidget {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: const Color(0xFF090909),
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFD4AF37), brightness: Brightness.dark),
+    appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF101010), foregroundColor: Colors.white, centerTitle: false),
     ),
     home: const StartupGate(),
   );
@@ -563,44 +564,128 @@ class PlayerBar extends StatelessWidget {
   );
 }
 
-class FullPlayerPage extends StatelessWidget {
+class FullPlayerPage extends StatefulWidget {
   const FullPlayerPage({super.key});
-  String _time(Duration d) => '${d.inMinutes.toString().padLeft(2,'0')}:${(d.inSeconds%60).toString().padLeft(2,'0')}';
+  @override
+  State<FullPlayerPage> createState() => _FullPlayerPageState();
+}
+
+class _FullPlayerPageState extends State<FullPlayerPage> {
+  bool repeatOne = false;
+  String _time(Duration d) => '${d.inMinutes.toString().padLeft(2, '0')}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar:AppBar(title:const Text('Now playing'),actions:[IconButton(tooltip:'Queue',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const QueuePage())),icon:const Icon(Icons.queue_music))]),
-    body:ValueListenableBuilder<Map<String,dynamic>?>(
-      valueListenable:playback.currentTrack,
-      builder:(context,track,_)=>track==null?const Notice('Choose a track to start listening.'):Padding(
-        padding:const EdgeInsets.all(24),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-          ClipRRect(borderRadius:BorderRadius.circular(22),child:SizedBox(width:260,height:260,child:MediaCover(url:track['cover_url']?.toString(),height:260))),
-          const SizedBox(height:24),
-          Text((track['title']??'Now playing').toString(),style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold),textAlign:TextAlign.center),
-          Text((track['artist']??'High-Tech Entertainment').toString(),style:const TextStyle(color:Colors.white60)),
-          const SizedBox(height:20),
-          StreamBuilder<Duration>(stream:player.positionStream,initialData:Duration.zero,builder:(context,pos){
-            final duration=player.duration??Duration.zero;
-            final position=pos.data??Duration.zero;
-            final value=duration.inMilliseconds==0?0.0:position.inMilliseconds.clamp(0,duration.inMilliseconds).toDouble();
-            return Column(children:[
-              Slider(value:value,max:duration.inMilliseconds==0?1.0:duration.inMilliseconds.toDouble(),onChanged:(v)=>player.seek(Duration(milliseconds:v.round()))),
-              Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text(_time(position)),Text(_time(duration))]),
-            ]);
-          }),
-          const SizedBox(height:12),
-          Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-            IconButton(onPressed:()=>playback.toggleShuffle(),icon:Icon(playback.shuffle?Icons.shuffle_on:Icons.shuffle)),
-            IconButton(iconSize:38,onPressed:()=>playback.previous(),icon:const Icon(Icons.skip_previous)),
-            StreamBuilder<PlayerState>(stream:player.playerStateStream,builder:(context,s){
-              final playing=s.data?.playing??false;
-              return IconButton(iconSize:64,color:const Color(0xFFD4AF37),onPressed:()=>playing?player.pause():player.play(),icon:Icon(playing?Icons.pause_circle_filled:Icons.play_circle_fill));
-            }),
-            IconButton(iconSize:38,onPressed:()=>playback.next(),icon:const Icon(Icons.skip_next)),
-            IconButton(onPressed:()=>playback.setRepeat(true),icon:const Icon(Icons.repeat_one)),
-          ]),
-          ValueListenableBuilder<bool>(valueListenable:playback.adPlaying,builder:(context,isAd,_)=>Text(isAd?'Sponsored audio • High-Tech Entertainment':'Quality Sound, Global Vibes',style:const TextStyle(color:Colors.white54,fontSize:12))),
-        ]),
+    appBar: AppBar(
+      title: const Text('Now playing'),
+      actions: [
+        IconButton(
+          tooltip: 'View playback queue',
+          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QueuePage())),
+          icon: const Icon(Icons.queue_music),
+        ),
+      ],
+    ),
+    body: Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+          colors: [Color(0xFF211A0D), Color(0xFF0B0B0B), Color(0xFF080808)]),
       ),
+      child: SafeArea(child: ValueListenableBuilder<Map<String, dynamic>?>(
+        valueListenable: playback.currentTrack,
+        builder: (context, track, _) => track == null
+          ? const Notice('Choose a track from Music or Discover to start listening.')
+          : SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(22, 18, 22, 34),
+            child: Column(children: [
+              Container(
+                width: 280, height: 280,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(26),
+                  boxShadow: [BoxShadow(color: const Color(0xFFD4AF37).withOpacity(.12), blurRadius: 34, spreadRadius: 2)],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: MediaCover(url: track['cover_url']?.toString(), height: 280),
+              ),
+              const SizedBox(height: 28),
+              Text((track['title'] ?? 'Now playing').toString(),
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+                textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 7),
+              Text((track['artist'] ?? 'High-Tech Entertainment').toString(),
+                style: const TextStyle(color: Colors.white60, fontSize: 15)),
+              const SizedBox(height: 24),
+              StreamBuilder<Duration>(
+                stream: player.positionStream, initialData: Duration.zero,
+                builder: (context, pos) {
+                  final duration = player.duration ?? Duration.zero;
+                  final position = pos.data ?? Duration.zero;
+                  final max = duration.inMilliseconds > 0 ? duration.inMilliseconds.toDouble() : 1.0;
+                  final value = position.inMilliseconds.clamp(0, max.toInt()).toDouble();
+                  return Column(children: [
+                    Slider(
+                      value: value, max: max,
+                      onChanged: duration == Duration.zero ? null : (v) => player.seek(Duration(milliseconds: v.round())),
+                    ),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Text(_time(position), style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                      Text(_time(duration), style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                    ]),
+                  ]);
+                },
+              ),
+              const SizedBox(height: 12),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+                IconButton(
+                  tooltip: playback.shuffle ? 'Turn shuffle off' : 'Turn shuffle on',
+                  onPressed: () async { await playback.toggleShuffle(); if (mounted) setState(() {}); },
+                  color: playback.shuffle ? const Color(0xFFD4AF37) : Colors.white70,
+                  icon: const Icon(Icons.shuffle),
+                ),
+                IconButton(iconSize: 38, onPressed: playback.previous, icon: const Icon(Icons.skip_previous)),
+                StreamBuilder<PlayerState>(
+                  stream: player.playerStateStream,
+                  builder: (context, state) {
+                    final playing = state.data?.playing ?? false;
+                    return IconButton(
+                      iconSize: 68, color: const Color(0xFFD4AF37),
+                      onPressed: () => playing ? player.pause() : player.play(),
+                      icon: Icon(playing ? Icons.pause_circle_filled : Icons.play_circle_fill),
+                    );
+                  },
+                ),
+                IconButton(iconSize: 38, onPressed: playback.next, icon: const Icon(Icons.skip_next)),
+                IconButton(
+                  tooltip: repeatOne ? 'Turn repeat off' : 'Repeat this track',
+                  onPressed: () async { repeatOne = !repeatOne; await playback.setRepeat(repeatOne); if (mounted) setState(() {}); },
+                  color: repeatOne ? const Color(0xFFD4AF37) : Colors.white70,
+                  icon: const Icon(Icons.repeat_one),
+                ),
+              ]),
+              const SizedBox(height: 12),
+              ValueListenableBuilder<bool>(
+                valueListenable: playback.adPlaying,
+                builder: (context, isAd, _) => Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(isAd ? Icons.campaign_outlined : Icons.graphic_eq, size: 16, color: const Color(0xFFD4AF37)),
+                  const SizedBox(width: 7),
+                  Text(isAd ? 'Sponsored promotion • High-Tech Entertainment' : 'Quality Sound. Global Vibes.',
+                    style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                ]),
+              ),
+              ValueListenableBuilder<String?>(
+                valueListenable: playback.playbackError,
+                builder: (context, error, _) => error == null ? const SizedBox.shrink() :
+                  Padding(padding: const EdgeInsets.only(top: 14), child: Text(error,
+                    textAlign: TextAlign.center, style: const TextStyle(color: Colors.orangeAccent))),
+              ),
+              const SizedBox(height: 18),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QueuePage())),
+                icon: const Icon(Icons.queue_music), label: const Text('View upcoming tracks'),
+              ),
+            ]),
+          ),
+      )),
     ),
   );
 }
@@ -932,8 +1017,6 @@ class _SettingsPageState extends State<SettingsPage> {
   bool checking = false;
   bool autoplaySetting = true;
   bool shuffleSetting = false;
-  bool audioAdsSetting = true;
-  int adFrequency = 3;
 
   @override
   void initState() { super.initState(); _loadVersion(); _loadPlaybackSettings(); }
@@ -942,9 +1025,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs=await SharedPreferences.getInstance();
     autoplaySetting=prefs.getBool('hte_autoplay')??true;
     shuffleSetting=prefs.getBool('hte_shuffle')??false;
-    audioAdsSetting=prefs.getBool('hte_audio_ads')??true;
-    adFrequency=prefs.getInt('hte_ad_frequency')??3;
-    playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting; playback.audioAdsEnabled=audioAdsSetting; playback.adEvery=adFrequency;
+    playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting;
     if(mounted)setState((){});
   }
   Future<void> _savePlaybackSetting(String key,Object value) async {
@@ -1053,12 +1134,11 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(leading: const Icon(Icons.info_outline), title: const Text('App version'), subtitle: Text(version)),
       ])),
       const SizedBox(height: 12),
-      const Heading('Playback preferences'),
+      const Heading('Listening experience'),
       Card(child: Column(children: [
-        SwitchListTile(title:const Text('Smart Autoplay'),subtitle:const Text('Continue with recommended music when the queue ends'),value:autoplaySetting,onChanged:(v){setState(()=>autoplaySetting=v);playback.autoplay=v;_savePlaybackSetting('hte_autoplay',v);}),
-        SwitchListTile(title:const Text('Shuffle'),subtitle:const Text('Play queued tracks in random order'),value:shuffleSetting,onChanged:(v){setState(()=>shuffleSetting=v);playback.shuffle=v;player.setShuffleModeEnabled(v);_savePlaybackSetting('hte_shuffle',v);}),
-        SwitchListTile(title:const Text('HT Audio Ads'),subtitle:const Text('Play promotional audio between tracks'),value:audioAdsSetting,onChanged:(v){setState(()=>audioAdsSetting=v);playback.audioAdsEnabled=v;_savePlaybackSetting('hte_audio_ads',v);}),
-        ListTile(title:const Text('Ad interval'),subtitle:const Text('Play a promotional clip after this many songs'),trailing:DropdownButton<int>(value:adFrequency,items:const [DropdownMenuItem(value:3,child:Text('3 songs')),DropdownMenuItem(value:4,child:Text('4 songs'))],onChanged:(v){if(v!=null){setState(()=>adFrequency=v);playback.adEvery=v;_savePlaybackSetting('hte_ad_frequency',v);}})),
+        SwitchListTile(title:const Text('Smart Autoplay'),subtitle:const Text('Continue with published music when your queue ends'),value:autoplaySetting,onChanged:(v){setState(()=>autoplaySetting=v);playback.autoplay=v;_savePlaybackSetting('hte_autoplay',v);}),
+        SwitchListTile(title:const Text('Shuffle'),subtitle:const Text('Mix the order of tracks in your queue'),value:shuffleSetting,onChanged:(v){setState(()=>shuffleSetting=v);playback.shuffle=v;player.setShuffleModeEnabled(v);_savePlaybackSetting('hte_shuffle',v);}),
+        const ListTile(leading: Icon(Icons.campaign_outlined, color: Color(0xFFD4AF37)), title: Text('Promotional campaigns'), subtitle: Text('Promotional campaigns are managed by High-Tech Entertainment administrators. Listener settings cannot disable them.'), isThreeLine: true),
       ])),
       const SizedBox(height: 12),
       Card(child: Column(children: [
