@@ -603,7 +603,7 @@ class _FullPlayerPageState extends State<FullPlayerPage> {
                 width: 280, height: 280,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(26),
-                  boxShadow: [BoxShadow(color: const Color(0xFFD4AF37).withOpacity(.12), blurRadius: 34, spreadRadius: 2)],
+                  boxShadow: [BoxShadow(color: const Color.fromARGB(31, 212, 175, 55), blurRadius: 34, spreadRadius: 2)],
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: MediaCover(url: track['cover_url']?.toString(), height: 280),
