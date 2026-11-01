@@ -42,17 +42,17 @@
     <h2>Welcome back.</h2>
     <p class="muted">Sign in with an account assigned an active HTE administrator role.</p>
     <form id="login-form">
-      <div class="field"><label for="login-email">Email address</label><input id="login-email" name="email" type="email" required autocomplete="username" placeholder="Founder email"></div>
+      <div class="field"><label for="login-email">Email address</label><input id="login-email" name="email" type="email" required autocomplete="username" placeholder="Administrator email"></div>
       <div class="field"><label for="login-password">Password</label><input id="login-password" name="password" type="password" required autocomplete="current-password" placeholder="Your password"></div>
       <div class="admin-login-actions"><button class="btn gold" type="submit">Enter Admin Centre →</button><button class="btn" type="button" id="google-login">Continue with Google</button></div>
       <div class="status" id="login-status" role="status" aria-live="polite"></div>
     </form>
-    <div class="admin-secure-note">🔒 Protected by Supabase authentication and founder-only database policies.</div>
+    <div class="admin-secure-note">🔒 Protected by Supabase authentication and owner/admin role policies.</div>
   </div>
 </section>
 
 <div id="admin-app" class="admin-workspace" hidden>
-  <aside class="admin-sidebar" aria-label="Founder studio navigation">
+  <aside class="admin-sidebar" aria-label="Administrator navigation">
     <div class="admin-side-heading">WORKSPACE</div>
     <button class="admin-nav-item active" data-tab="overview"><span class="admin-nav-icon">⌂</span><span>Overview</span><b>01</b></button>
     <button class="admin-nav-item" data-tab="videos"><span class="admin-nav-icon">▶</span><span>Video manager</span><b>03</b></button>
@@ -99,7 +99,7 @@
         <button class="admin-quick-card" data-tab="releases" type="button"><span>▣</span><strong>Publish a release</strong><small>Showcase a new project</small><b>Manage releases →</b></button>
         <button class="admin-quick-card" data-tab="inbox" type="button"><span>✉</span><strong>Check enquiries</strong><small>Review booking and contact messages</small><b>Open inbox →</b></button>
       </div>
-      <div class="admin-bottom-note"><span class="admin-note-icon">✓</span><div><strong>Your studio is protected</strong><p>Founder access is restricted by the authorised Supabase account and database Row Level Security policies. Keep your password and private keys confidential.</p></div></div>
+      <div class="admin-bottom-note"><span class="admin-note-icon">✓</span><div><strong>Your studio is protected</strong><p>Only accounts with an active owner or administrator role can access management actions. Supabase Row Level Security enforces every change. Keep your password and private keys confidential.</p></div></div>
     </section>
 
     <section class="admin-view" data-view="videos" hidden>
