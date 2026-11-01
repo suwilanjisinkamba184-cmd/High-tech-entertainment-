@@ -13,7 +13,7 @@ document.addEventListener('submit',async function(event){
     const config=window.HTE_SUPABASE_CONFIG||{};
     if(!window.supabase||!config.url||!config.publishableKey)throw new Error('The upload service did not load. Refresh the page and try again.');
     const client=window.supabase.createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});
-    say('Checking founder access…');
+    say('Checking administrator access…');
     const {data:auth,error:authError}=await client.auth.getSession();
     if(authError)throw authError;
     const user=auth.session?.user;
