@@ -69,7 +69,7 @@ jobs:
                           <data android:scheme="com.hightechentertainment.app" android:host="login-callback" />
                       </intent-filter>'''
               text = text.replace("</activity>", intent + "\n                  </activity>", 1)
-          if "com.ryanheise.audioservice.AudioService" not in text:
+          if 'android:name="com.ryanheise.audioservice.AudioService"' not in text:
               components = '''<service android:name="com.ryanheise.audioservice.AudioService"
                       android:foregroundServiceType="mediaPlayback"
                       android:exported="true" tools:ignore="Instantiatable">
@@ -106,6 +106,7 @@ jobs:
           PY
           grep -R -E "minSdk|targetSdk" android/app/build.gradle*
       - name: Configure Android upload-key signing
+        id: android_signing
         working-directory: ${{ runner.temp }}/hte_app
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -164,8 +165,10 @@ jobs:
           else:
               raise SystemExit("Android Gradle build file not found")
           PY
+            echo "release_signing_ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "No upload-key secrets configured; this build will use debug signing and is for testing only."
+            echo "release_signing_ready=false" >> "$GITHUB_OUTPUT"
           fi
       - name: Install dependencies and generate branded launcher icon
         working-directory: ${{ runner.temp }}/hte_app
@@ -173,11 +176,17 @@ jobs:
           flutter pub get
           dart run flutter_launcher_icons
           flutter analyze
-      - name: Build APK and Play Store bundle
+      - name: Build Android APK and (when release-signed) Play Store bundle
         working-directory: ${{ runner.temp }}/hte_app
+        env:
+          RELEASE_SIGNING_READY: ${{ steps.android_signing.outputs.release_signing_ready }}
         run: |
           flutter build apk --release --target-platform android-arm,android-arm64
-          flutter build appbundle --release
+          if [ "$RELEASE_SIGNING_READY" = "true" ]; then
+            flutter build appbundle --release
+          else
+            echo "Skipping AAB: configure the four ANDROID_* upload-key repository secrets to create a Play Store-ready bundle."
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: high-tech-entertainment-android
