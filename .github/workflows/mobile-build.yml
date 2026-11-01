@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   android:
@@ -115,12 +115,12 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_STORE_PASSWORD" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
-            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hte-upload-key.jks"
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hte-upload-key.p12"
             cat > android/key.properties <<EOF
           storePassword=$ANDROID_STORE_PASSWORD
           keyPassword=$ANDROID_KEY_PASSWORD
           keyAlias=$ANDROID_KEY_ALIAS
-          storeFile=$RUNNER_TEMP/hte-upload-key.jks
+          storeFile=$RUNNER_TEMP/hte-upload-key.p12
           EOF
             python3 - <<'PY'
           from pathlib import Path
@@ -190,10 +190,23 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: high-tech-entertainment-android
-          path: |
-            ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/app-release.apk
-            ${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/app-release.aab
+          path: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
+
+      - name: Publish public Android APK release
+        if: github.event_name != 'pull_request' && steps.android_signing.outputs.release_signing_ready == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: High-Tech Entertainment Android
+          target_commitish: ${{ github.sha }}
+          body: |
+            Official High-Tech Entertainment Android app.
+            Download the APK and install it on a compatible Android device.
+            This release is signed with the project's private upload key.
+          files: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/app-release.apk
+          overwrite_files: true
+          make_latest: true
 
   windows:
     runs-on: windows-latest
