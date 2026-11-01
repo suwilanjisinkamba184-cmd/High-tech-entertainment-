@@ -2,7 +2,7 @@ name: HTE quality checks
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feature/player-ui-deep-overhaul]
   push:
     branches: [main, feature/player-ui-deep-overhaul, feature/website-deep-overhaul]
 
