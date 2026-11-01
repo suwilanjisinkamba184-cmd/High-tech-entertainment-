@@ -17,8 +17,8 @@ document.addEventListener('submit',async function(event){
     const {data:auth,error:authError}=await client.auth.getSession();
     if(authError)throw authError;
     const user=auth.session?.user;
-    const {data:allowed,error:roleError}=await client.rpc('hte_is_admin');
-    if(roleError||allowed!==true||!user)throw new Error('Administrator access is required. Sign in with an authorised HTE admin account.');
+    const {data:roleAllowed,error:roleError}=await client.rpc('hte_is_admin');
+    if(roleError||roleAllowed!==true||!user)throw new Error('Administrator access is required. Sign in with an authorised HTE admin account.');
     const data=new FormData(form);
     const file=data.get('audio');
     if(!(file instanceof File)||!file.size)throw new Error('Please select an audio file.');
