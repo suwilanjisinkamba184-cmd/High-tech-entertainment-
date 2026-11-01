@@ -17,7 +17,8 @@ document.addEventListener('submit',async function(event){
     const {data:auth,error:authError}=await client.auth.getSession();
     if(authError)throw authError;
     const user=auth.session?.user;
-    if(!user||user.id!=='b268df9e-eff5-43b9-a38f-869b33add38b'||String(user.email||'').toLowerCase()!=='suwilanjisinkamba184@gmail.com')throw new Error('Founder session not found. Sign out, sign in again, and retry.');
+    const {data:allowed,error:roleError}=await client.rpc('hte_is_admin');
+    if(roleError||allowed!==true||!user)throw new Error('Administrator access is required. Sign in with an authorised HTE admin account.');
     const data=new FormData(form);
     const file=data.get('audio');
     if(!(file instanceof File)||!file.size)throw new Error('Please select an audio file.');
