@@ -1,0 +1,11 @@
+(()=>{'use strict';
+const button=document.querySelector('.nav-toggle');
+const nav=document.getElementById('hte-primary-nav');
+if(!button||!nav)return;
+const close=()=>{button.setAttribute('aria-expanded','false');button.setAttribute('aria-label','Open navigation');nav.classList.remove('is-open')};
+button.addEventListener('click',()=>{const open=button.getAttribute('aria-expanded')!=='true';button.setAttribute('aria-expanded',String(open));button.setAttribute('aria-label',open?'Close navigation':'Open navigation');nav.classList.toggle('is-open',open)});
+nav.addEventListener('click',event=>{if(event.target.closest('a'))close()});
+document.addEventListener('keydown',event=>{if(event.key==='Escape')close()});
+document.addEventListener('click',event=>{if(!nav.contains(event.target)&&!button.contains(event.target))close()});
+window.addEventListener('resize',()=>{if(window.innerWidth>760)close()});
+})();
