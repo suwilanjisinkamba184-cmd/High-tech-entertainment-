@@ -248,7 +248,7 @@ class LoginPage extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white60)),
                 const SizedBox(height: 22),
-                const AccountTab(),
+                const AccountTab(embedded: true),
               ],
             ),
           ),
@@ -787,7 +787,8 @@ class _SavedTabState extends State<SavedTab> {
 }
 
 class AccountTab extends StatefulWidget {
-  const AccountTab({super.key});
+  const AccountTab({super.key, this.embedded = false});
+  final bool embedded;
   @override
   State<AccountTab> createState() => _AccountTabState();
 }
@@ -833,7 +834,7 @@ class _AccountTabState extends State<AccountTab> {
   @override
   Widget build(BuildContext context) {
     final user = db.auth.currentUser;
-    return ListView(padding: const EdgeInsets.all(20), children: [
+    final content = <Widget>[
       if (user != null) ...[
         const Brand(),
         Card(child: ListTile(
@@ -880,7 +881,15 @@ class _AccountTabState extends State<AccountTab> {
           child: const Text('Request account deletion'),
         ),
       ],
-    ]);
+    ];
+    if (widget.embedded) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: content,
+      );
+    }
+    return ListView(padding: const EdgeInsets.all(20), children: content);
   }
 }
 
