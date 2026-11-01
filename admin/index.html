@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#070b12">
   <meta name="robots" content="noindex,nofollow,noarchive">
-  <title>Founder Studio · High Tech Entertainment</title>
+  <title>Administrator Control Centre · High Tech Entertainment</title>
   <link rel="stylesheet" href="../assets/site.css?v=20261101-2">
   <link rel="stylesheet" href="../assets/admin.css?v=20261101-2">
   <link rel="stylesheet" href="../assets/admin-overhaul.css?v=1">
@@ -38,13 +38,13 @@
     </div>
   </div>
   <div class="panel admin-login-card">
-    <div class="eyebrow">Founder authentication</div>
+    <div class="eyebrow">Administrator authentication</div>
     <h2>Welcome back.</h2>
-    <p class="muted">Sign in with the authorised founder account to access your studio.</p>
+    <p class="muted">Sign in with an account assigned an active HTE administrator role.</p>
     <form id="login-form">
       <div class="field"><label for="login-email">Email address</label><input id="login-email" name="email" type="email" required autocomplete="username" placeholder="Founder email"></div>
       <div class="field"><label for="login-password">Password</label><input id="login-password" name="password" type="password" required autocomplete="current-password" placeholder="Your password"></div>
-      <div class="admin-login-actions"><button class="btn gold" type="submit">Enter Founder Studio →</button><button class="btn" type="button" id="google-login">Continue with Google</button></div>
+      <div class="admin-login-actions"><button class="btn gold" type="submit">Enter Admin Centre →</button><button class="btn" type="button" id="google-login">Continue with Google</button></div>
       <div class="status" id="login-status" role="status" aria-live="polite"></div>
     </form>
     <div class="admin-secure-note">🔒 Protected by Supabase authentication and founder-only database policies.</div>
@@ -66,13 +66,13 @@
     <button class="admin-nav-item" data-tab="settings"><span class="admin-nav-icon">⚙</span><span>Settings</span><b>06</b></button>
     <a class="admin-nav-item" href="../account/"><span class="admin-nav-icon">◉</span><span>Profile & account</span><b>↗</b></a>
     <a class="admin-nav-item" href="../"><span class="admin-nav-icon">↗</span><span>Public website</span><b>↗</b></a>
-    <div class="admin-sidebar-bottom"><div class="admin-status-orb"></div><div><strong>STUDIO SECURE</strong><small>Founder access only</small></div></div>
+    <div class="admin-sidebar-bottom"><div class="admin-status-orb"></div><div><strong>STUDIO SECURE</strong><small>Assigned administrators only</small></div></div>
   </aside>
 
   <main id="main" class="admin-main">
     <div class="admin-main-top">
       <div><div class="eyebrow">HIGH TECH ENTERTAINMENT / CONTROL ROOM</div><h1 id="view-title">Overview</h1><p id="admin-date" class="admin-date">Your creative operations, in one place.</p></div>
-      <div class="admin-main-actions"><span class="admin-user-chip"><span class="admin-user-avatar">HT</span><span><strong data-user-name>Founder</strong><small>Founder account</small></span></span><button class="btn" id="refresh-admin" type="button">↻ Refresh data</button></div>
+      <div class="admin-main-actions"><span class="admin-user-chip"><span class="admin-user-avatar">HT</span><span><strong data-user-name>Founder</strong><small>Administrator account</small></span></span><button class="btn" id="refresh-admin" type="button">↻ Refresh data</button></div>
     </div>
     <div class="status admin-global-status" id="admin-status" role="status" aria-live="polite"></div>
 
