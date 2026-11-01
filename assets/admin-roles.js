@@ -47,5 +47,6 @@ list.addEventListener('click',async e=>{
  finally{button.disabled=false;}
 });
 $('#refresh-roles')?.addEventListener('click',load);
+db?.auth.onAuthStateChange((_event,session)=>{if(session)setTimeout(load,0);else list.innerHTML='<div class="empty">Sign in with the HTE owner account to view private account roles.</div>';});
 load();
 })();
