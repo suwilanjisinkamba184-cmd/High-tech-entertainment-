@@ -317,9 +317,11 @@ class _UpdatePasswordPageState extends State<UpdatePasswordPage> {
     } on AuthException catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not update the password. Please request a new reset link.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not update the password. Please request a new reset link.')),
+        );
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -972,9 +974,11 @@ class _AccountTabState extends State<AccountTab> {
     } on AuthException catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google sign-in could not complete: $error')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google sign-in could not complete: $error')),
+        );
+      }
     } finally {
       if (mounted) setState(() => googleBusy = false);
     }
@@ -994,15 +998,19 @@ class _AccountTabState extends State<AccountTab> {
         address,
         redirectTo: 'com.hightechentertainment.app://login-callback',
       );
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('If an account exists for that email, a password reset link has been sent. Open it on this phone.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('If an account exists for that email, a password reset link has been sent. Open it on this phone.')),
+        );
+      }
     } on AuthException catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not send the reset email. Check your connection and try again.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not send the reset email. Check your connection and try again.')),
+        );
+      }
     } finally {
       if (mounted) setState(() => resetBusy = false);
     }
