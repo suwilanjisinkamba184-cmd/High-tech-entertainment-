@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const $=s=>document.querySelector(s),config=window.HTE_SUPABASE_CONFIG||{},UID='b268df9e-eff5-43b9-a38f-869b33add38b',EMAIL='suwilanjisinkamba184@gmail.com';
+const $=s=>document.querySelector(s),config=window.HTE_SUPABASE_CONFIG||{};
 if(!window.supabase||!config.url||!config.publishableKey)return;
 const db=window.supabase.createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
