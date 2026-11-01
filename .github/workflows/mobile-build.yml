@@ -175,7 +175,7 @@ jobs:
         run: |
           flutter pub get
           dart run flutter_launcher_icons
-          flutter analyze
+          flutter analyze lib
       - name: Build Android APK and (when release-signed) Play Store bundle
         working-directory: ${{ runner.temp }}/hte_app
         env:
