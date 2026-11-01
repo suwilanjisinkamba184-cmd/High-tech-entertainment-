@@ -28,7 +28,7 @@ Never put the keystore, passwords, or Base64 value in the repository, an issue, 
 
 ## 3. Build the signed AAB
 
-After all four secrets are saved, open Actions → Build High-Tech Entertainment App → Run workflow. Download the `high-tech-entertainment-android` artifact. It contains both `app-release.apk` (device installation/testing) and `app-release.aab` (Google Play upload). Use the AAB for Play Console.
+After all four secrets are saved, open Actions → Build High-Tech Entertainment App → Run workflow. Download the `high-tech-entertainment-android` artifact. It contains `app-listener-release.apk` (public listener app), `app-admin-release.apk` (separate administrator app), and the listener `app-listener-release.aab` (Google Play upload). The public GitHub Release publishes only the listener APK; the administrator APK is not attached to the public release. Its private screens and APIs still require an active HTE owner/admin role.
 
 If the secrets are missing, the build is for device testing only and is debug-signed.
 
@@ -38,6 +38,6 @@ When creating the first Play release, enrol in Play App Signing. Google Play use
 
 ## Planned application ID
 
-`com.hightechentertainment.app`
+Listener: `com.hightechentertainment.app`\n\nAdministrator: `com.hightechentertainment.app.admin`
 
 Check the generated AAB's application ID before creating the Play Console app. Package names are permanent in Play Console.
