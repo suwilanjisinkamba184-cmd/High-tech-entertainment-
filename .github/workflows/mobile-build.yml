@@ -2,12 +2,12 @@ name: Build High-Tech Entertainment App
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/admin-security-app-overhaul]
     paths:
       - 'mobile-app/**'
       - '.github/workflows/mobile-build.yml'
   pull_request:
-    branches: [main]
+    branches: [main, feature/admin-security-app-overhaul, feature/website-deep-overhaul]
     paths:
       - 'mobile-app/**'
       - '.github/workflows/mobile-build.yml'
@@ -58,17 +58,26 @@ jobs:
           for permission in required_permissions:
               if permission not in text:
                   text = text.replace("<application", f'    <uses-permission android:name="{permission}" />\n    <application', 1)
-          text = re.sub(r'android:label="[^"]*"', 'android:label="High-Tech Entertainment"', text)
+          text = re.sub(r'android:label="[^"]*"', 'android:label="@string/app_name"', text)
           # just_audio_background requires its Activity, foreground service and media-button receiver.
           text = re.sub(r'<activity android:name="[^"]+"', '<activity android:name="com.ryanheise.audioservice.AudioServiceActivity"', text, count=1)
-          if "android:scheme=\"com.hightechentertainment.app\"" not in text:
-              intent = '''<intent-filter>
-                          <action android:name="android.intent.action.VIEW" />
-                          <category android:name="android.intent.category.DEFAULT" />
-                          <category android:name="android.intent.category.BROWSABLE" />
-                          <data android:scheme="com.hightechentertainment.app" android:host="login-callback" />
-                      </intent-filter>'''
-              text = text.replace("</activity>", intent + "\n                  </activity>", 1)
+          # Deep links are flavor-specific so listener and administrator APKs can coexist.
+          overlay_root = Path("android/app/src")
+          for flavor, scheme in (("listener", "com.hightechentertainment.app"), ("admin", "com.hightechentertainment.admin")):
+              overlay = overlay_root / flavor / "AndroidManifest.xml"
+              overlay.parent.mkdir(parents=True, exist_ok=True)
+              overlay.write_text(f'''<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application>
+                <activity android:name="com.ryanheise.audioservice.AudioServiceActivity" android:exported="true">
+                  <intent-filter>
+                    <action android:name="android.intent.action.VIEW" />
+                    <category android:name="android.intent.category.DEFAULT" />
+                    <category android:name="android.intent.category.BROWSABLE" />
+                    <data android:scheme="{scheme}" android:host="login-callback" />
+                  </intent-filter>
+                </activity>
+              </application>
+          </manifest>''')
           if 'android:name="com.ryanheise.audioservice.AudioService"' not in text:
               components = '''<service android:name="com.ryanheise.audioservice.AudioService"
                       android:foregroundServiceType="mediaPlayback"
@@ -102,9 +111,43 @@ jobs:
                   text, n = re.subn(r'(?m)^(\s*targetSdkVersion\s+)[^\n]+', r'\g<1>36', text)
               if n == 0:
                   raise SystemExit(f"Could not set Android 16 target SDK in {path}")
+              if path.name == "build.gradle.kts":
+                  if 'productFlavors {' not in text:
+                      flavors = '''    flavorDimensions += "distribution"
+              productFlavors {
+                  create("listener") {
+                      dimension = "distribution"
+                      resValue("string", "app_name", "High-Tech Entertainment")
+                  }
+                  create("admin") {
+                      dimension = "distribution"
+                      applicationIdSuffix = ".admin"
+                      resValue("string", "app_name", "High-Tech Admin")
+                  }
+              }
+          '''
+                      text = text.replace("    buildTypes {", flavors + "    buildTypes {", 1)
+                  text = re.sub(r'(?m)^\\s*applicationId\\s*=\\s*"[^"]+"', '        applicationId = "com.hightechentertainment.app"', text, count=1)
+              else:
+                  if "productFlavors {" not in text:
+                      flavors = '''    flavorDimensions "distribution"
+              productFlavors {
+                  listener {
+                      dimension "distribution"
+                      resValue "string", "app_name", "High-Tech Entertainment"
+                  }
+                  admin {
+                      dimension "distribution"
+                      applicationIdSuffix ".admin"
+                      resValue "string", "app_name", "High-Tech Admin"
+                  }
+              }
+          '''
+                      text = text.replace("    buildTypes {", flavors + "    buildTypes {", 1)
+                  text = re.sub(r'(?m)^\\s*applicationId\\s+"[^"]+"', '        applicationId "com.hightechentertainment.app"', text, count=1)
               path.write_text(text)
           PY
-          grep -R -E "minSdk|targetSdk" android/app/build.gradle*
+          grep -R -E "minSdk|targetSdk|applicationId|productFlavors" android/app/build.gradle*
       - name: Configure Android upload-key signing
         id: android_signing
         working-directory: ${{ runner.temp }}/hte_app
@@ -179,18 +222,20 @@ jobs:
       - name: Build Android APK and Google Play App Bundle
         working-directory: ${{ runner.temp }}/hte_app
         run: |
-          flutter build apk --release --target-platform android-arm,android-arm64
-          flutter build appbundle --release
+          flutter build apk --release --flavor listener --target lib/main.dart --target-platform android-arm,android-arm64
+          flutter build apk --release --flavor admin --target lib/admin_main.dart --target-platform android-arm,android-arm64
+          flutter build appbundle --release --flavor listener --target lib/main.dart
       - uses: actions/upload-artifact@v4
         with:
           name: high-tech-entertainment-android
           path: |
-            ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/app-release.apk
-            ${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/app-release.aab
+            ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/app-listener-release.apk
+            ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/app-admin-release.apk
+            ${{ runner.temp }}/hte_app/build/app/outputs/bundle/listenerRelease/app-listener-release.aab
           if-no-files-found: error
 
       - name: Publish public Android APK release
-        if: github.event_name != 'pull_request' && steps.android_signing.outputs.release_signing_ready == 'true'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && steps.android_signing.outputs.release_signing_ready == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: android-latest
@@ -200,7 +245,7 @@ jobs:
             Official High-Tech Entertainment Android app.
             Download the APK and install it on a compatible Android device.
             This release is signed with the project's private upload key.
-          files: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/app-release.apk
+          files: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/app-listener-release.apk
           overwrite_files: true
           make_latest: true
 
