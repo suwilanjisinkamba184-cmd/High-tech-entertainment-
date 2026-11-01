@@ -802,6 +802,12 @@ class _AccountTabState extends State<AccountTab> {
   @override
   void dispose() { email.dispose(); password.dispose(); super.dispose(); } 
   Future<void> authenticate() async {
+    if (email.text.trim().isEmpty || password.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter your email address and password.')),
+      );
+      return;
+    }
     setState(() => busy = true);
     try {
       if (signup) {
@@ -809,10 +815,58 @@ class _AccountTabState extends State<AccountTab> {
       } else {
         await db.auth.signInWithPassword(email: email.text.trim(), password: password.text);
       }
-      if (mounted) setState(() {});
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication request completed. Check your email if confirmation is enabled.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(signup
+              ? 'Account request sent. Check your email if confirmation is enabled.'
+              : 'Signed in successfully.')),
+        );
+      }
     } on AuthException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to sign in. Check your connection and try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> signInWithGoogle() async {
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      final launched = await db.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: authRedirect,
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open Google sign-in. Please try again.')),
+        );
+      }
+      // supabase_flutter receives the registered app callback, exchanges the
+      // PKCE code and persists the session. AuthGate then opens MainScreen.
+    } on AuthException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Google sign-in could not start. Check that Google is enabled in Supabase.')),
+        );
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -851,8 +905,28 @@ class _AccountTabState extends State<AccountTab> {
         const SizedBox(height: 12),
         TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder())),
         const SizedBox(height: 14),
-        FilledButton(onPressed: busy ? null : authenticate, child: Text(busy ? 'Please wait' : (signup ? 'Create account' : 'Sign in'))),
-        TextButton(onPressed: () => setState(() => signup = !signup), child: Text(signup ? 'Already registered? Sign in' : 'Create a new account')),
+        FilledButton(
+          onPressed: busy ? null : authenticate,
+          child: Text(busy ? 'Please wait' : (signup ? 'Create account' : 'Sign in')),
+        ),
+        if (!signup) ...[
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: busy ? null : signInWithGoogle,
+            icon: const Icon(Icons.g_mobiledata, size: 28),
+            label: const Text('Continue with Google'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(50),
+              side: const BorderSide(color: Color(0xFFD4AF37)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Center(
+            child: Text('Secure sign-in powered by Supabase',
+              style: TextStyle(color: Colors.white54, fontSize: 11)),
+          ),
+        ],
+        TextButton(onPressed: busy ? null : () => setState(() => signup = !signup), child: Text(signup ? 'Already registered? Sign in' : 'Create a new account')),
         TextButton.icon(
           onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication),
           icon: const Icon(Icons.privacy_tip_outlined),
