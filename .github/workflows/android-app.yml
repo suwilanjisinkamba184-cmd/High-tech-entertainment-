@@ -1,0 +1,101 @@
+name: Build High-Tech Entertainment Android app
+
+on:
+  push:
+    branches:
+      - main
+      - fix/android-google-oauth-and-build
+    paths:
+      - "mobile-app/**"
+      - ".github/workflows/android-app.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile-app
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate missing Android platform project
+        run: flutter create --platforms=android --org com.hightechentertainment .
+
+      - name: Configure app deep link and Android permissions
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          ET.register_namespace("android", "http://schemas.android.com/apk/res/android")
+          ns = "{http://schemas.android.com/apk/res/android}"
+          tree = ET.parse(manifest)
+          root = tree.getroot()
+
+          if not any(node.tag == "uses-permission" and node.get(ns + "name") == "android.permission.INTERNET" for node in root):
+              permission = ET.Element("uses-permission")
+              permission.set(ns + "name", "android.permission.INTERNET")
+              root.insert(0, permission)
+
+          activity = next((node for node in root.iter("activity") if node.get(ns + "name") == ".MainActivity"), None)
+          if activity is None:
+              raise SystemExit("Generated Android manifest does not contain .MainActivity")
+
+          already_registered = any(
+              node.tag == "data"
+              and node.get(ns + "scheme") == "com.hightechentertainment.app"
+              and node.get(ns + "host") == "login-callback"
+              for node in activity.iter("data")
+          )
+          if not already_registered:
+              intent = ET.SubElement(activity, "intent-filter")
+              ET.SubElement(intent, "action").set(ns + "name", "android.intent.action.VIEW")
+              ET.SubElement(intent, "category").set(ns + "name", "android.intent.category.DEFAULT")
+              ET.SubElement(intent, "category").set(ns + "name", "android.intent.category.BROWSABLE")
+              data = ET.SubElement(intent, "data")
+              data.set(ns + "scheme", "com.hightechentertainment.app")
+              data.set(ns + "host", "login-callback")
+
+          tree.write(manifest, encoding="utf-8", xml_declaration=True)
+          PY
+
+          if [ -f android/app/build.gradle.kts ]; then
+            sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 26/' android/app/build.gradle.kts
+          elif [ -f android/app/build.gradle ]; then
+            sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 26/' android/app/build.gradle
+          fi
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze Dart source
+        run: flutter analyze --no-pub
+
+      - name: Build Android APK
+        run: flutter build apk --release
+
+      - name: Build Android App Bundle
+        run: flutter build appbundle --release
+
+      - name: Upload Android builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: high-tech-entertainment-android
+          path: |
+            mobile-app/build/app/outputs/flutter-apk/app-release.apk
+            mobile-app/build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 14
