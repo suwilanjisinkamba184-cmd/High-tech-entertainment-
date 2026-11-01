@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'playback_engine.dart';
@@ -15,7 +16,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 const supabaseUrl = 'https://wqrxacjbsldbnoekbkbf.supabase.co';
 const supabaseKey = 'sb_publishable_hB_aRh-dnicpRQq3wiRtWg_JTdhmMda';
-const authRedirect = 'com.hightechentertainment.app://login-callback';
+// Set this to the Web OAuth client ID created in Google Cloud Console.
+const googleWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
 final db = Supabase.instance.client;
 final playback = HtePlayback();
 final player = playback.player;
@@ -79,6 +81,17 @@ class _StartupGateState extends State<StartupGate>
         url: supabaseUrl,
         publishableKey: supabaseKey,
       );
+      // Native Google account chooser (Google Play Services); no browser redirect.
+      if (googleWebClientId.isNotEmpty) {
+        try {
+          await GoogleSignIn.instance.initialize(
+            serverClientId: googleWebClientId,
+          );
+        } catch (_) {
+          // A missing or misconfigured Google OAuth client must not block
+          // email sign-in or password recovery.
+        }
+      }
       // Audio notifications are optional: a notification initialisation
       // failure must not prevent the rest of the app from opening.
       try {
@@ -203,6 +216,9 @@ class AuthGate extends StatelessWidget {
         final session = snapshot.hasData
             ? snapshot.data!.session
             : db.auth.currentSession;
+        if (snapshot.data?.event == AuthChangeEvent.passwordRecovery) {
+          return const UpdatePasswordPage();
+        }
         return session == null ? const LoginPage() : const MainScreen();
       },
     );
@@ -256,6 +272,83 @@ class LoginPage extends StatelessWidget {
       ),
     );
   }
+}
+
+class UpdatePasswordPage extends StatefulWidget {
+  const UpdatePasswordPage({super.key});
+  @override
+  State<UpdatePasswordPage> createState() => _UpdatePasswordPageState();
+}
+
+class _UpdatePasswordPageState extends State<UpdatePasswordPage> {
+  final password = TextEditingController();
+  final confirmation = TextEditingController();
+  bool busy = false;
+
+  @override
+  void dispose() {
+    password.dispose();
+    confirmation.dispose();
+    super.dispose();
+  }
+
+  Future<void> updatePassword() async {
+    if (password.text.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Use a password with at least 8 characters.')),
+      );
+      return;
+    }
+    if (password.text != confirmation.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The passwords do not match.')),
+      );
+      return;
+    }
+    setState(() => busy = true);
+    try {
+      await db.auth.updateUser(UserAttributes(password: password.text));
+      await db.auth.signOut();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password updated. Sign in with your new password.')),
+        );
+      }
+    } on AuthException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not update the password. Please request a new reset link.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: const Color(0xFF080808),
+    appBar: AppBar(title: const Text('Reset password')),
+    body: SafeArea(child: Center(child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 480),
+      child: ListView(padding: const EdgeInsets.all(24), shrinkWrap: true, children: [
+        const Brand(),
+        const Text('Choose a new password', textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 18),
+        TextField(controller: password, obscureText: true,
+          decoration: const InputDecoration(labelText: 'New password', border: OutlineInputBorder())),
+        const SizedBox(height: 12),
+        TextField(controller: confirmation, obscureText: true,
+          decoration: const InputDecoration(labelText: 'Confirm new password', border: OutlineInputBorder())),
+        const SizedBox(height: 18),
+        FilledButton(onPressed: busy ? null : updatePassword,
+          child: Text(busy ? 'Updating…' : 'Update password')),
+      ]),
+    ))),
+  );
 }
 
 class MainScreen extends StatefulWidget {
@@ -518,7 +611,15 @@ class TrackList extends StatelessWidget {
             subtitle: Text((item['artist'] ?? 'High-Tech Entertainment').toString()),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
               IconButton(tooltip: 'Save favourite', onPressed: () async { await toggleFavourite((item['id'] ?? '').toString()); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your favourites have been updated.'))); }, icon: const Icon(Icons.favorite_border, size: 20, color: Colors.pinkAccent)),
-              IconButton(tooltip: 'Share track', onPressed: () => Share.share('${item['title']} — ${item['artist']}\nHigh-Tech Entertainment'), icon: const Icon(Icons.share_outlined, size: 20)),
+              IconButton(
+                tooltip: 'Share track',
+                onPressed: () => SharePlus.instance.share(
+                  ShareParams(
+                    text: '${item['title']} — ${item['artist']}\nHigh-Tech Entertainment',
+                  ),
+                ),
+                icon: const Icon(Icons.share_outlined, size: 20),
+              ),
               IconButton(
               icon: const Icon(Icons.play_circle_fill, color: Color(0xFFD4AF37), size: 34),
               onPressed: () async {
@@ -798,10 +899,18 @@ class _AccountTabState extends State<AccountTab> {
   final password = TextEditingController();
   bool signup = false;
   bool busy = false;
+  bool googleBusy = false;
+  bool resetBusy = false;
 
   @override
   void dispose() { email.dispose(); password.dispose(); super.dispose(); } 
   Future<void> authenticate() async {
+    if (email.text.trim().isEmpty || password.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter your email address and password.')),
+      );
+      return;
+    }
     setState(() => busy = true);
     try {
       if (signup) {
@@ -809,12 +918,101 @@ class _AccountTabState extends State<AccountTab> {
       } else {
         await db.auth.signInWithPassword(email: email.text.trim(), password: password.text);
       }
-      if (mounted) setState(() {});
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication request completed. Check your email if confirmation is enabled.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(signup
+              ? 'Account request sent. Check your email if confirmation is enabled.'
+              : 'Signed in successfully.')),
+        );
+      }
     } on AuthException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to sign in. Check your connection and try again.')),
+        );
+      }
     } finally {
       if (mounted) setState(() => busy = false);
+    }
+  }
+
+
+  Future<void> signInWithGoogle() async {
+    if (googleWebClientId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Google sign-in is being configured. Please use email sign-in or password recovery for now.')),
+      );
+      return;
+    }
+    setState(() => googleBusy = true);
+    try {
+      final account = await GoogleSignIn.instance.authenticate();
+      final idToken = account.authentication.idToken;
+      if (idToken == null) {
+        throw const AuthException('Google did not return an identity token. Check the Web OAuth client ID configuration.');
+      }
+      var authorization = await account.authorizationClient.authorizationForScopes([]);
+      authorization ??= await account.authorizationClient.authorizeScopes([]);
+      await db.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: authorization.accessToken,
+      );
+    } on GoogleSignInException catch (error) {
+      if (mounted) {
+        final message = error.code == GoogleSignInExceptionCode.canceled
+            ? 'Google sign-in was cancelled.'
+            : 'Google sign-in failed: ${error.description ?? error.code.name}';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } on AuthException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google sign-in could not complete: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => googleBusy = false);
+    }
+  }
+
+  Future<void> sendPasswordReset() async {
+    final address = email.text.trim();
+    if (address.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter your email address first, then tap Forgot password?')),
+      );
+      return;
+    }
+    setState(() => resetBusy = true);
+    try {
+      await db.auth.resetPasswordForEmail(
+        address,
+        redirectTo: 'com.hightechentertainment.app://login-callback',
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('If an account exists for that email, a password reset link has been sent. Open it on this phone.')),
+        );
+      }
+    } on AuthException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not send the reset email. Check your connection and try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => resetBusy = false);
     }
   }
 
@@ -850,9 +1048,38 @@ class _AccountTabState extends State<AccountTab> {
         TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
         const SizedBox(height: 12),
         TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder())),
-        const SizedBox(height: 14),
-        FilledButton(onPressed: busy ? null : authenticate, child: Text(busy ? 'Please wait' : (signup ? 'Create account' : 'Sign in'))),
-        TextButton(onPressed: () => setState(() => signup = !signup), child: Text(signup ? 'Already registered? Sign in' : 'Create a new account')),
+        if (!signup) Align(alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: busy || resetBusy ? null : sendPasswordReset,
+            child: Text(resetBusy ? 'Sending reset link…' : 'Forgot password?'),
+          )),
+        const SizedBox(height: 8),
+        FilledButton(
+          onPressed: busy || googleBusy ? null : authenticate,
+          child: Text(busy ? 'Please wait' : (signup ? 'Create account' : 'Sign in with email')),
+        ),
+        if (!signup) ...[
+          const SizedBox(height: 12),
+          Row(children: const [
+            Expanded(child: Divider(color: Colors.white24)),
+            Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text('OR', style: TextStyle(color: Colors.white54))),
+            Expanded(child: Divider(color: Colors.white24)),
+          ]),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: busy || googleBusy ? null : signInWithGoogle,
+            icon: googleBusy
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.g_mobiledata, size: 28),
+            label: Text(googleBusy ? 'Connecting to Google…' : 'Continue with Google'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+              side: const BorderSide(color: Color(0xFFD4AF37)),
+              foregroundColor: const Color(0xFFD4AF37),
+            ),
+          ),
+        ],
+        TextButton(onPressed: busy || googleBusy ? null : () => setState(() => signup = !signup), child: Text(signup ? 'Already registered? Sign in' : 'Create a new account')),
         TextButton.icon(
           onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication),
           icon: const Icon(Icons.privacy_tip_outlined),

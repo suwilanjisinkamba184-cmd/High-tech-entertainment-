@@ -1,24 +1,26 @@
 name: high_tech_entertainment
 description: Official High-Tech Entertainment native app.
 publish_to: 'none'
-version: 2.0.0+4
+version: 2.0.2+6
 
 environment:
-  sdk: '>=3.4.0 <4.0.0'
+  sdk: '>=3.10.0 <4.0.0'
+  flutter: '>=3.38.1'
 
 dependencies:
   flutter:
     sdk: flutter
   supabase_flutter: ^2.10.0
+  google_sign_in: ^7.2.0
   http: ^1.6.0
-  package_info_plus: ^8.3.1
+  package_info_plus: ^10.2.2
   just_audio: ^0.10.5
   just_audio_background: ^0.0.1-beta.17
   video_player: ^2.10.0
   url_launcher: ^6.3.2
   flutter_svg: ^2.2.0
   shared_preferences: ^2.5.3
-  share_plus: ^10.1.4
+  share_plus: ^13.3.1
 
 dev_dependencies:
   flutter_test:
