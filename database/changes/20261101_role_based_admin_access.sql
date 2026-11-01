@@ -86,6 +86,9 @@ begin
   if _user_id is null or not exists (select 1 from auth.users u where u.id = _user_id) then
     raise exception 'Target account does not exist' using errcode = '22023';
   end if;
+  if _user_id = auth.uid() and _role <> 'owner' then
+    raise exception 'The active owner cannot remove their own owner role' using errcode = '42501';
+  end if;
   insert into private.user_roles(user_id, role, is_active, created_by)
   values (_user_id, _role, coalesce(_active,true), auth.uid())
   on conflict (user_id) do update
