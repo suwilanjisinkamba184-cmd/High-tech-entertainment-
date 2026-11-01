@@ -1089,7 +1089,7 @@ class _AdminConsolePageState extends State<AdminConsolePage> {
         subtitle: Text(item['is_published'] == true ? 'Published' : 'Draft'),
         trailing: Switch.adaptive(
           value: item['is_published'] == true,
-          activeColor: const Color(0xFFD4AF37),
+          activeThumbColor: const Color(0xFFD4AF37),
           onChanged: (value) => _publish(table, item['id'].toString(), value),
         ),
       )),
