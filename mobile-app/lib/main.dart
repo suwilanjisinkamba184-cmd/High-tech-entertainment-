@@ -83,9 +83,14 @@ class _StartupGateState extends State<StartupGate>
       );
       // Native Google account chooser (Google Play Services); no browser redirect.
       if (googleWebClientId.isNotEmpty) {
-        await GoogleSignIn.instance.initialize(
-          serverClientId: googleWebClientId,
-        );
+        try {
+          await GoogleSignIn.instance.initialize(
+            serverClientId: googleWebClientId,
+          );
+        } catch (_) {
+          // A missing or misconfigured Google OAuth client must not block
+          // email sign-in or password recovery.
+        }
       }
       // Audio notifications are optional: a notification initialisation
       // failure must not prevent the rest of the app from opening.
@@ -950,8 +955,8 @@ class _AccountTabState extends State<AccountTab> {
       if (idToken == null) {
         throw const AuthException('Google did not return an identity token. Check the Web OAuth client ID configuration.');
       }
-      var authorization = await account.authorizationClient.authorizationForScopes(['email']);
-      authorization ??= await account.authorizationClient.authorizeScopes(['email']);
+      var authorization = await account.authorizationClient.authorizationForScopes([]);
+      authorization ??= await account.authorizationClient.authorizeScopes([]);
       await db.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: idToken,
