@@ -239,7 +239,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish public Android APK release
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && steps.android_signing.outputs.release_signing_ready == 'true'
+        if: (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && github.event_name != 'pull_request' && steps.android_signing.outputs.release_signing_ready == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: android-latest
