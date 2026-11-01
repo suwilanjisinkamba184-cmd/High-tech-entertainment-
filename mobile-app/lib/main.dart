@@ -517,7 +517,15 @@ class TrackList extends StatelessWidget {
             subtitle: Text((item['artist'] ?? 'High-Tech Entertainment').toString()),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
               IconButton(tooltip: 'Save favourite', onPressed: () async { await toggleFavourite((item['id'] ?? '').toString()); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your favourites have been updated.'))); }, icon: const Icon(Icons.favorite_border, size: 20, color: Colors.pinkAccent)),
-              IconButton(tooltip: 'Share track', onPressed: () => SharePlus.instance.share(ShareParams(text: '${item['title']} — ${item['artist']}\nHigh-Tech Entertainment')), icon: const Icon(Icons.share_outlined, size: 20)),
+              IconButton(
+                tooltip: 'Share track',
+                onPressed: () => SharePlus.instance.share(
+                  ShareParams(
+                    text: '${item['title']} — ${item['artist']}\nHigh-Tech Entertainment',
+                  ),
+                ),
+                icon: const Icon(Icons.share_outlined, size: 20),
+              ),
               IconButton(
               icon: const Icon(Icons.play_circle_fill, color: Color(0xFFD4AF37), size: 34),
               onPressed: () async {
