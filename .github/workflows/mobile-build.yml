@@ -47,18 +47,43 @@ jobs:
           import re
           manifest = Path("android/app/src/main/AndroidManifest.xml")
           text = manifest.read_text()
-          if "android.permission.INTERNET" not in text:
-              text = text.replace("<application", '    <uses-permission android:name="android.permission.INTERNET" />\n    <application', 1)
-          if "com.hightechentertainment.app" not in text:
+          if 'xmlns:tools=' not in text:
+              text = text.replace('<manifest ', '<manifest xmlns:tools="http://schemas.android.com/tools" ', 1)
+          required_permissions = [
+              "android.permission.INTERNET",
+              "android.permission.WAKE_LOCK",
+              "android.permission.FOREGROUND_SERVICE",
+              "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+          ]
+          for permission in required_permissions:
+              if permission not in text:
+                  text = text.replace("<application", f'    <uses-permission android:name="{permission}" />\n    <application', 1)
+          text = re.sub(r'android:label="[^"]*"', 'android:label="High-Tech Entertainment"', text)
+          # just_audio_background requires its Activity, foreground service and media-button receiver.
+          text = re.sub(r'<activity android:name="[^"]+"', '<activity android:name="com.ryanheise.audioservice.AudioServiceActivity"', text, count=1)
+          if "android:scheme=\"com.hightechentertainment.app\"" not in text:
               intent = '''<intent-filter>
                           <action android:name="android.intent.action.VIEW" />
                           <category android:name="android.intent.category.DEFAULT" />
                           <category android:name="android.intent.category.BROWSABLE" />
                           <data android:scheme="com.hightechentertainment.app" android:host="login-callback" />
+                      </intent-filter>'''
+              text = text.replace("</activity>", intent + "\n                  </activity>", 1)
+          if "com.ryanheise.audioservice.AudioService" not in text:
+              components = '''<service android:name="com.ryanheise.audioservice.AudioService"
+                      android:foregroundServiceType="mediaPlayback"
+                      android:exported="true" tools:ignore="Instantiatable">
+                      <intent-filter>
+                          <action android:name="android.media.browse.MediaBrowserService" />
                       </intent-filter>
-                  </activity>'''
-              text = text.replace("</activity>", intent, 1)
-          text = re.sub(r'android:label="[^"]*"', 'android:label="High-Tech Entertainment"', text)
+                  </service>
+                  <receiver android:name="com.ryanheise.audioservice.MediaButtonReceiver"
+                      android:exported="true" tools:ignore="Instantiatable">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MEDIA_BUTTON" />
+                      </intent-filter>
+                  </receiver>'''
+              text = text.replace("</application>", components + "\n    </application>", 1)
           manifest.write_text(text)
           for path in (Path("android/app/build.gradle"), Path("android/app/build.gradle.kts")):
               if not path.exists():
@@ -142,9 +167,12 @@ jobs:
           else
             echo "No upload-key secrets configured; this build will use debug signing and is for testing only."
           fi
-      - name: Install dependencies
+      - name: Install dependencies and generate branded launcher icon
         working-directory: ${{ runner.temp }}/hte_app
-        run: flutter pub get
+        run: |
+          flutter pub get
+          dart run flutter_launcher_icons
+          flutter analyze
       - name: Build APK and Play Store bundle
         working-directory: ${{ runner.temp }}/hte_app
         run: |
