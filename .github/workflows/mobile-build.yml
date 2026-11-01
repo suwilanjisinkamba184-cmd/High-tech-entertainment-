@@ -176,17 +176,10 @@ jobs:
           flutter pub get
           dart run flutter_launcher_icons
           flutter analyze lib
-      - name: Build Android APK and (when release-signed) Play Store bundle
+      - name: Build Android APK only
         working-directory: ${{ runner.temp }}/hte_app
-        env:
-          RELEASE_SIGNING_READY: ${{ steps.android_signing.outputs.release_signing_ready }}
         run: |
           flutter build apk --release --target-platform android-arm,android-arm64
-          if [ "$RELEASE_SIGNING_READY" = "true" ]; then
-            flutter build appbundle --release
-          else
-            echo "Skipping AAB: configure the four ANDROID_* upload-key repository secrets to create a Play Store-ready bundle."
-          fi
       - uses: actions/upload-artifact@v4
         with:
           name: high-tech-entertainment-android
