@@ -190,11 +190,12 @@ jobs:
       - name: Build Android APK and (when release-signed) Play Store bundle
         working-directory: ${{ runner.temp }}/hte_app
         env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           RELEASE_SIGNING_READY: ${{ steps.android_signing.outputs.release_signing_ready }}
         run: |
-          flutter build apk --release --target-platform android-arm,android-arm64
+          flutter build apk --release --target-platform android-arm,android-arm64 --dart-define=GOOGLE_WEB_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID"
           if [ "$RELEASE_SIGNING_READY" = "true" ]; then
-            flutter build appbundle --release
+            flutter build appbundle --release --dart-define=GOOGLE_WEB_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID"
           else
             echo "Skipping AAB: configure the four ANDROID_* upload-key repository secrets to create a Play Store-ready bundle."
           fi
