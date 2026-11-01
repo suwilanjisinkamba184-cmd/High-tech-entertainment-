@@ -15,7 +15,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 const supabaseUrl = 'https://wqrxacjbsldbnoekbkbf.supabase.co';
 const supabaseKey = 'sb_publishable_hB_aRh-dnicpRQq3wiRtWg_JTdhmMda';
-const authRedirect = 'com.hightechentertainment.app://login-callback';
 final db = Supabase.instance.client;
 final playback = HtePlayback();
 final player = playback.player;
@@ -839,38 +838,6 @@ class _AccountTabState extends State<AccountTab> {
     }
   }
 
-  Future<void> signInWithGoogle() async {
-    if (busy) return;
-    setState(() => busy = true);
-    try {
-      final launched = await db.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: authRedirect,
-        authScreenLaunchMode: LaunchMode.externalApplication,
-      );
-      if (!launched && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open Google sign-in. Please try again.')),
-        );
-      }
-      // supabase_flutter receives the registered app callback, exchanges the
-      // PKCE code and persists the session. AuthGate then opens MainScreen.
-    } on AuthException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
-      }
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Google sign-in could not start. Check that Google is enabled in Supabase.')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -909,23 +876,6 @@ class _AccountTabState extends State<AccountTab> {
           onPressed: busy ? null : authenticate,
           child: Text(busy ? 'Please wait' : (signup ? 'Create account' : 'Sign in')),
         ),
-        if (!signup) ...[
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: busy ? null : signInWithGoogle,
-            icon: const Icon(Icons.g_mobiledata, size: 28),
-            label: const Text('Continue with Google'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(50),
-              side: const BorderSide(color: Color(0xFFD4AF37)),
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Center(
-            child: Text('Secure sign-in powered by Supabase',
-              style: TextStyle(color: Colors.white54, fontSize: 11)),
-          ),
-        ],
         TextButton(onPressed: busy ? null : () => setState(() => signup = !signup), child: Text(signup ? 'Already registered? Sign in' : 'Create a new account')),
         TextButton.icon(
           onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication),
