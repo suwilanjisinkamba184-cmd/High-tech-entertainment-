@@ -117,12 +117,10 @@ jobs:
               productFlavors {
                   create("listener") {
                       dimension = "distribution"
-                      resValue("string", "app_name", "High-Tech Entertainment")
                   }
                   create("admin") {
                       dimension = "distribution"
                       applicationIdSuffix = ".admin"
-                      resValue("string", "app_name", "High-Tech Admin")
                   }
               }
           '''
@@ -134,18 +132,22 @@ jobs:
               productFlavors {
                   listener {
                       dimension "distribution"
-                      resValue "string", "app_name", "High-Tech Entertainment"
                   }
                   admin {
                       dimension "distribution"
                       applicationIdSuffix ".admin"
-                      resValue "string", "app_name", "High-Tech Admin"
                   }
               }
           '''
                       text = text.replace("    buildTypes {", flavors + "    buildTypes {", 1)
                   text = re.sub(r'(?m)^\s*applicationId\s+"[^"]+"', '        applicationId "com.hightechentertainment.app"', text, count=1)
               path.write_text(text)
+          for flavor, app_name in (("listener", "High-Tech Entertainment"), ("admin", "High-Tech Admin")):
+              values = Path("android/app/src") / flavor / "res" / "values"
+              values.mkdir(parents=True, exist_ok=True)
+              values.joinpath("strings.xml").write_text(
+                  '<resources><string name="app_name">' + app_name + '</string></resources>'
+              )
           PY
           grep -R -E "minSdk|targetSdk|applicationId|productFlavors" android/app/build.gradle*
       - name: Configure Android upload-key signing
