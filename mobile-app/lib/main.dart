@@ -818,6 +818,31 @@ class _AccountTabState extends State<AccountTab> {
     }
   }
 
+  Future<void> signInWithGoogle() async {
+    setState(() => busy = true);
+    try {
+      await db.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: authRedirect,
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
+    } on AuthException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google sign-in failed: ${error.message}')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not start Google sign-in: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = db.auth.currentUser;
@@ -847,6 +872,26 @@ class _AccountTabState extends State<AccountTab> {
       ] else ...[
         const Text('Your account', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: busy ? null : signInWithGoogle,
+          icon: const Icon(Icons.g_mobiledata, size: 28),
+          label: const Text('Continue with Google'),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(50),
+            side: const BorderSide(color: Color(0xFFD4AF37)),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: Row(children: [
+            Expanded(child: Divider()),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: Text('OR USE EMAIL', style: TextStyle(color: Colors.white54, fontSize: 11, letterSpacing: 1.2)),
+            ),
+            Expanded(child: Divider()),
+          ]),
+        ),
         TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
         const SizedBox(height: 12),
         TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder())),
