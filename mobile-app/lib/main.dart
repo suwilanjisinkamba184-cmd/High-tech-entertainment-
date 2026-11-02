@@ -643,7 +643,7 @@ class ReleaseList extends StatelessWidget {
                             onPressed: () async {
                               final embed = spotifyEmbedUrl(spotifyUrl);
                               try {
-                                if (embed != null) {
+                                if (embed != null && defaultTargetPlatform == TargetPlatform.android) {
                                   if (!context.mounted) return;
                                   await Navigator.of(context).push(MaterialPageRoute(
                                     builder: (_) => SpotifyEmbedPage(
