@@ -263,4 +263,5 @@ jobs:
             Download the ZIP, extract it, and run app.exe.
           files: ${{ runner.temp }}/high-tech-entertainment-windows.zip
           overwrite_files: true
+          make_latest: false
 
