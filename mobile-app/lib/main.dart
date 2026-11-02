@@ -853,8 +853,9 @@ class _SavedTabState extends State<SavedTab> {
           saved = [];
         } else {
           final tracks = await db.from('tracks')
-            .select()
+            .select('*, releases!inner(is_published)')
             .eq('is_published', true)
+            .eq('releases.is_published', true)
             .inFilter('id', ids);
           final byId = {
             for (final track in tracks) track['id'].toString(): Map<String, dynamic>.from(track),
