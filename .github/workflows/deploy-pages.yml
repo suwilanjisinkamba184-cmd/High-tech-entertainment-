@@ -31,9 +31,9 @@ jobs:
           test -s assets/streaming.js
           test -s account/index.html
           test -s admin/index.html
-          grep -q 'https://high-tech-entertainment.suwilanjisinkamba184.workers.dev' index.html
+          grep -q 'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-' index.html
           grep -q '<link rel="canonical"' index.html
-          grep -q 'https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/sitemap.xml' robots.txt
+          grep -q 'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/sitemap.xml' robots.txt
           python -m json.tool package.json > /dev/null
       - name: Check JavaScript syntax
         run: |
