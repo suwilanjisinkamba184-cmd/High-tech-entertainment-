@@ -1,70 +1,148 @@
-# High Tech Entertainment
+# High-Tech Entertainment
 
-Premium, responsive music and artist platform for High Tech Entertainment.
+**Music. Beats. Production. Beyond.**
 
-## Production website
-- Public website: https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/
-- Founder studio: https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/admin/
-- Account profile: https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/account/
+High-Tech Entertainment is a music and artist platform for discovering releases, streaming music, viewing artists and videos, and contacting or booking the team. The project includes a public website, a founder administration area, and a Flutter application.
 
-The production hostname is a Cloudflare `workers.dev` endpoint. Hosting and deployment settings are managed in the connected Cloudflare project. GitHub Actions validates the repository; it does not publish a second copy of the site.
+## Production addresses
 
-## Website features
-- Public music catalogue, artist profiles, releases and music videos.
-- Streaming player with search, genre filtering, favourites and a device-local playlist.
-- Booking, contact and support forms.
-- Founder-only administration for tracks, videos, artists, releases and enquiries.
-- Account profiles with private avatar storage.
+- **Public website:** https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/
+- **Founder Studio:** https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/admin/
+- **Account:** https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/account/
 
-## Stack
-- Static HTML, CSS and JavaScript website.
-- Flutter native application in `mobile-app/`.
-- Supabase Auth, Postgres with Row Level Security, and Supabase Storage.
-- GitHub Actions for website validation and Android/Windows app builds.
+The repository is configured to use the Cloudflare `workers.dev` hostname above. Cloudflare hosting and production deployment are managed in the Cloudflare project. The GitHub website workflow is a **validation workflow only**; it does not deploy the website. Confirm the live site and Cloudflare deployment status in the Cloudflare dashboard.
+
+## Project components
+
+| Component | Location | Purpose |
+|---|---|---|
+| Public website | Repository root | Music catalogue, artists, releases, videos, player and contact/booking |
+| Founder Studio | `admin/` | Administrative tools for managing platform content and enquiries |
+| Account pages | `account/` | User account and profile experience |
+| Flutter application | `mobile-app/` | Android and Windows application source |
+| Supabase setup | Root SQL files and `database/` | Database schema, policies and migrations |
+| GitHub skills | `.github/skills/` | Design and engineering guidance for supported coding agents |
+
+## Technology
+
+- HTML, CSS and browser JavaScript for the website.
+- Flutter and Dart for the native application.
+- Supabase Auth, PostgreSQL, Row Level Security (RLS), and Storage.
+- GitHub Actions for website validation and application builds/releases.
+- Cloudflare for website hosting and deployment.
 
 ## Supabase configuration
-The browser configuration in `supabase-config.js` contains only the project URL and browser-safe publishable key. Never put a Supabase service-role key or an `sb_secret_` key in frontend files, mobile code, or Git history.
 
-Founder authorization is restricted by the configured Supabase Auth UID and database Row Level Security policies. Frontend checks are only a user-interface convenience; RLS is the security boundary.
+The website's `supabase-config.js` contains the Supabase project URL and a browser-safe publishable key. A publishable key is intended for client-side use; it does **not** replace database security. Protect data with correct RLS policies and Storage policies.
 
-### Authentication redirect URLs
-In Supabase Authentication URL Configuration, set the production Site URL to:
+**Never commit or expose** a Supabase `service_role` key, an `sb_secret_` key, database passwords, signing passwords, or a keystore file. Keep private credentials in the relevant secure service settings or GitHub Actions secrets.
 
-`https://high-tech-entertainment.suwilanjisinkamba184.workers.dev`
+Founder-only actions must be enforced by database RLS and server-side authorization. Hiding admin controls in the browser is not a security boundary.
 
-Allow these redirect URLs:
-- `https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/admin/`
-- `https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/account/`
+### Authentication URL settings
 
-If this remains a single-founder admin system, disable public user signups in Supabase Auth settings. Existing authorised users can still sign in.
+In Supabase Dashboard → Authentication → URL Configuration:
 
-## Database and storage setup
-SQL files in this repository:
-- `supabase-setup.sql` — baseline tables and storage setup.
-- `supabase-admin-policies.sql` — founder-only catalogue and audio permissions.
-- `SUPABASE-REDESIGN-MIGRATION.sql` — private profile table and avatar bucket policies.
-- `database/changes/` — subsequent database migrations.
+Set the production Site URL to:
 
-Before enabling uploads, verify the actual Storage bucket IDs in the Supabase dashboard. The website upload code currently expects `hte-audio`, `hte-avatars`, and `hte-video`; bucket display names are not necessarily the same as bucket IDs.
+```
+https://high-tech-entertainment.suwilanjisinkamba184.workers.dev
+```
 
-## Mobile application
-The Flutter source is under `mobile-app/`. The workflow `.github/workflows/mobile-build.yml` builds Android APK/AAB and a Windows ZIP. Android release publishing requires the four repository Actions secrets documented in `mobile-app/ANDROID-RELEASE-SIGNING.md`. Never commit the keystore or passwords.
+Add the production routes used by the application to the allowed redirect URLs, including:
 
-## Quality checks
-- `.github/workflows/deploy-pages.yml` validates required website files, XML and JavaScript syntax.
-- `.github/workflows/mobile-build.yml` runs Flutter analysis and builds the mobile deliverables.
-- Emil Kowalski design-engineering skills are stored in `.github/skills/`.
-- Repository-specific Copilot guidance is stored in `.github/copilot-instructions.md`.
+```
+https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/admin/
+https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/account/
+```
 
-## Launch verification
-The following require real service credentials and/or physical-device testing and cannot be proven by static repository checks alone:
-1. Google and email/password sign-in, sign-out and redirect behavior.
-2. Founder-only RLS access and all admin create/update/delete operations.
-3. Actual Storage bucket IDs, upload policies and public/private access.
-4. Track and video playback on Android and mobile browsers.
-5. Booking, contact and support form delivery.
-6. Signed APK installation and update compatibility on a real Android device.
-7. Cloudflare production deployment and Supabase redirect configuration.
+Add any additional callback URLs only when they are actually used by the website or mobile authentication flow. Do not use localhost as the production Site URL.
 
-## Local preview
-Serve the repository root with a local HTTP server. Opening files directly using `file://` is not a reliable test for Supabase authentication redirects.
+## Database and Storage
+
+Database setup and migration files currently include:
+
+- `supabase-setup.sql` — baseline database and storage setup.
+- `supabase-admin-policies.sql` — founder/admin access policies.
+- `SUPABASE-REDESIGN-MIGRATION.sql` — profile and avatar-related migration.
+- `database/changes/` — subsequent database changes.
+
+The website upload code expects these exact Supabase Storage bucket IDs:
+
+| Bucket ID | Intended content | Access configuration |
+|---|---|---|
+| `hte-audio` | Published audio tracks | Public reads; uploads/deletes controlled by policies |
+| `hte-avatars` | User profile avatars | Private; access controlled by policies or signed URLs |
+| `hte-video` | Music videos | Confirm intended public/private access and policies before use |
+
+Bucket **IDs** are not necessarily the same as their display names. Verify bucket IDs, size limits, MIME restrictions and policies in Supabase Dashboard → Storage before enabling uploads. Do not make private profile images public merely to make them display.
+
+## Flutter application
+
+Flutter source code is in `mobile-app/`.
+
+The GitHub Actions workflow `.github/workflows/mobile-build.yml` builds:
+
+- Android release APK.
+- Android App Bundle (AAB).
+- Windows desktop ZIP package.
+
+The Android job requires all four repository Actions secrets before it can run:
+
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_STORE_PASSWORD`
+- `ANDROID_KEY_PASSWORD`
+
+Follow [Android release signing setup](mobile-app/ANDROID-RELEASE-SIGNING.md) to configure them. The workflow **fails when any required signing secret is missing**; it does not produce a debug-signed fallback build. Keep the keystore and all passwords private.
+
+The planned Android application ID is `com.hightechentertainment.app`. Verify the generated package/application ID before registering the app in Google Play Console.
+
+## GitHub Actions
+
+- `.github/workflows/deploy-pages.yml` — despite its historical filename, this workflow validates website files, JavaScript syntax, package JSON and sitemap XML. It does **not** publish to GitHub Pages or Cloudflare.
+- `.github/workflows/mobile-build.yml` — builds Android and Windows application packages and publishes releases when its required conditions and secrets are satisfied.
+
+Open the repository's **Actions** tab to inspect workflow runs and download available artifacts. A successful validation run does not, by itself, prove that the live website, Supabase authentication, uploads or media playback work.
+
+## Design and coding-agent guidance
+
+- `.github/skills/` contains the project's installed design and engineering skills.
+- `.github/copilot-instructions.md` contains repository-specific development guidance.
+
+Use these resources when working on interface design, animation, mobile behavior, accessibility, performance and code review. Review changes and run the relevant checks before merging them into `main`.
+
+## Local development
+
+Run a local HTTP server from the repository root. For example, with Python installed:
+
+```bash
+python -m http.server 8000
+```
+
+Then open:
+
+```
+http://localhost:8000/
+```
+
+Do not rely on opening the HTML files directly with `file://`; browser authentication redirects and some web APIs require an HTTP origin.
+
+## Pre-release verification checklist
+
+Before calling a release production-ready, verify each item in the actual environment:
+
+- [ ] Public website loads over HTTPS at the configured Cloudflare hostname.
+- [ ] Supabase email/password and any enabled OAuth sign-in flows complete and return to the correct page.
+- [ ] Founder/admin authorization is enforced by RLS and server-side checks.
+- [ ] Admin create, edit and delete operations work for tracks, artists, releases and videos.
+- [ ] Storage bucket IDs, privacy settings, file limits and upload policies match the application.
+- [ ] Audio and video playback work in supported desktop and mobile browsers.
+- [ ] Booking, contact and support forms deliver submissions to the intended destination.
+- [ ] Android APK installs and runs on a physical device; background playback and authentication are tested.
+- [ ] Windows package extracts and launches on a supported Windows machine.
+- [ ] Release signing and update compatibility are verified before distributing an Android update.
+
+## Support and maintenance
+
+Keep this README aligned with the actual routes, Supabase schema, bucket IDs, workflow behavior and Cloudflare configuration. Update it whenever deployment architecture or application build requirements change.
