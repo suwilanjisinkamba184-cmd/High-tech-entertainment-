@@ -221,7 +221,7 @@ jobs:
           cache = Path.home() / ".pub-cache" / "hosted" / "pub.dev"
           if not cache.exists():
               raise SystemExit("Pub package cache was not found.")
-          pattern = re.compile(r"(?m)^(\\s*compileSdk(?:Version)?\\s*(?:=\\s*)?)(\\d+)(\\s*(?://.*)?$)")
+          pattern = re.compile(r"(?m)^(\s*compileSdk(?:Version)?\s*(?:=\s*)?)(\\d+)(\s*(?://.*)?$)")
           changed = []
           for gradle in cache.glob("*/android/build.gradle*"):
               source = gradle.read_text()
@@ -236,11 +236,11 @@ jobs:
           picker = list(cache.glob("file_picker-*/android/build.gradle*"))
           if not picker:
               raise SystemExit("Resolved file_picker Android Gradle file was not found.")
-          picker_text = "\\n".join(path.read_text() for path in picker)
-          if re.search(r"(?m)^\\s*compileSdk(?:Version)?\\s*(?:=\\s*)?34\\b", picker_text):
+          picker_text = "\n".join(path.read_text() for path in picker)
+          if re.search(r"(?m)^\s*compileSdk(?:Version)?\s*(?:=\s*)?34\\b", picker_text):
               raise SystemExit("file_picker is still configured for Android API 34.")
           print(f"Updated plugin Android compile SDK declarations: {len(changed)}")
-          print("\\n".join(changed))
+          print("\n".join(changed))
           PY
       - name: Build signed Android APK
         working-directory: ${{ runner.temp }}/hte_app
@@ -267,12 +267,12 @@ jobs:
             exit 1
           fi
           VERIFY_OUTPUT="$("$APKSIGNER" verify --verbose --print-certs "$APK" 2>&1)" || {
-            printf '%s\\n' "$VERIFY_OUTPUT"
+            printf '%s\n' "$VERIFY_OUTPUT"
             echo "::error::APK signature verification failed."
             exit 1
           }
-          printf '%s\\n' "$VERIFY_OUTPUT"
-          ACTUAL_CERT_SHA256="$(printf '%s\\n' "$VERIFY_OUTPUT" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print $2; exit}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          printf '%s\n' "$VERIFY_OUTPUT"
+          ACTUAL_CERT_SHA256="$(printf '%s\n' "$VERIFY_OUTPUT" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print $2; exit}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
           if [ -z "$ACTUAL_CERT_SHA256" ] || [ "$ACTUAL_CERT_SHA256" != "$EXPECTED_CERT_SHA256" ]; then
             echo "::error::APK is not signed with the configured High-Tech Entertainment upload certificate."
             exit 1
