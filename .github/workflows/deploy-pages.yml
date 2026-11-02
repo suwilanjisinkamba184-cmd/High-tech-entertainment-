@@ -34,6 +34,10 @@ jobs:
           grep -q 'https://high-tech-entertainment.suwilanjisinkamba184.workers.dev' index.html
           grep -q '<link rel="canonical"' index.html
           grep -q 'https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/sitemap.xml' robots.txt
+          python -m json.tool package.json > /dev/null
+      - name: Check JavaScript syntax
+        run: |
+          find . -type f -name '*.js' -not -path './node_modules/*' -print0 | xargs -0 -r -n1 node --check
       - name: Validate sitemap XML
         run: python -c "import xml.etree.ElementTree as ET; ET.parse('sitemap.xml'); print('Sitemap XML is valid')"
       - name: Check JavaScript syntax
