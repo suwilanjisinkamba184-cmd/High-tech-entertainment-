@@ -24,6 +24,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   final _artistBio = TextEditingController();
   final _releaseTitle = TextEditingController();
   final _spotifyUrl = TextEditingController();
+  final _releaseCoverUrl = TextEditingController();
   final _coverUrl = TextEditingController();
   PlatformFile? _audio;
   PlatformFile? _artwork;
@@ -38,7 +39,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   @override
   void dispose() {
     _title.dispose(); _artist.dispose(); _genre.dispose();
-    _artistName.dispose(); _artistBio.dispose(); _releaseTitle.dispose(); _spotifyUrl.dispose(); _coverUrl.dispose();
+    _artistName.dispose(); _artistBio.dispose(); _releaseTitle.dispose(); _spotifyUrl.dispose(); _releaseCoverUrl.dispose(); _coverUrl.dispose();
     super.dispose();
   }
 
@@ -153,8 +154,8 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   Future<void> _saveRelease() async {
     if (_releaseTitle.text.trim().isEmpty) { _toast('Enter a release title.'); return; }
     try {
-      await _supabase.from('releases').insert({'title':_releaseTitle.text.trim(),'spotify_url':_spotifyUrl.text.trim().isEmpty?null:_spotifyUrl.text.trim(),'is_published':false});
-      _releaseTitle.clear(); _spotifyUrl.clear(); await _loadAll(); _toast('Release saved as a draft.');
+      await _supabase.from('releases').insert({'title':_releaseTitle.text.trim(),'spotify_url':_spotifyUrl.text.trim().isEmpty?null:_spotifyUrl.text.trim(),'cover_url':_releaseCoverUrl.text.trim().isEmpty?null:_releaseCoverUrl.text.trim(),'is_published':false});
+      _releaseTitle.clear(); _spotifyUrl.clear(); _releaseCoverUrl.clear(); await _loadAll(); _toast('Release saved as a draft.');
     } catch(e) { _toast('Could not save release: $e'); }
   }
 
@@ -239,7 +240,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         const SizedBox(height:10),FilledButton(onPressed:_busy?null:_saveRelease,child:const Text('Save release draft')),
         const SizedBox(height:18),_releaseRows()]);
       case 5: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        _header('VISUAL LIBRARY','Artwork','Upload public release artwork to the dedicated HTE artwork bucket, then attach its URL to a music track.'),
+        _header('VISUAL LIBRARY','Artwork','Upload public release artwork to the dedicated HTE artwork bucket, then attach its URL to a track or release.'),
         OutlinedButton.icon(onPressed:_busy?null:_pickArtwork,icon:const Icon(Icons.image_outlined),label:Text(_artwork?.name??'Choose artwork image')),
         const SizedBox(height:10),
         SizedBox(width:double.infinity,child:FilledButton(onPressed:_busy?null:_uploadArtwork,child:_busy?const CircularProgressIndicator():const Text('Upload artwork'))),
