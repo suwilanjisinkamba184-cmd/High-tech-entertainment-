@@ -86,13 +86,14 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
 
   Future<void> _pickArtwork() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['jpg','jpeg','png','webp','avif'], withData: false);
-    if (result != null && result.files.isNotEmpty) setState(() => _artwork = result.files.first);
+    if (mounted && result != null && result.files.isNotEmpty) setState(() => _artwork = result.files.first);
   }
   Future<void> _uploadArtwork() async {
     if (_artwork == null) { _toast('Choose an image first.'); return; }
     setState(() => _busy = true);
     try {
       final url = await _uploadFile(_artwork!, 'releases', 'hte-artwork');
+      if (!mounted) return;
       _coverUrl.text = url;
       setState(() => _artwork = null);
       _toast('Artwork uploaded. Its public URL is ready to attach to a track.');
@@ -102,7 +103,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   Future<void> _pickAudio() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.custom,
       allowedExtensions: ['mp3','m4a','aac','wav','ogg','flac'], withData: false);
-    if (result != null && result.files.isNotEmpty) setState(() => _audio = result.files.first);
+    if (mounted && result != null && result.files.isNotEmpty) setState(() => _audio = result.files.first);
   }
   String _extension(PlatformFile file) => (file.extension ?? 'bin').toLowerCase();
   Future<String> _uploadFile(PlatformFile file, String folder, String bucket) async {
@@ -135,6 +136,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         if (coverUrl.isNotEmpty) 'cover_url': coverUrl,
         'uploader': 'High-Tech Entertainment', 'is_published': false,
       });
+      if (!mounted) return;
       _title.clear(); _artist.clear(); _genre.text = 'Afrobeat';
       setState(() { _audio = null; _coverUrl.clear(); _section = 2; });
       await _loadAll(); _toast('Track uploaded and saved as a draft.');
@@ -159,6 +161,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     if (_artistName.text.trim().isEmpty) { _toast('Enter an artist name.'); return; }
     try {
       await _supabase.from('artists').insert({'name':_artistName.text.trim(),'bio':_artistBio.text.trim(),'is_published':false});
+      if (!mounted) return;
       _artistName.clear(); _artistBio.clear(); await _loadAll(); _toast('Artist saved as a draft.');
     } catch(e) { _toast('Could not save artist: $e'); }
   }
@@ -174,6 +177,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     if (_releaseTitle.text.trim().isEmpty) { _toast('Enter a release title.'); return; }
     try {
       await _supabase.from('releases').insert({'title':_releaseTitle.text.trim(),'spotify_url':_spotifyUrl.text.trim().isEmpty?null:_spotifyUrl.text.trim(),'cover_url':_releaseCoverUrl.text.trim().isEmpty?null:_releaseCoverUrl.text.trim(),'is_published':false});
+      if (!mounted) return;
       _releaseTitle.clear(); _spotifyUrl.clear(); _releaseCoverUrl.clear(); await _loadAll(); _toast('Release saved as a draft.');
     } catch(e) { _toast('Could not save release: $e'); }
   }
