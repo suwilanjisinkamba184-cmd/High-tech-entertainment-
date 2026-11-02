@@ -237,6 +237,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         _header('RELEASE MANAGEMENT','Releases','Create release records and manage their publication status.'),
         TextField(controller:_releaseTitle,decoration:const InputDecoration(labelText:'Release title')),
         const SizedBox(height:10),TextField(controller:_spotifyUrl,decoration:const InputDecoration(labelText:'Spotify release URL (optional)')),
+        const SizedBox(height:10),TextField(controller:_releaseCoverUrl,decoration:const InputDecoration(labelText:'Release artwork URL (optional)')),
         const SizedBox(height:10),FilledButton(onPressed:_busy?null:_saveRelease,child:const Text('Save release draft')),
         const SizedBox(height:18),_releaseRows()]);
       case 5: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -254,7 +255,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         const _AdminEmpty('Connect a founder-authorized Edge Function before enabling account-level actions.'),
       ]);
       case 7: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        _header('PLATFORM INSIGHTS','Analytics','Live analytics require listening and download event tables. These figures show only current catalogue records.'),
+        _header('PLATFORM INSIGHTS','Analytics','Audience-wide metrics require a founder-authorized aggregate endpoint. These figures show the live catalogue counts only.'),
         _metric('Catalogue tracks',_metrics['Tracks']??0,Icons.music_note),
         _metric('Published tracks',_metrics['Published']??0,Icons.public),
       ]);
