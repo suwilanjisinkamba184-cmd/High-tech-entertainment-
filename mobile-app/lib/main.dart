@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -133,9 +132,7 @@ class StartupGate extends StatefulWidget {
   State<StartupGate> createState() => _StartupGateState();
 }
 
-class _StartupGateState extends State<StartupGate>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _spin;
+class _StartupGateState extends State<StartupGate> {
   bool _ready = false;
   bool _starting = true;
   String? _error;
@@ -143,10 +140,6 @@ class _StartupGateState extends State<StartupGate>
   @override
   void initState() {
     super.initState();
-    _spin = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
     _initialize();
   }
 
@@ -192,7 +185,6 @@ class _StartupGateState extends State<StartupGate>
 
   @override
   void dispose() {
-    _spin.dispose();
     super.dispose();
   }
 
@@ -208,17 +200,11 @@ class _StartupGateState extends State<StartupGate>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                AnimatedBuilder(
-                  animation: _spin,
-                  builder: (context, child) => Transform.rotate(
-                    angle: _spin.value * 2 * math.pi,
-                    child: child,
-                  ),
-                  child: SvgPicture.asset(
-                    'assets/high-tech-logo.svg',
-                    width: 116,
-                    height: 116,
-                  ),
+                SvgPicture.asset(
+                  'assets/high-tech-logo.svg',
+                  width: 116,
+                  height: 116,
+                  semanticsLabel: 'High-Tech Entertainment',
                 ),
                 const SizedBox(height: 30),
                 const Text(
@@ -443,35 +429,99 @@ class Heading extends StatelessWidget {
 
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
+
   @override
-  Widget build(BuildContext context) => ListView(children: [
-    const Brand(),
-    Container(
-      margin: const EdgeInsets.fromLTRB(18, 4, 18, 12),
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 26),
-      decoration: BoxDecoration(
-        color: const Color(0xFF111214),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF3D3422)),
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.only(bottom: 28),
+    children: [
+      const Brand(),
+      Container(
+        margin: const EdgeInsets.fromLTRB(18, 4, 18, 22),
+        padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111214),
+          border: Border.all(color: const Color(0xFF51452E)),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'INDEPENDENT MUSIC.\nBUILT TO TRAVEL.',
+                    style: TextStyle(
+                      color: Color(0xFFD9B96E),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 2.0,
+                      height: 1.7,
+                    ),
+                  ),
+                ),
+                SvgPicture.asset(
+                  'assets/high-tech-logo.svg',
+                  width: 74,
+                  height: 74,
+                  semanticsLabel: 'HT crest',
+                ),
+              ],
+            ),
+            const SizedBox(height: 22),
+            const Text(
+              'Quality sound.\nGlobal ambition.',
+              style: TextStyle(
+                fontSize: 34,
+                height: 1.08,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -1.2,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Discover official releases, meet the artists and listen to the sounds of High-Tech Entertainment.',
+              style: TextStyle(
+                color: Color(0xFFB9B6AE),
+                height: 1.65,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MusicTab()),
+                ),
+                icon: const Icon(Icons.headphones_rounded, size: 18),
+                label: const Text('Explore the music'),
+              ),
+            ),
+          ],
+        ),
       ),
-      child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('INDEPENDENT SOUND. GLOBAL AMBITION.',
-          style: TextStyle(color: Color(0xFFD9B96E), fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.8)),
-        SizedBox(height: 16),
-        Text('QUALITY SOUND.\nGLOBAL VIBES.',
-          style: TextStyle(fontSize: 30, height: 1.04, fontWeight: FontWeight.w800, letterSpacing: -0.7)),
-        SizedBox(height: 12),
-        Text('Discover official releases, artists and music from High-Tech Entertainment.',
-          style: TextStyle(color: Color(0xFFB9B6AE), height: 1.5)),
-      ]),
-    ),
-    const Heading('Latest releases'),
-    const ReleaseList(horizontal: true),
-    const Heading('Featured artists'),
-    const ArtistList(horizontal: true),
-    const Heading('Recently added music'),
-    const TrackList(compact: true),
-  ]);
+      const Heading('Latest releases'),
+      const ReleaseList(horizontal: true),
+      const Heading('Featured artists'),
+      const ArtistList(horizontal: true),
+      const Heading('Released music'),
+      const TrackList(compact: true),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(20, 24, 20, 8),
+        child: Text(
+          'HIGH-TECH ENTERTAINMENT  ·  MUSIC. BEATS. PRODUCTION. BEYOND.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Color(0xFF77736B),
+            fontSize: 9,
+            letterSpacing: 1.1,
+            height: 1.8,
+          ),
+        ),
+      ),
+    ],
+  );
 }
 
 class ArtistsTab extends StatelessWidget {
