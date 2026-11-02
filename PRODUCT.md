@@ -20,7 +20,7 @@ Confident, independent, musically literate, ambitious, polished, and welcoming. 
 
 ## Product constraints
 - Supabase is the source of truth for catalogue publication and media metadata.
-- Only tracks explicitly published and linked to a published release belong in the public mobile listening catalogue.
+- Only tracks explicitly marked is_published = true belong in the public mobile listening catalogue. Draft tracks stay hidden; an optional release association does not hide a published track.
 - Spotify URLs must be handled through Spotify's official embed/player experience; never treat a Spotify page URL as a raw audio stream.
 - Direct audio URLs must use HTTPS.
 - Keep secrets and service-role credentials out of browser and mobile source code.
