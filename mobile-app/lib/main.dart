@@ -17,8 +17,8 @@ const supabaseUrl = 'https://wqrxacjbsldbnoekbkbf.supabase.co';
 const supabaseKey = 'sb_publishable_hB_aRh-dnicpRQq3wiRtWg_JTdhmMda';
 const authRedirect = 'com.hightechentertainment.app://login-callback';
 final db = Supabase.instance.client;
-final playback = HtePlayback();
-final player = playback.player;
+late final HtePlayback playback;
+late final AudioPlayer player;
 final ValueNotifier<int> favouritesRevision = ValueNotifier<int>(0);
 
 Future<void> main() async {
@@ -146,17 +146,15 @@ class _StartupGateState extends State<StartupGate>
         url: supabaseUrl,
         publishableKey: supabaseKey,
       );
-      // Audio notifications are optional: a notification initialisation
-      // failure must not prevent the rest of the app from opening.
-      try {
-        await JustAudioBackground.init(
-          androidNotificationChannelId: 'com.hightechentertainment.app.audio',
-          androidNotificationChannelName: 'High-Tech Music Playback',
-          androidNotificationOngoing: true,
-        );
-      } catch (_) {
-        // Playback remains available in-app even if background controls fail.
-      }
+      // Initialise the background handler before constructing AudioPlayer.
+      // Otherwise playback can fail with _audioHandler not initialised.
+      await JustAudioBackground.init(
+        androidNotificationChannelId: 'com.hightechentertainment.app.audio',
+        androidNotificationChannelName: 'High-Tech Music Playback',
+        androidNotificationOngoing: true,
+      );
+      playback = HtePlayback();
+      player = playback.player;
       await Future<void>.delayed(const Duration(milliseconds: 700));
       if (mounted) {
         setState(() {
@@ -333,7 +331,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int tab = 0;
-  final pages = const [HomeTab(), DiscoverTab(), MusicTab(), SavedTab(), MoreTab()];
+  final pages = const [HomeTab(), DiscoverTab(), MusicTab(), AccountTab()];
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(child: IndexedStack(index: tab, children: pages)),
@@ -344,8 +342,7 @@ class _MainScreenState extends State<MainScreen> {
         NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
         NavigationDestination(icon: Icon(Icons.search), label: 'Discover'),
         NavigationDestination(icon: Icon(Icons.music_note_outlined), label: 'Music'),
-        NavigationDestination(icon: Icon(Icons.favorite_border), label: 'Saved'),
-        NavigationDestination(icon: Icon(Icons.grid_view_rounded), label: 'More'),
+        NavigationDestination(icon: Icon(Icons.person_outline), label: 'Account'),
       ],
     )]),
   );
@@ -566,7 +563,7 @@ class TrackList extends StatelessWidget {
   final List<Map<String, dynamic>>? items;
   @override
   Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
-    future: items == null ? rows('tracks', 'created_at') : Future.value(items),
+    future: items == null ? playableTracks() : Future.value(items.where(_isPlayableTrack).toList()),
     builder: (context, snapshot) {
       if (snapshot.hasError) return Notice('Unable to load tracks: ${snapshot.error}. Check connection, Data API access and RLS.');
       if (!snapshot.hasData) return const Busy();
@@ -584,7 +581,6 @@ class TrackList extends StatelessWidget {
             title: Text((item['title'] ?? 'Track').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
             subtitle: Text((item['artist'] ?? 'High-Tech Entertainment').toString()),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              IconButton(tooltip: 'Save favourite', onPressed: () async { await toggleFavourite((item['id'] ?? '').toString()); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your favourites have been updated.'))); }, icon: const Icon(Icons.favorite_border, size: 20, color: Colors.pinkAccent)),
               IconButton(tooltip: 'Share track', onPressed: () => Share.share('${item['title']} — ${item['artist']}\nHigh-Tech Entertainment'), icon: const Icon(Icons.share_outlined, size: 20)),
               IconButton(
               icon: const Icon(Icons.play_circle_fill, color: Color(0xFFD4AF37), size: 34),
@@ -779,7 +775,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
       final data = term.trim().isEmpty
         ? await q.order('created_at', ascending: false).limit(100)
         : await q.ilike('title', '%${term.trim()}%').order('created_at', ascending: false).limit(100);
-      results = List<Map<String,dynamic>>.from(data);
+      results = List<Map<String,dynamic>>.from(data).where(_isPlayableTrack).toList();
     } catch (e) { error = e.toString(); }
     if (mounted) setState(() => loading = false);
   }
@@ -1140,6 +1136,18 @@ class _SettingsPageState extends State<SettingsPage> {
         textAlign: TextAlign.center, style: TextStyle(color: Colors.white54))),
     ]),
   );
+}
+
+bool _isPlayableTrack(Map<String, dynamic> track) {
+  final title = (track['title'] ?? '').toString().trim();
+  final audioUrl = (track['audio_url'] ?? '').toString().trim();
+  return title.isNotEmpty && audioUrl.startsWith('https://');
+}
+
+Future<List<Map<String, dynamic>>> playableTracks() async {
+  final data = await db.from('tracks').select().eq('is_published', true)
+      .order('created_at', ascending: false).limit(100);
+  return List<Map<String, dynamic>>.from(data).where(_isPlayableTrack).toList();
 }
 
 Future<List<Map<String, dynamic>>> rows(String table, String orderBy) async {
