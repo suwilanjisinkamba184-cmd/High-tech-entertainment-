@@ -127,7 +127,7 @@
               <div class="field"><label>Uploader / producer</label><input name="uploader" value="High Tech Entertainment" maxlength="80"></div>
               <div class="field"><label>Genre</label><input name="genre" maxlength="80" placeholder="Afrobeats, Dancehall, Drill"></div>
               <div class="field full"><label>Cover artwork URL <span class="optional">OPTIONAL</span></label><input name="cover_url" type="url" placeholder="https://…"></div>
-              <div class="field full"><label>Audio file</label><input name="audio" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.webm,.flac" required><small class="admin-field-help">Supported: MP3, M4A, AAC, WAV, OGG, FLAC and WebM. Maximum 100 MB.</small></div>
+              <div class="field full"><label>Spotify track URL <span class="optional">OPTIONAL</span></label><input name="spotify_url" type="url" placeholder="https://open.spotify.com/track/…"><small class="admin-field-help">Paste a Spotify track link to stream it from the website and Android app.</small></div><div class="field full"><label>Audio file <span class="optional">OPTIONAL</span></label><input name="audio" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.webm,.flac"><small class="admin-field-help">Upload MP3, M4A, AAC, WAV, OGG, FLAC or WebM (maximum 100 MB). Provide either a Spotify URL or an audio file.</small></div>
               <div class="field full admin-checkbox-field"><label><input name="is_published" type="checkbox" checked style="width:auto"> Publish immediately on the public website</label></div>
             </div>
             <button class="btn gold admin-submit" type="submit">Upload track <span>↑</span></button><div class="status" id="track-status" role="status" aria-live="polite"></div>
