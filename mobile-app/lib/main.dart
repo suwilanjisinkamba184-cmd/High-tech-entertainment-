@@ -725,13 +725,15 @@ class TrackList extends StatelessWidget {
                   playback.currentTrack.value = null;
                   playback.queueView.value = [];
                   if (embedUrl != null && defaultTargetPlatform == TargetPlatform.android) {
-                    if (context.mounted) Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => SpotifyEmbedPage(
-                        title: (item['title'] ?? 'Spotify').toString(),
-                        artist: (item['artist'] ?? 'High-Tech Entertainment').toString(),
-                        embedUrl: embedUrl,
-                      ),
-                    ));
+                    if (context.mounted) {
+                      await Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => SpotifyEmbedPage(
+                          title: (item['title'] ?? 'Spotify').toString(),
+                          artist: (item['artist'] ?? 'High-Tech Entertainment').toString(),
+                          embedUrl: embedUrl,
+                        ),
+                      ));
+                    }
                   } else {
                     final uri = Uri.tryParse(rawUrl);
                     if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -742,9 +744,11 @@ class TrackList extends StatelessWidget {
                   final audioQueue = items.where((track) => !isSpotifyUrl((track['audio_url'] ?? '').toString())).toList();
                   await playback.playTrack(item, audioQueue);
                 } catch (error) {
-                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Playback failed: $error')),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Playback failed: $error')),
+                    );
+                  }
                 }
               },
             )]),
@@ -1326,7 +1330,7 @@ String? spotifyEmbedUrl(String raw) {
       (unit >= 65 && unit <= 90) ||
       (unit >= 97 && unit <= 122));
   if (type == null || !supported.contains(type) || !validId) return null;
-  return 'https://open.spotify.com/embed/' + type + '/' + id! + '?utm_source=generator&theme=0';
+  return 'https://open.spotify.com/embed/$type/$id?utm_source=generator&theme=0';
 }
 
 bool _isPlayableTrack(Map<String, dynamic> track) {
@@ -1342,7 +1346,7 @@ Future<List<Map<String, dynamic>>> publishedTracks([String term = '']) async {
       .select()
       .eq('is_published', true);
   if (term.trim().isNotEmpty) {
-    query = query.ilike('title', '%' + term.trim() + '%');
+    query = query.ilike('title', '%${term.trim()}%');
   }
   final data = await query.order('created_at', ascending: false).limit(100);
   return List<Map<String, dynamic>>.from(data).where(_isPlayableTrack).toList();
