@@ -1387,7 +1387,7 @@ class _AccountTabState extends State<AccountTab> {
         const SizedBox(height: 18),
         FilledButton(onPressed: () async { await db.auth.signOut(); if (mounted) setState(() {}); }, child: const Text('Sign out')),
         TextButton.icon(
-          onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html'), mode: LaunchMode.externalApplication),
+          onPressed: () => launchUrl(Uri.parse('https://high-techmedia.netlify.app/account-deletion.html'), mode: LaunchMode.externalApplication),
           icon: const Icon(Icons.privacy_tip_outlined),
           label: const Text('Privacy policy & account deletion'),
         ),
@@ -1421,12 +1421,12 @@ class _AccountTabState extends State<AccountTab> {
         FilledButton(onPressed: busy ? null : authenticate, child: Text(busy ? 'Please wait' : (signup ? 'Create account' : 'Sign in'))),
         TextButton(onPressed: () => setState(() => signup = !signup), child: Text(signup ? 'Already registered? Sign in' : 'Create a new account')),
         TextButton.icon(
-          onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication),
+          onPressed: () => launchUrl(Uri.parse('https://high-techmedia.netlify.app/privacy-policy.html'), mode: LaunchMode.externalApplication),
           icon: const Icon(Icons.privacy_tip_outlined),
           label: const Text('Privacy policy'),
         ),
         TextButton(
-          onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html'), mode: LaunchMode.externalApplication),
+          onPressed: () => launchUrl(Uri.parse('https://high-techmedia.netlify.app/account-deletion.html'), mode: LaunchMode.externalApplication),
           child: const Text('Request account deletion'),
         ),
       ],
@@ -1585,11 +1585,11 @@ class _SettingsPageState extends State<SettingsPage> {
       const SizedBox(height: 12),
       Card(child: Column(children: [
         ListTile(leading: const Icon(Icons.language), title: const Text('High-Tech Entertainment website'), trailing: const Icon(Icons.open_in_new),
-          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/'), mode: LaunchMode.externalApplication)),
+          onTap: () => launchUrl(Uri.parse('https://high-techmedia.netlify.app/'), mode: LaunchMode.externalApplication)),
         ListTile(leading: const Icon(Icons.privacy_tip_outlined), title: const Text('Privacy policy'), trailing: const Icon(Icons.open_in_new),
-          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication)),
+          onTap: () => launchUrl(Uri.parse('https://high-techmedia.netlify.app/privacy-policy.html'), mode: LaunchMode.externalApplication)),
         ListTile(leading: const Icon(Icons.delete_outline), title: const Text('Request account deletion'), trailing: const Icon(Icons.open_in_new),
-          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html'), mode: LaunchMode.externalApplication)),
+          onTap: () => launchUrl(Uri.parse('https://high-techmedia.netlify.app/account-deletion.html'), mode: LaunchMode.externalApplication)),
       ])),
       const Padding(padding: EdgeInsets.all(20), child: Text('Quality Sound, Global Vibes.\nMusic. Beats. Production. Beyond.',
         textAlign: TextAlign.center, style: TextStyle(color: Colors.white54))),
