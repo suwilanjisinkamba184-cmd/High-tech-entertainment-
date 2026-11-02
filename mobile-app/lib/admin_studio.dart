@@ -75,7 +75,11 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     final Uint8List? bytes = file.bytes;
     if (bytes == null || bytes.isEmpty) throw Exception('Could not read selected file. Please select it again.');
     final path = '$folder/${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')}';
-    final mime = file.extension?.toLowerCase() == 'mp3' ? 'audio/mpeg' : null;
+    final ext = _extension(file);
+    final mime = <String,String>{
+      'mp3':'audio/mpeg','m4a':'audio/x-m4a','aac':'audio/aac',
+      'wav':'audio/wav','ogg':'audio/ogg','flac':'audio/flac',
+    }[ext];
     await _supabase.storage.from(bucket).uploadBinary(path, bytes,
       fileOptions: FileOptions(upsert: false, contentType: mime));
     return _supabase.storage.from(bucket).getPublicUrl(path);
