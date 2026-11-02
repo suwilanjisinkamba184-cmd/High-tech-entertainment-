@@ -87,15 +87,15 @@ jobs:
           text = re.sub(r'android:label="[^"]*"', 'android:label="High-Tech Entertainment"', text)
           text = re.sub(r'<activity android:name="[^"]+"', '<activity android:name="com.ryanheise.audioservice.AudioServiceActivity"', text, count=1)
           if "android:scheme=\"com.hightechentertainment.app\"" not in text:
-              intent = \'\'\'<intent-filter>
+              intent = """<intent-filter>
                           <action android:name="android.intent.action.VIEW" />
                           <category android:name="android.intent.category.DEFAULT" />
                           <category android:name="android.intent.category.BROWSABLE" />
                           <data android:scheme="com.hightechentertainment.app" android:host="login-callback" />
-                      </intent-filter>\'\'\'
+                      </intent-filter>"""
               text = text.replace("</activity>", intent + "\n                  </activity>", 1)
           if 'android:name="com.ryanheise.audioservice.AudioService"' not in text:
-              components = \'\'\'<service android:name="com.ryanheise.audioservice.AudioService"
+              components = """<service android:name="com.ryanheise.audioservice.AudioService"
                       android:foregroundServiceType="mediaPlayback"
                       android:exported="true" tools:ignore="Instantiatable">
                       <intent-filter>
@@ -107,7 +107,7 @@ jobs:
                       <intent-filter>
                           <action android:name="android.intent.action.MEDIA_BUTTON" />
                       </intent-filter>
-                  </receiver>\'\'\'
+                  </receiver>"""
               text = text.replace("</application>", components + "\n    </application>", 1)
           manifest.write_text(text)
           gradle_files = [Path("android/app/build.gradle"), Path("android/app/build.gradle.kts")]
@@ -159,7 +159,7 @@ jobs:
               imports = 'import java.util.Properties\nimport java.io.FileInputStream\n\nval keystoreProperties = Properties()\nval keystorePropertiesFile = rootProject.file("key.properties")\nif (keystorePropertiesFile.exists()) { keystoreProperties.load(FileInputStream(keystorePropertiesFile)) }\n\n'
               if "val keystorePropertiesFile" not in text:
                   text = imports + text
-              block = \'\'\'    signingConfigs {
+              block = """    signingConfigs {
                   create("release") {
                       keyAlias = keystoreProperties["keyAlias"] as String
                       keyPassword = keystoreProperties["keyPassword"] as String
@@ -167,7 +167,7 @@ jobs:
                       storePassword = keystoreProperties["storePassword"] as String
                   }
               }
-          \'\'\'
+          """
               if 'create("release")' not in text:
                   text = text.replace("    buildTypes {", block + "    buildTypes {")
               text = text.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
