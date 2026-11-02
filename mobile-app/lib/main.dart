@@ -11,6 +11,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'playback_engine.dart';
 import 'video_player_page.dart';
+import 'admin_studio_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -1071,6 +1072,14 @@ class _AccountTabState extends State<AccountTab> {
     final content = <Widget>[
       if (user != null) ...[
         const Brand(),
+        if ((user.email ?? '').toLowerCase() == 'suwilanjisinkamba184@gmail.com')
+          Card(child: ListTile(
+            leading: const Icon(Icons.admin_panel_settings_outlined, color: Color(0xFFD4AF37)),
+            title: const Text('Founder Studio'),
+            subtitle: const Text('Private High-Tech administration'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminStudioPage())),
+          )),
         Card(child: ListTile(
           leading: const Icon(Icons.settings_outlined, color: Color(0xFFD4AF37)),
           title: const Text('App settings'),
