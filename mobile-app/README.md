@@ -1,6 +1,6 @@
 # High-Tech Entertainment — Native Android App
 
-The Flutter application in this folder is the native Android client for High-Tech Entertainment.
+The Flutter application in this folder is the native Android client for High-Tech Entertainment. Current app version: **2.1.0**.
 
 ## Experiences
 
@@ -17,7 +17,7 @@ The Flutter application in this folder is the native Android client for High-Tec
 - Founder-only entry for the configured owner account.
 - Dashboard, music upload, track publishing and deletion.
 - Artist and release draft creation and publishing.
-- Public artwork upload and URL management.
+- Public artwork upload, artwork library listing and URL management.
 - User management placeholder (requires a protected Auth Admin Edge Function).
 - Catalogue analytics and activity views; audience-wide metrics require a secure aggregate endpoint.
 
@@ -36,7 +36,7 @@ The artwork bucket migration is recorded at `database/changes/20261102_create_ht
 
 ## Android build
 
-The GitHub Actions workflow creates the Android platform scaffold, copies the Flutter source and assets, configures Android 8+ (min SDK 26), configures the app link and background audio service, and builds APK and AAB outputs.
+The GitHub Actions workflow runs Flutter tests and static analysis, creates the Android platform scaffold, copies the Flutter source and assets, configures Android 8+ (min SDK 26), configures the app link and background audio service, and builds APK and AAB outputs. Signed Android releases use semantic version tags so the in-app update checker can compare versions.
 
 Required repository Actions secrets:
 - `ANDROID_KEYSTORE_BASE64`
