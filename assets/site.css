@@ -291,3 +291,10 @@ main>.section .wrap{max-width:var(--hte-max)}
   html{scroll-behavior:auto}
   .btn,.music-card,.artist-card,.release-card,.video-card{transition:none!important}
 }
+
+
+/* Design-engineering polish: explicit, interruptible transitions and clear press feedback. */
+.btn{transition:transform 160ms ease-out,border-color 180ms ease,box-shadow 180ms ease}
+.btn:active:not(:disabled){transform:scale(.97)}
+select:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.btn{transition:none!important}.btn:active:not(:disabled){transform:none}}
