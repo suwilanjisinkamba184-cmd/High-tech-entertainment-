@@ -18,7 +18,7 @@ The Flutter application in this folder is the native Android client for High-Tec
 - Dashboard, music upload, track publishing and deletion.
 - Artist and release draft creation and publishing.
 - Public artwork upload, artwork library listing and URL management.
-- User management placeholder (requires a protected Auth Admin Edge Function).
+- Secure user directory through a role-checked Supabase function; destructive account actions and role changes remain server-side only.
 - Catalogue analytics and activity views; audience-wide metrics require a secure aggregate endpoint.
 
 ## Supabase integration
@@ -32,7 +32,7 @@ Project: `wqrxacjbsldbnoekbkbf`
 - Public catalogue reads are governed by existing RLS policies.
 - User playlists, favourites and listening history are scoped by the signed-in user's RLS policies.
 
-The artwork bucket migration is recorded at `database/changes/20261102_create_hte_artwork_bucket.sql` and has been applied to the connected project.
+The artwork bucket and admin listing migrations are recorded under `database/changes/` and have been applied to the connected project. The secure user directory function is also applied and returns records only to authenticated HTE owners/admins.
 
 ## Android build
 
