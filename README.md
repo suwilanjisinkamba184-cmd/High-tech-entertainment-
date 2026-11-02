@@ -6,11 +6,11 @@ High-Tech Entertainment is a music and artist platform for discovering releases,
 
 ## Production addresses
 
-- **Public website:** https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/
-- **Founder Studio:** https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/admin/
-- **Account:** https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/account/
+- **Public website:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/
+- **Founder Studio:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/admin/
+- **Account:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account/
 
-The repository is configured to use the Cloudflare `workers.dev` hostname above. Cloudflare hosting and production deployment are managed in the Cloudflare project. The GitHub website workflow is a **validation workflow only**; it does not deploy the website. Confirm the live site and Cloudflare deployment status in the Cloudflare dashboard.
+GitHub Pages is the sole public website deployment target. The workflow `.github/workflows/publish-github-pages.yml` publishes the static website from `main` using GitHub Actions. Netlify and Cloudflare are not used for public website deployment. Supabase remains the backend for authentication, database, media storage and serverless functions.
 
 ## Project components
 
@@ -28,8 +28,7 @@ The repository is configured to use the Cloudflare `workers.dev` hostname above.
 - HTML, CSS and browser JavaScript for the website.
 - Flutter and Dart for the native application.
 - Supabase Auth, PostgreSQL, Row Level Security (RLS), and Storage.
-- GitHub Actions for website validation and application builds/releases.
-- Cloudflare for website hosting and deployment.
+- GitHub Actions and GitHub Pages for website publishing, validation and application builds/releases.
 
 ## Supabase configuration
 
@@ -46,14 +45,15 @@ In Supabase Dashboard → Authentication → URL Configuration:
 Set the production Site URL to:
 
 ```
-https://high-tech-entertainment.suwilanjisinkamba184.workers.dev
+https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/
 ```
 
 Add the production routes used by the application to the allowed redirect URLs, including:
 
 ```
-https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/admin/
-https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/account/
+https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/
+https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/admin/
+https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account/
 ```
 
 Add any additional callback URLs only when they are actually used by the website or mobile authentication flow. Do not use localhost as the production Site URL.
@@ -100,7 +100,8 @@ The planned Android application ID is `com.hightechentertainment.app`. Verify th
 
 ## GitHub Actions
 
-- `.github/workflows/deploy-pages.yml` — despite its historical filename, this workflow validates website files, JavaScript syntax, package JSON and sitemap XML. It does **not** publish to GitHub Pages or Cloudflare.
+- `.github/workflows/publish-github-pages.yml` — assembles and publishes the public website to GitHub Pages on every push to `main`.
+- `.github/workflows/deploy-pages.yml` — validation only: checks required website files, JavaScript syntax, package JSON and sitemap XML.
 - `.github/workflows/mobile-build.yml` — builds Android and Windows application packages and publishes releases when its required conditions and secrets are satisfied.
 
 Open the repository's **Actions** tab to inspect workflow runs and download available artifacts. A successful validation run does not, by itself, prove that the live website, Supabase authentication, uploads or media playback work.
@@ -132,7 +133,7 @@ Do not rely on opening the HTML files directly with `file://`; browser authentic
 
 Before calling a release production-ready, verify each item in the actual environment:
 
-- [ ] Public website loads over HTTPS at the configured Cloudflare hostname.
+- [ ] Public website loads over HTTPS at the configured GitHub Pages URL.
 - [ ] Supabase email/password and any enabled OAuth sign-in flows complete and return to the correct page.
 - [ ] Founder/admin authorization is enforced by RLS and server-side checks.
 - [ ] Admin create, edit and delete operations work for tracks, artists, releases and videos.
