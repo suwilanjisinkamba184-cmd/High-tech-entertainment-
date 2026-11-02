@@ -19,6 +19,8 @@ const supabaseUrl = 'https://wqrxacjbsldbnoekbkbf.supabase.co';
 const supabaseKey = 'sb_publishable_hB_aRh-dnicpRQq3wiRtWg_JTdhmMda';
 const authRedirect = 'com.hightechentertainment.app://login-callback';
 final db = Supabase.instance.client;
+bool _supabaseInitialized = false;
+bool _audioBackgroundInitializationAttempted = false;
 late final HtePlayback playback;
 late final AudioPlayer player;
 final ValueNotifier<int> favouritesRevision = ValueNotifier<int>(0);
@@ -152,13 +154,19 @@ class _StartupGateState extends State<StartupGate> {
       });
     }
     try {
-      await Supabase.initialize(
-        url: supabaseUrl,
-        publishableKey: supabaseKey,
-      );
+      if (!_supabaseInitialized) {
+        await Supabase.initialize(
+          url: supabaseUrl,
+          publishableKey: supabaseKey,
+        );
+        _supabaseInitialized = true;
+      }
       // Initialise the background handler before constructing AudioPlayer.
-      // Otherwise playback can fail with _audioHandler not initialised.
-      if (defaultTargetPlatform == TargetPlatform.android) {
+      // Keep the attempt flag so a later retry does not call Supabase.initialize
+      // a second time if audio-service setup failed after Supabase succeeded.
+      if (defaultTargetPlatform == TargetPlatform.android &&
+          !_audioBackgroundInitializationAttempted) {
+        _audioBackgroundInitializationAttempted = true;
         await JustAudioBackground.init(
           androidNotificationChannelId: 'com.hightechentertainment.app.audio',
           androidNotificationChannelName: 'High-Tech Music Playback',
