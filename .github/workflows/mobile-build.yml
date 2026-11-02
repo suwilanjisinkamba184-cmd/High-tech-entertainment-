@@ -144,6 +144,12 @@ jobs:
           if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_STORE_PASSWORD" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
             echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hte-upload-key.p12"
             keytool -list -keystore "$RUNNER_TEMP/hte-upload-key.p12" -storepass "$ANDROID_STORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
+            CERT_SHA256="$(keytool -list -v -keystore "$RUNNER_TEMP/hte-upload-key.p12" -storepass "$ANDROID_STORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" | awk -F': ' '/SHA256:/{print $2; exit}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+            if [ -z "$CERT_SHA256" ]; then
+              echo "::error::Could not read the upload certificate SHA-256 fingerprint."
+              exit 1
+            fi
+            echo "release_cert_sha256=$CERT_SHA256" >> "$GITHUB_OUTPUT"
             cat > android/key.properties <<EOF
           storePassword=$ANDROID_STORE_PASSWORD
           keyPassword=$ANDROID_KEY_PASSWORD
@@ -205,24 +211,76 @@ jobs:
           dart run flutter_launcher_icons
           flutter test
           flutter analyze lib
-      - name: Build Android APK and Google Play App Bundle
+      - name: Align Android plugin compile SDK with API 36
         working-directory: ${{ runner.temp }}/hte_app
+        shell: bash
         run: |
-          flutter build apk --release --target-platform android-arm,android-arm64
-          flutter build appbundle --release
-      - name: Verify release APK signature
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          cache = Path.home() / ".pub-cache" / "hosted" / "pub.dev"
+          if not cache.exists():
+              raise SystemExit("Pub package cache was not found.")
+          pattern = re.compile(r"(?m)^(\\s*compileSdk(?:Version)?\\s*(?:=\\s*)?)(\\d+)(\\s*(?://.*)?$)")
+          changed = []
+          for gradle in cache.glob("*/android/build.gradle*"):
+              source = gradle.read_text()
+              updated, count = pattern.subn(
+                  lambda match: match.group(1) + "36" + match.group(3)
+                  if int(match.group(2)) < 36 else match.group(0),
+                  source,
+              )
+              if count and updated != source:
+                  gradle.write_text(updated)
+                  changed.append(str(gradle))
+          picker = list(cache.glob("file_picker-*/android/build.gradle*"))
+          if not picker:
+              raise SystemExit("Resolved file_picker Android Gradle file was not found.")
+          picker_text = "\\n".join(path.read_text() for path in picker)
+          if re.search(r"(?m)^\\s*compileSdk(?:Version)?\\s*(?:=\\s*)?34\\b", picker_text):
+              raise SystemExit("file_picker is still configured for Android API 34.")
+          print(f"Updated plugin Android compile SDK declarations: {len(changed)}")
+          print("\\n".join(changed))
+          PY
+      - name: Build signed Android APK
         working-directory: ${{ runner.temp }}/hte_app
+        run: flutter build apk --release --target-platform android-arm,android-arm64
+      - name: Verify release APK signature
+        if: always()
+        working-directory: ${{ runner.temp }}/hte_app
+        env:
+          EXPECTED_CERT_SHA256: ${{ steps.android_signing.outputs.release_cert_sha256 }}
+        shell: bash
         run: |
           APK="build/app/outputs/flutter-apk/app-release.apk"
           APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
-          test -s "$APK"
-          test -x "$APKSIGNER"
-          "$APKSIGNER" verify --verbose --print-certs "$APK"
-          if "$APKSIGNER" verify "$APK" 2>&1 | grep -qi "DOES NOT VERIFY"; then
-            echo "::error::APK signature verification failed"
+          if [ ! -s "$APK" ]; then
+            echo "::error::Signed APK verification executed, but no APK was produced by the build step."
             exit 1
           fi
-          echo "APK signature verified successfully."
+          if [ ! -x "$APKSIGNER" ]; then
+            echo "::error::Android apksigner was not installed."
+            exit 1
+          fi
+          if [ -z "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::Expected upload certificate fingerprint is missing."
+            exit 1
+          fi
+          VERIFY_OUTPUT="$("$APKSIGNER" verify --verbose --print-certs "$APK" 2>&1)" || {
+            printf '%s\\n' "$VERIFY_OUTPUT"
+            echo "::error::APK signature verification failed."
+            exit 1
+          }
+          printf '%s\\n' "$VERIFY_OUTPUT"
+          ACTUAL_CERT_SHA256="$(printf '%s\\n' "$VERIFY_OUTPUT" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print $2; exit}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          if [ -z "$ACTUAL_CERT_SHA256" ] || [ "$ACTUAL_CERT_SHA256" != "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::APK is not signed with the configured High-Tech Entertainment upload certificate."
+            exit 1
+          fi
+          echo "PASS: APK signature is valid and matches the configured upload certificate."
+      - name: Build Google Play App Bundle
+        working-directory: ${{ runner.temp }}/hte_app
+        run: flutter build appbundle --release
       - uses: actions/upload-artifact@v4
         with:
           name: high-tech-entertainment-android
