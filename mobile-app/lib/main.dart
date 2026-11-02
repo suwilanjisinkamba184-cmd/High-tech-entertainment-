@@ -440,9 +440,14 @@ class HomeTab extends StatelessWidget {
         margin: const EdgeInsets.fromLTRB(18, 4, 18, 22),
         padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
         decoration: BoxDecoration(
-          color: const Color(0xFF111214),
-          border: Border.all(color: const Color(0xFF51452E)),
-          borderRadius: BorderRadius.circular(6),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF382A15), Color(0xFF171719), Color(0xFF101113)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(color: const Color(0xFF8D713E)),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 24, offset: Offset(0, 10))],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -501,6 +506,23 @@ class HomeTab extends StatelessWidget {
             ),
           ],
         ),
+      ),
+      ValueListenableBuilder<Map<String, dynamic>?>(
+        valueListenable: playback.currentTrack,
+        builder: (context, track, _) {
+          if (track == null) return const SizedBox.shrink();
+          return Card(
+            margin: const EdgeInsets.fromLTRB(18, 0, 18, 16),
+            child: ListTile(
+              leading: SizedBox(width: 48, height: 48,
+                child: MediaCover(url: track['cover_url']?.toString(), height: 48)),
+              title: const Text('Continue listening', style: TextStyle(fontSize: 10, color: Color(0xFFD9B96E), letterSpacing: 1)),
+              subtitle: Text((track['title'] ?? 'Now playing').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
+              trailing: const Icon(Icons.play_circle_fill, color: Color(0xFFD9B96E), size: 30),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FullPlayerPage())),
+            ),
+          );
+        },
       ),
       const Heading('Latest releases'),
       const ReleaseList(horizontal: true),
