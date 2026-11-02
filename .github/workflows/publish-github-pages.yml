@@ -27,10 +27,12 @@ jobs:
           set -euo pipefail
           mkdir -p _site
           cp -R assets admin account _site/
-          cp index.html supabase-config.js robots.txt sitemap.xml account-deletion.html high-tech-logo.svg _site/
+          cp index.html supabase-config.js robots.txt sitemap.xml account-deletion.html privacy-policy.html high-tech-logo.svg _site/
           cp google31fdb4754075f7bd.html googled2aa97c2eb951371.html _site/ 2>/dev/null || true
           touch _site/.nojekyll
           test -s _site/index.html
+          test -s _site/privacy-policy.html
+          test -s _site/account-deletion.html
           test -s _site/supabase-config.js
           test -s _site/assets/premium-refresh.css
           test -s _site/assets/admin-enhancements.css
