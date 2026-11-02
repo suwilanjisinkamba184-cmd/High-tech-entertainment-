@@ -1179,6 +1179,53 @@ class NotificationsPage extends StatelessWidget {
   );
 }
 
+class ProfileEditPage extends StatefulWidget {
+  const ProfileEditPage({super.key});
+  @override
+  State<ProfileEditPage> createState()=>_ProfileEditPageState();
+}
+class _ProfileEditPageState extends State<ProfileEditPage>{
+  final _name=TextEditingController();
+  final _bio=TextEditingController();
+  final _phone=TextEditingController();
+  bool _loading=true;
+  bool _saving=false;
+  @override
+  void initState(){super.initState();_load();}
+  @override
+  void dispose(){_name.dispose();_bio.dispose();_phone.dispose();super.dispose();}
+  Future<void> _load() async {
+    final user=db.auth.currentUser;
+    if(user==null){setState(()=>_loading=false);return;}
+    try{
+      final row=await db.from('profiles').select('display_name,bio,phone').eq('id',user.id).maybeSingle();
+      if(row!=null){_name.text=(row['display_name']??'').toString();_bio.text=(row['bio']??'').toString();_phone.text=(row['phone']??'').toString();}
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Could not load profile: $e')));}
+    if(mounted)setState(()=>_loading=false);
+  }
+  Future<void> _save() async {
+    final user=db.auth.currentUser;
+    if(user==null)return;
+    setState(()=>_saving=true);
+    try{
+      await db.from('profiles').upsert({'id':user.id,'display_name':_name.text.trim(),'bio':_bio.text.trim(),'phone':_phone.text.trim(),'updated_at':DateTime.now().toIso8601String()});
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profile updated.')));
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Profile update failed: $e')));}
+    if(mounted)setState(()=>_saving=false);
+  }
+  @override
+  Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:const Text('My profile')),
+    body:_loading?const Busy():ListView(padding:const EdgeInsets.all(20),children:[
+      const Brand(tagline:'YOUR HIGH-TECH ACCOUNT'),
+      TextField(controller:_name,decoration:const InputDecoration(labelText:'Display name')),
+      const SizedBox(height:12),TextField(controller:_bio,maxLines:4,decoration:const InputDecoration(labelText:'About you')),
+      const SizedBox(height:12),TextField(controller:_phone,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'Phone number (optional)')),
+      const SizedBox(height:18),FilledButton(onPressed:_saving?null:_save,child:_saving?const CircularProgressIndicator():const Text('Save profile')),
+    ]),
+  );
+}
+
 class AccountTab extends StatefulWidget {
   const AccountTab({super.key, this.embedded = false});
   final bool embedded;
@@ -1242,6 +1289,13 @@ class _AccountTabState extends State<AccountTab> {
     final content = <Widget>[
       if (user != null) ...[
         const Brand(),
+        Card(child: ListTile(
+          leading: const Icon(Icons.account_circle_outlined, color: Color(0xFFD4AF37)),
+          title: const Text('My profile'),
+          subtitle: const Text('Edit your display name and account details'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileEditPage())),
+        )),
         Card(child: ListTile(
           leading: const Icon(Icons.settings_outlined, color: Color(0xFFD4AF37)),
           title: const Text('App settings'),
