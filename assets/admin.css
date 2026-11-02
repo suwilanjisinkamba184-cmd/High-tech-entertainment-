@@ -245,3 +245,55 @@
  .admin-page *, .admin-page *::before,.admin-page *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
  .admin-page .btn:active:not(:disabled){transform:none}
 }
+
+
+/* Founder Studio — premium black / champagne-gold design system */
+.admin-page{
+ --admin-panel:#11100d;--admin-line:rgba(220,188,119,.18);
+ --admin-cyan:#e1bd78;--admin-gold:#e8c982;
+ background:#070707;color:#f5f1e8;
+}
+.admin-page:before{opacity:.09}
+.admin-topbar{background:rgba(7,7,7,.96);border-bottom-color:rgba(220,188,119,.2)}
+.admin-live{color:#d6c59f}
+.admin-workspace{background:#080808}
+.admin-sidebar{background:linear-gradient(180deg,#0c0b09,#080808);border-right-color:rgba(220,188,119,.16)}
+.admin-nav-item{color:#a69b87}
+.admin-nav-item:hover{background:rgba(220,188,119,.08);color:#fff5df;border-color:rgba(220,188,119,.18)}
+.admin-nav-item.active{color:#fff2d4;background:linear-gradient(100deg,rgba(220,188,119,.17),rgba(220,188,119,.045));border-color:rgba(220,188,119,.28);box-shadow:inset 3px 0 0 #d9b96e}
+.admin-nav-icon{background:#211c12;color:#e7c77f}
+.admin-nav-item b{color:#806f4d}
+.admin-sidebar-bottom{background:linear-gradient(130deg,#1b170f,#0c0b09);border-color:rgba(220,188,119,.22)}
+.admin-sidebar-bottom strong{color:#e9d29b}
+.admin-main-top .eyebrow,.admin-welcome-banner .eyebrow{color:#d9b96e}
+.admin-welcome-banner{border-color:rgba(220,188,119,.28);background:radial-gradient(ellipse at 76% 42%,rgba(183,137,54,.2),transparent 39%),radial-gradient(ellipse at 95% 100%,rgba(220,188,119,.13),transparent 40%),linear-gradient(115deg,#201a10,#0d0c0a 66%,#18130b)}
+.admin-banner-art strong{color:#e7c77f}
+.admin-stat-card,.admin-quick-card,.admin-info-card,.admin-setting-card,.panel,.admin-table-wrap,.admin-bottom-note{border-color:rgba(220,188,119,.16)!important;background:linear-gradient(145deg,#14120e,#0d0d0c)!important;box-shadow:0 14px 36px #0005}
+.admin-stat-card .value,.admin-stat-card .admin-stat-icon,.admin-quick-card>span,.admin-setting-icon,.admin-info-icon{color:#e4c47d}
+.admin-stat-top>span:last-child,.admin-section-label>div>span,.admin-table-heading>div>span{color:#c5a76b}
+.admin-quick-card:hover,.admin-stat-card:hover,.admin-info-card:hover{border-color:rgba(220,188,119,.38)!important;transform:translateY(-2px)}
+.admin-quick-card b,.admin-quick-card strong{color:#f1dfb6}
+.admin-nav-item.active .admin-nav-icon{background:#322817;color:#f2d18b}
+.admin-login-visual{background:radial-gradient(ellipse at 80% 30%,rgba(196,151,68,.23),transparent 42%),linear-gradient(140deg,#21190e,#090909 72%)}
+.admin-login-copy .eyebrow{color:#dfc17f}
+.admin-login-copy h1 span,.hte-ai-hero h2 span{color:#e3c47d}
+.admin-login-card{border-color:rgba(220,188,119,.22)!important;background:linear-gradient(145deg,#17140f,#0c0c0b)!important}
+.admin-page .btn.gold,.admin-page .btn.primary{background:linear-gradient(110deg,#e8cb88,#b88c43)!important;color:#171107!important;border-color:#e5c47c!important}
+.admin-page .btn{border-color:rgba(220,188,119,.24)}
+.admin-page input:not([type=checkbox]),.admin-page select,.admin-page textarea{background:#090908!important;border-color:rgba(220,188,119,.2)!important;color:#f7f1e5!important}
+.admin-page input:focus,.admin-page select:focus,.admin-page textarea:focus{outline:2px solid rgba(220,188,119,.38);outline-offset:1px}
+.admin-page .data-table th{color:#d7bd83}
+.admin-page .data-table td{border-color:rgba(220,188,119,.12)}
+.admin-page .admin-live i,.admin-page .admin-status-orb{background:#d8b66d;box-shadow:0 0 13px #d8b66d}
+.hte-ai-hero{border-color:rgba(220,188,119,.27)!important;background:radial-gradient(ellipse at 78% 35%,rgba(190,146,61,.22),transparent 42%),linear-gradient(120deg,#20190e,#0b0b09 72%)!important}
+.hte-ai-orb{background:linear-gradient(145deg,#f2d89d,#a77b32)!important;color:#1b1408!important;box-shadow:0 0 50px rgba(215,177,100,.18)}
+.hte-ai-badge{border-color:rgba(220,188,119,.25)!important;color:#e4c985!important}
+.hte-ai-status-strip{border-color:rgba(220,188,119,.17)!important;background:#100e0a!important;color:#c5b38d!important}
+.hte-ai-status-strip>span:first-child{color:#d9b96e!important}
+.hte-ai-form-panel .admin-panel-icon{background:#292012!important;color:#edcf8b!important}
+.hte-ai-generate{background:linear-gradient(110deg,#efd393,#b8893f)!important;color:#171006!important}
+.hte-ai-campaign{border-color:rgba(220,188,119,.2)!important;background:linear-gradient(145deg,#17140e,#0c0c0a)!important}
+.hte-ai-campaign-state.published{color:#e4c47d!important}
+.admin-footer{border-top-color:rgba(220,188,119,.16)!important;color:#9c8b68!important}
+@media(max-width:900px){.admin-workspace{grid-template-columns:1fr}.admin-sidebar{position:sticky;top:78px;z-index:30;height:auto;min-height:0;padding:10px;display:flex;flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid rgba(220,188,119,.16)}.admin-side-heading,.admin-sidebar-bottom{display:none}.admin-nav-item{width:auto;min-width:max-content;min-height:42px;padding:0 12px}.admin-nav-item b{display:none}.admin-main{padding-top:24px}}
+@media(max-width:560px){.admin-main-top{align-items:flex-start;flex-direction:column}.admin-main-actions{width:100%;justify-content:space-between}.admin-welcome-banner{min-height:0}.admin-banner-art{display:none}.admin-topbar-inner{width:calc(100% - 24px)}.admin-top-actions .admin-live{display:none}}
