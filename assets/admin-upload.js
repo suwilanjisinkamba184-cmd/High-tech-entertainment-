@@ -9,6 +9,7 @@ document.addEventListener('submit',async function(event){
   const status=document.getElementById('track-status');
   const say=(message,type='')=>{if(status){status.textContent=message;status.className='status '+type;}};
   if(button)button.disabled=true;
+  let uploadedPath=null,recordSaved=false;
   try{
     const config=window.HTE_SUPABASE_CONFIG||{};
     if(!window.supabase||!config.url||!config.publishableKey)throw new Error('The upload service did not load. Refresh the page and try again.');
@@ -31,6 +32,7 @@ document.addEventListener('submit',async function(event){
     const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
     const {data:stored,error:storageError}=await client.storage.from('hte-audio').upload(user.id+'/'+Date.now()+'-'+safeName,file,{upsert:false,contentType});
     if(storageError)throw storageError;
+    uploadedPath=stored.path;
     const audioUrl=client.storage.from('hte-audio').getPublicUrl(stored.path).data.publicUrl;
     say('Saving track details…');
     const {error:dbError}=await client.from('tracks').insert({
@@ -43,10 +45,12 @@ document.addEventListener('submit',async function(event){
       is_published:data.get('is_published')==='on'
     });
     if(dbError)throw dbError;
+    recordSaved=true;
     form.reset();
     say('Success! Your track has been uploaded and saved. Refreshing the music list…','success');
     setTimeout(()=>location.reload(),1200);
   }catch(error){
+    if(uploadedPath&&!recordSaved){try{await client.storage.from('hte-audio').remove([uploadedPath]);}catch(cleanupError){console.warn('HTE orphaned audio cleanup failed:',cleanupError)}}
     console.error('HTE track upload:',error);
     say(error?.message||'Upload failed. Please try again.','error');
   }finally{
