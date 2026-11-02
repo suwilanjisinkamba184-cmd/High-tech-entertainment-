@@ -221,7 +221,7 @@ jobs:
           cache = Path.home() / ".pub-cache" / "hosted" / "pub.dev"
           if not cache.exists():
               raise SystemExit("Pub package cache was not found.")
-          pattern = re.compile(r"(?m)^(\s*compileSdk(?:Version)?\s*(?:=\s*)?)(\\d+)(\s*(?://.*)?$)")
+          pattern = re.compile(r"(?m)^(\s*compileSdk(?:Version)?\s*(?:=\s*)?)(\d+)(\s*(?://.*)?$)")
           changed = []
           for gradle in cache.glob("*/android/build.gradle*"):
               source = gradle.read_text()
@@ -237,7 +237,7 @@ jobs:
           if not picker:
               raise SystemExit("Resolved file_picker Android Gradle file was not found.")
           picker_text = "\n".join(path.read_text() for path in picker)
-          if re.search(r"(?m)^\s*compileSdk(?:Version)?\s*(?:=\s*)?34\\b", picker_text):
+          if re.search(r"(?m)^\s*compileSdk(?:Version)?\s*(?:=\s*)?34\b", picker_text):
               raise SystemExit("file_picker is still configured for Android API 34.")
           print(f"Updated plugin Android compile SDK declarations: {len(changed)}")
           print("\n".join(changed))
