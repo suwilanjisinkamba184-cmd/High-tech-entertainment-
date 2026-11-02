@@ -123,10 +123,19 @@ class HtePlayback {
     if (_index >= _queue.length) {
       if (!autoplay) { await player.stop(); return; }
       try {
-        final data = await Supabase.instance.client.from('tracks').select()
-          .eq('is_published',true).order('created_at',ascending:false).limit(40);
+        final data = await Supabase.instance.client.from('tracks')
+          .select('*, releases!inner(is_published)')
+          .eq('is_published',true)
+          .eq('releases.is_published',true)
+          .order('created_at',ascending:false).limit(40);
         final tracks = List<Map<String,dynamic>>.from(data)
-          .where((t)=>(t['audio_url'] ?? '').toString().startsWith('http'))
+          .where((t) {
+            final raw = (t['audio_url'] ?? '').toString().trim();
+            final uri = Uri.tryParse(raw);
+            final host = (uri?.host ?? '').toLowerCase();
+            final spotify = raw.startsWith('spotify:') || host == 'spotify.link' || host == 'spotify.com' || host.endsWith('.spotify.com');
+            return !spotify && uri != null && uri.scheme == 'https' && uri.host.isNotEmpty;
+          })
           .where((t)=>t['id']?.toString()!=currentTrack.value?['id']?.toString()).toList();
         if (tracks.isEmpty) { await player.stop(); return; }
         _queue = tracks;
