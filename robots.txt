@@ -1,5 +1,6 @@
 User-agent: *
-Allow: /
-Disallow: /admin/
-Disallow: /account/
+Allow: /High-tech-entertainment-/
+Disallow: /High-tech-entertainment-/admin/
+Disallow: /High-tech-entertainment-/account/
+
 Sitemap: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/sitemap.xml
