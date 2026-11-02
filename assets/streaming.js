@@ -3,39 +3,42 @@ const root=document.getElementById('hte-streaming');if(!root)return;
 const cfg=window.HTE_SUPABASE_CONFIG||{},db=window.supabase&&cfg.url&&cfg.publishableKey?window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;
 const $=s=>root.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const read=(k)=>{try{let x=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(x)?x:[]}catch(_){return[]}};
-let catalogue=[],filtered=[],current=-1,queue=[],audio=new Audio(),user=null,cloudPlaylistId=null;
+let catalogue=[],filtered=[],current=-1,queue=[],audio=new Audio(),user=null,cloudPlaylistId=null,syncing=false;
 let favorites=new Set(read('hte-favorites')),playlist=read('hte-playlist'),view='all',shuffle=false;
 const spotify=x=>/open\.spotify\.com\/(embed\/)?(track|album|playlist)/i.test(x||'');
 const art=x=>x.cover_url?'<img src="'+esc(x.cover_url)+'" alt="" loading="lazy"><span class="hte-art-fallback" hidden>HT</span>':'<span>HT</span>';
 const duration=n=>{n=Number(n)||0;return n?Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0'):'—'};
 function status(s){let e=$('[data-stream-status]');if(e)e.textContent=s}
-function saveLocal(){try{localStorage.setItem('hte-favorites',JSON.stringify([...favorites]));localStorage.setItem('hte-playlist',JSON.stringify(playlist))}catch(_){status('Browser storage is full or unavailable. Your account-synced collection remains available when signed in.')}}
+function saveLocal(){try{const suffix=user?':'+user.id:'';localStorage.setItem('hte-favorites'+suffix,JSON.stringify([...favorites]));localStorage.setItem('hte-playlist'+suffix,JSON.stringify(playlist))}catch(_){status('Browser storage is full or unavailable. Your account-synced collection remains available when signed in.')}}
 function ensureControls(){
  const genre=$('[data-stream-genre]');if(genre&&!genre.querySelector('[value="__favorites"]'))genre.insertAdjacentHTML('beforeend','<option value="__favorites">♥ My favourites</option>');
  const bar=$('.hte-stream-toolbar');if(bar&&!$('[data-cloud-state]'))bar.insertAdjacentHTML('beforeend','<span class="hte-cloud-state" data-cloud-state>Guest collection · this device</span>');
  const head=$('.hte-playlist-heading');if(head&&!$('[data-playlist-shuffle]'))head.insertAdjacentHTML('beforeend','<div class="hte-playlist-tools"><button class="btn" type="button" data-playlist-shuffle>⇄ Shuffle</button><button class="btn" type="button" data-playlist-save>↥ Sync playlist</button></div>');
 }
 async function syncAccount(){
- if(!db)return;
+ if(!db||syncing)return;
+ syncing=true;
  try{
-  const {data}=await db.auth.getSession();user=data?.session?.user||null;
+  const {data}=await db.auth.getSession(),nextUser=data?.session?.user||null;
+  const changed=(nextUser?.id||null)!==(user?.id||null);
+  user=nextUser;
   const badge=$('[data-cloud-state]');
-  if(!user){cloudPlaylistId=null;if(badge)badge.textContent='Guest collection · this device';return}
+  if(!user){cloudPlaylistId=null;favorites=new Set(read('hte-favorites'));playlist=read('hte-playlist');if(badge)badge.textContent='Guest collection · this device';return}
   if(badge)badge.textContent='Syncing your HTE account…';
   const {data:favs,error:fe}=await db.from('user_favorites').select('track_id').eq('user_id',user.id);
   if(fe)throw fe;
-  if(favs?.length){favorites=new Set(favs.map(x=>x.track_id));saveLocal()}
-  else if(favorites.size){const rows=[...favorites].map(track_id=>({user_id:user.id,track_id}));const {error}=await db.from('user_favorites').upsert(rows,{onConflict:'user_id,track_id'});if(error)throw error}
+  favorites=new Set((favs||[]).map(x=>x.track_id));
   const {data:pls,error:pe}=await db.from('playlists').select('id').eq('user_id',user.id).eq('name','My HTE Playlist').limit(1);
   if(pe)throw pe;
   if(pls?.length)cloudPlaylistId=pls[0].id;
   else{const {data:p,error}=await db.from('playlists').insert({user_id:user.id,name:'My HTE Playlist',description:'Your personal High Tech Entertainment playlist',is_public:false}).select('id').single();if(error)throw error;cloudPlaylistId=p.id}
   const {data:items,error:ie}=await db.from('playlist_tracks').select('track_id,position').eq('playlist_id',cloudPlaylistId).order('position');
   if(ie)throw ie;
-  if(items?.length){playlist=items.map(x=>x.track_id);saveLocal()}
-  else if(playlist.length){const rows=playlist.map((track_id,position)=>({playlist_id:cloudPlaylistId,track_id,position}));const {error}=await db.from('playlist_tracks').upsert(rows,{onConflict:'playlist_id,track_id'});if(error)throw error}
+  playlist=(items||[]).map(x=>x.track_id);
+  saveLocal();
   if(badge)badge.textContent='✓ Synced to your account';
  }catch(e){console.warn('HTE account library sync:',e);const badge=$('[data-cloud-state]');if(badge)badge.textContent='Account sync unavailable · local backup active'}
+ finally{syncing=false}
 }
 async function syncFavorite(id,on){if(!user||!db)return;try{if(on){const {error}=await db.from('user_favorites').upsert({user_id:user.id,track_id:id},{onConflict:'user_id,track_id'});if(error)throw error}else{const {error}=await db.from('user_favorites').delete().eq('user_id',user.id).eq('track_id',id);if(error)throw error}}catch(e){console.warn(e);status('Favourite saved on this device, but account sync failed. Please try again later.')}}
 async function syncPlaylist(){if(!user||!cloudPlaylistId){status('Sign in through My account to sync your playlist across devices.');return}try{const {error:delErr}=await db.from('playlist_tracks').delete().eq('playlist_id',cloudPlaylistId);if(delErr)throw delErr;if(playlist.length){const rows=playlist.map((track_id,position)=>({playlist_id:cloudPlaylistId,track_id,position}));const {error}=await db.from('playlist_tracks').insert(rows);if(error)throw error}status('Playlist synced securely to your HTE account.')}catch(e){console.error(e);status('Playlist sync failed: '+(e.message||'check account permissions'))}}
