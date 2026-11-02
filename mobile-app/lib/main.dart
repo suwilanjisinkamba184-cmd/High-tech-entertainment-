@@ -336,7 +336,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int tab = 0;
-  final pages = const [HomeTab(), DiscoverTab(), MusicTab(), AccountTab()];
+  final pages = const [HomeTab(), DiscoverTab(), ReleasesTab(), LibraryTab(), AccountTab()];
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(child: IndexedStack(index: tab, children: pages)),
@@ -346,8 +346,9 @@ class _MainScreenState extends State<MainScreen> {
       destinations: const [
         NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
         NavigationDestination(icon: Icon(Icons.search), label: 'Discover'),
-        NavigationDestination(icon: Icon(Icons.music_note_outlined), label: 'Music'),
-        NavigationDestination(icon: Icon(Icons.person_outline), label: 'Account'),
+        NavigationDestination(icon: Icon(Icons.album_outlined), label: 'Releases'),
+        NavigationDestination(icon: Icon(Icons.library_music_outlined), label: 'Library'),
+        NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
       ],
     )]),
   );
@@ -506,6 +507,14 @@ class HomeTab extends StatelessWidget {
       const ReleaseList(horizontal: true),
       const Heading('Featured artists'),
       const ArtistList(horizontal: true),
+      const Heading('Watch & explore'),
+      Card(child: ListTile(
+        leading: const Icon(Icons.video_library_outlined, color: Color(0xFFD9B96E)),
+        title: const Text('Music videos'),
+        subtitle: const Text('Watch official High-Tech visual releases'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const Scaffold(appBar: AppBar(title: Text('Videos')), body: VideosTab()))),
+      )),
       const Heading('Released music'),
       const TrackList(compact: true),
       const Padding(
@@ -1009,6 +1018,167 @@ class _SavedTabState extends State<SavedTab> {
   ]);
 }
 
+class ReleasesTab extends StatelessWidget {
+  const ReleasesTab({super.key});
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    const Brand(tagline: 'OFFICIAL RELEASES'),
+    const Align(alignment: Alignment.centerLeft, child: Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Text('Latest releases', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
+    )),
+    const Expanded(child: ReleaseList()),
+  ]);
+}
+
+class LibraryTab extends StatelessWidget {
+  const LibraryTab({super.key});
+  @override
+  Widget build(BuildContext context) => DefaultTabController(
+    length: 2,
+    child: Column(children: [
+      const Brand(tagline: 'YOUR MUSIC COLLECTION'),
+      const TabBar(tabs:[Tab(text:'Favourites'),Tab(text:'Playlists')],labelColor:Color(0xFFD9B96E)),
+      const Expanded(child:TabBarView(children:[SavedTab(),PlaylistsTab()])),
+    ]),
+  );
+}
+
+class PlaylistsTab extends StatefulWidget {
+  const PlaylistsTab({super.key});
+  @override
+  State<PlaylistsTab> createState() => _PlaylistsTabState();
+}
+class _PlaylistsTabState extends State<PlaylistsTab> {
+  List<Map<String,dynamic>> items=[];
+  bool loading=true;
+  @override
+  void initState(){super.initState();load();}
+  Future<void> load() async {
+    setState(()=>loading=true);
+    try {
+      final user=db.auth.currentUser;
+      if(user==null){items=[];} else {
+        final data=await db.from('playlists').select().eq('user_id',user.id).order('created_at',ascending:false);
+        items=List<Map<String,dynamic>>.from(data);
+      }
+    } catch(e){debugPrint('Playlist load failed: $e');}
+    if(mounted)setState(()=>loading=false);
+  }
+  Future<void> create() async {
+    final controller=TextEditingController();
+    final name=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('New playlist'),
+      content:TextField(controller:controller,autofocus:true,maxLength:100,decoration:const InputDecoration(labelText:'Playlist name')),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
+        FilledButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),child:const Text('Create'))],
+    ));
+    controller.dispose();
+    if(name==null||name.isEmpty)return;
+    final user=db.auth.currentUser;
+    if(user==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sign in to create playlists.')));return;}
+    try {await db.from('playlists').insert({'user_id':user.id,'name':name});await load();}
+    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Could not create playlist: $e')));}
+  }
+  @override
+  Widget build(BuildContext context)=>loading?const Busy():Column(children:[
+    Padding(padding:const EdgeInsets.fromLTRB(16,12,16,6),child:Row(children:[
+      const Expanded(child:Text('Your playlists',style:TextStyle(fontWeight:FontWeight.w700))),
+      FilledButton.tonalIcon(onPressed:create,icon:const Icon(Icons.add),label:const Text('Create')),
+    ])),
+    Expanded(child:items.isEmpty?const Notice('Create a playlist to organise your favourite High-Tech tracks.'):
+      ListView.builder(itemCount:items.length,itemBuilder:(ctx,i){
+        final item=items[i];
+        return Card(child:ListTile(
+          leading:const CircleAvatar(backgroundColor:Color(0xFF30260E),child:Icon(Icons.queue_music,color:Color(0xFFD9B96E))),
+          title:Text((item['name']??'Playlist').toString()),
+          subtitle:Text((item['description']??'Your personal collection').toString()),
+          trailing:const Icon(Icons.chevron_right),
+          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>PlaylistDetailPage(playlist:item))),
+        ));
+      })),
+  ]);
+}
+
+class PlaylistDetailPage extends StatefulWidget {
+  const PlaylistDetailPage({super.key,required this.playlist});
+  final Map<String,dynamic> playlist;
+  @override
+  State<PlaylistDetailPage> createState()=>_PlaylistDetailPageState();
+}
+class _PlaylistDetailPageState extends State<PlaylistDetailPage>{
+  List<Map<String,dynamic>> tracks=[];
+  bool loading=true;
+  @override
+  void initState(){super.initState();load();}
+  Future<void> load() async {
+    setState(()=>loading=true);
+    try {
+      final links=await db.from('playlist_tracks').select('track_id').eq('playlist_id',widget.playlist['id']).order('position');
+      final ids=links.map((e)=>e['track_id'].toString()).toList();
+      if(ids.isEmpty){tracks=[];} else {
+        final data=await db.from('tracks').select().eq('is_published',true).inFilter('id',ids);
+        final byId={for(final row in data) row['id'].toString():Map<String,dynamic>.from(row)};
+        tracks=ids.where(byId.containsKey).map((id)=>byId[id]!).toList();
+      }
+    }catch(e){debugPrint('Playlist tracks load failed: $e');}
+    if(mounted)setState(()=>loading=false);
+  }
+  Future<void> addTracks() async {
+    try {
+      final data=await publishedTracks();
+      if(!mounted)return;
+      final selected=await showDialog<List<Map<String,dynamic>>>(context:context,builder:(ctx){
+        final chosen=<String>{};
+        return StatefulBuilder(builder:(ctx,setDialog)=>AlertDialog(
+          title:const Text('Add tracks'),
+          content:SizedBox(width:360,height:360,child:ListView(children:data.map((track){
+            final id=track['id'].toString();
+            return CheckboxListTile(value:chosen.contains(id),title:Text((track['title']??'Track').toString()),subtitle:Text((track['artist']??'').toString()),
+              onChanged:(v)=>setDialog(()=>v==true?chosen.add(id):chosen.remove(id)));
+          }).toList())),
+          actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
+            FilledButton(onPressed:()=>Navigator.pop(ctx,data.where((e)=>chosen.contains(e['id'].toString())).toList()),child:const Text('Add selected'))],
+        ));
+      });
+      if(selected==null||selected.isEmpty)return;
+      final current=await db.from('playlist_tracks').select('track_id').eq('playlist_id',widget.playlist['id']);
+      final existing=current.map((e)=>e['track_id'].toString()).toSet();
+      final fresh=selected.where((e)=>!existing.contains(e['id'].toString())).toList();
+      for(var i=0;i<fresh.length;i++){
+        await db.from('playlist_tracks').insert({'playlist_id':widget.playlist['id'],'track_id':fresh[i]['id'],'position':tracks.length+i});
+      }
+      await load();
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Could not add tracks: $e')));}
+  }
+  @override
+  Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:Text((widget.playlist['name']??'Playlist').toString())),
+    body:loading?const Busy():Column(children:[
+      Padding(padding:const EdgeInsets.all(16),child:Row(children:[
+        Expanded(child:Text('${tracks.length} tracks',style:const TextStyle(color:Colors.white60))),
+        FilledButton.tonalIcon(onPressed:addTracks,icon:const Icon(Icons.add),label:const Text('Add tracks')),
+      ])),
+      Expanded(child:tracks.isEmpty?const Notice('This playlist is empty. Add tracks from the High-Tech catalogue.'):TrackList(items:tracks)),
+    ]),
+  );
+}
+
+class NotificationsPage extends StatelessWidget {
+  const NotificationsPage({super.key});
+  @override
+  Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:const Text('Notifications')),
+    body:const Center(child:Padding(padding:EdgeInsets.all(28),child:Column(
+      mainAxisSize:MainAxisSize.min,children:[
+        Icon(Icons.notifications_none,color:Color(0xFFD9B96E),size:58),
+        SizedBox(height:14),Text('You are all caught up',style:TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
+        SizedBox(height:8),Text('Release alerts and account notifications will appear here when notifications are enabled.',textAlign:TextAlign.center,style:TextStyle(color:Colors.white60)),
+      ],
+    ))),
+  );
+}
+
 class AccountTab extends StatefulWidget {
   const AccountTab({super.key, this.embedded = false});
   final bool embedded;
@@ -1078,6 +1248,13 @@ class _AccountTabState extends State<AccountTab> {
           subtitle: const Text('Updates, app information and support'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsPage())),
+        )),
+        Card(child: ListTile(
+          leading: const Icon(Icons.notifications_none, color: Color(0xFFD4AF37)),
+          title: const Text('Notifications'),
+          subtitle: const Text('Release and account updates'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsPage())),
         )),
       ] else ...[
         const SizedBox(height: 8),
