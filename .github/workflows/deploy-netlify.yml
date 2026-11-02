@@ -27,6 +27,8 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -45,13 +47,12 @@ jobs:
           test -s _site/sitemap.xml
 
       - name: Publish production site to Netlify
-        if: ${{ secrets.NETLIFY_AUTH_TOKEN != '' }}
+        if: env.NETLIFY_AUTH_TOKEN != ''
         env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: 6bb79ec5-80a6-4973-b429-31ff4fbf958a
         run: npx --yes netlify-cli@latest deploy --prod --dir _site --site "$NETLIFY_SITE_ID" --auth "$NETLIFY_AUTH_TOKEN"
 
       - name: Report missing Netlify credential
-        if: ${{ secrets.NETLIFY_AUTH_TOKEN == '' }}
+        if: env.NETLIFY_AUTH_TOKEN == ''
         run: |
           echo "::warning::Netlify deploy skipped. Add NETLIFY_AUTH_TOKEN in GitHub repository Actions secrets to enable automatic production publishing."
