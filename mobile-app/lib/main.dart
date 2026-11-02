@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'admin_studio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -1080,6 +1081,15 @@ class _AccountTabState extends State<AccountTab> {
         )),
       ] else ...[
         const SizedBox(height: 8),
+      ],
+      if (user != null && user.id == 'b268df9e-eff5-43b9-a38f-869b33add38b') ...[
+        Card(child: ListTile(
+          leading: const Icon(Icons.admin_panel_settings_outlined, color: Color(0xFFD9B96E), size: 28),
+          title: const Text('HT Admin — Founder Studio', style: TextStyle(fontWeight: FontWeight.w700)),
+          subtitle: const Text('Private catalogue, uploads, artists and releases'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminStudioPage())),
+        )),
       ],
       if (user != null) ...[
         const Icon(Icons.account_circle, color: Color(0xFFD4AF37), size: 80),
