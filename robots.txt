@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://high-tech-entertainment.suwilanjisinkamba184.workers.dev/sitemap.xml
+Sitemap: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/sitemap.xml
