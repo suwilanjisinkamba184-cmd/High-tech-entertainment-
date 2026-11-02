@@ -68,7 +68,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   }
 
   Future<void> _pickArtwork() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['jpg','jpeg','png','webp','avif'], withData: true);
     if (result != null && result.files.isNotEmpty) setState(() => _artwork = result.files.first);
   }
   Future<void> _uploadArtwork() async {
