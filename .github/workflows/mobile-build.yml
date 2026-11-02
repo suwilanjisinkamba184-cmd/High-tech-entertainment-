@@ -33,14 +33,14 @@ jobs:
         id: app_version
         run: |
           python3 - <<'PY'
-          import re
+          import os
           from pathlib import Path
-          text = Path("mobile-app/pubspec.yaml").read_text()
-          match = re.search(r"(?m)^version:\\s*([0-9]+\\.[0-9]+\\.[0-9]+)", text)
-          if not match:
-              raise SystemExit("Could not read semantic app version from pubspec.yaml")
-          with open(__import__("os").environ["GITHUB_OUTPUT"], "a") as output:
-              output.write(f"version={match.group(1)}\\n")
+          line = next(line for line in Path("mobile-app/pubspec.yaml").read_text().splitlines() if line.startswith("version:"))
+          version = line.split(":", 1)[1].strip().split("+", 1)[0]
+          if not version or version.count(".") != 2:
+              raise SystemExit("Invalid semantic app version in pubspec.yaml")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("version=" + version + "\n")
           PY
       - name: Create Flutter platform scaffold
         run: |
