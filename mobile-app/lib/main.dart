@@ -1337,7 +1337,7 @@ bool _isPlayableTrack(Map<String, dynamic> track) {
   final title = (track['title'] ?? '').toString().trim();
   final audioUrl = (track['audio_url'] ?? '').toString().trim();
   final uri = Uri.tryParse(audioUrl);
-  return title.isNotEmpty && !title.toLowerCase().startsWith('spotify') &&
+  return title.isNotEmpty &&
       (isSpotifyUrl(audioUrl) || (uri != null && uri.scheme == 'https' && uri.host.isNotEmpty));
 }
 
