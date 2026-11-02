@@ -63,7 +63,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       _artists = List<Map<String,dynamic>>.from(values[1]);
       _releases = List<Map<String,dynamic>>.from(values[2]);
       try {
-        final files = await _supabase.storage.from('hte-artwork').list('releases');
+        final files = await _supabase.storage.from('hte-artwork').list(path: 'releases');
         _artworkFiles = files.map((file) => {'name':file.name}).toList();
       } catch (e) { debugPrint('Artwork library listing unavailable: $e'); }
       try {
