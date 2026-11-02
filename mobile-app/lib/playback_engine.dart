@@ -124,9 +124,8 @@ class HtePlayback {
       if (!autoplay) { await player.stop(); return; }
       try {
         final data = await Supabase.instance.client.from('tracks')
-          .select('*, releases!inner(is_published)')
+          .select()
           .eq('is_published',true)
-          .eq('releases.is_published',true)
           .order('created_at',ascending:false).limit(40);
         final tracks = List<Map<String,dynamic>>.from(data)
           .where((t) {
