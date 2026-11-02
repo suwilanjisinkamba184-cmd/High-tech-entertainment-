@@ -32,6 +32,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   List<Map<String,dynamic>> _artists = [];
   List<Map<String,dynamic>> _releases = [];
   List<Map<String,dynamic>> _artworkFiles = [];
+  List<Map<String,dynamic>> _users = [];
   Map<String,int> _metrics = {};
   static const _sections = ['Overview','Music uploads','Tracks','Artists','Releases','Artwork','Users','Analytics','Activity'];
 
@@ -64,9 +65,13 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         final files = await _supabase.storage.from('hte-artwork').list('releases');
         _artworkFiles = files.map((file) => {'name':file.name}).toList();
       } catch (e) { debugPrint('Artwork library listing unavailable: $e'); }
+      try {
+        final users = await _supabase.rpc('hte_admin_list_users');
+        _users = List<Map<String,dynamic>>.from(users);
+      } catch (e) { debugPrint('Secure user directory unavailable: $e'); }
       _metrics = {
         'Tracks': _tracks.length, 'Published': _tracks.where((e)=>e['is_published']==true).length,
-        'Artists': _artists.length, 'Releases': _releases.length,
+        'Artists': _artists.length, 'Releases': _releases.length, 'Users': _users.length,
       };
     } catch (e) { _error = e.toString(); }
     if (mounted) setState(() => _busy = false);
@@ -218,6 +223,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
           _metric('Published',_metrics['Published']??0,Icons.public),
           _metric('Artists',_metrics['Artists']??0,Icons.people),
           _metric('Releases',_metrics['Releases']??0,Icons.album),
+          _metric('Users',_metrics['Users']??0,Icons.people_alt),
         ]),
         const SizedBox(height:18),FilledButton.icon(onPressed:()=>setState(()=>_section=1),icon:const Icon(Icons.upload),label:const Text('Upload new music')),
         const SizedBox(height:20),const Text('Recent catalogue',style:TextStyle(fontWeight:FontWeight.w700)),_trackRows(),
@@ -270,8 +276,15 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         ))),
       ]);
       case 6: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        _header('ACCOUNT OVERSIGHT','Users','User directory and account actions must use a protected server-side function. This mobile client intentionally does not expose the Supabase service-role key or enumerate private Auth users.'),
-        const _AdminEmpty('Connect a founder-authorized Edge Function before enabling account-level actions.'),
+        _header('ACCOUNT OVERSIGHT','Users','Secure directory of registered accounts. The server checks the signed-in owner/admin role before returning any user records.'),
+        if(_users.isEmpty) const _AdminEmpty('No users found, or the secure user directory could not be loaded. Pull to refresh.'),
+        ..._users.map((user)=>Card(child:ListTile(
+          leading:const CircleAvatar(backgroundColor:Color(0xFF30260E),child:Icon(Icons.person_outline,color:_gold)),
+          title:Text((user['email']??'No email').toString(),maxLines:1,overflow:TextOverflow.ellipsis),
+          subtitle:Text('Role: ${user['role']??'user'} · Joined: ${user['created_at']??'Unknown'}',maxLines:2,overflow:TextOverflow.ellipsis),
+          trailing:const Icon(Icons.verified_user_outlined,color:_gold),
+        ))),
+        const _AdminEmpty('Account suspension, deletion and role changes remain protected server-side operations and are not exposed in this directory.'),
       ]);
       case 7: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         _header('PLATFORM INSIGHTS','Analytics','Audience-wide metrics require a founder-authorized aggregate endpoint. These figures show the live catalogue counts only.'),
