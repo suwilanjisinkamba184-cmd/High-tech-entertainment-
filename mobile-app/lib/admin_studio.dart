@@ -214,7 +214,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         _header('VISUAL LIBRARY','Artwork','Upload artwork using the same existing public bucket. Artwork upload is available from the music upload form.'),
         OutlinedButton.icon(onPressed:_pickCover,icon:const Icon(Icons.image),label:Text(_cover?.name??'Choose artwork')),
         if(_cover!=null) Text('Selected: ${_cover!.name}',style:const TextStyle(color:Colors.white60)),
-        const Notice('Attach selected artwork to a track during upload to keep artwork linked to its catalogue record.'),
+        const _AdminEmpty('Attach selected artwork to a track during upload to keep artwork linked to its catalogue record.'),
       ]);
       case 6: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         _header('ACCOUNT OVERSIGHT','Users','User directory and account actions must use a protected server-side function. This mobile client intentionally does not expose the Supabase service-role key or enumerate private Auth users.'),
@@ -242,16 +242,16 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       body:_busy && _tracks.isEmpty ? const Center(child:CircularProgressIndicator(color:_gold)) :
         _error!=null ? Center(child:Padding(padding:const EdgeInsets.all(20),child:Text('Could not load admin data: $_error'))) :
         RefreshIndicator(onRefresh:_loadAll,child:SingleChildScrollView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.fromLTRB(16,16,16,30),child:_page())),
-      bottomNavigationBar:SafeArea(top:false,child:NavigationBar(
-        selectedIndex:_section,
-        onDestinationSelected:(value)=>setState(()=>_section=value),
-        destinations:const [
-          NavigationDestination(icon:Icon(Icons.dashboard_outlined),label:'Overview'),
-          NavigationDestination(icon:Icon(Icons.upload_file),label:'Upload'),
-          NavigationDestination(icon:Icon(Icons.library_music),label:'Tracks'),
-          NavigationDestination(icon:Icon(Icons.people_outline),label:'Artists'),
-          NavigationDestination(icon:Icon(Icons.album_outlined),label:'Releases'),
-        ],
+      bottomNavigationBar:SafeArea(top:false,child:Container(
+        height:68,color:const Color(0xFF101113),
+        child:SingleChildScrollView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:8),
+          child:Row(children:List.generate(_sections.length,(i)=>Padding(
+            padding:const EdgeInsets.symmetric(horizontal:3,vertical:8),
+            child:ChoiceChip(label:Text(_sections[i]),selected:_section==i,
+              selectedColor:_gold,labelStyle:TextStyle(color:_section==i?Colors.black:Colors.white70,fontSize:11),
+              onSelected:(_)=>setState(()=>_section=i)),
+          ))),
+        ),
       )),
     );
   }
