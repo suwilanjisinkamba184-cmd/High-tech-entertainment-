@@ -183,3 +183,9 @@
   .hte-ai-feature-copy>span{font-size:.68rem}
   .hte-ai-feature-action{margin-left:55px;font-size:.7rem}
 }
+
+
+/* Founder Studio interaction feedback, consistent with the public interface. */
+.admin-page .btn{transition:transform 160ms ease-out,border-color 180ms ease,box-shadow 180ms ease}
+.admin-page .btn:active:not(:disabled){transform:scale(.97)}
+@media(prefers-reduced-motion:reduce){.admin-page .btn{transition:none!important}.admin-page .btn:active:not(:disabled){transform:none}}
