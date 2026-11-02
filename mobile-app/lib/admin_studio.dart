@@ -24,8 +24,8 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   final _artistBio = TextEditingController();
   final _releaseTitle = TextEditingController();
   final _releaseArtist = TextEditingController();
+  final _coverUrl = TextEditingController();
   PlatformFile? _audio;
-  PlatformFile? _cover;
   List<Map<String,dynamic>> _tracks = [];
   List<Map<String,dynamic>> _artists = [];
   List<Map<String,dynamic>> _releases = [];
@@ -37,7 +37,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   @override
   void dispose() {
     _title.dispose(); _artist.dispose(); _genre.dispose();
-    _artistName.dispose(); _artistBio.dispose(); _releaseTitle.dispose(); _releaseArtist.dispose();
+    _artistName.dispose(); _artistBio.dispose(); _releaseTitle.dispose(); _releaseArtist.dispose(); _coverUrl.dispose();
     super.dispose();
   }
 
@@ -70,10 +70,6 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       allowedExtensions: ['mp3','m4a','aac','wav','ogg','flac'], withData: true);
     if (result != null && result.files.isNotEmpty) setState(() => _audio = result.files.first);
   }
-  Future<void> _pickCover() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
-    if (result != null && result.files.isNotEmpty) setState(() => _cover = result.files.first);
-  }
   String _extension(PlatformFile file) => (file.extension ?? 'bin').toLowerCase();
   Future<String> _uploadBytes(PlatformFile file, String folder, String bucket) async {
     final Uint8List? bytes = file.bytes;
@@ -91,16 +87,15 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     setState(() => _busy = true);
     try {
       final audioUrl = await _uploadBytes(_audio!, 'tracks', 'hte-audio');
-      String? coverUrl;
-      if (_cover != null) coverUrl = await _uploadBytes(_cover!, 'covers', 'hte-audio');
+      final coverUrl = _coverUrl.text.trim();
       await _supabase.from('tracks').insert({
         'title': _title.text.trim(), 'artist': _artist.text.trim(),
         'genre': _genre.text.trim(), 'audio_url': audioUrl,
-        if (coverUrl != null) 'cover_url': coverUrl,
+        if (coverUrl.isNotEmpty) 'cover_url': coverUrl,
         'uploader': 'High-Tech Entertainment', 'is_published': false,
       });
       _title.clear(); _artist.clear(); _genre.text = 'Afrobeat';
-      setState(() { _audio = null; _cover = null; _section = 2; });
+      setState(() { _audio = null; _coverUrl.clear(); _section = 2; });
       await _loadAll(); _toast('Track uploaded and saved as a draft.');
     } catch (e) { _toast('Upload failed: $e'); if (mounted) setState(() => _busy = false); }
   }
@@ -126,10 +121,18 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       _artistName.clear(); _artistBio.clear(); await _loadAll(); _toast('Artist saved as a draft.');
     } catch(e) { _toast('Could not save artist: $e'); }
   }
+  Future<void> _publishArtist(Map<String,dynamic> item, bool published) async {
+    try { await _supabase.from('artists').update({'is_published':published}).eq('id',item['id']); await _loadAll(); }
+    catch(e) { _toast('Could not update artist: $e'); }
+  }
+  Future<void> _publishRelease(Map<String,dynamic> item, bool published) async {
+    try { await _supabase.from('releases').update({'is_published':published}).eq('id',item['id']); await _loadAll(); }
+    catch(e) { _toast('Could not update release: $e'); }
+  }
   Future<void> _saveRelease() async {
     if (_releaseTitle.text.trim().isEmpty) { _toast('Enter a release title.'); return; }
     try {
-      await _supabase.from('releases').insert({'title':_releaseTitle.text.trim(),'description':_releaseArtist.text.trim(),'is_published':false});
+      await _supabase.from('releases').insert({'title':_releaseTitle.text.trim(),'is_published':false});
       _releaseTitle.clear(); _releaseArtist.clear(); await _loadAll(); _toast('Release saved as a draft.');
     } catch(e) { _toast('Could not save release: $e'); }
   }
@@ -164,13 +167,17 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     leading:const CircleAvatar(backgroundColor:Color(0xFF30260E),child:Icon(Icons.person,color:_gold)),
     title:Text((item['name']??'Artist').toString()),
     subtitle:Text((item['bio']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis),
-    trailing:Text(item['is_published']==true?'LIVE':'DRAFT',style:const TextStyle(color:_gold,fontSize:10)),
+    trailing:PopupMenuButton<String>(onSelected:(v)=>_publishArtist(item,v=='publish'),
+      itemBuilder:(_)=>[PopupMenuItem(value:'publish',child:Text(item['is_published']==true?'Keep published':'Publish')),
+        const PopupMenuItem(value:'draft',child:Text('Move to drafts'))]),
   ))).toList());
   Widget _releaseRows() => Column(children:_releases.map((item)=>Card(child:ListTile(
     leading:const CircleAvatar(backgroundColor:Color(0xFF30260E),child:Icon(Icons.album,color:_gold)),
     title:Text((item['title']??'Release').toString()),
     subtitle:Text((item['release_date']??'No release date').toString()),
-    trailing:Text(item['is_published']==true?'LIVE':'DRAFT',style:const TextStyle(color:_gold,fontSize:10)),
+    trailing:PopupMenuButton<String>(onSelected:(v)=>_publishRelease(item,v=='publish'),
+      itemBuilder:(_)=>[PopupMenuItem(value:'publish',child:Text(item['is_published']==true?'Keep published':'Publish')),
+        const PopupMenuItem(value:'draft',child:Text('Move to drafts'))]),
   ))).toList());
 
   Widget _page() {
@@ -193,7 +200,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         const SizedBox(height:10),TextField(controller:_genre,decoration:const InputDecoration(labelText:'Genre')),
         const SizedBox(height:12),
         OutlinedButton.icon(onPressed:_busy?null:_pickAudio,icon:const Icon(Icons.audio_file),label:Text(_audio?.name??'Choose audio file')),
-        OutlinedButton.icon(onPressed:_busy?null:_pickCover,icon:const Icon(Icons.image_outlined),label:Text(_cover?.name??'Choose cover artwork (optional)')),
+        TextField(controller:_coverUrl,decoration:const InputDecoration(labelText:'Cover artwork URL (optional)',hintText:'https://…')),
         const SizedBox(height:16),SizedBox(width:double.infinity,child:FilledButton(onPressed:_busy?null:_saveTrack,child:_busy?const CircularProgressIndicator():const Text('Upload and save draft'))),
       ]);
       case 2: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -212,9 +219,9 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         const SizedBox(height:18),_releaseRows()]);
       case 5: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         _header('VISUAL LIBRARY','Artwork','Upload artwork using the same existing public bucket. Artwork upload is available from the music upload form.'),
-        OutlinedButton.icon(onPressed:_pickCover,icon:const Icon(Icons.image),label:Text(_cover?.name??'Choose artwork')),
-        if(_cover!=null) Text('Selected: ${_cover!.name}',style:const TextStyle(color:Colors.white60)),
-        const _AdminEmpty('Attach selected artwork to a track during upload to keep artwork linked to its catalogue record.'),
+        TextField(controller:_coverUrl,decoration:const InputDecoration(labelText:'Public artwork URL',hintText:'https://…')),
+        const SizedBox(height:10),
+        const _AdminEmpty('Use an existing public image URL from your High-Tech artwork library, then attach it to a track during upload. The private avatar bucket is deliberately not exposed as public release artwork.'),
       ]);
       case 6: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         _header('ACCOUNT OVERSIGHT','Users','User directory and account actions must use a protected server-side function. This mobile client intentionally does not expose the Supabase service-role key or enumerate private Auth users.'),
