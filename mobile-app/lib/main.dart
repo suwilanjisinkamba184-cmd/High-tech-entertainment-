@@ -507,6 +507,13 @@ class HomeTab extends StatelessWidget {
       const ReleaseList(horizontal: true),
       const Heading('Featured artists'),
       const ArtistList(horizontal: true),
+      Card(child: ListTile(
+        leading: const Icon(Icons.people_outline, color: Color(0xFFD9B96E)),
+        title: const Text('Explore all artists'),
+        subtitle: const Text('Meet the creators behind the sound'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const Scaffold(appBar: AppBar(title: Text('Artists')), body: ArtistsTab()))),
+      )),
       const Heading('Watch & explore'),
       Card(child: ListTile(
         leading: const Icon(Icons.video_library_outlined, color: Color(0xFFD9B96E)),
@@ -558,11 +565,15 @@ class ArtistList extends StatelessWidget {
       if (horizontal) {
         return SizedBox(height: 145, child: ListView(
           scrollDirection: Axis.horizontal,
-          children: items.map((item) => SizedBox(width: 112, child: Column(children: [
-            Avatar(item: item),
-            const SizedBox(height: 8),
-            Text((item['name'] ?? 'Artist').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
-          ]))).toList(),
+          children: items.map((item) => InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ArtistDetailPage(artist:item))),
+            child: SizedBox(width: 112, child: Column(children: [
+              Avatar(item: item),
+              const SizedBox(height: 8),
+              Text((item['name'] ?? 'Artist').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
+            ])),
+          )).toList(),
         ));
       }
       return ListView.builder(
@@ -573,6 +584,7 @@ class ArtistList extends StatelessWidget {
             leading: Avatar(item: item),
             title: Text((item['name'] ?? 'Artist').toString()),
             subtitle: Text((item['bio'] ?? 'High-Tech Entertainment artist').toString(), maxLines: 2, overflow: TextOverflow.ellipsis),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ArtistDetailPage(artist:item))),
           ));
         },
       );
@@ -591,6 +603,30 @@ class Avatar extends StatelessWidget {
       backgroundColor: const Color(0xFF30260E),
       backgroundImage: url.startsWith('http') ? NetworkImage(url) : null,
       child: url.startsWith('http') ? null : const Icon(Icons.person, color: Color(0xFFD4AF37), size: 34),
+    );
+  }
+}
+
+class ArtistDetailPage extends StatelessWidget {
+  const ArtistDetailPage({super.key,required this.artist});
+  final Map<String,dynamic> artist;
+  @override
+  Widget build(BuildContext context) {
+    final name=(artist['name']??'Artist').toString();
+    return Scaffold(
+      appBar:AppBar(title:Text(name)),
+      body:ListView(padding:const EdgeInsets.only(bottom:24),children:[
+        const SizedBox(height:18),
+        Center(child:Avatar(item:artist)),
+        const SizedBox(height:12),
+        Center(child:Text(name,style:const TextStyle(fontSize:24,fontWeight:FontWeight.bold))),
+        Padding(padding:const EdgeInsets.all(20),child:Text((artist['bio']??'High-Tech Entertainment artist').toString(),textAlign:TextAlign.center,style:const TextStyle(color:Colors.white60))),
+        const Heading('Artist releases'),
+        FutureBuilder<List<Map<String,dynamic>>>(
+          future:db.from('tracks').select().eq('is_published',true).eq('artist',name).order('created_at',ascending:false).then((data)=>List<Map<String,dynamic>>.from(data).where(_isPlayableTrack).toList()),
+          builder:(context,snapshot)=>snapshot.hasError?const Notice('Unable to load this artist’s tracks.'):!snapshot.hasData?const Busy():snapshot.data!.isEmpty?const Notice('Published tracks by this artist will appear here.'):TrackList(items:snapshot.data!),
+        ),
+      ]),
     );
   }
 }
