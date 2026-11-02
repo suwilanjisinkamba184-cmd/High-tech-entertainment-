@@ -29,6 +29,12 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Install required Android SDK components
+        uses: android-actions/setup-android@v3
+      - name: Install Android 36 platform, build tools and native toolchain
+        run: |
+          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358" "cmake;3.22.1"
+          yes | sdkmanager --licenses
       - name: Read Android app version
         id: app_version
         run: |
@@ -53,7 +59,7 @@ jobs:
           cp -R mobile-app/assets/. "$RUNNER_TEMP/hte_app/assets/"
           python3 -m pip install --quiet cairosvg
           python3 -c "import cairosvg; cairosvg.svg2png(url='$RUNNER_TEMP/hte_app/assets/high-tech-logo.svg', write_to='$RUNNER_TEMP/hte_app/assets/high-tech-logo.png', output_width=1024, output_height=1024)"
-      - name: Set Play Store Android identity and target API
+      - name: Set Play Store Android identity, SDK levels and target API
         working-directory: ${{ runner.temp }}/hte_app
         run: |
           python3 - <<'PY'
@@ -71,20 +77,19 @@ jobs:
           ]
           for permission in required_permissions:
               if permission not in text:
-                  text = text.replace("<application", f'    <uses-permission android:name="{permission}" />\n    <application', 1)
+                  text = text.replace("<application", f'    <uses-permission android:name="{permission}" />\\n    <application', 1)
           text = re.sub(r'android:label="[^"]*"', 'android:label="High-Tech Entertainment"', text)
-          # just_audio_background requires its Activity, foreground service and media-button receiver.
           text = re.sub(r'<activity android:name="[^"]+"', '<activity android:name="com.ryanheise.audioservice.AudioServiceActivity"', text, count=1)
-          if "android:scheme=\"com.hightechentertainment.app\"" not in text:
-              intent = '''<intent-filter>
+          if "android:scheme=\\"com.hightechentertainment.app\\"" not in text:
+              intent = \'\'\'<intent-filter>
                           <action android:name="android.intent.action.VIEW" />
                           <category android:name="android.intent.category.DEFAULT" />
                           <category android:name="android.intent.category.BROWSABLE" />
                           <data android:scheme="com.hightechentertainment.app" android:host="login-callback" />
-                      </intent-filter>'''
-              text = text.replace("</activity>", intent + "\n                  </activity>", 1)
+                      </intent-filter>\'\'\'
+              text = text.replace("</activity>", intent + "\\n                  </activity>", 1)
           if 'android:name="com.ryanheise.audioservice.AudioService"' not in text:
-              components = '''<service android:name="com.ryanheise.audioservice.AudioService"
+              components = \'\'\'<service android:name="com.ryanheise.audioservice.AudioService"
                       android:foregroundServiceType="mediaPlayback"
                       android:exported="true" tools:ignore="Instantiatable">
                       <intent-filter>
@@ -96,29 +101,31 @@ jobs:
                       <intent-filter>
                           <action android:name="android.intent.action.MEDIA_BUTTON" />
                       </intent-filter>
-                  </receiver>'''
-              text = text.replace("</application>", components + "\n    </application>", 1)
+                  </receiver>\'\'\'
+              text = text.replace("</application>", components + "\\n    </application>", 1)
           manifest.write_text(text)
-          for path in (Path("android/app/build.gradle"), Path("android/app/build.gradle.kts")):
+          gradle_files = [Path("android/app/build.gradle"), Path("android/app/build.gradle.kts")]
+          found = False
+          for path in gradle_files:
               if not path.exists():
                   continue
+              found = True
               text = path.read_text()
               if path.name == "build.gradle.kts":
-                  text, n = re.subn(r'(?m)^(\s*minSdk\s*=\s*)[^\n]+', r'\g<1>26', text)
+                  text, min_n = re.subn(r'(?m)^(\\s*minSdk\\s*=\\s*)[^\\n]+', r'\\g<1>26', text)
+                  text, compile_n = re.subn(r'(?m)^(\\s*compileSdk\\s*=\\s*)[^\\n]+', r'\\g<1>36', text)
+                  text, target_n = re.subn(r'(?m)^(\\s*targetSdk\\s*=\\s*)[^\\n]+', r'\\g<1>36', text)
               else:
-                  text, n = re.subn(r'(?m)^(\s*minSdkVersion\s+)[^\n]+', r'\g<1>26', text)
-              if n == 0:
-                  raise SystemExit(f"Could not set Android 8 minimum SDK in {path}")
-              text, n = re.subn(r'(?m)^(\s*targetSdk\s*=\s*)[^\n]+', r'\g<1>36', text)
-              if n == 0:
-                  text, n = re.subn(r'(?m)^(\s*targetSdkVersion\s*=\s*)[^\n]+', r'\g<1>36', text)
-              if n == 0:
-                  text, n = re.subn(r'(?m)^(\s*targetSdkVersion\s+)[^\n]+', r'\g<1>36', text)
-              if n == 0:
-                  raise SystemExit(f"Could not set Android 16 target SDK in {path}")
+                  text, min_n = re.subn(r'(?m)^(\\s*minSdkVersion\\s+)[^\\n]+', r'\\g<1>26', text)
+                  text, compile_n = re.subn(r'(?m)^(\\s*compileSdkVersion?\\s+)[^\\n]+', r'\\g<1>36', text)
+                  text, target_n = re.subn(r'(?m)^(\\s*targetSdkVersion\\s+)[^\\n]+', r'\\g<1>36', text)
+              if min_n == 0 or compile_n == 0 or target_n == 0:
+                  raise SystemExit(f"Could not configure minSdk 26, compileSdk 36 and targetSdk 36 in {path}")
               path.write_text(text)
+          if not found:
+              raise SystemExit("Android app Gradle build file not found")
           PY
-          grep -R -E "minSdk|targetSdk" android/app/build.gradle*
+          grep -R -E "minSdk|compileSdk|targetSdk" android/app/build.gradle*
       - name: Configure Android upload-key signing
         id: android_signing
         working-directory: ${{ runner.temp }}/hte_app
@@ -130,6 +137,7 @@ jobs:
         run: |
           if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_STORE_PASSWORD" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
             echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hte-upload-key.p12"
+            keytool -list -keystore "$RUNNER_TEMP/hte-upload-key.p12" -storepass "$ANDROID_STORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
             cat > android/key.properties <<EOF
           storePassword=$ANDROID_STORE_PASSWORD
           keyPassword=$ANDROID_KEY_PASSWORD
@@ -142,10 +150,10 @@ jobs:
           groovy = Path("android/app/build.gradle")
           if kts.exists():
               text = kts.read_text()
-              imports = 'import java.util.Properties\nimport java.io.FileInputStream\n\nval keystoreProperties = Properties()\nval keystorePropertiesFile = rootProject.file("key.properties")\nif (keystorePropertiesFile.exists()) { keystoreProperties.load(FileInputStream(keystorePropertiesFile)) }\n\n'
+              imports = 'import java.util.Properties\\nimport java.io.FileInputStream\\n\\nval keystoreProperties = Properties()\\nval keystorePropertiesFile = rootProject.file("key.properties")\\nif (keystorePropertiesFile.exists()) { keystoreProperties.load(FileInputStream(keystorePropertiesFile)) }\\n\\n'
               if "val keystorePropertiesFile" not in text:
                   text = imports + text
-              block = '''    signingConfigs {
+              block = \'\'\'    signingConfigs {
                   create("release") {
                       keyAlias = keystoreProperties["keyAlias"] as String
                       keyPassword = keystoreProperties["keyPassword"] as String
@@ -153,14 +161,14 @@ jobs:
                       storePassword = keystoreProperties["storePassword"] as String
                   }
               }
-          '''
+          \'\'\'
               if 'create("release")' not in text:
                   text = text.replace("    buildTypes {", block + "    buildTypes {")
               text = text.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
               kts.write_text(text)
           elif groovy.exists():
               text = groovy.read_text()
-              imports = "def keystoreProperties = new Properties()\ndef keystorePropertiesFile = rootProject.file('key.properties')\nif (keystorePropertiesFile.exists()) { keystoreProperties.load(new FileInputStream(keystorePropertiesFile)) }\n\n"
+              imports = "def keystoreProperties = new Properties()\\ndef keystorePropertiesFile = rootProject.file('key.properties')\\nif (keystorePropertiesFile.exists()) { keystoreProperties.load(new FileInputStream(keystorePropertiesFile)) }\\n\\n"
               if "keystorePropertiesFile" not in text:
                   text = imports + text
               block = """    signingConfigs {
@@ -196,6 +204,19 @@ jobs:
         run: |
           flutter build apk --release --target-platform android-arm,android-arm64
           flutter build appbundle --release
+      - name: Verify release APK signature
+        working-directory: ${{ runner.temp }}/hte_app
+        run: |
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          test -s "$APK"
+          test -x "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+          if "$APKSIGNER" verify "$APK" 2>&1 | grep -qi "DOES NOT VERIFY"; then
+            echo "::error::APK signature verification failed"
+            exit 1
+          fi
+          echo "APK signature verified successfully."
       - uses: actions/upload-artifact@v4
         with:
           name: high-tech-entertainment-android
@@ -230,22 +251,21 @@ jobs:
       - name: Create Flutter platform scaffold
         shell: pwsh
         run: |
-          flutter create --platforms=windows --org com.hightechentertainment --project-name app "$env:RUNNER_TEMP\hte_app"
-          Copy-Item mobile-app\pubspec.yaml "$env:RUNNER_TEMP\hte_app\pubspec.yaml" -Force
-          Remove-Item "$env:RUNNER_TEMP\hte_app\lib" -Recurse -Force
-          Copy-Item mobile-app\lib "$env:RUNNER_TEMP\hte_app\lib" -Recurse
-          New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\hte_app\assets" | Out-Null
-          Copy-Item mobile-app\assets\* "$env:RUNNER_TEMP\hte_app\assets" -Recurse -Force
-          # Windows desktop uses the bundled SVG at runtime; no Cairo native library is required.
+          flutter create --platforms=windows --org com.hightechentertainment --project-name app "$env:RUNNER_TEMP\\hte_app"
+          Copy-Item mobile-app\\pubspec.yaml "$env:RUNNER_TEMP\\hte_app\\pubspec.yaml" -Force
+          Remove-Item "$env:RUNNER_TEMP\\hte_app\\lib" -Recurse -Force
+          Copy-Item mobile-app\\lib "$env:RUNNER_TEMP\\hte_app\\lib" -Recurse
+          New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\\hte_app\\assets" | Out-Null
+          Copy-Item mobile-app\\assets\\* "$env:RUNNER_TEMP\\hte_app\\assets" -Recurse -Force
       - name: Build Windows app
         shell: pwsh
-        working-directory: ${{ runner.temp }}\hte_app
+        working-directory: ${{ runner.temp }}\\hte_app
         run: |
           flutter pub get
           flutter build windows --release
       - name: Package Windows app
         shell: pwsh
-        run: Compress-Archive -Path "$env:RUNNER_TEMP\hte_app\build\windows\x64\runner\Release\*" -DestinationPath "$env:RUNNER_TEMP\high-tech-entertainment-windows.zip"
+        run: Compress-Archive -Path "$env:RUNNER_TEMP\\hte_app\\build\\windows\\x64\\runner\\Release\\*" -DestinationPath "$env:RUNNER_TEMP\\high-tech-entertainment-windows.zip"
       - uses: actions/upload-artifact@v4
         with:
           name: high-tech-entertainment-windows
@@ -265,4 +285,3 @@ jobs:
           files: ${{ runner.temp }}/high-tech-entertainment-windows.zip
           overwrite_files: true
           make_latest: false
-
