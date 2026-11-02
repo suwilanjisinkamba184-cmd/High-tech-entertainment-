@@ -512,7 +512,7 @@ class HomeTab extends StatelessWidget {
         title: const Text('Explore all artists'),
         subtitle: const Text('Meet the creators behind the sound'),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const Scaffold(appBar: AppBar(title: Text('Artists')), body: ArtistsTab()))),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Artists')), body: const ArtistsTab()))),
       )),
       const Heading('Watch & explore'),
       Card(child: ListTile(
@@ -520,7 +520,7 @@ class HomeTab extends StatelessWidget {
         title: const Text('Music videos'),
         subtitle: const Text('Watch official High-Tech visual releases'),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const Scaffold(appBar: AppBar(title: Text('Videos')), body: VideosTab()))),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Videos')), body: const VideosTab()))),
       )),
       const Heading('Released music'),
       const TrackList(compact: true),
