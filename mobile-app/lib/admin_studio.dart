@@ -23,9 +23,10 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   final _artistName = TextEditingController();
   final _artistBio = TextEditingController();
   final _releaseTitle = TextEditingController();
-  final _releaseArtist = TextEditingController();
+  final _spotifyUrl = TextEditingController();
   final _coverUrl = TextEditingController();
   PlatformFile? _audio;
+  PlatformFile? _artwork;
   List<Map<String,dynamic>> _tracks = [];
   List<Map<String,dynamic>> _artists = [];
   List<Map<String,dynamic>> _releases = [];
@@ -37,7 +38,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   @override
   void dispose() {
     _title.dispose(); _artist.dispose(); _genre.dispose();
-    _artistName.dispose(); _artistBio.dispose(); _releaseTitle.dispose(); _releaseArtist.dispose(); _coverUrl.dispose();
+    _artistName.dispose(); _artistBio.dispose(); _releaseTitle.dispose(); _spotifyUrl.dispose(); _coverUrl.dispose();
     super.dispose();
   }
 
@@ -65,6 +66,21 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     if (mounted) setState(() => _busy = false);
   }
 
+  Future<void> _pickArtwork() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+    if (result != null && result.files.isNotEmpty) setState(() => _artwork = result.files.first);
+  }
+  Future<void> _uploadArtwork() async {
+    if (_artwork == null) { _toast('Choose an image first.'); return; }
+    setState(() => _busy = true);
+    try {
+      final url = await _uploadBytes(_artwork!, 'releases', 'hte-artwork');
+      _coverUrl.text = url;
+      setState(() => _artwork = null);
+      _toast('Artwork uploaded. Its public URL is ready to attach to a track.');
+    } catch(e) { _toast('Artwork upload failed: $e'); }
+    finally { if(mounted)setState(()=>_busy=false); }
+  }
   Future<void> _pickAudio() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.custom,
       allowedExtensions: ['mp3','m4a','aac','wav','ogg','flac'], withData: true);
@@ -79,6 +95,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     final mime = <String,String>{
       'mp3':'audio/mpeg','m4a':'audio/x-m4a','aac':'audio/aac',
       'wav':'audio/wav','ogg':'audio/ogg','flac':'audio/flac',
+      'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','avif':'image/avif',
     }[ext];
     await _supabase.storage.from(bucket).uploadBinary(path, bytes,
       fileOptions: FileOptions(upsert: false, contentType: mime));
@@ -136,8 +153,8 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   Future<void> _saveRelease() async {
     if (_releaseTitle.text.trim().isEmpty) { _toast('Enter a release title.'); return; }
     try {
-      await _supabase.from('releases').insert({'title':_releaseTitle.text.trim(),'is_published':false});
-      _releaseTitle.clear(); _releaseArtist.clear(); await _loadAll(); _toast('Release saved as a draft.');
+      await _supabase.from('releases').insert({'title':_releaseTitle.text.trim(),'spotify_url':_spotifyUrl.text.trim().isEmpty?null:_spotifyUrl.text.trim(),'is_published':false});
+      _releaseTitle.clear(); _spotifyUrl.clear(); await _loadAll(); _toast('Release saved as a draft.');
     } catch(e) { _toast('Could not save release: $e'); }
   }
 
@@ -198,7 +215,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         const SizedBox(height:20),const Text('Recent catalogue',style:TextStyle(fontWeight:FontWeight.w700)),_trackRows(),
       ]);
       case 1: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        _header('CATALOGUE MANAGEMENT','Music uploads','Upload audio and optional cover artwork to the existing public audio bucket. New tracks remain drafts until you publish them.'),
+        _header('CATALOGUE MANAGEMENT','Music uploads','Upload audio to the existing public audio bucket. Add a public artwork URL from the Artwork screen. New tracks remain drafts until you publish them.'),
         TextField(controller:_title,decoration:const InputDecoration(labelText:'Track title')),
         const SizedBox(height:10),TextField(controller:_artist,decoration:const InputDecoration(labelText:'Artist')),
         const SizedBox(height:10),TextField(controller:_genre,decoration:const InputDecoration(labelText:'Genre')),
@@ -222,10 +239,14 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         const SizedBox(height:10),FilledButton(onPressed:_busy?null:_saveRelease,child:const Text('Save release draft')),
         const SizedBox(height:18),_releaseRows()]);
       case 5: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        _header('VISUAL LIBRARY','Artwork','Upload artwork using the same existing public bucket. Artwork upload is available from the music upload form.'),
-        TextField(controller:_coverUrl,decoration:const InputDecoration(labelText:'Public artwork URL',hintText:'https://…')),
+        _header('VISUAL LIBRARY','Artwork','Upload public release artwork to the dedicated HTE artwork bucket, then attach its URL to a music track.'),
+        OutlinedButton.icon(onPressed:_busy?null:_pickArtwork,icon:const Icon(Icons.image_outlined),label:Text(_artwork?.name??'Choose artwork image')),
         const SizedBox(height:10),
-        const _AdminEmpty('Use an existing public image URL from your High-Tech artwork library, then attach it to a track during upload. The private avatar bucket is deliberately not exposed as public release artwork.'),
+        SizedBox(width:double.infinity,child:FilledButton(onPressed:_busy?null:_uploadArtwork,child:_busy?const CircularProgressIndicator():const Text('Upload artwork'))),
+        const SizedBox(height:16),
+        TextField(controller:_coverUrl,decoration:const InputDecoration(labelText:'Artwork URL',hintText:'Upload an image or paste an existing public URL')),
+        const SizedBox(height:8),
+        const _AdminEmpty('Copy this URL into the Cover artwork URL field on the Music uploads screen. Public downloads are enabled; upload and delete permissions remain restricted to HTE administrators.'),
       ]);
       case 6: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         _header('ACCOUNT OVERSIGHT','Users','User directory and account actions must use a protected server-side function. This mobile client intentionally does not expose the Supabase service-role key or enumerate private Auth users.'),
