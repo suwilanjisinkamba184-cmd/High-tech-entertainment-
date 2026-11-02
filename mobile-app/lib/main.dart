@@ -857,6 +857,19 @@ class FullPlayerPage extends StatelessWidget {
           const SizedBox(height:24),
           Text((track['title']??'Now playing').toString(),style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold),textAlign:TextAlign.center),
           Text((track['artist']??'High-Tech Entertainment').toString(),style:const TextStyle(color:Colors.white60)),
+          ValueListenableBuilder<String?>(
+            valueListenable: playback.playbackError,
+            builder: (context, error, _) => error == null
+                ? const SizedBox(height: 12)
+                : Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      error,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Color(0xFFFFAAA4), fontSize: 12),
+                    ),
+                  ),
+          ),
           const SizedBox(height:20),
           StreamBuilder<Duration>(stream:player.positionStream,initialData:Duration.zero,builder:(context,pos){
             final duration=player.duration??Duration.zero;
