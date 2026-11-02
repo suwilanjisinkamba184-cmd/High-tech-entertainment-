@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
@@ -585,7 +586,7 @@ class TrackList extends StatelessWidget {
   final List<Map<String, dynamic>>? items;
   @override
   Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
-    future: items == null ? playableTracks() : Future.value(items.where(_isPlayableTrack).toList()),
+    future: items == null ? playableTracks() : Future.value(items!.where(_isPlayableTrack).toList()),
     builder: (context, snapshot) {
       if (snapshot.hasError) return Notice('Unable to load tracks: ${snapshot.error}. Check connection, Data API access and RLS.');
       if (!snapshot.hasData) return const Busy();
