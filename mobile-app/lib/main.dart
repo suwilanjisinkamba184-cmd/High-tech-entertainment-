@@ -1199,44 +1199,33 @@ String? spotifyEmbedUrl(String raw) {
   String? id;
   if (value.startsWith('spotify:')) {
     final parts = value.split(':');
-    if (parts.length == 3) { type = parts[1]; id = parts[2]; }
+    if (parts.length == 3) {
+      type = parts[1];
+      id = parts[2];
+    }
   } else if (uri != null && (uri.host == 'open.spotify.com' || uri.host.endsWith('.spotify.com'))) {
     final parts = uri.pathSegments;
     final offset = parts.isNotEmpty && parts.first == 'embed' ? 1 : 0;
-    if (parts.length > offset + 1) { type = parts[offset]; id = parts[offset + 1]; }
+    if (parts.length > offset + 1) {
+      type = parts[offset];
+      id = parts[offset + 1];
+    }
   }
   const supported = {'track', 'album', 'playlist', 'episode', 'show'};
-  if (type == null || id == null || !supported.contains(type) ||
-      !RegExp(r'^[A-Za-z0-9]+
-
-Future<List<Map<String, dynamic>>> rows(String table, String orderBy) async {
-  final result = await db.from(table).select().eq('is_published', true).order(orderBy, ascending: false);
-  return List<Map<String, dynamic>>.from(result);
-}
-
-class Busy extends StatelessWidget {
-  const Busy({super.key});
-  @override
-  Widget build(BuildContext context) => const Center(child: CircularProgressIndicator(color: Color(0xFFD4AF37)));
-}
-
-class Notice extends StatelessWidget {
-  const Notice(this.message, {super.key});
-  final String message;
-  @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.all(22), child: Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)));
-}
-).hasMatch(id)) return null;
-  return 'https://open.spotify.com/embed/$type/$id?utm_source=generator&theme=0';
+  final validId = id != null && id.isNotEmpty && id.codeUnits.every((unit) =>
+      (unit >= 48 && unit <= 57) ||
+      (unit >= 65 && unit <= 90) ||
+      (unit >= 97 && unit <= 122));
+  if (type == null || !supported.contains(type) || !validId) return null;
+  return 'https://open.spotify.com/embed/' + type + '/' + id! + '?utm_source=generator&theme=0';
 }
 
 bool _isPlayableTrack(Map<String, dynamic> track) {
   final title = (track['title'] ?? '').toString().trim();
   final audioUrl = (track['audio_url'] ?? '').toString().trim();
   final uri = Uri.tryParse(audioUrl);
-  final isSpotify = isSpotifyUrl(audioUrl);
   return title.isNotEmpty && !title.toLowerCase().startsWith('spotify') &&
-      (isSpotify || (uri != null && uri.scheme == 'https' && uri.host.isNotEmpty));
+      (isSpotifyUrl(audioUrl) || (uri != null && uri.scheme == 'https' && uri.host.isNotEmpty));
 }
 
 Future<List<Map<String, dynamic>>> publishedTracks([String term = '']) async {
@@ -1244,7 +1233,9 @@ Future<List<Map<String, dynamic>>> publishedTracks([String term = '']) async {
       .select('*, releases!inner(is_published)')
       .eq('is_published', true)
       .eq('releases.is_published', true);
-  if (term.trim().isNotEmpty) query = query.ilike('title', '%${term.trim()}%');
+  if (term.trim().isNotEmpty) {
+    query = query.ilike('title', '%' + term.trim() + '%');
+  }
   final data = await query.order('created_at', ascending: false).limit(100);
   return List<Map<String, dynamic>>.from(data).where(_isPlayableTrack).toList();
 }
@@ -1263,6 +1254,7 @@ class SpotifyEmbedPage extends StatefulWidget {
 class _SpotifyEmbedPageState extends State<SpotifyEmbedPage> {
   late final WebViewController controller;
   bool loading = true;
+
   @override
   void initState() {
     super.initState();
@@ -1270,10 +1262,13 @@ class _SpotifyEmbedPageState extends State<SpotifyEmbedPage> {
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0xFF08090B))
       ..setNavigationDelegate(NavigationDelegate(
-        onPageFinished: (_) { if (mounted) setState(() => loading = false); },
+        onPageFinished: (_) {
+          if (mounted) setState(() => loading = false);
+        },
       ))
       ..loadRequest(Uri.parse(widget.embedUrl));
   }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis)),
@@ -1281,7 +1276,8 @@ class _SpotifyEmbedPageState extends State<SpotifyEmbedPage> {
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(widget.artist, style: const TextStyle(color: Color(0xFFD9B96E), letterSpacing: 1.2, fontSize: 11, fontWeight: FontWeight.w700)),
+          Text(widget.artist, style: const TextStyle(
+            color: Color(0xFFD9B96E), letterSpacing: 1.2, fontSize: 11, fontWeight: FontWeight.w700)),
           const SizedBox(height: 5),
           const Text('Now playing on Spotify', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
@@ -1305,12 +1301,17 @@ Future<List<Map<String, dynamic>>> rows(String table, String orderBy) async {
 class Busy extends StatelessWidget {
   const Busy({super.key});
   @override
-  Widget build(BuildContext context) => const Center(child: CircularProgressIndicator(color: Color(0xFFD4AF37)));
+  Widget build(BuildContext context) => const Center(
+    child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
+  );
 }
 
 class Notice extends StatelessWidget {
   const Notice(this.message, {super.key});
   final String message;
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.all(22), child: Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)));
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(22),
+    child: Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)),
+  );
 }
