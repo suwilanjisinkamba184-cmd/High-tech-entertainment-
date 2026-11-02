@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -73,14 +73,14 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   }
 
   Future<void> _pickArtwork() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['jpg','jpeg','png','webp','avif'], withData: true);
+    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['jpg','jpeg','png','webp','avif'], withData: false);
     if (result != null && result.files.isNotEmpty) setState(() => _artwork = result.files.first);
   }
   Future<void> _uploadArtwork() async {
     if (_artwork == null) { _toast('Choose an image first.'); return; }
     setState(() => _busy = true);
     try {
-      final url = await _uploadBytes(_artwork!, 'releases', 'hte-artwork');
+      final url = await _uploadFile(_artwork!, 'releases', 'hte-artwork');
       _coverUrl.text = url;
       setState(() => _artwork = null);
       _toast('Artwork uploaded. Its public URL is ready to attach to a track.');
@@ -89,13 +89,15 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   }
   Future<void> _pickAudio() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.custom,
-      allowedExtensions: ['mp3','m4a','aac','wav','ogg','flac'], withData: true);
+      allowedExtensions: ['mp3','m4a','aac','wav','ogg','flac'], withData: false);
     if (result != null && result.files.isNotEmpty) setState(() => _audio = result.files.first);
   }
   String _extension(PlatformFile file) => (file.extension ?? 'bin').toLowerCase();
-  Future<String> _uploadBytes(PlatformFile file, String folder, String bucket) async {
-    final Uint8List? bytes = file.bytes;
-    if (bytes == null || bytes.isEmpty) throw Exception('Could not read selected file. Please select it again.');
+  Future<String> _uploadFile(PlatformFile file, String folder, String bucket) async {
+    final localPath = file.path;
+    if (localPath == null || localPath.isEmpty) throw Exception('The selected file path is unavailable. Please select it again.');
+    final localFile = File(localPath);
+    if (!await localFile.exists()) throw Exception('The selected file is no longer available on this device.');
     final path = '$folder/${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')}';
     final ext = _extension(file);
     final mime = <String,String>{
@@ -103,7 +105,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       'wav':'audio/wav','ogg':'audio/ogg','flac':'audio/flac',
       'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','avif':'image/avif',
     }[ext];
-    await _supabase.storage.from(bucket).uploadBinary(path, bytes,
+    await _supabase.storage.from(bucket).upload(path, localFile,
       fileOptions: FileOptions(upsert: false, contentType: mime));
     return _supabase.storage.from(bucket).getPublicUrl(path);
   }
@@ -113,7 +115,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     }
     setState(() => _busy = true);
     try {
-      final audioUrl = await _uploadBytes(_audio!, 'tracks', 'hte-audio');
+      final audioUrl = await _uploadFile(_audio!, 'tracks', 'hte-audio');
       final coverUrl = _coverUrl.text.trim();
       await _supabase.from('tracks').insert({
         'title': _title.text.trim(), 'artist': _artist.text.trim(),
