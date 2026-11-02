@@ -113,6 +113,21 @@ Open the repository's **Actions** tab to inspect workflow runs and download avai
 
 Use these resources when working on interface design, animation, mobile behavior, accessibility, performance and code review. Review changes and run the relevant checks before merging them into `main`.
 
+## GitHub coding-agent skills
+
+The repository includes reusable agent skills under `.github/skills/`:
+
+- **Impeccable** — primary design director for UX critique, accessibility, responsive layout, typography, polish and hardening.
+- **Emil Kowalski design engineering** — interaction detail, component craft and purposeful motion.
+- **Break UI** — stress-testing unusual content, empty states, overflow and edge cases.
+- **Mobile Native** — touch-first responsive behavior and mobile-browser quality.
+- **Apple Design** — gesture, motion and interface feedback principles.
+- **Animation Performance / Animate** — reduced-motion-aware animation and performance.
+- **Pick UI Library** — dependency evaluation before adding UI libraries.
+- **Prototype** — comparing materially different interface directions.
+
+Start with `PRODUCT.md`, `DESIGN.md` and `.github/copilot-instructions.md`. The checked-in Impeccable skill and references are available to compatible coding agents. Its optional CLI and automatic hooks are installed separately with `npx impeccable install`; they are not assumed active merely because the skill files are present.
+
 ## Local development
 
 Run a local HTTP server from the repository root. For example, with Python installed:

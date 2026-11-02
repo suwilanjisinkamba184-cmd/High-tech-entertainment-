@@ -1,0 +1,59 @@
+/* High-Tech Entertainment — editorial label identity
+   Persuade surface: independent music label, not an app dashboard. */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+:root{--hte-ink:#f3efe6;--hte-muted:#aaa69d;--hte-gold:#d4b36d;--hte-line:rgba(212,179,109,.22);--hte-bg:#090a0b;--hte-panel:#111214}
+html{scroll-behavior:smooth;scroll-padding-top:88px}
+body{background:var(--hte-bg);color:var(--hte-ink);font-family:'DM Sans',Arial,sans-serif;line-height:1.7}
+.wrap{width:min(1260px,calc(100% - 64px))}
+.topbar{position:sticky;top:0;background:rgba(9,10,11,.96);backdrop-filter:blur(14px);border-bottom:1px solid var(--hte-line)}
+.nav{min-height:88px;gap:28px}
+.brand{display:flex;align-items:center;gap:14px;white-space:nowrap;font-size:.92rem;font-weight:700;letter-spacing:.18em}
+.brand-logo{display:block;width:58px;height:58px;object-fit:contain}
+.brand small{display:block;color:var(--hte-gold);font-size:.57rem;letter-spacing:.31em;margin-top:3px}
+.navlinks{gap:clamp(12px,2vw,28px);font-size:.72rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.navlinks a{color:#c5c0b5;transition:color .18s ease}
+.navlinks a:hover{color:var(--hte-gold)}
+.btn{min-height:44px;padding:12px 19px;border-radius:2px;border:1px solid #5a4a2c;background:transparent;box-shadow:none;font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.btn.gold{background:var(--hte-gold);border-color:var(--hte-gold);color:#111}
+.btn:hover{transform:translateY(-2px);box-shadow:none}
+.hero{padding:clamp(78px,10vw,140px) 0 clamp(70px,9vw,118px);border-bottom:1px solid var(--hte-line)}
+.hero-grid{grid-template-columns:1.1fr .9fr;gap:clamp(38px,7vw,100px);align-items:center}
+.eyebrow{font-size:.67rem;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--hte-gold)}
+.hero h1,.section-head h2,.feature-band h2,.page-title{font-family:'Playfair Display',Georgia,serif;font-weight:500;letter-spacing:-.045em}
+.hero h1{font-size:clamp(4rem,8vw,8rem);line-height:.93;margin:24px 0 26px}
+.hero h1 .gold-text{color:var(--hte-gold);background:none}
+.hero .lead{max-width:590px;color:#c0bcb3;font-size:1.02rem;line-height:1.9}
+.hero-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}
+.hero-art{position:relative;min-height:440px;aspect-ratio:1.05/1;border:1px solid var(--hte-line);border-radius:0;background:radial-gradient(ellipse at 50% 44%,#40321c 0,#1b1812 32%,#0d0e0f 75%);box-shadow:none;display:grid;place-items:center;overflow:hidden}
+.hero-art:before{content:"";position:absolute;width:80%;aspect-ratio:1;border:1px solid #d4b36d42;border-radius:50%;inset:10% auto auto 10%}
+.hero-art:after{content:"";position:absolute;width:62%;aspect-ratio:1;border:1px solid #ffffff22;border-radius:50%;inset:19% auto auto 19%}
+.hero-crest{position:relative;z-index:1;width:min(68%,310px);height:auto;filter:drop-shadow(0 14px 36px #0009)}
+.section{padding:clamp(68px,8vw,108px) 0;border-bottom:1px solid rgba(255,255,255,.1)}
+.section-head{margin-bottom:38px;max-width:780px}
+.section-head h2,.feature-band h2{font-size:clamp(2.8rem,5vw,4.8rem);line-height:1.05;margin:12px 0}
+.section-head p,.muted{color:var(--hte-muted);font-size:.93rem;line-height:1.85}
+.cards{gap:22px}
+.music-card,.artist-card,.release-card,.panel,.stat{background:#101113;border:1px solid rgba(255,255,255,.13);border-radius:0;box-shadow:none}
+.music-card,.artist-card,.release-card{padding:18px;transition:border-color .2s ease,transform .2s ease}
+.music-card:hover,.artist-card:hover,.release-card:hover{border-color:#b18e4c;transform:translateY(-3px)}
+.cover{border-radius:0;background:linear-gradient(145deg,#282319,#101214)}
+.music-card h3,.artist-card h3,.release-card h3{font-family:'Playfair Display',Georgia,serif;font-size:1.45rem;font-weight:500}
+.music-card audio{display:block;width:100%;max-width:100%;accent-color:var(--hte-gold)}
+.pill{border-radius:0;border:1px solid var(--hte-line);background:transparent;color:var(--hte-gold);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase}
+.feature-band{padding:clamp(30px,5vw,62px);border:1px solid var(--hte-line);border-radius:0;background:linear-gradient(110deg,#1b1710,#101113 70%);box-shadow:none}
+.feature-band p{max-width:720px;color:#c0bcb3;line-height:1.9}
+.contact-grid{gap:clamp(32px,6vw,80px)}
+.panel{padding:clamp(22px,3vw,34px)}
+.field input,.field textarea,.field select,.hte-search input,.hte-stream-toolbar select{min-height:48px;border:1px solid #41403c;border-radius:2px;background:#0b0c0d;color:var(--hte-ink);padding:12px 14px;font-size:16px}
+.field input:focus,.field textarea:focus,.field select:focus,.hte-search input:focus,.hte-stream-toolbar select:focus{border-color:var(--hte-gold);outline:2px solid #d4b36d33;outline-offset:2px}
+.field textarea{min-height:140px}
+footer,.footer{background:#070809;border-top:1px solid var(--hte-line)}
+footer a:hover,.footer a:hover{color:var(--hte-gold)}
+/* Keep the streaming catalogue legible while preserving the label's editorial tone. */
+.hte-stream-hero{border:1px solid var(--hte-line);border-radius:0;background:linear-gradient(110deg,#1b1710,#101113);box-shadow:none}
+.hte-track-card,.hte-stream-card,.hte-playlist-panel,.hte-now-playing{border:1px solid rgba(255,255,255,.13);border-radius:0;background:#101113;box-shadow:none}
+.hte-stream-orb{border-color:#b18e4c;color:var(--hte-gold);box-shadow:none}
+.hte-stream-badges span{border-radius:0;border-color:var(--hte-line);color:#e7d7b6;background:transparent}
+@media(max-width:900px){.nav{flex-wrap:wrap;padding:12px 0}.navlinks{order:3;width:100%;justify-content:center;flex-wrap:wrap;padding:8px 0}.hero-grid{grid-template-columns:1fr}.hero-art{min-height:300px;max-width:620px;width:100%;margin-inline:auto}.hero h1{font-size:clamp(3.6rem,12vw,6.4rem)}}
+@media(max-width:560px){.wrap{width:calc(100% - 36px)}.nav{gap:12px}.brand-logo{width:48px;height:48px}.brand{font-size:.8rem}.navlinks{justify-content:flex-start;gap:12px 18px;font-size:.65rem}.hero{padding:62px 0}.hero-art{min-height:270px}.hero-actions .btn{flex:1 1 100%;text-align:center}.section{padding:62px 0}.section-head h2,.feature-band h2{font-size:2.8rem}.feature-band{padding:25px 20px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}

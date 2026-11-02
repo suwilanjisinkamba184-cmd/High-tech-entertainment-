@@ -2,7 +2,7 @@
 
 ## Project context
 - This repository contains the public music website, founder/admin dashboard, account pages, Supabase integration, and a Flutter Android application under `mobile-app/`.
-- The website is a static HTML/CSS/JavaScript application with a small Node.js server; production deployment is configured for Netlify.
+- The public website is a static HTML/CSS/JavaScript site deployed through GitHub Pages (`.github/workflows/publish-github-pages.yml`). The Node.js server is for supported local/server workflows; do not silently change the production deployment target.
 - Supabase provides authentication, Postgres data, and Storage. The browser configuration must contain only the project URL and publishable/anon key.
 
 ## Required working practices
@@ -25,3 +25,13 @@ Use the project skills in `.github/skills/` when relevant:
 - `pick-ui-library` when selecting a frontend component library.
 
 For the Flutter app, translate applicable design principles into Flutter-native patterns; do not apply React Native or Expo-specific implementation advice to Flutter code.
+
+## Impeccable and frontend quality skills
+- Use `.github/skills/impeccable/SKILL.md` as the primary design director for website, admin, account, and native app interface work. Its command references are in `.github/skills/impeccable/reference/`.
+- For website redesigns and polish, follow Impeccable's Persuade/Experience mode, use `PRODUCT.md` and `DESIGN.md`, and apply `craft-floor.md`, `critique.md`, `audit.md`, `polish.md`, `harden.md`, `adapt.md`, and `typeset.md` as relevant.
+- Use `emil-design-eng` for high-fidelity visual craft; `break-ui` for long titles, missing covers, empty catalogues, unusual text, and small-screen stress cases.
+- Use `mobile-native` for the responsive website on real phones; use `mobile-native` principles only where applicable and use Flutter-native patterns for the Flutter app.
+- Use `apple-design`, `animate`, `improve-animations`, `review-animations`, and `animation-performance` for purposeful motion, reduced-motion behavior, and frame-budget decisions.
+- Use `pick-ui-library` before introducing new frontend component dependencies; prefer the existing vanilla HTML/CSS/JS and Flutter stacks when they are sufficient.
+- Use `prototype` when materially different visual directions need comparison. Do not install libraries or add dependencies just to imitate a visual style.
+- Preserve a single shared HTE brand identity across website and app, while allowing each surface to use the interaction patterns appropriate to its purpose.

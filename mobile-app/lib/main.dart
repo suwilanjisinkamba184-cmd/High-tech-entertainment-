@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
@@ -12,6 +12,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'playback_engine.dart';
 import 'video_player_page.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 const supabaseUrl = 'https://wqrxacjbsldbnoekbkbf.supabase.co';
 const supabaseKey = 'sb_publishable_hB_aRh-dnicpRQq3wiRtWg_JTdhmMda';
@@ -52,6 +53,20 @@ class HteApp extends StatelessWidget {
         elevation: 0,
         centerTitle: false,
         surfaceTintColor: Colors.transparent,
+      ),
+      cardTheme: CardThemeData(
+        color: const Color(0xFF111214),
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: const BorderSide(color: Color(0xFF2D2E30)),
+        ),
+      ),
+      listTileTheme: const ListTileThemeData(
+        iconColor: Color(0xFFB9B7B1),
+        minVerticalPadding: 10,
+        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 5),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -117,9 +132,7 @@ class StartupGate extends StatefulWidget {
   State<StartupGate> createState() => _StartupGateState();
 }
 
-class _StartupGateState extends State<StartupGate>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _spin;
+class _StartupGateState extends State<StartupGate> {
   bool _ready = false;
   bool _starting = true;
   String? _error;
@@ -127,10 +140,6 @@ class _StartupGateState extends State<StartupGate>
   @override
   void initState() {
     super.initState();
-    _spin = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
     _initialize();
   }
 
@@ -176,7 +185,6 @@ class _StartupGateState extends State<StartupGate>
 
   @override
   void dispose() {
-    _spin.dispose();
     super.dispose();
   }
 
@@ -192,17 +200,11 @@ class _StartupGateState extends State<StartupGate>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                AnimatedBuilder(
-                  animation: _spin,
-                  builder: (context, child) => Transform.rotate(
-                    angle: _spin.value * 2 * math.pi,
-                    child: child,
-                  ),
-                  child: SvgPicture.asset(
-                    'assets/high-tech-logo.svg',
-                    width: 116,
-                    height: 116,
-                  ),
+                SvgPicture.asset(
+                  'assets/high-tech-logo.svg',
+                  width: 116,
+                  height: 116,
+                  semanticsLabel: 'High-Tech Entertainment',
                 ),
                 const SizedBox(height: 30),
                 const Text(
@@ -401,15 +403,16 @@ class Brand extends StatelessWidget {
   final String tagline;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(20),
+    padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
     child: Row(children: [
-      SvgPicture.asset('assets/high-tech-logo.svg', width: 52, height: 52),
-      const SizedBox(width: 12),
+      SvgPicture.asset('assets/high-tech-logo.svg', width: 58, height: 58),
+      const SizedBox(width: 14),
       const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('HIGH-TECH', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, letterSpacing: 2)),
-        Text('ENTERTAINMENT', style: TextStyle(fontSize: 11, color: Color(0xFFD4AF37), letterSpacing: 3)),
+        Text('HIGH-TECH', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 2.4, height: 1.1)),
+        SizedBox(height: 4),
+        Text('ENTERTAINMENT', style: TextStyle(fontSize: 10, color: Color(0xFFD9B96E), letterSpacing: 3.2, fontWeight: FontWeight.w600)),
       ])),
-      const Icon(Icons.equalizer, color: Color(0xFFD4AF37)),
+      const Icon(Icons.graphic_eq_rounded, color: Color(0xFFD9B96E), size: 23),
     ]),
   );
 }
@@ -426,31 +429,99 @@ class Heading extends StatelessWidget {
 
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
+
   @override
-  Widget build(BuildContext context) => ListView(children: [
-    const Brand(),
-    Container(
-      margin: const EdgeInsets.symmetric(horizontal: 18),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFF806B2B)),
-        gradient: const LinearGradient(colors: [Color(0xFF44350E), Color(0xFF15120A), Color(0xFF181818)]),
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.only(bottom: 28),
+    children: [
+      const Brand(),
+      Container(
+        margin: const EdgeInsets.fromLTRB(18, 4, 18, 22),
+        padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111214),
+          border: Border.all(color: const Color(0xFF51452E)),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'INDEPENDENT MUSIC.\nBUILT TO TRAVEL.',
+                    style: TextStyle(
+                      color: Color(0xFFD9B96E),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 2.0,
+                      height: 1.7,
+                    ),
+                  ),
+                ),
+                SvgPicture.asset(
+                  'assets/high-tech-logo.svg',
+                  width: 74,
+                  height: 74,
+                  semanticsLabel: 'HT crest',
+                ),
+              ],
+            ),
+            const SizedBox(height: 22),
+            const Text(
+              'Quality sound.\nGlobal ambition.',
+              style: TextStyle(
+                fontSize: 34,
+                height: 1.08,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -1.2,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Discover official releases, meet the artists and listen to the sounds of High-Tech Entertainment.',
+              style: TextStyle(
+                color: Color(0xFFB9B6AE),
+                height: 1.65,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MusicTab()),
+                ),
+                icon: const Icon(Icons.headphones_rounded, size: 18),
+                label: const Text('Explore the music'),
+              ),
+            ),
+          ],
+        ),
       ),
-      child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('QUALITY SOUND,', style: TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.w900, letterSpacing: 2)),
-        Text('GLOBAL VIBES.', style: TextStyle(fontSize: 29, fontWeight: FontWeight.w900)),
-        SizedBox(height: 8),
-        Text('Discover artists, music and new releases from High-Tech Entertainment.'),
-      ]),
-    ),
-    const Heading('Latest releases'),
-    const ReleaseList(horizontal: true),
-    const Heading('Featured artists'),
-    const ArtistList(horizontal: true),
-    const Heading('Recently added music'),
-    const TrackList(compact: true),
-  ]);
+      const Heading('Latest releases'),
+      const ReleaseList(horizontal: true),
+      const Heading('Featured artists'),
+      const ArtistList(horizontal: true),
+      const Heading('Released music'),
+      const TrackList(compact: true),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(20, 24, 20, 8),
+        child: Text(
+          'HIGH-TECH ENTERTAINMENT  ·  MUSIC. BEATS. PRODUCTION. BEYOND.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Color(0xFF77736B),
+            fontSize: 9,
+            letterSpacing: 1.1,
+            height: 1.8,
+          ),
+        ),
+      ),
+    ],
+  );
 }
 
 class ArtistsTab extends StatelessWidget {
@@ -526,7 +597,7 @@ class ReleaseList extends StatelessWidget {
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published releases will appear here.');
       return SizedBox(
-        height: horizontal ? 180 : null,
+        height: horizontal ? 260 : null,
         child: ListView.builder(
           scrollDirection: horizontal ? Axis.horizontal : Axis.vertical,
           shrinkWrap: !horizontal,
@@ -535,12 +606,72 @@ class ReleaseList extends StatelessWidget {
           itemCount: items.length,
           itemBuilder: (context, index) {
             final item = items[index];
+            final spotifyUrl = (item['spotify_url'] ?? '').toString().trim();
             return SizedBox(
-              width: horizontal ? 145 : null,
-              child: Card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                MediaCover(url: item['cover_url']?.toString(), height: horizontal ? 112 : 170),
-                Padding(padding: const EdgeInsets.all(10), child: Text((item['title'] ?? 'Release').toString(), maxLines: 2, overflow: TextOverflow.ellipsis)),
-              ])),
+              width: horizontal ? 170 : null,
+              child: Card(
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    MediaCover(url: item['cover_url']?.toString(), height: horizontal ? 112 : 190),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 11, 12, 4),
+                      child: Text(
+                        (item['title'] ?? 'Release').toString(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    if ((item['release_date'] ?? '').toString().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          item['release_date'].toString(),
+                          style: const TextStyle(color: Colors.white54, fontSize: 11),
+                        ),
+                      ),
+                    if (spotifyUrl.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                            label: const Text('Listen on Spotify'),
+                            onPressed: () async {
+                              final embed = spotifyEmbedUrl(spotifyUrl);
+                              try {
+                                if (embed != null && defaultTargetPlatform == TargetPlatform.android) {
+                                  if (!context.mounted) return;
+                                  await Navigator.of(context).push(MaterialPageRoute(
+                                    builder: (_) => SpotifyEmbedPage(
+                                      title: (item['title'] ?? 'Spotify release').toString(),
+                                      artist: 'High-Tech Entertainment',
+                                      embedUrl: embed,
+                                    ),
+                                  ));
+                                } else {
+                                  final uri = Uri.tryParse(spotifyUrl);
+                                  if (uri != null && await canLaunchUrl(uri)) {
+                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  }
+                                }
+                              } catch (error) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Could not open Spotify: $error')),
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             );
           },
         ),
@@ -565,7 +696,7 @@ class TrackList extends StatelessWidget {
   final List<Map<String, dynamic>>? items;
   @override
   Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
-    future: items == null ? playableTracks() : Future.value(items.where(_isPlayableTrack).toList()),
+    future: items == null ? playableTracks() : Future.value(items!.where(_isPlayableTrack).toList()),
     builder: (context, snapshot) {
       if (snapshot.hasError) return Notice('Unable to load tracks: ${snapshot.error}. Check connection, Data API access and RLS.');
       if (!snapshot.hasData) return const Busy();
@@ -587,8 +718,38 @@ class TrackList extends StatelessWidget {
               IconButton(
               icon: const Icon(Icons.play_circle_fill, color: Color(0xFFD4AF37), size: 34),
               onPressed: () async {
-                try { await playback.playTrack(item, items); }
-                catch (error) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Playback failed: $error'))); }
+                final rawUrl = (item['audio_url'] ?? '').toString().trim();
+                final embedUrl = spotifyEmbedUrl(rawUrl);
+                if (isSpotifyUrl(rawUrl)) {
+                  await player.stop();
+                  playback.currentTrack.value = null;
+                  playback.queueView.value = [];
+                  if (embedUrl != null && defaultTargetPlatform == TargetPlatform.android) {
+                    if (context.mounted) {
+                      await Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => SpotifyEmbedPage(
+                          title: (item['title'] ?? 'Spotify').toString(),
+                          artist: (item['artist'] ?? 'High-Tech Entertainment').toString(),
+                          embedUrl: embedUrl,
+                        ),
+                      ));
+                    }
+                  } else {
+                    final uri = Uri.tryParse(rawUrl);
+                    if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                  return;
+                }
+                try {
+                  final audioQueue = items.where((track) => !isSpotifyUrl((track['audio_url'] ?? '').toString())).toList();
+                  await playback.playTrack(item, audioQueue);
+                } catch (error) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Playback failed: $error')),
+                    );
+                  }
+                }
               },
             )]),
           ));
@@ -773,11 +934,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
   Future<void> search(String term) async {
     setState(() { loading = true; error = null; });
     try {
-      final q = db.from('tracks').select().eq('is_published', true);
-      final data = term.trim().isEmpty
-        ? await q.order('created_at', ascending: false).limit(100)
-        : await q.ilike('title', '%${term.trim()}%').order('created_at', ascending: false).limit(100);
-      results = List<Map<String,dynamic>>.from(data).where(_isPlayableTrack).toList();
+      results = await publishedTracks(term);
     } catch (e) { error = e.toString(); }
     if (mounted) setState(() => loading = false);
   }
@@ -1140,21 +1297,112 @@ class _SettingsPageState extends State<SettingsPage> {
   );
 }
 
+bool isSpotifyUrl(String raw) {
+  final value = raw.trim();
+  if (value.startsWith('spotify:')) return true;
+  final uri = Uri.tryParse(value);
+  final host = (uri?.host ?? '').toLowerCase();
+  return host == 'spotify.com' || host.endsWith('.spotify.com') || host == 'spotify.link';
+}
+
+String? spotifyEmbedUrl(String raw) {
+  final value = raw.trim();
+  final uri = Uri.tryParse(value);
+  String? type;
+  String? id;
+  if (value.startsWith('spotify:')) {
+    final parts = value.split(':');
+    if (parts.length == 3) {
+      type = parts[1];
+      id = parts[2];
+    }
+  } else if (uri != null && (uri.host == 'open.spotify.com' || uri.host.endsWith('.spotify.com'))) {
+    final parts = uri.pathSegments;
+    final offset = parts.isNotEmpty && parts.first == 'embed' ? 1 : 0;
+    if (parts.length > offset + 1) {
+      type = parts[offset];
+      id = parts[offset + 1];
+    }
+  }
+  const supported = {'track', 'album', 'playlist', 'episode', 'show'};
+  final validId = id != null && id.isNotEmpty && id.codeUnits.every((unit) =>
+      (unit >= 48 && unit <= 57) ||
+      (unit >= 65 && unit <= 90) ||
+      (unit >= 97 && unit <= 122));
+  if (type == null || !supported.contains(type) || !validId) return null;
+  return 'https://open.spotify.com/embed/$type/$id?utm_source=generator&theme=0';
+}
+
 bool _isPlayableTrack(Map<String, dynamic> track) {
   final title = (track['title'] ?? '').toString().trim();
   final audioUrl = (track['audio_url'] ?? '').toString().trim();
   final uri = Uri.tryParse(audioUrl);
-  final host = (uri?.host ?? '').toLowerCase();
-  final isSpotifyLink = host == 'spotify.com' || host.endsWith('.spotify.com') || host == 'spotify.link';
   return title.isNotEmpty &&
-      !title.toLowerCase().startsWith('spotify') &&
-      !isSpotifyLink && uri != null && uri.scheme == 'https';
+      (isSpotifyUrl(audioUrl) || (uri != null && uri.scheme == 'https' && uri.host.isNotEmpty));
 }
 
-Future<List<Map<String, dynamic>>> playableTracks() async {
-  final data = await db.from('tracks').select().eq('is_published', true)
-      .order('created_at', ascending: false).limit(100);
+Future<List<Map<String, dynamic>>> publishedTracks([String term = '']) async {
+  var query = db.from('tracks')
+      .select()
+      .eq('is_published', true);
+  if (term.trim().isNotEmpty) {
+    query = query.ilike('title', '%${term.trim()}%');
+  }
+  final data = await query.order('created_at', ascending: false).limit(100);
   return List<Map<String, dynamic>>.from(data).where(_isPlayableTrack).toList();
+}
+
+Future<List<Map<String, dynamic>>> playableTracks() => publishedTracks();
+
+class SpotifyEmbedPage extends StatefulWidget {
+  const SpotifyEmbedPage({super.key, required this.title, required this.artist, required this.embedUrl});
+  final String title;
+  final String artist;
+  final String embedUrl;
+  @override
+  State<SpotifyEmbedPage> createState() => _SpotifyEmbedPageState();
+}
+
+class _SpotifyEmbedPageState extends State<SpotifyEmbedPage> {
+  late final WebViewController controller;
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF08090B))
+      ..setNavigationDelegate(NavigationDelegate(
+        onPageFinished: (_) {
+          if (mounted) setState(() => loading = false);
+        },
+      ))
+      ..loadRequest(Uri.parse(widget.embedUrl));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis)),
+    body: Column(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(widget.artist, style: const TextStyle(
+            color: Color(0xFFD9B96E), letterSpacing: 1.2, fontSize: 11, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 5),
+          const Text('Now playing on Spotify', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          const Text('Playback is provided by Spotify. Sign in to Spotify if prompted.',
+            style: TextStyle(color: Colors.white60, fontSize: 12)),
+        ]),
+      ),
+      Expanded(child: Stack(children: [
+        WebViewWidget(controller: controller),
+        if (loading) const Center(child: CircularProgressIndicator(color: Color(0xFFD9B96E))),
+      ])),
+    ]),
+  );
 }
 
 Future<List<Map<String, dynamic>>> rows(String table, String orderBy) async {
@@ -1165,12 +1413,17 @@ Future<List<Map<String, dynamic>>> rows(String table, String orderBy) async {
 class Busy extends StatelessWidget {
   const Busy({super.key});
   @override
-  Widget build(BuildContext context) => const Center(child: CircularProgressIndicator(color: Color(0xFFD4AF37)));
+  Widget build(BuildContext context) => const Center(
+    child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
+  );
 }
 
 class Notice extends StatelessWidget {
   const Notice(this.message, {super.key});
   final String message;
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.all(22), child: Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)));
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(22),
+    child: Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)),
+  );
 }
