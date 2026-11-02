@@ -606,12 +606,72 @@ class ReleaseList extends StatelessWidget {
           itemCount: items.length,
           itemBuilder: (context, index) {
             final item = items[index];
+            final spotifyUrl = (item['spotify_url'] ?? '').toString().trim();
             return SizedBox(
-              width: horizontal ? 145 : null,
-              child: Card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                MediaCover(url: item['cover_url']?.toString(), height: horizontal ? 112 : 170),
-                Padding(padding: const EdgeInsets.all(10), child: Text((item['title'] ?? 'Release').toString(), maxLines: 2, overflow: TextOverflow.ellipsis)),
-              ])),
+              width: horizontal ? 170 : null,
+              child: Card(
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    MediaCover(url: item['cover_url']?.toString(), height: horizontal ? 112 : 190),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 11, 12, 4),
+                      child: Text(
+                        (item['title'] ?? 'Release').toString(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    if ((item['release_date'] ?? '').toString().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          item['release_date'].toString(),
+                          style: const TextStyle(color: Colors.white54, fontSize: 11),
+                        ),
+                      ),
+                    if (spotifyUrl.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                            label: const Text('Listen on Spotify'),
+                            onPressed: () async {
+                              final embed = spotifyEmbedUrl(spotifyUrl);
+                              try {
+                                if (embed != null) {
+                                  if (!context.mounted) return;
+                                  await Navigator.of(context).push(MaterialPageRoute(
+                                    builder: (_) => SpotifyEmbedPage(
+                                      title: (item['title'] ?? 'Spotify release').toString(),
+                                      artist: 'High-Tech Entertainment',
+                                      embedUrl: embed,
+                                    ),
+                                  ));
+                                } else {
+                                  final uri = Uri.tryParse(spotifyUrl);
+                                  if (uri != null && await canLaunchUrl(uri)) {
+                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  }
+                                }
+                              } catch (error) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Could not open Spotify: $error')),
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             );
           },
         ),
