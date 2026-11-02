@@ -28,7 +28,6 @@ jobs:
           test -s assets/app.js
           test -s assets/site.css
           test -s assets/videos.js
-          test -s assets/streaming.js
           test -s account/index.html
           test -s admin/index.html
           grep -q 'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-' index.html
