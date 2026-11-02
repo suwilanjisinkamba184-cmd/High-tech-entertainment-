@@ -54,6 +54,20 @@ class HteApp extends StatelessWidget {
         centerTitle: false,
         surfaceTintColor: Colors.transparent,
       ),
+      cardTheme: CardThemeData(
+        color: const Color(0xFF111214),
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: const BorderSide(color: Color(0xFF2D2E30)),
+        ),
+      ),
+      listTileTheme: const ListTileThemeData(
+        iconColor: Color(0xFFB9B7B1),
+        minVerticalPadding: 10,
+        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: const Color(0xFF0E1012),
@@ -596,6 +610,9 @@ class TrackList extends StatelessWidget {
                 final rawUrl = (item['audio_url'] ?? '').toString().trim();
                 final embedUrl = spotifyEmbedUrl(rawUrl);
                 if (isSpotifyUrl(rawUrl)) {
+                  await player.stop();
+                  playback.currentTrack.value = null;
+                  playback.queueView.value = [];
                   if (embedUrl != null) {
                     if (context.mounted) Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => SpotifyEmbedPage(
