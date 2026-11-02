@@ -40,6 +40,3 @@ jobs:
           find . -type f -name '*.js' -not -path './node_modules/*' -print0 | xargs -0 -r -n1 node --check
       - name: Validate sitemap XML
         run: python -c "import xml.etree.ElementTree as ET; ET.parse('sitemap.xml'); print('Sitemap XML is valid')"
-      - name: Check JavaScript syntax
-        run: |
-          find assets -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
