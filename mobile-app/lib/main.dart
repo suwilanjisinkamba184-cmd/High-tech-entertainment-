@@ -981,9 +981,8 @@ class _SavedTabState extends State<SavedTab> {
           saved = [];
         } else {
           final tracks = await db.from('tracks')
-            .select('*, releases!inner(is_published)')
+            .select()
             .eq('is_published', true)
-            .eq('releases.is_published', true)
             .inFilter('id', ids);
           final byId = {
             for (final track in tracks) track['id'].toString(): Map<String, dynamic>.from(track),
@@ -1340,9 +1339,8 @@ bool _isPlayableTrack(Map<String, dynamic> track) {
 
 Future<List<Map<String, dynamic>>> publishedTracks([String term = '']) async {
   var query = db.from('tracks')
-      .select('*, releases!inner(is_published)')
-      .eq('is_published', true)
-      .eq('releases.is_published', true);
+      .select()
+      .eq('is_published', true);
   if (term.trim().isNotEmpty) {
     query = query.ilike('title', '%' + term.trim() + '%');
   }
