@@ -235,7 +235,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       case 4: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         _header('RELEASE MANAGEMENT','Releases','Create release records and manage their publication status.'),
         TextField(controller:_releaseTitle,decoration:const InputDecoration(labelText:'Release title')),
-        const SizedBox(height:10),TextField(controller:_releaseArtist,decoration:const InputDecoration(labelText:'Description / artist credit')),
+        const SizedBox(height:10),TextField(controller:_spotifyUrl,decoration:const InputDecoration(labelText:'Spotify release URL (optional)')),
         const SizedBox(height:10),FilledButton(onPressed:_busy?null:_saveRelease,child:const Text('Save release draft')),
         const SizedBox(height:18),_releaseRows()]);
       case 5: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
