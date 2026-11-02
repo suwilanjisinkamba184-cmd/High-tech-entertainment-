@@ -33,6 +33,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   List<Map<String,dynamic>> _releases = [];
   List<Map<String,dynamic>> _artworkFiles = [];
   List<Map<String,dynamic>> _users = [];
+  Map<String,dynamic> _analytics = {};
   Map<String,int> _metrics = {};
   static const _sections = ['Overview','Music uploads','Tracks','Artists','Releases','Artwork','Users','Analytics','Activity'];
 
@@ -69,6 +70,12 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         final users = await _supabase.rpc('hte_admin_list_users');
         _users = List<Map<String,dynamic>>.from(users);
       } catch (e) { debugPrint('Secure user directory unavailable: $e'); }
+      try {
+        final analytics = await _supabase.rpc('hte_admin_get_analytics');
+        if (analytics is List && analytics.isNotEmpty) {
+          _analytics = Map<String,dynamic>.from(analytics.first);
+        }
+      } catch (e) { debugPrint('Secure platform analytics unavailable: $e'); }
       _metrics = {
         'Tracks': _tracks.length, 'Published': _tracks.where((e)=>e['is_published']==true).length,
         'Artists': _artists.length, 'Releases': _releases.length, 'Users': _users.length,
@@ -287,9 +294,20 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         const _AdminEmpty('Account suspension, deletion and role changes remain protected server-side operations and are not exposed in this directory.'),
       ]);
       case 7: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        _header('PLATFORM INSIGHTS','Analytics','Audience-wide metrics require a founder-authorized aggregate endpoint. These figures show the live catalogue counts only.'),
-        _metric('Catalogue tracks',_metrics['Tracks']??0,Icons.music_note),
-        _metric('Published tracks',_metrics['Published']??0,Icons.public),
+        _header('PLATFORM INSIGHTS','Analytics','Live aggregate metrics are returned by a role-checked Supabase function. Download totals are not available because download events are not currently recorded.'),
+        GridView.count(crossAxisCount:2,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),childAspectRatio:1.45,crossAxisSpacing:8,mainAxisSpacing:8,children:[
+          _metric('Total plays',int.tryParse('${_analytics['total_plays']??0}')??0,Icons.play_arrow),
+          _metric('Unique listeners',int.tryParse('${_analytics['unique_listeners']??0}')??0,Icons.headphones),
+          _metric('Ad impressions',int.tryParse('${_analytics['ad_impressions']??0}')??0,Icons.campaign),
+          _metric('Published tracks',int.tryParse('${_analytics['published_tracks']??0}')??(_metrics['Published']??0),Icons.public),
+        ]),
+        const SizedBox(height:18),
+        Card(child:ListTile(
+          leading:const Icon(Icons.trending_up,color:_gold),
+          title:Text((_analytics['top_track_title']??'No listening data yet').toString()),
+          subtitle:Text('Top track · ${_analytics['top_track_plays']??0} plays'),
+        )),
+        const SizedBox(height:8),Text('Total catalogue tracks: ${_analytics['total_tracks']??_metrics['Tracks']??0}',style:const TextStyle(color:Colors.white60)),
       ]);
       default: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         _header('AUDIT TRAIL','Platform activity','Recent tracks, artist profiles and releases from the live catalogue. A full actor-by-actor audit trail requires a dedicated audit-log table.'),
