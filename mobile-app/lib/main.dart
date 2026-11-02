@@ -1109,6 +1109,7 @@ class _PlaylistsTabState extends State<PlaylistsTab> {
       actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
         FilledButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),child:const Text('Create'))],
     ));
+    if(!mounted){controller.dispose();return;}
     controller.dispose();
     if(name==null||name.isEmpty)return;
     final user=db.auth.currentUser;
