@@ -123,7 +123,7 @@
             <div class="form-grid">
               <div class="field"><label>Track title</label><input name="title" required maxlength="140" placeholder="Enter track title"></div>
               <div class="field"><label>Artist</label><input name="artist" required maxlength="180" placeholder="Artist name"></div>
-              <div class="field"><label>Release</label><select name="release_id" required><option value="">Choose a release</option></select><small class="admin-field-help">The app only lists tracks assigned to a published release.</small></div>
+              <div class="field"><label>Associate with release <span class="optional">OPTIONAL</span></label><select name="release_id"><option value="">Choose a release</option></select><small class="admin-field-help">The app lists tracks marked as published. Associate this track with a release if it belongs to a specific project.</small></div>
               <div class="field"><label>Uploader / producer</label><input name="uploader" value="High Tech Entertainment" maxlength="80"></div>
               <div class="field"><label>Genre</label><input name="genre" maxlength="80" placeholder="Afrobeats, Dancehall, Drill"></div>
               <div class="field full"><label>Cover artwork URL <span class="optional">OPTIONAL</span></label><input name="cover_url" type="url" placeholder="https://…"></div>
