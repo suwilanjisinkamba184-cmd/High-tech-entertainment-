@@ -1,16 +1,55 @@
-# High-Tech Entertainment Mobile App
+# High-Tech Entertainment — Native Android App
 
-This directory is reserved for the native Flutter application.
+The Flutter application in this folder is the native Android client for High-Tech Entertainment.
 
-## Targets
-- Android: APK for direct installation and AAB for Google Play.
-- iOS: IPA build through a macOS GitHub Actions runner (Apple signing credentials required for distribution).
-- Windows: Windows desktop package through a Windows GitHub Actions runner.
+## Experiences
 
-## Backend
-The app will use the existing High-Tech Entertainment Supabase project. Before implementing data access, verify the live table schemas, row-level security policies, and Storage bucket names. Never put a Supabase service-role key in the client application.
+### HT Music — public listener experience
+- Branded startup and required Supabase sign-in.
+- Google OAuth and email/password authentication.
+- Home, Discover, Releases, Library, Favourites, Playlists and Profile.
+- Artist catalogue, music videos, search, track sharing and notifications placeholder.
+- Native audio playback, queue, background controls, shuffle, autoplay and sponsored audio.
+- Spotify release links and embeds.
+- App settings, privacy, account deletion and GitHub release update checks.
 
-## Build process
-GitHub Actions will build platform artifacts and upload them as workflow artifacts. Store signing credentials only in GitHub Actions secrets.
+### HT Admin — private founder studio
+- Founder-only entry for the configured owner account.
+- Dashboard, music upload, track publishing and deletion.
+- Artist and release draft creation and publishing.
+- Public artwork upload and URL management.
+- User management placeholder (requires a protected Auth Admin Edge Function).
+- Catalogue analytics and activity views; audience-wide metrics require a secure aggregate endpoint.
 
-The Flutter source and CI workflow will be added here after the Supabase schema and application requirements are verified.
+## Supabase integration
+
+Project: `wqrxacjbsldbnoekbkbf`
+
+- Auth uses the Supabase publishable key; no service-role key is bundled.
+- Music files use the public `hte-audio` bucket. Upload/delete policies require an HTE owner/admin role.
+- Release artwork uses `hte-artwork`; public reads are enabled while upload/update/delete are restricted to HTE owner/admin roles.
+- Videos use the existing `hte-video` bucket and public `videos` catalogue.
+- Public catalogue reads are governed by existing RLS policies.
+- User playlists, favourites and listening history are scoped by the signed-in user's RLS policies.
+
+The artwork bucket migration is recorded at `database/changes/20261102_create_hte_artwork_bucket.sql` and has been applied to the connected project.
+
+## Android build
+
+The GitHub Actions workflow creates the Android platform scaffold, copies the Flutter source and assets, configures Android 8+ (min SDK 26), configures the app link and background audio service, and builds APK and AAB outputs.
+
+Required repository Actions secrets:
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_STORE_PASSWORD`
+- `ANDROID_KEY_PASSWORD`
+
+Build locally from this directory:
+```bash
+flutter pub get
+flutter analyze lib
+flutter test
+flutter build apk --release
+```
+
+The CI workflow also builds Windows separately. iOS distribution is not currently part of the supported release target.
