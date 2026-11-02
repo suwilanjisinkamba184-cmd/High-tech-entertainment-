@@ -148,11 +148,13 @@ class _StartupGateState extends State<StartupGate>
       );
       // Initialise the background handler before constructing AudioPlayer.
       // Otherwise playback can fail with _audioHandler not initialised.
-      await JustAudioBackground.init(
-        androidNotificationChannelId: 'com.hightechentertainment.app.audio',
-        androidNotificationChannelName: 'High-Tech Music Playback',
-        androidNotificationOngoing: true,
-      );
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        await JustAudioBackground.init(
+          androidNotificationChannelId: 'com.hightechentertainment.app.audio',
+          androidNotificationChannelName: 'High-Tech Music Playback',
+          androidNotificationOngoing: true,
+        );
+      }
       playback = HtePlayback();
       player = playback.player;
       await Future<void>.delayed(const Duration(milliseconds: 700));
@@ -1141,7 +1143,12 @@ class _SettingsPageState extends State<SettingsPage> {
 bool _isPlayableTrack(Map<String, dynamic> track) {
   final title = (track['title'] ?? '').toString().trim();
   final audioUrl = (track['audio_url'] ?? '').toString().trim();
-  return title.isNotEmpty && audioUrl.startsWith('https://');
+  final uri = Uri.tryParse(audioUrl);
+  final host = (uri?.host ?? '').toLowerCase();
+  final isSpotifyLink = host == 'spotify.com' || host.endsWith('.spotify.com') || host == 'spotify.link';
+  return title.isNotEmpty &&
+      !title.toLowerCase().startsWith('spotify') &&
+      !isSpotifyLink && uri != null && uri.scheme == 'https';
 }
 
 Future<List<Map<String, dynamic>>> playableTracks() async {
