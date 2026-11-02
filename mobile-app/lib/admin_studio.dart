@@ -31,6 +31,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   List<Map<String,dynamic>> _tracks = [];
   List<Map<String,dynamic>> _artists = [];
   List<Map<String,dynamic>> _releases = [];
+  List<Map<String,dynamic>> _artworkFiles = [];
   Map<String,int> _metrics = {};
   static const _sections = ['Overview','Music uploads','Tracks','Artists','Releases','Artwork','Users','Analytics','Activity'];
 
@@ -59,6 +60,10 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       _tracks = List<Map<String,dynamic>>.from(values[0]);
       _artists = List<Map<String,dynamic>>.from(values[1]);
       _releases = List<Map<String,dynamic>>.from(values[2]);
+      try {
+        final files = await _supabase.storage.from('hte-artwork').list('releases');
+        _artworkFiles = files.map((file) => {'name':file.name}).toList();
+      } catch (e) { debugPrint('Artwork library listing unavailable: $e'); }
       _metrics = {
         'Tracks': _tracks.length, 'Published': _tracks.where((e)=>e['is_published']==true).length,
         'Artists': _artists.length, 'Releases': _releases.length,
@@ -248,7 +253,19 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         const SizedBox(height:16),
         TextField(controller:_coverUrl,decoration:const InputDecoration(labelText:'Artwork URL',hintText:'Upload an image or paste an existing public URL')),
         const SizedBox(height:8),
-        const _AdminEmpty('Copy this URL into the Cover artwork URL field on the Music uploads screen. Public downloads are enabled; upload and delete permissions remain restricted to HTE administrators.'),
+        const _AdminEmpty('Tap an uploaded image below to use it as track artwork. Public downloads are enabled; upload and delete permissions remain restricted to HTE administrators.'),
+        const SizedBox(height:14),
+        const Text('Uploaded artwork',style:TextStyle(fontWeight:FontWeight.w700)),
+        if(_artworkFiles.isEmpty) const _AdminEmpty('No artwork uploaded yet.'),
+        ..._artworkFiles.map((file)=>Card(child:ListTile(
+          leading:const Icon(Icons.image_outlined,color:_gold),
+          title:Text((file['name']??'Artwork').toString(),maxLines:1,overflow:TextOverflow.ellipsis),
+          trailing:const Icon(Icons.copy_outlined),
+          onTap:(){
+            _coverUrl.text=_supabase.storage.from('hte-artwork').getPublicUrl('releases/${file['name']}');
+            _toast('Artwork URL selected. Use it on the Music uploads screen.');
+          },
+        ))),
       ]);
       case 6: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         _header('ACCOUNT OVERSIGHT','Users','User directory and account actions must use a protected server-side function. This mobile client intentionally does not expose the Supabase service-role key or enumerate private Auth users.'),
