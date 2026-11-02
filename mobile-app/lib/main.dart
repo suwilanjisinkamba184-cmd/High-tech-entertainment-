@@ -597,7 +597,7 @@ class ReleaseList extends StatelessWidget {
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published releases will appear here.');
       return SizedBox(
-        height: horizontal ? 180 : null,
+        height: horizontal ? 260 : null,
         child: ListView.builder(
           scrollDirection: horizontal ? Axis.horizontal : Axis.vertical,
           shrinkWrap: !horizontal,
