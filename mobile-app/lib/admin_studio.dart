@@ -277,8 +277,10 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         _metric('Published tracks',_metrics['Published']??0,Icons.public),
       ]);
       default: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        _header('AUDIT TRAIL','Platform activity','Recent catalogue records from Supabase. Full audit history requires a dedicated audit-log table.'),
-        _trackRows(),
+        _header('AUDIT TRAIL','Platform activity','Recent tracks, artist profiles and releases from the live catalogue. A full actor-by-actor audit trail requires a dedicated audit-log table.'),
+        const Text('Recent tracks',style:TextStyle(fontWeight:FontWeight.w700)),_trackRows(),
+        const SizedBox(height:14),const Text('Artist activity',style:TextStyle(fontWeight:FontWeight.w700)),_artistRows(),
+        const SizedBox(height:14),const Text('Release activity',style:TextStyle(fontWeight:FontWeight.w700)),_releaseRows(),
       ]);
     }
   }
