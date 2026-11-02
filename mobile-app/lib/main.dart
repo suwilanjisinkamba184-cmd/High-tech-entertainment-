@@ -1224,6 +1224,7 @@ class _ProfileEditPageState extends State<ProfileEditPage>{
   final _name=TextEditingController();
   final _bio=TextEditingController();
   final _phone=TextEditingController();
+  String _avatarUrl='';
   bool _loading=true;
   bool _saving=false;
   @override
@@ -1234,8 +1235,8 @@ class _ProfileEditPageState extends State<ProfileEditPage>{
     final user=db.auth.currentUser;
     if(user==null){setState(()=>_loading=false);return;}
     try{
-      final row=await db.from('profiles').select('display_name,bio,phone').eq('id',user.id).maybeSingle();
-      if(row!=null){_name.text=(row['display_name']??'').toString();_bio.text=(row['bio']??'').toString();_phone.text=(row['phone']??'').toString();}
+      final row=await db.from('profiles').select('display_name,bio,phone,avatar_url').eq('id',user.id).maybeSingle();
+      if(row!=null){_name.text=(row['display_name']??'').toString();_bio.text=(row['bio']??'').toString();_phone.text=(row['phone']??'').toString();_avatarUrl=(row['avatar_url']??'').toString();}
     }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Could not load profile: $e')));}
     if(mounted)setState(()=>_loading=false);
   }
@@ -1244,7 +1245,7 @@ class _ProfileEditPageState extends State<ProfileEditPage>{
     if(user==null)return;
     setState(()=>_saving=true);
     try{
-      await db.from('profiles').upsert({'id':user.id,'display_name':_name.text.trim(),'bio':_bio.text.trim(),'phone':_phone.text.trim(),'updated_at':DateTime.now().toIso8601String()});
+      await db.from('profiles').upsert({'id':user.id,'display_name':_name.text.trim(),'bio':_bio.text.trim(),'phone':_phone.text.trim(),'avatar_url':_avatarUrl,'updated_at':DateTime.now().toIso8601String()});
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profile updated.')));
     }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Profile update failed: $e')));}
     if(mounted)setState(()=>_saving=false);
