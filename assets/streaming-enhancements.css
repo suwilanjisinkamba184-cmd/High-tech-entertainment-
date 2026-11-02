@@ -1,0 +1,9 @@
+/* HTE streaming library controls */
+.hte-cloud-state{display:inline-flex;align-items:center;gap:6px;color:#d9b96e;font-size:.76rem;letter-spacing:.02em}
+.hte-playlist-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.hte-playlist-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid rgba(217,185,110,.12)}
+.hte-playlist-row>span{min-width:0;overflow-wrap:anywhere}.hte-playlist-row>div{display:flex;gap:6px;flex-shrink:0}
+.hte-playlist-row small{color:#a9a69f}.hte-playlist-row>span>b{color:#d9b96e;font-size:.72rem;margin-right:6px}
+.hte-stream-actions .hte-icon-btn[aria-pressed=true]{color:#f2c86e;border-color:#d9b96e;background:#d9b96e18}
+.hte-stream-actions .hte-icon-btn{min-width:42px}
+@media(max-width:560px){.hte-cloud-state{width:100%}.hte-playlist-tools{width:100%}.hte-playlist-tools .btn{flex:1}.hte-playlist-row{align-items:flex-start}}
