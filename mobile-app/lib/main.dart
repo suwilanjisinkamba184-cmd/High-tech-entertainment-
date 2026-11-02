@@ -613,7 +613,7 @@ class TrackList extends StatelessWidget {
                   await player.stop();
                   playback.currentTrack.value = null;
                   playback.queueView.value = [];
-                  if (embedUrl != null) {
+                  if (embedUrl != null && defaultTargetPlatform == TargetPlatform.android) {
                     if (context.mounted) Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => SpotifyEmbedPage(
                         title: (item['title'] ?? 'Spotify').toString(),
