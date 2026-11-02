@@ -21,6 +21,7 @@ create table if not exists public.releases (
   artist_id uuid references public.artists(id) on delete set null,
   cover_url text,
   release_date date,
+  spotify_url text,
   description text not null default '',
   is_published boolean not null default false,
   created_at timestamptz not null default now()
@@ -51,6 +52,7 @@ create table if not exists public.contact_messages (
 );
 
 -- Keep this baseline safe to rerun against existing projects.
+alter table public.releases add column if not exists spotify_url text;
 alter table public.tracks add column if not exists genre text;
 
 alter table public.artists enable row level security;
