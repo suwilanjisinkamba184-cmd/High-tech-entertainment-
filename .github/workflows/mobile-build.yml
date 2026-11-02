@@ -281,12 +281,21 @@ jobs:
       - name: Build Google Play App Bundle
         working-directory: ${{ runner.temp }}/hte_app
         run: flutter build appbundle --release
+      - name: Apply official High-Tech Entertainment download filenames
+        working-directory: ${{ runner.temp }}/hte_app
+        run: |
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          AAB="build/app/outputs/bundle/release/app-release.aab"
+          test -s "$APK"
+          test -s "$AAB"
+          mv "$APK" "build/app/outputs/flutter-apk/High-Tech-Entertainment.apk"
+          mv "$AAB" "build/app/outputs/bundle/release/High-Tech-Entertainment.aab"
       - uses: actions/upload-artifact@v4
         with:
           name: high-tech-entertainment-android
           path: |
-            ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/app-release.apk
-            ${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/app-release.aab
+            ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment.apk
+            ${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/High-Tech-Entertainment.aab
           if-no-files-found: error
 
       - name: Publish public Android APK release
@@ -300,7 +309,7 @@ jobs:
             Official High-Tech Entertainment Android app.
             Download the APK and install it on a compatible Android device.
             This release is signed with the project's private upload key.
-          files: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/app-release.apk
+          files: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment.apk
           overwrite_files: true
           make_latest: true
 
