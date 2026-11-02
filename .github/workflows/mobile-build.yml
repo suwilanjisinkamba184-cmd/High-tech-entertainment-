@@ -29,8 +29,6 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Install required Android SDK components
-        uses: android-actions/setup-android@v3
       - name: Install Android 36 platform, build tools and native toolchain
         run: |
           yes | sdkmanager --licenses
