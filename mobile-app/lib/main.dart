@@ -35,8 +35,75 @@ class HteApp extends StatelessWidget {
     theme: ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF090909),
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFD4AF37), brightness: Brightness.dark),
+      scaffoldBackgroundColor: const Color(0xFF08090B),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFFD9B96E),
+        brightness: Brightness.dark,
+      ).copyWith(
+        primary: const Color(0xFFD9B96E),
+        onPrimary: const Color(0xFF17130B),
+        secondary: const Color(0xFFC7CCD2),
+        surface: const Color(0xFF111316),
+        outline: const Color(0xFF393A3B),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF08090B),
+        foregroundColor: Color(0xFFF6F3EC),
+        elevation: 0,
+        centerTitle: false,
+        surfaceTintColor: Colors.transparent,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF0E1012),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFF393A3B)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFF393A3B)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFD9B96E), width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFFFAAA4)),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: const Color(0xFFD9B96E),
+          foregroundColor: const Color(0xFF17130B),
+          minimumSize: const Size(48, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xFFF6F3EC),
+          minimumSize: const Size(48, 48),
+          side: const BorderSide(color: Color(0xFF514936)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+        ),
+      ),
+      dividerTheme: const DividerThemeData(color: Color(0xFF292B2E), thickness: 1),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: Color(0xFFD9B96E),
+        linearTrackColor: Color(0xFF292B2E),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: const Color(0xFF1B1D20),
+        contentTextStyle: const TextStyle(color: Color(0xFFF6F3EC)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        behavior: SnackBarBehavior.floating,
+      ),
+      visualDensity: VisualDensity.standard,
     ),
     home: const StartupGate(),
   );
