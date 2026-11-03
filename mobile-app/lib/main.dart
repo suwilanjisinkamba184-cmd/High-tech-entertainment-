@@ -1760,8 +1760,7 @@ class _SettingsPageState extends State<SettingsPage> {
         client.close();
       }
 
-      final downloadedApk = apkFile;
-      if (downloadedApk == null) throw const FileSystemException('The APK download did not complete.');
+      final downloadedApk = apkFile!;
       final firstBytes = await downloadedApk.openRead(0, 4).first;
       if (firstBytes.length < 4 || firstBytes[0] != 0x50 || firstBytes[1] != 0x4b) {
         throw const FormatException('The downloaded file is not a valid APK archive.');
@@ -1779,8 +1778,8 @@ class _SettingsPageState extends State<SettingsPage> {
         type: 'application/vnd.android.package-archive',
       );
       if (!mounted) return;
-      if (result != 'done') {
-        _message('APK downloaded, but Android could not open the installer ($result). Allow High-Tech Entertainment to install unknown apps in Android Settings, then try again.');
+      if (result.type != ResultType.done) {
+        _message('APK downloaded, but Android could not open the installer (${result.message}). Allow High-Tech Entertainment to install unknown apps in Android Settings, then try again.');
       } else {
         _message('Update downloaded. Follow the Android installation prompt to finish updating.');
       }
