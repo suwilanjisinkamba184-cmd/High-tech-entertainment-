@@ -825,6 +825,20 @@ class PlayerBar extends StatelessWidget {
     valueListenable: playback.currentTrack,
     builder: (context, track, _) {
       if (track == null) return const SizedBox.shrink();
+      if (playback.adPlaying.value) {
+        return const Material(
+          color: Color(0xFF1B1B1B),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(children: [
+              Icon(Icons.campaign, color: Color(0xFFD9B96E)),
+              SizedBox(width: 10),
+              Expanded(child: Text('High-Tech Entertainment • Advertisement')),
+              Icon(Icons.graphic_eq, color: Color(0xFFD9B96E)),
+            ]),
+          ),
+        );
+      }
       return Material(
         color: const Color(0xFF1B1B1B),
         child: InkWell(
@@ -851,54 +865,98 @@ class PlayerBar extends StatelessWidget {
 class FullPlayerPage extends StatelessWidget {
   const FullPlayerPage({super.key});
   String _time(Duration d) => '${d.inMinutes.toString().padLeft(2,'0')}:${(d.inSeconds%60).toString().padLeft(2,'0')}';
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar:AppBar(title:const Text('Now playing'),actions:[IconButton(tooltip:'Queue',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const QueuePage())),icon:const Icon(Icons.queue_music))]),
-    body:ValueListenableBuilder<Map<String,dynamic>?>(
-      valueListenable:playback.currentTrack,
-      builder:(context,track,_)=>track==null?const Notice('Choose a track to start listening.'):Padding(
-        padding:const EdgeInsets.all(24),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-          ClipRRect(borderRadius:BorderRadius.circular(22),child:SizedBox(width:260,height:260,child:MediaCover(url:track['cover_url']?.toString(),height:260))),
-          const SizedBox(height:24),
-          Text((track['title']??'Now playing').toString(),style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold),textAlign:TextAlign.center),
-          Text((track['artist']??'High-Tech Entertainment').toString(),style:const TextStyle(color:Colors.white60)),
-          ValueListenableBuilder<String?>(
-            valueListenable: playback.playbackError,
-            builder: (context, error, _) => error == null
-                ? const SizedBox(height: 12)
-                : Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Text(
-                      error,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Color(0xFFFFAAA4), fontSize: 12),
-                    ),
+    appBar: AppBar(title: const Text('Now playing')),
+    body: ValueListenableBuilder<bool>(
+      valueListenable: playback.adPlaying,
+      builder: (context, isAd, _) {
+        if (isAd) {
+          return const Center(child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.campaign, size: 64, color: Color(0xFFD9B96E)),
+              SizedBox(height: 18),
+              Text('Advertisement', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              Text('Please listen until the advert finishes.',
+                style: TextStyle(color: Colors.white60)),
+              SizedBox(height: 18),
+              CircularProgressIndicator(color: Color(0xFFD9B96E)),
+            ],
+          ));
+        }
+        return ValueListenableBuilder<Map<String,dynamic>?>(
+          valueListenable: playback.currentTrack,
+          builder: (context, track, _) => track == null
+            ? const Notice('Choose a track to start listening.')
+            : Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: SizedBox(width: 260, height: 260,
+                    child: MediaCover(url: track['cover_url']?.toString(), height: 260)),
+                ),
+                const SizedBox(height: 24),
+                Text((track['title'] ?? 'Now playing').toString(),
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center),
+                Text((track['artist'] ?? 'High-Tech Entertainment').toString(),
+                  style: const TextStyle(color: Colors.white60)),
+                ValueListenableBuilder<String?>(
+                  valueListenable: playback.playbackError,
+                  builder: (context, error, _) => error == null
+                    ? const SizedBox(height: 12)
+                    : Padding(padding: const EdgeInsets.only(top: 12),
+                      child: Text(error, textAlign: TextAlign.center,
+                        style: const TextStyle(color: Color(0xFFFFAAA4), fontSize: 12))),
+                ),
+                const SizedBox(height: 20),
+                StreamBuilder<Duration>(
+                  stream: player.positionStream,
+                  initialData: Duration.zero,
+                  builder: (context, pos) {
+                    final duration = player.duration ?? Duration.zero;
+                    final position = pos.data ?? Duration.zero;
+                    final value = duration.inMilliseconds == 0 ? 0.0 :
+                      position.inMilliseconds.clamp(0, duration.inMilliseconds).toDouble();
+                    return Column(children: [
+                      Slider(value: value,
+                        max: duration.inMilliseconds == 0 ? 1.0 : duration.inMilliseconds.toDouble(),
+                        onChanged: (v) => player.seek(Duration(milliseconds: v.round()))),
+                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [Text(_time(position)), Text(_time(duration))]),
+                    ]);
+                  },
+                ),
+                const SizedBox(height: 12),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+                  IconButton(onPressed: () => playback.toggleShuffle(),
+                    icon: Icon(playback.shuffle ? Icons.shuffle_on : Icons.shuffle)),
+                  IconButton(iconSize: 38, onPressed: () => playback.previous(),
+                    icon: const Icon(Icons.skip_previous)),
+                  StreamBuilder<PlayerState>(
+                    stream: player.playerStateStream,
+                    builder: (context, s) {
+                      final playing = s.data?.playing ?? false;
+                      return IconButton(iconSize: 64, color: const Color(0xFFD4AF37),
+                        onPressed: () => playing ? player.pause() : player.play(),
+                        icon: Icon(playing ? Icons.pause_circle_filled : Icons.play_circle_fill));
+                    },
                   ),
-          ),
-          const SizedBox(height:20),
-          StreamBuilder<Duration>(stream:player.positionStream,initialData:Duration.zero,builder:(context,pos){
-            final duration=player.duration??Duration.zero;
-            final position=pos.data??Duration.zero;
-            final value=duration.inMilliseconds==0?0.0:position.inMilliseconds.clamp(0,duration.inMilliseconds).toDouble();
-            return Column(children:[
-              Slider(value:value,max:duration.inMilliseconds==0?1.0:duration.inMilliseconds.toDouble(),onChanged:(v)=>player.seek(Duration(milliseconds:v.round()))),
-              Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text(_time(position)),Text(_time(duration))]),
-            ]);
-          }),
-          const SizedBox(height:12),
-          Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-            IconButton(onPressed:()=>playback.toggleShuffle(),icon:Icon(playback.shuffle?Icons.shuffle_on:Icons.shuffle)),
-            IconButton(iconSize:38,onPressed:()=>playback.previous(),icon:const Icon(Icons.skip_previous)),
-            StreamBuilder<PlayerState>(stream:player.playerStateStream,builder:(context,s){
-              final playing=s.data?.playing??false;
-              return IconButton(iconSize:64,color:const Color(0xFFD4AF37),onPressed:()=>playing?player.pause():player.play(),icon:Icon(playing?Icons.pause_circle_filled:Icons.play_circle_fill));
-            }),
-            IconButton(iconSize:38,onPressed:()=>playback.next(),icon:const Icon(Icons.skip_next)),
-            IconButton(onPressed:()=>playback.setRepeat(true),icon:const Icon(Icons.repeat_one)),
-          ]),
-          ValueListenableBuilder<bool>(valueListenable:playback.adPlaying,builder:(context,isAd,_)=>Text(isAd?'Sponsored audio • High-Tech Entertainment':'Quality Sound, Global Vibes',style:const TextStyle(color:Colors.white54,fontSize:12))),
-        ]),
-      ),
+                  IconButton(iconSize: 38, onPressed: () => playback.next(),
+                    icon: const Icon(Icons.skip_next)),
+                  IconButton(onPressed: () => playback.setRepeat(true),
+                    icon: const Icon(Icons.repeat_one)),
+                ]),
+                const Text('Quality Sound, Global Vibes',
+                  style: TextStyle(color: Colors.white54, fontSize: 12)),
+              ]),
+            ),
+        );
+      },
     ),
   );
 }

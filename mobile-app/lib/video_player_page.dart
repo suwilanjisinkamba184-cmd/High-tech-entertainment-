@@ -13,9 +13,9 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
   bool ready=false; String? error;
   @override void initState(){
     super.initState();
-    controller=widget.filePath != null
+    controller = (widget.filePath != null
       ? VideoPlayerController.file(File(widget.filePath!))
-      : VideoPlayerController.networkUrl(Uri.parse(widget.url))
+      : VideoPlayerController.networkUrl(Uri.parse(widget.url)))
       ..initialize().then((_){if(mounted)setState(()=>ready=true);})
       .catchError((e){if(mounted)setState(()=>error=e.toString());});
   }

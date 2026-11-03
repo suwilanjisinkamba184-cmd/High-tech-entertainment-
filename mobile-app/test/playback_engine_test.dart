@@ -10,6 +10,10 @@ void main() {
     expect(identical(HtePlayback.instance.player, HtePlayback().player), isTrue);
   });
 
+  test('uses an advert interval of eight completed songs', () {
+    expect(HtePlayback.advertInterval, 8);
+  });
+
   group('Direct audio URL validation', () {
     test('accepts a public Supabase MP3 URL', () {
       final uri = HtePlayback.directAudioUri(

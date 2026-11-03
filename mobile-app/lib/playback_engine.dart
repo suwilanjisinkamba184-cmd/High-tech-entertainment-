@@ -85,6 +85,7 @@ class HtePlayback {
     Map<String, dynamic> track, [
     List<Map<String, dynamic>>? source,
   ]) async {
+    if (adPlaying.value) return;
     _queue = source == null || source.isEmpty
         ? [track]
         : List<Map<String, dynamic>>.from(source);
@@ -195,15 +196,7 @@ class HtePlayback {
         'artist': ad['title'] ?? 'High-Tech Entertainment',
       };
       await player.setAudioSource(
-        AudioSource.uri(
-          uri,
-          tag: MediaItem(
-            id: (ad['id'] ?? uri.toString()).toString(),
-            title: (ad['title'] ?? 'Advertisement').toString(),
-            artist: 'High-Tech Entertainment',
-            album: 'Sponsored audio',
-          ),
-        ),
+        AudioSource.uri(uri),
         preload: true,
       );
       // No in-app skip or pause control is exposed while the splash advert plays.
@@ -246,15 +239,7 @@ class HtePlayback {
         'artist': ad['title'] ?? 'High-Tech Entertainment',
       };
       await player.setAudioSource(
-        AudioSource.uri(
-          uri,
-          tag: MediaItem(
-            id: (ad['id'] ?? uri.toString()).toString(),
-            title: (ad['title'] ?? 'Advertisement').toString(),
-            artist: 'High-Tech Entertainment',
-            album: 'Sponsored audio',
-          ),
-        ),
+        AudioSource.uri(uri),
         preload: true,
       );
       unawaited(_startPlayback());
@@ -318,12 +303,14 @@ class HtePlayback {
   }
 
   Future<void> next() async {
+    if (adPlaying.value) return;
     playbackError.value = null;
     await player.stop();
     await _playNextTrack();
   }
 
   Future<void> previous() async {
+    if (adPlaying.value) return;
     if (player.position > const Duration(seconds: 3)) {
       await player.seek(Duration.zero);
       return;
