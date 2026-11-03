@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:high_tech_entertainment/playback_engine.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test('HtePlayback factory always returns the shared service', () {
     expect(identical(HtePlayback.instance, HtePlayback()), isTrue);
     expect(identical(HtePlayback(), HtePlayback()), isTrue);
