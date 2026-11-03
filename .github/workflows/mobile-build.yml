@@ -213,6 +213,13 @@ jobs:
             echo "::error::One or more required Android signing secrets are missing or empty. Add all four repository Actions secrets before building a distributable APK."
             exit 1
           fi
+      - name: Verify bundled offline startup advertisement
+        working-directory: ${{ runner.temp }}/hte_app
+        run: |
+          if [ ! -s assets/AUD-20261103-WA0002.mp3 ]; then
+            echo "::error::Missing mobile-app/assets/AUD-20261103-WA0002.mp3. Add the approved High-Tech Entertainment advert MP3 to that exact repository path so the startup advert works offline."
+            exit 1
+          fi
       - name: Install dependencies and generate branded launcher icon
         working-directory: ${{ runner.temp }}/hte_app
         run: |

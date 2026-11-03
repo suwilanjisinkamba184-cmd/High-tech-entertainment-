@@ -155,18 +155,9 @@ class _StartupGateState extends State<StartupGate> {
       });
     }
     try {
-      if (!_supabaseInitialized) {
-        await Supabase.initialize(
-          url: supabaseUrl,
-          publishableKey: supabaseKey,
-        );
-        _supabaseInitialized = true;
-      }
-      // The background audio handler MUST finish initialising before the
-      // singleton AudioPlayer is constructed. Mark it ready only after init
-      // succeeds: marking an attempt before awaiting it leaves just_audio's
-      // late _audioHandler unset if init throws, and a retry then creates a
-      // player against an uninitialised handler (the reported crash).
+      // Initialise the one native audio service first. The bundled startup
+      // advert must play before any network-dependent Supabase work so it can
+      // run on the very first launch with airplane mode enabled.
       if (defaultTargetPlatform == TargetPlatform.android &&
           !_audioBackgroundInitialized) {
         await JustAudioBackground.init(
@@ -178,9 +169,20 @@ class _StartupGateState extends State<StartupGate> {
       }
       playback = HtePlayback();
       player = playback.player;
-      // Keep the branded splash visible for the complete startup advert.
-      // A short network timeout lets the app open normally when offline.
+
+      // This source is an APK asset, not a remote URL. The splash remains up
+      // until the entire advert has finished playing.
       await playback.playStartupAd();
+
+      // Authentication/data services initialise only after the offline
+      // startup experience has completed.
+      if (!_supabaseInitialized) {
+        await Supabase.initialize(
+          url: supabaseUrl,
+          publishableKey: supabaseKey,
+        );
+        _supabaseInitialized = true;
+      }
       if (mounted) {
         setState(() {
           _ready = true;
@@ -775,6 +777,34 @@ class TrackList extends StatelessWidget {
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
               IconButton(tooltip: 'Share track', onPressed: () => Share.share('${item['title']} — ${item['artist']}\nHigh-Tech Entertainment'), icon: const Icon(Icons.share_outlined, size: 20)),
               IconButton(
+                tooltip: 'Download for offline listening',
+                icon: const Icon(Icons.download_for_offline_outlined, size: 21),
+                onPressed: () async {
+                  try {
+                    final url = (item['audio_url'] ?? '').toString().trim();
+                    if (isSpotifyUrl(url)) {
+                      throw StateError('Spotify streams cannot be downloaded here.');
+                    }
+                    await downloadRemoteMedia(
+                      url: url,
+                      title: (item['title'] ?? 'High-Tech track').toString(),
+                      kind: 'mp3',
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Track saved to your Offline media library.')),
+                      );
+                    }
+                  } catch (error) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Download failed: $error')),
+                      );
+                    }
+                  }
+                },
+              ),
+              IconButton(
               icon: const Icon(Icons.play_circle_fill, color: Color(0xFFD4AF37), size: 34),
               onPressed: () async {
                 final rawUrl = (item['audio_url'] ?? '').toString().trim();
@@ -994,7 +1024,47 @@ class VideosTab extends StatelessWidget {
               leading: SizedBox(width: 62, height: 55, child: MediaCover(url: item['thumbnail_url']?.toString(), height: 55)),
               title: Text((item['title'] ?? 'Video').toString()),
               subtitle: Text((item['artist'] ?? 'High-Tech Entertainment').toString()),
-              trailing: const Icon(Icons.open_in_new, color: Color(0xFFD4AF37)),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: 'Download video for offline viewing',
+                    icon: const Icon(Icons.download_for_offline_outlined, color: Color(0xFFD4AF37)),
+                    onPressed: () async {
+                      try {
+                        final raw = (item['video_url'] ?? '').toString().trim();
+                        final uri = Uri.tryParse(raw);
+                        final isDirect = uri != null &&
+                            (uri.scheme == 'https' || uri.scheme == 'http') &&
+                            uri.host.isNotEmpty &&
+                            !raw.contains('youtube.com') &&
+                            !raw.contains('youtu.be') &&
+                            !raw.contains('vimeo.com');
+                        if (!isDirect) {
+                          throw StateError('Only direct video-file links can be downloaded. YouTube and Vimeo must be watched online.');
+                        }
+                        await downloadRemoteMedia(
+                          url: raw,
+                          title: (item['title'] ?? 'High-Tech video').toString(),
+                          kind: 'mp4',
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Video saved to your Offline media library.')),
+                          );
+                        }
+                      } catch (error) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Video download failed: $error')),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                  const Icon(Icons.open_in_new, color: Color(0xFFD4AF37)),
+                ],
+              ),
               onTap: () async {
                 final raw=(item['video_url']??'').toString();
                 final link=Uri.tryParse(raw);
@@ -1525,8 +1595,6 @@ class _SettingsPageState extends State<SettingsPage> {
   bool checking = false;
   bool autoplaySetting = true;
   bool shuffleSetting = false;
-  bool audioAdsSetting = true;
-  int adFrequency = 3;
 
   @override
   void initState() { super.initState(); _loadVersion(); _loadPlaybackSettings(); }
@@ -1535,9 +1603,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs=await SharedPreferences.getInstance();
     autoplaySetting=prefs.getBool('hte_autoplay')??true;
     shuffleSetting=prefs.getBool('hte_shuffle')??false;
-    audioAdsSetting=prefs.getBool('hte_audio_ads')??true;
-    adFrequency=prefs.getInt('hte_ad_frequency')??3;
-    playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting; playback.audioAdsEnabled=audioAdsSetting; playback.adEvery=adFrequency;
+    playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting; playback.audioAdsEnabled=true; playback.adEvery=HtePlayback.advertInterval;
     if(mounted)setState((){});
   }
   Future<void> _savePlaybackSetting(String key,Object value) async {
@@ -1650,8 +1716,11 @@ class _SettingsPageState extends State<SettingsPage> {
       Card(child: Column(children: [
         SwitchListTile(title:const Text('Smart Autoplay'),subtitle:const Text('Continue with recommended music when the queue ends'),value:autoplaySetting,onChanged:(v){setState(()=>autoplaySetting=v);playback.autoplay=v;_savePlaybackSetting('hte_autoplay',v);}),
         SwitchListTile(title:const Text('Shuffle'),subtitle:const Text('Play queued tracks in random order'),value:shuffleSetting,onChanged:(v){setState(()=>shuffleSetting=v);playback.shuffle=v;player.setShuffleModeEnabled(v);_savePlaybackSetting('hte_shuffle',v);}),
-        SwitchListTile(title:const Text('HT Audio Ads'),subtitle:const Text('Play promotional audio between tracks'),value:audioAdsSetting,onChanged:(v){setState(()=>audioAdsSetting=v);playback.audioAdsEnabled=v;_savePlaybackSetting('hte_audio_ads',v);}),
-        ListTile(title:const Text('Ad interval'),subtitle:const Text('Play a promotional clip after this many songs'),trailing:DropdownButton<int>(value:adFrequency,items:const [DropdownMenuItem(value:3,child:Text('3 songs')),DropdownMenuItem(value:4,child:Text('4 songs'))],onChanged:(v){if(v!=null){setState(()=>adFrequency=v);playback.adEvery=v;_savePlaybackSetting('hte_ad_frequency',v);}})),
+        const ListTile(
+          leading: Icon(Icons.campaign_outlined, color: Color(0xFFD4AF37)),
+          title: Text('HT Audio Advertisements'),
+          subtitle: Text('The startup advert plays before the app opens. The same advert plays after every 8 completed songs. Advert playback cannot be skipped.'),
+        ),
       ])),
       const SizedBox(height: 12),
       Card(child: Column(children: [
