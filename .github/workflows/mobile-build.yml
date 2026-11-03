@@ -85,7 +85,16 @@ jobs:
               if permission not in text:
                   text = text.replace("<application", f'    <uses-permission android:name="{permission}" />\n    <application', 1)
           text = re.sub(r'android:label="[^"]*"', 'android:label="High-Tech Entertainment"', text)
-          text = re.sub(r'<activity android:name="[^"]+"', '<activity android:name="com.ryanheise.audioservice.AudioServiceActivity"', text, count=1)
+          activity_pattern = r'(<activity\\b(?:(?!>).)*?\\bandroid:name=")[^"]+"'
+          text, activity_count = re.subn(
+              activity_pattern,
+              r'\\1com.ryanheise.audioservice.AudioServiceActivity"',
+              text,
+              count=1,
+              flags=re.S,
+          )
+          if activity_count != 1 or 'android:name="com.ryanheise.audioservice.AudioServiceActivity"' not in text:
+              raise SystemExit("Could not set the required AudioServiceActivity in AndroidManifest.xml")
           if "android:scheme=\"com.hightechentertainment.app\"" not in text:
               intent = """<intent-filter>
                           <action android:name="android.intent.action.VIEW" />
