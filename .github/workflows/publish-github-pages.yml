@@ -1,8 +1,9 @@
 name: Manual legacy GitHub Pages fallback
 
-# Cloudflare Pages is the primary deployment target. Keep this workflow manual-only
-# so pushes to main do not publish a second, competing canonical website.
+# GitHub Pages is the canonical public deployment. Publish every validated main update.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
