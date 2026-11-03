@@ -67,7 +67,7 @@ for stylesheet in root.rglob("*.css"):
             missing.append(f"{stylesheet}: missing CSS reference: {value}")
 
 if missing:
-    raise SystemExit("\\n".join(missing))
+    raise SystemExit("\n".join(missing))
 print("Sitemap XML, local HTML references, and CSS assets are valid.")
 PY
 
