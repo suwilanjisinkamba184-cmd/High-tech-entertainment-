@@ -1,6 +1,6 @@
 # High-Tech Entertainment — Native Android App
 
-The Flutter application in this folder is the native Android client for High-Tech Entertainment.\n\nOfficial website: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/ Current app version: **2.1.6**.
+The Flutter application in this folder is the native Android client for High-Tech Entertainment.\n\nOfficial website: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/ Current app version: **2.1.7**.
 
 ## Experiences
 
