@@ -54,3 +54,16 @@ flutter build apk --release
 ```
 
 The CI workflow also builds Windows separately. iOS distribution is not currently part of the supported release target.
+
+
+## Single-instance audio playback
+
+HT Music uses one process-wide `HtePlayback.instance` service and one `just_audio` `AudioPlayer`. The service owns the active track, queue, completion handling, audio-ad insertion, and playback error state. The mini-player, full player, queue screen, and all catalogue screens must read and control that same service; do not create `AudioPlayer()` instances in widgets, tabs, routes, or screen state objects.
+
+- Background audio is initialized once at application startup with `JustAudioBackground.init` before the shared playback service is first accessed.
+- Track changes replace the source on the shared player; navigation must not dispose or recreate it.
+- The notification and lock-screen controls are backed by the same player and media metadata.
+- The service is exposed through `HtePlayback.instance`. The `HtePlayback()` factory remains as a compatibility entry point and returns the same singleton.
+- Run `flutter test` and `flutter analyze lib` after playback changes. Verify play/pause, previous/next, navigation persistence, notification controls, and locked-screen playback on a physical Android device.
+
+A singleton prevents duplicate app-owned player instances, but a successful build alone does not prove Android background playback on every device; physical-device verification remains required.
