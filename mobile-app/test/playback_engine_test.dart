@@ -2,6 +2,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:high_tech_entertainment/playback_engine.dart';
 
 void main() {
+  test('HtePlayback factory always returns the shared service', () {
+    expect(identical(HtePlayback.instance, HtePlayback()), isTrue);
+    expect(identical(HtePlayback(), HtePlayback()), isTrue);
+    expect(identical(HtePlayback.instance.player, HtePlayback().player), isTrue);
+  });
+
   group('Direct audio URL validation', () {
     test('accepts a public Supabase MP3 URL', () {
       final uri = HtePlayback.directAudioUri(
