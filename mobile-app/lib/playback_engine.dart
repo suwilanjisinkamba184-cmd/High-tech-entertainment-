@@ -52,7 +52,7 @@ class HtePlayback {
   bool _handlingCompletion = false;
   bool _playingStartupAd = false;
   static const int advertInterval = 8;
-  static const String startupAdvertAsset = 'assets/startup_ad.mp3';
+  static const String startupAdvertAsset = 'assets/AUD-20261103-WA0002.mp3';
   int adEvery = advertInterval;
 
   String _friendlyError(Object error) {
