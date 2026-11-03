@@ -19,9 +19,17 @@ GitHub and Cloudflare both publish the public website from the same `main` branc
 | Public website | Repository root | Music catalogue, artists, releases, videos, player and contact/booking |
 | Founder Studio | `admin/` | Administrative tools for managing platform content and enquiries |
 | Account pages | `account/` | User account and profile experience |
-| Flutter application | `mobile-app/` | Android and Windows application source |\n\n### Music platform features\n\n- Public streaming catalogue with title/artist/genre search and genre filtering.\n- Device playlist and favourites for guests; authenticated favourites and the personal playlist sync through Supabase.\n- Listening activity is recorded to the signed-in user’s private listening history.\n- Founder Studio includes track metadata editing and live counts for unpublished tracks, videos and enquiries.\n- Track edits, publishing and uploads remain protected by Supabase Row Level Security; no service-role key is shipped to the browser.
+| Flutter application | `mobile-app/` | Android and Windows application source |
 | Supabase setup | Root SQL files and `database/` | Database schema, policies and migrations |
 | GitHub skills | `.github/skills/` | Design and engineering guidance for supported coding agents |
+
+### Music platform features
+
+- Public streaming catalogue with title/artist/genre search and genre filtering.
+- Device playlist and favourites for guests; authenticated favourites and the personal playlist sync through Supabase.
+- Listening activity is recorded to the signed-in user’s private listening history.
+- Founder Studio includes track metadata editing and live counts for unpublished tracks, videos and enquiries.
+- Track edits, publishing and uploads remain protected by Supabase Row Level Security; no service-role key is shipped to the browser.
 
 ## Technology
 
