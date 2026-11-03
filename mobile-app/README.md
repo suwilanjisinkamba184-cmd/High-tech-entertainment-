@@ -11,7 +11,7 @@ The Flutter application in this folder is the native Android client for High-Tec
 - Artist catalogue, music videos, search, track sharing and notifications placeholder.
 - Native audio playback, queue, background controls, shuffle, autoplay and sponsored audio.
 - Spotify release links and embeds.
-- App settings, privacy, account deletion and GitHub release update checks.
+- App settings, privacy, account deletion and in-app GitHub release updates with download progress, APK integrity checks and Android's user-approved package installer.
 
 ### HT Admin — private founder studio
 - Founder-only entry for the configured owner account.
