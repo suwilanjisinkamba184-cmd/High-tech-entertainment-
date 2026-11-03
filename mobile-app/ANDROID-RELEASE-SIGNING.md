@@ -71,3 +71,10 @@ com.hightechentertainment.app
 ```
 
 The workflow generates the Android platform scaffold and configures the application identity. Check the application ID in the generated AAB before creating the Play Console app. Package names are permanent in Play Console.
+
+
+## Native Google sign-in configuration
+- Keep the existing Google Cloud project and OAuth clients. Do not replace the configured client IDs.
+- Add the existing **Web application OAuth client ID** as the GitHub Actions repository secret named `GOOGLE_WEB_CLIENT_ID`. Do not use the Android OAuth client ID here.
+- The native Android sign-in flow uses Google Credential Manager through `google_sign_in` and exchanges the ID token with Supabase Auth. If the secret is absent, the app temporarily retains the existing Supabase browser OAuth flow.
+- The Android OAuth client must match package name `com.hightechentertainment.app` and the SHA-1 fingerprint of the upload certificate used by GitHub Actions. The existing Web client ID must also be configured in Supabase Authentication → Providers → Google.
