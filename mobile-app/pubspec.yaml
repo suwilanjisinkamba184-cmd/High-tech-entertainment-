@@ -33,7 +33,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/high-tech-logo.svg
-    - assets/startup_ad.mp3
+    - assets/AUD-20261103-WA0002.mp3
 
 flutter_launcher_icons:
   android: true
