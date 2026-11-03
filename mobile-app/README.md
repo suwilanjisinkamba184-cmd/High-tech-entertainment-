@@ -53,7 +53,7 @@ flutter test
 flutter build apk --release
 ```
 
-The CI workflow also builds Windows separately. iOS distribution is not currently part of the supported release target.
+Windows source files are preserved, but Windows build execution and release packaging are paused. The current CI validation and distributable release target is Android only. iOS distribution is not currently part of the supported release target.
 
 
 ## Single-instance audio playback
