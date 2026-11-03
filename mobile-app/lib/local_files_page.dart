@@ -111,8 +111,7 @@ class _LocalFilesTabState extends State<LocalFilesTab> {
           restored.add(PlatformFile(
             name: item['name']?.toString() ?? file.uri.pathSegments.last,
             size: await file.length(),
-            path: path,
-            extension: item['extension']?.toString(),
+            path: path
           ));
         }
       }
@@ -181,8 +180,7 @@ class _LocalFilesTabState extends State<LocalFilesTab> {
           persisted.add(PlatformFile(
             name: selected.name,
             size: await copied.length(),
-            path: copied.path,
-            extension: extension,
+            path: copied.path
           ));
         } catch (error) {
           debugPrint('Could not save selected media ${selected.name}: $error');
@@ -224,7 +222,7 @@ class _LocalFilesTabState extends State<LocalFilesTab> {
     if (index < 0) return;
 
     try {
-      await playback.playTrack(queue[index], queue);
+      await HtePlayback.instance.playTrack(queue[index], queue);
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
