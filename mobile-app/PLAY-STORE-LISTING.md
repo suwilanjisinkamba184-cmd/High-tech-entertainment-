@@ -27,7 +27,7 @@ Music. Beats. Production. Beyond.
 
 Catalogue availability depends on the content published by High-Tech Entertainment. An internet connection is required for online catalogue content, account access and streaming.
 
-## Store contact and graphics — still required
+## Developer information\n- **Developer brand:** High Technologies\n- **Product:** High-Tech Entertainment\n- **Founder:** Suwilanji Sinkamba\n- **Location:** Kitwe, Zambia\n- **Mission:** Combining innovative technology, music, entertainment and digital experiences in one platform.\n- **In-app copyright:** Copyright 2026 High Technologies.\n- Note: the public developer account name shown by Google Play is controlled separately in Play Console.\n\n## Store contact and graphics — still required
 - Support email address: obtain and verify the official HTE support email.
 - Website: https://high-techmedia.netlify.app/
 - Privacy policy: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html
