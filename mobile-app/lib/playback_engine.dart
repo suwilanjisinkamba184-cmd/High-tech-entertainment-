@@ -50,7 +50,9 @@ class HtePlayback {
   int _index = -1, _tracksSinceAd = 0;
   bool autoplay = true, shuffle = false, audioAdsEnabled = true;
   bool _handlingCompletion = false;
-  int adEvery = 3;
+  static const int advertInterval = 8;
+  int adEvery = advertInterval;
+  Map<String, dynamic>? _cachedAdvert;
 
   String _friendlyError(Object error) {
     final message = error.toString();
@@ -100,9 +102,10 @@ class HtePlayback {
   }
 
   Future<void> _startTrack(Map<String, dynamic> track) async {
-    final uri = directAudioUri(track['audio_url']);
-    if (uri == null) {
-      const message = 'This item does not contain a direct audio-file URL. Spotify links must be played in Spotify.';
+    final localPath = (track['local_path'] ?? '').toString().trim();
+    final uri = localPath.isEmpty ? directAudioUri(track['audio_url']) : null;
+    if (localPath.isEmpty && uri == null) {
+      const message = 'This item does not contain a playable audio file.';
       playbackError.value = message;
       throw StateError(message);
     }
@@ -117,23 +120,23 @@ class HtePlayback {
 
     // setAudioSource waits for the media source to be prepared. Playback itself
     // must remain unawaited here because its Future completes when the track ends.
+    final mediaTag = MediaItem(
+      id: (track['id'] ?? localPath).toString(),
+      title: title,
+      artist: artist,
+      album: 'High-Tech Entertainment',
+      artUri: artwork != null && artwork.hasScheme ? artwork : null,
+    );
     await player.setAudioSource(
-      AudioSource.uri(
-        uri,
-        tag: MediaItem(
-          id: (track['id'] ?? uri.toString()).toString(),
-          title: title,
-          artist: artist,
-          album: 'High-Tech Entertainment',
-          artUri: artwork != null && artwork.hasScheme ? artwork : null,
-        ),
-      ),
+      localPath.isNotEmpty
+          ? AudioSource.file(localPath, tag: mediaTag)
+          : AudioSource.uri(uri!, tag: mediaTag),
       preload: true,
     );
     unawaited(_startPlayback());
 
     final user = Supabase.instance.client.auth.currentUser;
-    if (user != null && track['id'] != null) {
+    if (user != null && track['id'] != null && localPath.isEmpty) {
       Supabase.instance.client
           .from('listening_history')
           .insert({'user_id': user.id, 'track_id': track['id']})
@@ -148,6 +151,71 @@ class HtePlayback {
     } catch (error) {
       playbackError.value = _friendlyError(error);
       debugPrint('HTE playback start failed: $error');
+    }
+  }
+
+  Future<Map<String, dynamic>?> _loadAdvert() async {
+    if (_cachedAdvert != null) return _cachedAdvert;
+    try {
+      final result = await Supabase.instance.client
+          .from('audio_ads')
+          .select('id,title,audio_url,ends_at')
+          .eq('is_published', true)
+          .or('starts_at.is.null,starts_at.lte.${DateTime.now().toUtc().toIso8601String()}')
+          .order('priority', ascending: false)
+          .limit(10)
+          .timeout(const Duration(seconds: 5));
+      final now = DateTime.now().toUtc();
+      final ads = List<Map<String, dynamic>>.from(result).where((ad) {
+        final end = DateTime.tryParse((ad['ends_at'] ?? '').toString());
+        return directAudioUri(ad['audio_url']) != null &&
+            (end == null || end.isAfter(now));
+      }).toList();
+      if (ads.isEmpty) return null;
+      // Cache one advert so startup and every eighth-song placement use
+      // exactly the same sound for this app session.
+      _cachedAdvert = ads.first;
+      return _cachedAdvert;
+    } catch (error) {
+      debugPrint('HTE advert lookup unavailable: $error');
+      return null;
+    }
+  }
+
+  Future<void> playStartupAd() async {
+    if (!audioAdsEnabled) return;
+    try {
+      final ad = await _loadAdvert();
+      if (ad == null) return;
+      final uri = directAudioUri(ad['audio_url']);
+      if (uri == null) return;
+      adPlaying.value = true;
+      currentTrack.value = {
+        'title': 'Advertisement',
+        'artist': ad['title'] ?? 'High-Tech Entertainment',
+      };
+      await player.setAudioSource(
+        AudioSource.uri(
+          uri,
+          tag: MediaItem(
+            id: (ad['id'] ?? uri.toString()).toString(),
+            title: (ad['title'] ?? 'Advertisement').toString(),
+            artist: 'High-Tech Entertainment',
+            album: 'Sponsored audio',
+          ),
+        ),
+        preload: true,
+      );
+      // No in-app skip or pause control is exposed while the splash advert plays.
+      await player.play().timeout(
+        const Duration(seconds: 60),
+        onTimeout: () async => player.stop(),
+      );
+    } catch (error) {
+      debugPrint('HTE startup advert playback unavailable: $error');
+    } finally {
+      adPlaying.value = false;
+      currentTrack.value = null;
     }
   }
 
@@ -167,23 +235,10 @@ class HtePlayback {
 
   Future<bool> _playAd() async {
     try {
-      final result = await Supabase.instance.client
-          .from('audio_ads')
-          .select('id,title,audio_url,ends_at')
-          .eq('is_published', true)
-          .or('starts_at.is.null,starts_at.lte.${DateTime.now().toUtc().toIso8601String()}')
-          .order('priority', ascending: false)
-          .limit(10);
-      final now = DateTime.now().toUtc();
-      final ads = List<Map<String, dynamic>>.from(result).where((ad) {
-        final end = DateTime.tryParse((ad['ends_at'] ?? '').toString());
-        return directAudioUri(ad['audio_url']) != null &&
-            (end == null || end.isAfter(now));
-      }).toList();
-      if (ads.isEmpty) return false;
-
-      final ad = ads[Random().nextInt(ads.length)];
-      final uri = directAudioUri(ad['audio_url'])!;
+      final ad = await _loadAdvert();
+      if (ad == null) return false;
+      final uri = directAudioUri(ad['audio_url']);
+      if (uri == null) return false;
       adPlaying.value = true;
       playbackError.value = null;
       currentTrack.value = {

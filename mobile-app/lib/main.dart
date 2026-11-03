@@ -12,6 +12,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'playback_engine.dart';
 import 'video_player_page.dart';
+import 'local_files_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -177,7 +178,9 @@ class _StartupGateState extends State<StartupGate> {
       }
       playback = HtePlayback();
       player = playback.player;
-      await Future<void>.delayed(const Duration(milliseconds: 700));
+      // Keep the branded splash visible for the complete startup advert.
+      // A short network timeout lets the app open normally when offline.
+      await playback.playStartupAd();
       if (mounted) {
         setState(() {
           _ready = true;
@@ -1094,11 +1097,19 @@ class LibraryTab extends StatelessWidget {
   const LibraryTab({super.key});
   @override
   Widget build(BuildContext context) => DefaultTabController(
-    length: 2,
+    length: 3,
     child: Column(children: [
       const Brand(tagline: 'YOUR MUSIC COLLECTION'),
-      const TabBar(tabs:[Tab(text:'Favourites'),Tab(text:'Playlists')],labelColor:Color(0xFFD9B96E)),
-      const Expanded(child:TabBarView(children:[SavedTab(),PlaylistsTab()])),
+      const TabBar(tabs:[
+        Tab(text:'Favourites'),
+        Tab(text:'Playlists'),
+        Tab(text:'On device'),
+      ],labelColor:Color(0xFFD9B96E)),
+      const Expanded(child:TabBarView(children:[
+        SavedTab(),
+        PlaylistsTab(),
+        LocalFilesTab(),
+      ])),
     ]),
   );
 }

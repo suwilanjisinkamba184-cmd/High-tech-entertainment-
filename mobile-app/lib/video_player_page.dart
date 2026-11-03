@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 class HteVideoPlayerPage extends StatefulWidget {
-  const HteVideoPlayerPage({super.key,required this.url,required this.title});
+  const HteVideoPlayerPage({super.key,required this.url,required this.title,this.filePath});
   final String url,title;
+  final String? filePath;
   @override State<HteVideoPlayerPage> createState()=>_HteVideoPlayerPageState();
 }
 class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
@@ -11,7 +13,9 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
   bool ready=false; String? error;
   @override void initState(){
     super.initState();
-    controller=VideoPlayerController.networkUrl(Uri.parse(widget.url))
+    controller=widget.filePath != null
+      ? VideoPlayerController.file(File(widget.filePath!))
+      : VideoPlayerController.networkUrl(Uri.parse(widget.url))
       ..initialize().then((_){if(mounted)setState(()=>ready=true);})
       .catchError((e){if(mounted)setState(()=>error=e.toString());});
   }
