@@ -7,9 +7,23 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Native audio playback for High-Tech Entertainment.
+///
+/// This is the application's single playback service. Always obtain it through
+/// [HtePlayback.instance] (or the compatibility factory [HtePlayback()]);
+/// never construct an AudioPlayer in a screen, widget, or tab. The one player
+/// owns the queue, notification session, and playback state for the app.
 /// Spotify URLs are intentionally handled by the Spotify embed screen; this
 /// engine only accepts direct audio-file URLs that just_audio can stream.
 class HtePlayback {
+  HtePlayback._();
+
+  /// Process-wide singleton shared by every screen and mini-player.
+  static final HtePlayback instance = HtePlayback._();
+
+  /// Preserve existing call sites while ensuring they all receive one service.
+  factory HtePlayback() => instance;
+
+  /// The only AudioPlayer instance permitted in the HT Music application.
   final AudioPlayer player = AudioPlayer();
   final ValueNotifier<Map<String, dynamic>?> currentTrack = ValueNotifier(null);
   final ValueNotifier<bool> adPlaying = ValueNotifier(false);
