@@ -1525,7 +1525,6 @@ class _SettingsPageState extends State<SettingsPage> {
   bool checking = false;
   bool autoplaySetting = true;
   bool shuffleSetting = false;
-  int adFrequency = 8;
 
   @override
   void initState() { super.initState(); _loadVersion(); _loadPlaybackSettings(); }
@@ -1534,7 +1533,6 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs=await SharedPreferences.getInstance();
     autoplaySetting=prefs.getBool('hte_autoplay')??true;
     shuffleSetting=prefs.getBool('hte_shuffle')??false;
-    adFrequency=HtePlayback.advertInterval;
     playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting; playback.audioAdsEnabled=true; playback.adEvery=HtePlayback.advertInterval;
     if(mounted)setState((){});
   }
