@@ -14,6 +14,66 @@ void main() {
     expect(HtePlayback.advertInterval, 8);
   });
 
+  group('Completed track advert scheduling', () {
+    test('triggers only after eight completed tracks, then starts a new cycle', () {
+      final counter = CompletedTrackAdCounter();
+
+      for (var track = 1; track < 8; track++) {
+        expect(
+          counter.recordCompletion(interval: 8, enabled: true),
+          isFalse,
+          reason: 'Track $track must not trigger an advert',
+        );
+      }
+
+      expect(counter.completedTracks, 7);
+      expect(counter.recordCompletion(interval: 8, enabled: true), isTrue);
+      // A due advert remains due until playback confirms it has completed.
+      expect(counter.completedTracks, 8);
+      expect(counter.recordCompletion(interval: 8, enabled: true), isTrue);
+      counter.reset();
+      expect(counter.completedTracks, 0);
+      for (var track = 1; track < 8; track++) {
+        expect(counter.recordCompletion(interval: 8, enabled: true), isFalse);
+      }
+      expect(counter.recordCompletion(interval: 8, enabled: true), isTrue);
+    });
+
+    test('manual track selection does not reset completed-track count', () {
+      final counter = CompletedTrackAdCounter();
+      for (var track = 0; track < 5; track++) {
+        expect(counter.recordCompletion(interval: 8, enabled: true), isFalse);
+      }
+
+      // Selecting another track is intentionally not a counter operation.
+      expect(counter.completedTracks, 5);
+      for (var track = 0; track < 2; track++) {
+        expect(counter.recordCompletion(interval: 8, enabled: true), isFalse);
+      }
+      expect(counter.recordCompletion(interval: 8, enabled: true), isTrue);
+      expect(counter.completedTracks, 8);
+    });
+
+    test('disabled ads do not accumulate hidden completions', () {
+      final counter = CompletedTrackAdCounter();
+      for (var track = 0; track < 10; track++) {
+        expect(counter.recordCompletion(interval: 8, enabled: false), isFalse);
+      }
+      expect(counter.completedTracks, 0);
+      for (var track = 0; track < 7; track++) {
+        expect(counter.recordCompletion(interval: 8, enabled: true), isFalse);
+      }
+      expect(counter.recordCompletion(interval: 8, enabled: true), isTrue);
+    });
+
+    test('invalid intervals never trigger adverts', () {
+      final counter = CompletedTrackAdCounter();
+      expect(counter.recordCompletion(interval: 0, enabled: true), isFalse);
+      expect(counter.recordCompletion(interval: -1, enabled: true), isFalse);
+      expect(counter.completedTracks, 0);
+    });
+  });
+
   group('Direct audio URL validation', () {
     test('accepts a public Supabase MP3 URL', () {
       final uri = HtePlayback.directAudioUri(

@@ -6,6 +6,24 @@ import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// Counts completed music tracks independently of track selection.
+///
+/// Starting, skipping to, or manually selecting a track must not reset this
+/// count. The counter resets only after the scheduled advert is due.
+class CompletedTrackAdCounter {
+  int _completedTracks = 0;
+
+  int get completedTracks => _completedTracks;
+
+  bool recordCompletion({required int interval, required bool enabled}) {
+    if (!enabled || interval <= 0) return false;
+    _completedTracks++;
+    return _completedTracks >= interval;
+  }
+
+  void reset() => _completedTracks = 0;
+}
+
 /// Native audio playback for High-Tech Entertainment.
 ///
 /// This is the application's single playback service. Always obtain it through
@@ -47,7 +65,8 @@ class HtePlayback {
   final ValueNotifier<String?> playbackError = ValueNotifier(null);
 
   List<Map<String, dynamic>> _queue = [];
-  int _index = -1, _tracksSinceAd = 0;
+  int _index = -1;
+  final CompletedTrackAdCounter _adCounter = CompletedTrackAdCounter();
   bool autoplay = true, shuffle = false, audioAdsEnabled = true;
   bool _handlingCompletion = false;
   bool _playingStartupAd = false;
@@ -98,7 +117,8 @@ class HtePlayback {
       _index = 0;
     }
     queueView.value = List<Map<String, dynamic>>.from(_queue);
-    _tracksSinceAd = 0;
+    // Do not reset the advert counter here: users may select tracks manually.
+    // Only eight genuinely completed music tracks should trigger an advert.
     adPlaying.value = false;
     await _startTrack(track);
   }
@@ -120,8 +140,6 @@ class HtePlayback {
     final artist = (track['artist'] ?? 'High-Tech Entertainment').toString();
     final artwork = Uri.tryParse((track['cover_url'] ?? '').toString());
 
-    // setAudioSource waits for the media source to be prepared. Playback itself
-    // must remain unawaited here because its Future completes when the track ends.
     final mediaTag = MediaItem(
       id: (track['id'] ?? localPath).toString(),
       title: title,
@@ -137,13 +155,21 @@ class HtePlayback {
     );
     unawaited(_startPlayback());
 
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user != null && track['id'] != null && localPath.isEmpty) {
-      Supabase.instance.client
-          .from('listening_history')
-          .insert({'user_id': user.id, 'track_id': track['id']})
-          .then((_) {})
-          .catchError((_) {});
+    // Local files must remain playable without Supabase or internet access.
+    // Listening history is best-effort metadata and must never fail playback.
+    if (localPath.isEmpty) {
+      try {
+        final user = Supabase.instance.client.auth.currentUser;
+        if (user != null && track['id'] != null) {
+          Supabase.instance.client
+              .from('listening_history')
+              .insert({'user_id': user.id, 'track_id': track['id']})
+              .then((_) {})
+              .catchError((_) {});
+        }
+      } catch (error) {
+        debugPrint('Skipping listening history while Supabase is unavailable: $error');
+      }
     }
   }
 
@@ -169,14 +195,22 @@ class HtePlayback {
     };
     try {
       await player.setAudioSource(
-        AudioSource.asset(startupAdvertAsset),
+        AudioSource.asset(
+          startupAdvertAsset,
+          tag: MediaItem(
+            id: 'hte-audio-advert',
+            title: 'Advertisement',
+            artist: 'High-Tech Entertainment',
+            album: 'High-Tech Entertainment',
+          ),
+        ),
         preload: true,
       );
       await player.play();
     } catch (error) {
       playbackError.value = _friendlyError(error);
       debugPrint('HTE bundled startup advert failed: $error');
-      rethrow; // Never silently bypass the required startup advertisement.
+      rethrow;
     } finally {
       _playingStartupAd = false;
       adPlaying.value = false;
@@ -185,19 +219,17 @@ class HtePlayback {
   }
 
   Future<void> _advanceAfterCompletion() async {
-    // Startup audio is deliberately not part of the music queue.
     if (_playingStartupAd) return;
     if (adPlaying.value) {
+      // The interval is consumed only after the advert has actually completed.
+      _adCounter.reset();
       adPlaying.value = false;
       await _playNextTrack();
       return;
     }
-    _tracksSinceAd++;
-    if (audioAdsEnabled && _tracksSinceAd >= adEvery) {
-      _tracksSinceAd = 0;
+    if (_adCounter.recordCompletion(interval: adEvery, enabled: audioAdsEnabled)) {
       final advertStarted = await _playAd();
       if (advertStarted) return;
-      // Do not continue to the next song when a mandatory advert fails.
       await player.stop();
       return;
     }
@@ -212,10 +244,16 @@ class HtePlayback {
         'title': 'Advertisement',
         'artist': 'High-Tech Entertainment',
       };
-      // Use the same bundled advert after every eight completed songs.
-      // This also works offline and never creates another AudioPlayer.
       await player.setAudioSource(
-        AudioSource.asset(startupAdvertAsset),
+        AudioSource.asset(
+          startupAdvertAsset,
+          tag: MediaItem(
+            id: 'hte-audio-advert',
+            title: 'Advertisement',
+            artist: 'High-Tech Entertainment',
+            album: 'High-Tech Entertainment',
+          ),
+        ),
         preload: true,
       );
       unawaited(_startPlayback());

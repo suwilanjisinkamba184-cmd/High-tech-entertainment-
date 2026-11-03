@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
@@ -23,11 +24,16 @@ import 'package:webview_flutter/webview_flutter.dart';
 const supabaseUrl = 'https://wqrxacjbsldbnoekbkbf.supabase.co';
 const supabaseKey = 'sb_publishable_hB_aRh-dnicpRQq3wiRtWg_JTdhmMda';
 const authRedirect = 'com.hightechentertainment.app://login-callback';
+const googleWebClientId = String.fromEnvironment('HTE_GOOGLE_WEB_CLIENT_ID');
+bool _googleSignInInitialized = false;
 final db = Supabase.instance.client;
 bool _supabaseInitialized = false;
 bool _audioBackgroundInitialized = false;
-late final HtePlayback playback;
-late final AudioPlayer player;
+// Both references resolve to the single process-wide playback service.
+// Top-level finals are lazy, so the service is first created after the Android
+// audio background handler has been initialized in StartupGate.
+final HtePlayback playback = HtePlayback.instance;
+final AudioPlayer player = HtePlayback.instance.player;
 final ValueNotifier<int> favouritesRevision = ValueNotifier<int>(0);
 
 Future<void> main() async {
@@ -140,18 +146,39 @@ class StartupGate extends StatefulWidget {
   State<StartupGate> createState() => _StartupGateState();
 }
 
-class _StartupGateState extends State<StartupGate> {
+class _StartupGateState extends State<StartupGate> with SingleTickerProviderStateMixin {
   bool _ready = false;
   bool _starting = true;
   String? _error;
+  Future<void>? _initialization;
+  late final AnimationController _startupAnimation;
 
   @override
   void initState() {
     super.initState();
+    _startupAnimation = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
     _initialize();
   }
 
-  Future<void> _initialize() async {
+  /// Coalesce overlapping startup/retry requests into one initialization.
+  /// A failed attempt can be retried without reassigning late-final services.
+  Future<void> _initialize() {
+    final running = _initialization;
+    if (running != null) return running;
+
+    final attempt = _initializeServices();
+    _initialization = attempt;
+    return attempt.whenComplete(() {
+      if (identical(_initialization, attempt)) {
+        _initialization = null;
+      }
+    });
+  }
+
+  Future<void> _initializeServices() async {
     if (mounted) {
       setState(() {
         _starting = true;
@@ -171,12 +198,12 @@ class _StartupGateState extends State<StartupGate> {
         );
         _audioBackgroundInitialized = true;
       }
-      playback = HtePlayback();
-      player = playback.player;
+      // HtePlayback is a process-wide singleton; never reassign it on retries.
 
-      // This source is an APK asset, not a remote URL. The splash remains up
-      // until the entire advert has finished playing.
-      await playback.playStartupAd();
+      // Startup tone is temporarily disabled while isolating the
+      // just_audio_background MediaItem initialisation failure. Keep the
+      // bundled MP3 in assets and retain scheduled in-player adverts.
+      // The splash must never wait for optional audio playback.
 
       // Authentication/data services initialise only after the offline
       // startup experience has completed.
@@ -205,6 +232,7 @@ class _StartupGateState extends State<StartupGate> {
 
   @override
   void dispose() {
+    _startupAnimation.dispose();
     super.dispose();
   }
 
@@ -220,13 +248,70 @@ class _StartupGateState extends State<StartupGate> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SvgPicture.asset(
-                  'assets/high-tech-logo.svg',
-                  width: 116,
-                  height: 116,
-                  semanticsLabel: 'High-Tech Entertainment',
+                AnimatedBuilder(
+                  animation: _startupAnimation,
+                  builder: (context, child) {
+                    final pulse = _startupAnimation.value;
+                    return Transform.scale(
+                      scale: 0.96 + (pulse * 0.045),
+                      child: Container(
+                        width: 224,
+                        height: 224,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFD9A52B).withValues(alpha: 0.12 + (pulse * 0.16)),
+                              blurRadius: 28 + (pulse * 24),
+                              spreadRadius: 2 + (pulse * 5),
+                            ),
+                          ],
+                        ),
+                        child: SvgPicture.asset(
+                          'assets/high-tech-logo.svg',
+                          width: 214,
+                          height: 214,
+                          semanticsLabel: 'High-Tech Entertainment app logo',
+                        ),
+                      ),
+                    );
+                  },
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 26),
+                AnimatedBuilder(
+                  animation: _startupAnimation,
+                  builder: (context, child) {
+                    final pulse = _startupAnimation.value;
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: List.generate(5, (index) {
+                        final phase = (pulse + (index * 0.17)) % 1.0;
+                        return Container(
+                          width: 4,
+                          height: 9 + (phase * 19),
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          decoration: BoxDecoration(
+                            color: Color.lerp(
+                              const Color(0xFF8A6420),
+                              const Color(0xFFFFD978),
+                              phase,
+                            ),
+                            borderRadius: BorderRadius.circular(5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFD9A52B).withValues(alpha: 0.25),
+                                blurRadius: 7,
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
                 const Text(
                   'HIGH-TECH',
                   style: TextStyle(
@@ -316,8 +401,9 @@ class LoginPage extends StatelessWidget {
                 const SizedBox(height: 18),
                 Center(child: SvgPicture.asset(
                   'assets/high-tech-logo.svg',
-                  width: 116,
-                  height: 116,
+                  width: 132,
+                  height: 132,
+                  semanticsLabel: 'High-Tech Entertainment',
                 )),
                 const SizedBox(height: 22),
                 const Text('HIGH-TECH ENTERTAINMENT',
@@ -426,7 +512,7 @@ class Brand extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
     child: Row(children: [
-      SvgPicture.asset('assets/high-tech-logo.svg', width: 58, height: 58),
+      SvgPicture.asset('assets/high-tech-logo.svg', width: 58, height: 58, semanticsLabel: 'High-Tech Entertainment'),
       const SizedBox(width: 14),
       const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('HIGH-TECH', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 2.4, height: 1.1)),
@@ -1465,11 +1551,35 @@ class _AccountTabState extends State<AccountTab> {
   Future<void> signInWithGoogle() async {
     setState(() => busy = true);
     try {
-      await db.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: authRedirect,
-        authScreenLaunchMode: LaunchMode.externalApplication,
-      );
+      if (googleWebClientId.trim().isNotEmpty) {
+        final google = GoogleSignIn.instance;
+        if (!_googleSignInInitialized) {
+          await google.initialize(serverClientId: googleWebClientId.trim());
+          _googleSignInInitialized = true;
+        }
+        final account = await google.authenticate();
+        final authorization = await account.authorizationClient
+                .authorizationForScopes(const ['email', 'profile']) ??
+            await account.authorizationClient
+                .authorizeScopes(const ['email', 'profile']);
+        final idToken = account.authentication.idToken;
+        if (idToken == null) {
+          throw const AuthException('Google did not return an identity token. Check the Web OAuth client ID.');
+        }
+        await db.auth.signInWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: idToken,
+          accessToken: authorization.accessToken,
+        );
+      } else {
+        // Retain the configured Supabase OAuth flow until the Web client ID
+        // is supplied as a GitHub Actions secret.
+        await db.auth.signInWithOAuth(
+          OAuthProvider.google,
+          redirectTo: authRedirect,
+          authScreenLaunchMode: LaunchMode.externalApplication,
+        );
+      }
     } on AuthException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1479,7 +1589,7 @@ class _AccountTabState extends State<AccountTab> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not start Google sign-in: $error')),
+          SnackBar(content: Text('Google sign-in could not complete: $error')),
         );
       }
     } finally {
@@ -1840,9 +1950,47 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(leading: const Icon(Icons.delete_outline), title: const Text('Request account deletion'), trailing: const Icon(Icons.open_in_new),
           onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html'), mode: LaunchMode.externalApplication)),
       ])),
-      const Padding(padding: EdgeInsets.all(20), child: Text('Quality Sound, Global Vibes.\nMusic. Beats. Production. Beyond.',
+      const Heading('About the developer'),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text('HIGH TECHNOLOGIES', style: TextStyle(color: Color(0xFFD9B96E), fontWeight: FontWeight.w800, letterSpacing: 1.5, fontSize: 16)),
+              SizedBox(height: 12),
+              _DeveloperDetail(label: 'Product', value: 'High-Tech Entertainment'),
+              _DeveloperDetail(label: 'Founder', value: 'Suwilanji Sinkamba'),
+              _DeveloperDetail(label: 'Location', value: 'Kitwe, Zambia'),
+              SizedBox(height: 10),
+              Text('Combining innovative technology, music, entertainment and digital experiences in one platform.', style: TextStyle(color: Colors.white70, height: 1.5)),
+              SizedBox(height: 12),
+              Text('Copyright 2026 High Technologies.', style: TextStyle(color: Colors.white54, fontSize: 12)),
+            ],
+          ),
+        ),
+      ),
+      const Padding(padding: EdgeInsets.all(20), child: Text('Quality Sound, Global Vibes.\\nMusic. Beats. Production. Beyond.',
         textAlign: TextAlign.center, style: TextStyle(color: Colors.white54))),
     ]),
+  );
+}
+
+class _DeveloperDetail extends StatelessWidget {
+  const _DeveloperDetail({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: 82, child: Text(label, style: const TextStyle(color: Colors.white54))),
+        Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600))),
+      ],
+    ),
   );
 }
 

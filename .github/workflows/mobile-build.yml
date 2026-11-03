@@ -263,7 +263,7 @@ jobs:
           PY
       - name: Build signed Android APK
         working-directory: ${{ runner.temp }}/hte_app
-        run: flutter build apk --release --target-platform android-arm,android-arm64
+        run: flutter build apk --release --target-platform android-arm,android-arm64 --dart-define=HTE_GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
       - name: Verify release APK signature
         if: always()
         working-directory: ${{ runner.temp }}/hte_app
@@ -299,7 +299,7 @@ jobs:
           echo "PASS: APK signature is valid and matches the configured upload certificate."
       - name: Build Google Play App Bundle
         working-directory: ${{ runner.temp }}/hte_app
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --dart-define=HTE_GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
       - name: Apply official High-Tech Entertainment download filenames
         working-directory: ${{ runner.temp }}/hte_app
         run: |
@@ -309,12 +309,18 @@ jobs:
           test -s "$AAB"
           mv "$APK" "build/app/outputs/flutter-apk/High-Tech-Entertainment.apk"
           mv "$AAB" "build/app/outputs/bundle/release/High-Tech-Entertainment.aab"
-      - uses: actions/upload-artifact@v4
+      - name: Upload standalone Android APK
+        uses: actions/upload-artifact@v4
         with:
-          name: high-tech-entertainment-android
-          path: |
-            ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment.apk
-            ${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/High-Tech-Entertainment.aab
+          name: High-Tech-Entertainment-APK
+          path: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment.apk
+          if-no-files-found: error
+          compression-level: 0
+      - name: Upload Android App Bundle separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: High-Tech-Entertainment-AAB
+          path: ${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/High-Tech-Entertainment.aab
           if-no-files-found: error
 
       - name: Publish public Android APK release
@@ -331,49 +337,3 @@ jobs:
           files: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment.apk
           overwrite_files: true
           make_latest: true
-
-  windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - name: Create Flutter platform scaffold
-        shell: pwsh
-        run: |
-          flutter create --platforms=windows --org com.hightechentertainment --project-name app "$env:RUNNER_TEMP\hte_app"
-          Copy-Item mobile-app\pubspec.yaml "$env:RUNNER_TEMP\hte_app\pubspec.yaml" -Force
-          Remove-Item "$env:RUNNER_TEMP\hte_app\lib" -Recurse -Force
-          Copy-Item mobile-app\lib "$env:RUNNER_TEMP\hte_app\lib" -Recurse
-          New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\hte_app\assets" | Out-Null
-          Copy-Item mobile-app\assets\* "$env:RUNNER_TEMP\hte_app\assets" -Recurse -Force
-      - name: Build Windows app
-        shell: pwsh
-        working-directory: ${{ runner.temp }}\hte_app
-        run: |
-          flutter pub get
-          flutter build windows --release
-      - name: Package Windows app
-        shell: pwsh
-        run: Compress-Archive -Path "$env:RUNNER_TEMP\hte_app\build\windows\x64\runner\Release\*" -DestinationPath "$env:RUNNER_TEMP\high-tech-entertainment-windows.zip"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: high-tech-entertainment-windows
-          path: ${{ runner.temp }}/high-tech-entertainment-windows.zip
-          if-no-files-found: error
-
-      - name: Publish public Windows download
-        if: github.event_name != 'pull_request'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: windows-latest
-          name: High-Tech Entertainment for Windows
-          target_commitish: ${{ github.sha }}
-          body: |
-            Official High-Tech Entertainment Windows desktop app.
-            Download the ZIP, extract it, and run app.exe.
-          files: ${{ runner.temp }}/high-tech-entertainment-windows.zip
-          overwrite_files: true
-          make_latest: false
