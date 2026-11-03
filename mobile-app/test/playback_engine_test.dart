@@ -28,6 +28,10 @@ void main() {
 
       expect(counter.completedTracks, 7);
       expect(counter.recordCompletion(interval: 8, enabled: true), isTrue);
+      // A due advert remains due until playback confirms it has completed.
+      expect(counter.completedTracks, 8);
+      expect(counter.recordCompletion(interval: 8, enabled: true), isTrue);
+      counter.reset();
       expect(counter.completedTracks, 0);
       for (var track = 1; track < 8; track++) {
         expect(counter.recordCompletion(interval: 8, enabled: true), isFalse);
@@ -47,9 +51,10 @@ void main() {
         expect(counter.recordCompletion(interval: 8, enabled: true), isFalse);
       }
       expect(counter.recordCompletion(interval: 8, enabled: true), isTrue);
+      expect(counter.completedTracks, 8);
     });
 
-    test('disabled ads do not accumulate hidden completions', () {
+    test('disabled ads do not accumulate hidden completions', {
       final counter = CompletedTrackAdCounter();
       for (var track = 0; track < 10; track++) {
         expect(counter.recordCompletion(interval: 8, enabled: false), isFalse);
