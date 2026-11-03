@@ -50,9 +50,10 @@ class HtePlayback {
   int _index = -1, _tracksSinceAd = 0;
   bool autoplay = true, shuffle = false, audioAdsEnabled = true;
   bool _handlingCompletion = false;
+  bool _playingStartupAd = false;
   static const int advertInterval = 8;
+  static const String startupAdvertAsset = 'assets/startup_ad.mp3';
   int adEvery = advertInterval;
-  Map<String, dynamic>? _cachedAdvert;
 
   String _friendlyError(Object error) {
     final message = error.toString();
@@ -155,64 +156,36 @@ class HtePlayback {
     }
   }
 
-  Future<Map<String, dynamic>?> _loadAdvert() async {
-    if (_cachedAdvert != null) return _cachedAdvert;
-    try {
-      final result = await Supabase.instance.client
-          .from('audio_ads')
-          .select('id,title,audio_url,ends_at')
-          .eq('is_published', true)
-          .or('starts_at.is.null,starts_at.lte.${DateTime.now().toUtc().toIso8601String()}')
-          .order('priority', ascending: false)
-          .limit(10)
-          .timeout(const Duration(seconds: 5));
-      final now = DateTime.now().toUtc();
-      final ads = List<Map<String, dynamic>>.from(result).where((ad) {
-        final end = DateTime.tryParse((ad['ends_at'] ?? '').toString());
-        return directAudioUri(ad['audio_url']) != null &&
-            (end == null || end.isAfter(now));
-      }).toList();
-      if (ads.isEmpty) return null;
-      // Cache one advert so startup and every eighth-song placement use
-      // exactly the same sound for this app session.
-      _cachedAdvert = ads.first;
-      return _cachedAdvert;
-    } catch (error) {
-      debugPrint('HTE advert lookup unavailable: $error');
-      return null;
-    }
-  }
-
+  /// Plays the bundled advert. Because this is an app asset, it works on the
+  /// very first launch without Wi-Fi, mobile data, Supabase or a cached file.
+  /// The splash remains visible until the complete audio source finishes.
   Future<void> playStartupAd() async {
     if (!audioAdsEnabled) return;
+    _playingStartupAd = true;
+    adPlaying.value = true;
+    currentTrack.value = {
+      'title': 'Advertisement',
+      'artist': 'High-Tech Entertainment',
+    };
     try {
-      final ad = await _loadAdvert();
-      if (ad == null) return;
-      final uri = directAudioUri(ad['audio_url']);
-      if (uri == null) return;
-      adPlaying.value = true;
-      currentTrack.value = {
-        'title': 'Advertisement',
-        'artist': ad['title'] ?? 'High-Tech Entertainment',
-      };
       await player.setAudioSource(
-        AudioSource.uri(uri),
+        AudioSource.asset(startupAdvertAsset),
         preload: true,
       );
-      // No in-app skip or pause control is exposed while the splash advert plays.
-      await player.play().timeout(
-        const Duration(seconds: 60),
-        onTimeout: () async => player.stop(),
-      );
+      await player.play();
     } catch (error) {
-      debugPrint('HTE startup advert playback unavailable: $error');
+      playbackError.value = _friendlyError(error);
+      debugPrint('HTE bundled startup advert failed: $error');
     } finally {
+      _playingStartupAd = false;
       adPlaying.value = false;
       currentTrack.value = null;
     }
   }
 
   Future<void> _advanceAfterCompletion() async {
+    // Startup audio is deliberately not part of the music queue.
+    if (_playingStartupAd) return;
     if (adPlaying.value) {
       adPlaying.value = false;
       await _playNextTrack();
@@ -228,35 +201,24 @@ class HtePlayback {
 
   Future<bool> _playAd() async {
     try {
-      final ad = await _loadAdvert();
-      if (ad == null) return false;
-      final uri = directAudioUri(ad['audio_url']);
-      if (uri == null) return false;
       adPlaying.value = true;
       playbackError.value = null;
       currentTrack.value = {
         'title': 'Advertisement',
-        'artist': ad['title'] ?? 'High-Tech Entertainment',
+        'artist': 'High-Tech Entertainment',
       };
+      // Use the same bundled advert after every eight completed songs.
+      // This also works offline and never creates another AudioPlayer.
       await player.setAudioSource(
-        AudioSource.uri(uri),
+        AudioSource.asset(startupAdvertAsset),
         preload: true,
       );
       unawaited(_startPlayback());
-
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user != null) {
-        Supabase.instance.client
-            .from('ad_impressions')
-            .insert({'ad_id': ad['id'], 'user_id': user.id})
-            .then((_) {})
-            .catchError((_) {});
-      }
       return true;
     } catch (error) {
       adPlaying.value = false;
       playbackError.value = _friendlyError(error);
-      debugPrint('HTE advert playback failed: $error');
+      debugPrint('HTE bundled advert playback failed: $error');
       return false;
     }
   }
