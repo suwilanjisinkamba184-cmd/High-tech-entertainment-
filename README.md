@@ -62,6 +62,9 @@ Add the production routes used by the application to the allowed redirect URLs, 
 https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/
 https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/admin/
 https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account/
+https://high-tech-entertainment-16g.pages.dev/
+https://high-tech-entertainment-16g.pages.dev/admin/
+https://high-tech-entertainment-16g.pages.dev/account/
 ```
 
 Add any additional callback URLs only when they are actually used by the website or mobile authentication flow. Do not use localhost as the production Site URL.
