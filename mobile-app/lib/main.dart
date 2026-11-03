@@ -146,15 +146,20 @@ class StartupGate extends StatefulWidget {
   State<StartupGate> createState() => _StartupGateState();
 }
 
-class _StartupGateState extends State<StartupGate> {
+class _StartupGateState extends State<StartupGate> with SingleTickerProviderStateMixin {
   bool _ready = false;
   bool _starting = true;
   String? _error;
   Future<void>? _initialization;
+  late final AnimationController _startupAnimation;
 
   @override
   void initState() {
     super.initState();
+    _startupAnimation = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
     _initialize();
   }
 
@@ -226,6 +231,7 @@ class _StartupGateState extends State<StartupGate> {
 
   @override
   void dispose() {
+    _startupAnimation.dispose();
     super.dispose();
   }
 
@@ -241,13 +247,70 @@ class _StartupGateState extends State<StartupGate> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SvgPicture.asset(
-                  'assets/high-tech-logo.svg',
-                  width: 116,
-                  height: 116,
-                  semanticsLabel: 'High-Tech Entertainment',
+                AnimatedBuilder(
+                  animation: _startupAnimation,
+                  builder: (context, child) {
+                    final pulse = _startupAnimation.value;
+                    return Transform.scale(
+                      scale: 0.96 + (pulse * 0.045),
+                      child: Container(
+                        width: 224,
+                        height: 224,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFD9A52B).withValues(alpha: 0.12 + (pulse * 0.16)),
+                              blurRadius: 28 + (pulse * 24),
+                              spreadRadius: 2 + (pulse * 5),
+                            ),
+                          ],
+                        ),
+                        child: SvgPicture.asset(
+                          'assets/high-tech-logo.svg',
+                          width: 214,
+                          height: 214,
+                          semanticsLabel: 'High-Tech Entertainment app logo',
+                        ),
+                      ),
+                    );
+                  },
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 26),
+                AnimatedBuilder(
+                  animation: _startupAnimation,
+                  builder: (context, child) {
+                    final pulse = _startupAnimation.value;
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: List.generate(5, (index) {
+                        final phase = (pulse + (index * 0.17)) % 1.0;
+                        return Container(
+                          width: 4,
+                          height: 9 + (phase * 19),
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          decoration: BoxDecoration(
+                            color: Color.lerp(
+                              const Color(0xFF8A6420),
+                              const Color(0xFFFFD978),
+                              phase,
+                            ),
+                            borderRadius: BorderRadius.circular(5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFD9A52B).withValues(alpha: 0.25),
+                                blurRadius: 7,
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
                 const Text(
                   'HIGH-TECH',
                   style: TextStyle(
@@ -337,8 +400,9 @@ class LoginPage extends StatelessWidget {
                 const SizedBox(height: 18),
                 Center(child: SvgPicture.asset(
                   'assets/high-tech-logo.svg',
-                  width: 116,
-                  height: 116,
+                  width: 132,
+                  height: 132,
+                  semanticsLabel: 'High-Tech Entertainment',
                 )),
                 const SizedBox(height: 22),
                 const Text('HIGH-TECH ENTERTAINMENT',
@@ -447,7 +511,7 @@ class Brand extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
     child: Row(children: [
-      SvgPicture.asset('assets/high-tech-logo.svg', width: 58, height: 58),
+      SvgPicture.asset('assets/high-tech-logo.svg', width: 58, height: 58, semanticsLabel: 'High-Tech Entertainment'),
       const SizedBox(width: 14),
       const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('HIGH-TECH', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 2.4, height: 1.1)),

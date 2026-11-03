@@ -1,4 +1,4 @@
-# Google Play Store listing — High-Tech Entertainment
+# High-Tech Entertainment — future store listing draft
 
 ## App details
 - **App name:** High-Tech Entertainment
@@ -46,4 +46,4 @@ Catalogue availability depends on the content published by High-Tech Entertainme
 - Upload the signed Android App Bundle (.aab), not the APK, for the Play release.
 
 ## Release status
-This is a prepared draft, not an approved or published Play Store listing. The app still needs a release/upload signing key, a signed AAB, device testing, screenshots, verified support contact details, and completion of Play Console review tasks.
+**Not published on Google Play.** This document is only a preparation draft. Do not display a Google Play badge, claim Play Store availability, or direct users to a Play Store download until an approved listing is publicly available. The app still needs a release/upload signing key, a signed AAB, device testing, screenshots, verified support contact details, and completion of Play Console review tasks.
