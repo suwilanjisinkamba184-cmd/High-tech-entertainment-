@@ -15,13 +15,29 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// Spotify URLs are intentionally handled by the Spotify embed screen; this
 /// engine only accepts direct audio-file URLs that just_audio can stream.
 class HtePlayback {
-  HtePlayback._();
-
   /// Process-wide singleton shared by every screen and mini-player.
   static final HtePlayback instance = HtePlayback._();
 
   /// Preserve existing call sites while ensuring they all receive one service.
   factory HtePlayback() => instance;
+
+  HtePlayback._() {
+    player.errorStream.listen((error) {
+      playbackError.value = _friendlyError(error);
+      debugPrint('HTE audio player error: $error');
+    });
+    player.processingStateStream.listen((state) {
+      if (state == ProcessingState.completed && !_handlingCompletion) {
+        _handlingCompletion = true;
+        _advanceAfterCompletion()
+            .catchError((Object error) {
+              playbackError.value = _friendlyError(error);
+              debugPrint('HTE queue advance failed: $error');
+            })
+            .whenComplete(() => _handlingCompletion = false);
+      }
+    });
+  }
 
   /// The only AudioPlayer instance permitted in the HT Music application.
   final AudioPlayer player = AudioPlayer();
@@ -35,8 +51,6 @@ class HtePlayback {
   bool autoplay = true, shuffle = false, audioAdsEnabled = true;
   bool _handlingCompletion = false;
   int adEvery = 3;
-
-  HtePlayback() {
     player.errorStream.listen((error) {
       playbackError.value = _friendlyError(error);
       debugPrint('HTE audio player error: $error');
