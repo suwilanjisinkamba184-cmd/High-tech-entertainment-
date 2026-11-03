@@ -195,7 +195,15 @@ class HtePlayback {
     };
     try {
       await player.setAudioSource(
-        AudioSource.asset(startupAdvertAsset),
+        AudioSource.asset(
+          startupAdvertAsset,
+          tag: MediaItem(
+            id: 'hte-audio-advert',
+            title: 'Advertisement',
+            artist: 'High-Tech Entertainment',
+            album: 'High-Tech Entertainment',
+          ),
+        ),
         preload: true,
       );
       await player.play();
@@ -237,7 +245,15 @@ class HtePlayback {
         'artist': 'High-Tech Entertainment',
       };
       await player.setAudioSource(
-        AudioSource.asset(startupAdvertAsset),
+        AudioSource.asset(
+          startupAdvertAsset,
+          tag: MediaItem(
+            id: 'hte-audio-advert',
+            title: 'Advertisement',
+            artist: 'High-Tech Entertainment',
+            album: 'High-Tech Entertainment',
+          ),
+        ),
         preload: true,
       );
       unawaited(_startPlayback());
