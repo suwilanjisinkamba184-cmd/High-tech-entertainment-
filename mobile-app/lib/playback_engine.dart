@@ -18,9 +18,7 @@ class CompletedTrackAdCounter {
   bool recordCompletion({required int interval, required bool enabled}) {
     if (!enabled || interval <= 0) return false;
     _completedTracks++;
-    if (_completedTracks < interval) return false;
-    _completedTracks = 0;
-    return true;
+    return _completedTracks >= interval;
   }
 
   void reset() => _completedTracks = 0;
@@ -215,6 +213,8 @@ class HtePlayback {
   Future<void> _advanceAfterCompletion() async {
     if (_playingStartupAd) return;
     if (adPlaying.value) {
+      // The interval is consumed only after the advert has actually completed.
+      _adCounter.reset();
       adPlaying.value = false;
       await _playNextTrack();
       return;
