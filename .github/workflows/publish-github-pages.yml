@@ -1,4 +1,4 @@
-name: Manual legacy GitHub Pages fallback
+name: Deploy official website to GitHub Pages
 
 # GitHub Pages is the canonical public deployment. Publish every validated main update.
 on:
