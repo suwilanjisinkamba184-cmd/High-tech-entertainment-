@@ -85,10 +85,10 @@ jobs:
               if permission not in text:
                   text = text.replace("<application", f'    <uses-permission android:name="{permission}" />\n    <application', 1)
           text = re.sub(r'android:label="[^"]*"', 'android:label="High-Tech Entertainment"', text)
-          activity_pattern = r'(<activity\\b(?:(?!>).)*?\\bandroid:name=")[^"]+"'
+          activity_pattern = r'(<activity\b(?:(?!>).)*?\bandroid:name=")[^"]+"'
           text, activity_count = re.subn(
               activity_pattern,
-              r'\\1com.ryanheise.audioservice.AudioServiceActivity"',
+              r'\1com.ryanheise.audioservice.AudioServiceActivity"',
               text,
               count=1,
               flags=re.S,
