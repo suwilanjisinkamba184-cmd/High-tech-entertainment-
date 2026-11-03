@@ -1746,7 +1746,7 @@ class _SettingsPageState extends State<SettingsPage> {
         await for (final chunk in streamed.stream) {
           sink.add(chunk);
           received += chunk.length;
-          if (mounted) setState(() => downloadProgress = (received / expectedSize).clamp(0.0, 1.0));
+          if (mounted) setState(() => downloadProgress = (received / expectedSize).clamp(0.0, 1.0).toDouble());
         }
         await sink.flush();
         await sink.close();
