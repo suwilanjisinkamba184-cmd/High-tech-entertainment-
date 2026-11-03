@@ -309,12 +309,18 @@ jobs:
           test -s "$AAB"
           mv "$APK" "build/app/outputs/flutter-apk/High-Tech-Entertainment.apk"
           mv "$AAB" "build/app/outputs/bundle/release/High-Tech-Entertainment.aab"
-      - uses: actions/upload-artifact@v4
+      - name: Upload standalone Android APK
+        uses: actions/upload-artifact@v4
         with:
-          name: high-tech-entertainment-android
-          path: |
-            ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment.apk
-            ${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/High-Tech-Entertainment.aab
+          name: High-Tech-Entertainment-APK
+          path: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment.apk
+          if-no-files-found: error
+          compression-level: 0
+      - name: Upload Android App Bundle separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: High-Tech-Entertainment-AAB
+          path: ${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/High-Tech-Entertainment.aab
           if-no-files-found: error
 
       - name: Publish public Android APK release
