@@ -54,7 +54,7 @@ void main() {
       expect(counter.completedTracks, 8);
     });
 
-    test('disabled ads do not accumulate hidden completions', {
+    test('disabled ads do not accumulate hidden completions', () {
       final counter = CompletedTrackAdCounter();
       for (var track = 0; track < 10; track++) {
         expect(counter.recordCompletion(interval: 8, enabled: false), isFalse);
