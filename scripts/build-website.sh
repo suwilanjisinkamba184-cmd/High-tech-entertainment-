@@ -50,9 +50,25 @@ for page in root.rglob("*.html"):
         if not resolved.exists() and not (resolved / "index.html").exists():
             missing.append(f"{page}: missing local reference: {value}")
 
+for stylesheet in root.rglob("*.css"):
+    text = stylesheet.read_text(encoding="utf-8")
+    for value in re.findall(r'''url\(\s*['"]?([^'")]+)['"]?\s*\)''', text, flags=re.I):
+        value = value.strip()
+        if re.match(r"^(?:https?:|data:|#|//)", value, flags=re.I):
+            continue
+        target = value.split("?", 1)[0].split("#", 1)[0]
+        resolved = (stylesheet.parent / target.lstrip("/") if not target.startswith("/") else root / target.lstrip("/")).resolve()
+        try:
+            resolved.relative_to(root.resolve())
+        except ValueError:
+            missing.append(f"{stylesheet}: CSS reference escapes build output: {value}")
+            continue
+        if not resolved.exists():
+            missing.append(f"{stylesheet}: missing CSS reference: {value}")
+
 if missing:
-    raise SystemExit("\n".join(missing))
-print("Sitemap XML and local HTML references are valid.")
+    raise SystemExit("\\n".join(missing))
+print("Sitemap XML, local HTML references, and CSS assets are valid.")
 PY
 
 echo "Website build output prepared in dist/"
