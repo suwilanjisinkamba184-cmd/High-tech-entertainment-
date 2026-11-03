@@ -157,13 +157,21 @@ class HtePlayback {
     );
     unawaited(_startPlayback());
 
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user != null && track['id'] != null && localPath.isEmpty) {
-      Supabase.instance.client
-          .from('listening_history')
-          .insert({'user_id': user.id, 'track_id': track['id']})
-          .then((_) {})
-          .catchError((_) {});
+    // Local files must remain playable without Supabase or internet access.
+    // Listening history is best-effort metadata and must never fail playback.
+    if (localPath.isEmpty) {
+      try {
+        final user = Supabase.instance.client.auth.currentUser;
+        if (user != null && track['id'] != null) {
+          Supabase.instance.client
+              .from('listening_history')
+              .insert({'user_id': user.id, 'track_id': track['id']})
+              .then((_) {})
+              .catchError((_) {});
+        }
+      } catch (error) {
+        debugPrint('Skipping listening history while Supabase is unavailable: $error');
+      }
     }
   }
 
