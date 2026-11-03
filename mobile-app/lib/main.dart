@@ -26,8 +26,11 @@ const authRedirect = 'com.hightechentertainment.app://login-callback';
 final db = Supabase.instance.client;
 bool _supabaseInitialized = false;
 bool _audioBackgroundInitialized = false;
-late final HtePlayback playback;
-late final AudioPlayer player;
+// Both references resolve to the single process-wide playback service.
+// Top-level finals are lazy, so the service is first created after the Android
+// audio background handler has been initialized in StartupGate.
+final HtePlayback playback = HtePlayback.instance;
+final AudioPlayer player = HtePlayback.instance.player;
 final ValueNotifier<int> favouritesRevision = ValueNotifier<int>(0);
 
 Future<void> main() async {
@@ -144,6 +147,7 @@ class _StartupGateState extends State<StartupGate> {
   bool _ready = false;
   bool _starting = true;
   String? _error;
+  Future<void>? _initialization;
 
   @override
   void initState() {
@@ -151,7 +155,22 @@ class _StartupGateState extends State<StartupGate> {
     _initialize();
   }
 
-  Future<void> _initialize() async {
+  /// Coalesce overlapping startup/retry requests into one initialization.
+  /// A failed attempt can be retried without reassigning late-final services.
+  Future<void> _initialize() {
+    final running = _initialization;
+    if (running != null) return running;
+
+    final attempt = _initializeServices();
+    _initialization = attempt;
+    return attempt.whenComplete(() {
+      if (identical(_initialization, attempt)) {
+        _initialization = null;
+      }
+    });
+  }
+
+  Future<void> _initializeServices() async {
     if (mounted) {
       setState(() {
         _starting = true;
@@ -171,8 +190,7 @@ class _StartupGateState extends State<StartupGate> {
         );
         _audioBackgroundInitialized = true;
       }
-      playback = HtePlayback();
-      player = playback.player;
+      // HtePlayback is a process-wide singleton; never reassign it on retries.
 
       // This source is an APK asset, not a remote URL. The splash remains up
       // until the entire advert has finished playing.
