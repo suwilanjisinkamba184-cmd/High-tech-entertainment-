@@ -10,7 +10,7 @@ import 'playback_engine.dart';
 ///
 /// The music service remains the only just_audio AudioPlayer in the app.
 /// Music is paused while a video is playing so the two audio streams never
-/// compete; previously playing music resumes when this page is closed.
+/// compete; previously playing music resumes only after video disposal ends.
 class HteVideoPlayerPage extends StatefulWidget {
   const HteVideoPlayerPage({
     super.key,
@@ -46,8 +46,10 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
     // An advertisement is non-interruptible. Do not let opening a video pause
     // or replace the advert that is currently playing.
     if (music.adPlaying.value) {
-      setState(() => _error =
-          'Please wait until the advertisement has finished before playing a video.');
+      if (mounted) {
+        setState(() => _error =
+            'Please wait until the advertisement has finished before playing a video.');
+      }
       return;
     }
 
@@ -55,6 +57,8 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
     if (_resumeMusic) {
       await music.player.pause();
     }
+    // The route may have been closed while the asynchronous pause was pending.
+    if (!mounted) return;
 
     try {
       final String? path = widget.filePath;
@@ -65,6 +69,7 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
         if (!await file.exists()) {
           throw const FileSystemException('The selected video file no longer exists.');
         }
+        if (!mounted) return;
         video = VideoPlayerController.file(file);
       } else {
         final uri = Uri.tryParse(widget.url.trim());
@@ -78,10 +83,8 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
 
       _controller = video;
       await video.initialize();
-      if (!mounted) {
-        await video.dispose();
-        return;
-      }
+      // dispose() owns controller cleanup if the route was closed meanwhile.
+      if (!mounted) return;
 
       _lastPlaying = video.value.isPlaying;
       video.addListener(_onVideoChanged);
@@ -133,21 +136,36 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
     }
   }
 
+  Future<void> _disposeVideoThenResume(VideoPlayerController video) async {
+    try {
+      await video.dispose();
+    } catch (error) {
+      debugPrint('Could not dispose video player cleanly: $error');
+    }
+    await _resumeMusicAfterVideo();
+  }
+
+  Future<void> _resumeMusicAfterVideo() async {
+    if (!_resumeMusic) return;
+    final music = HtePlayback.instance;
+    // Never restart music over a mandatory advertisement.
+    if (music.adPlaying.value) return;
+    try {
+      await music.player.play();
+    } catch (error) {
+      debugPrint('Could not resume music after video: $error');
+    }
+  }
+
   @override
   void dispose() {
     final video = _controller;
     if (video != null) {
       video.removeListener(_onVideoChanged);
-      unawaited(video.dispose());
-    }
-
-    if (_resumeMusic) {
-      final music = HtePlayback.instance;
-      if (!music.adPlaying.value) {
-        unawaited(music.player.play().catchError((Object error) {
-          debugPrint('Could not resume music after video: $error');
-        }));
-      }
+      // Wait for the video audio session to be released before resuming music.
+      unawaited(_disposeVideoThenResume(video));
+    } else {
+      unawaited(_resumeMusicAfterVideo());
     }
     super.dispose();
   }
