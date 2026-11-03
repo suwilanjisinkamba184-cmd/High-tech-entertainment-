@@ -1,15 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-labelledby="title desc">
-<title id="title">High-Tech Entertainment</title><desc id="desc">A refined gold HT monogram framed by a circular crest on a deep charcoal background.</desc>
-<defs><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f5e7bf"/><stop offset=".48" stop-color="#d7b66f"/><stop offset="1" stop-color="#92703a"/></linearGradient></defs>
-<rect width="800" height="800" rx="120" fill="#090a0b"/>
-<circle cx="400" cy="355" r="292" fill="none" stroke="url(#gold)" stroke-width="12"/>
-<circle cx="400" cy="355" r="269" fill="none" stroke="#ffffff" stroke-opacity=".16" stroke-width="2"/>
-<path d="M202 222h396v46H202z" fill="url(#gold)"/>
-<path d="M202 222h48v266h-48z" fill="url(#gold)"/>
-<path d="M550 222h48v266h-48z" fill="url(#gold)"/>
-<path d="M376 222h48v266h-48z" fill="url(#gold)"/>
-<path d="M250 332h300v46H250z" fill="url(#gold)"/>
-<path d="M202 442h396v46H202z" fill="url(#gold)"/>
-<text x="400" y="594" text-anchor="middle" fill="#f2e6c8" font-family="Georgia,serif" font-size="36" font-weight="700" letter-spacing="7">HIGH-TECH</text>
-<text x="400" y="638" text-anchor="middle" fill="#b9b7b1" font-family="Arial,sans-serif" font-size="21" letter-spacing="8">ENTERTAINMENT</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+<title id="title">High-Tech Entertainment HT emblem</title>
+<desc id="desc">A bold metallic gold HT monogram enclosed by two illuminated circular gold rings on a deep black background.</desc>
+<defs>
+  <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#fff1b8"/><stop offset=".22" stop-color="#f8ce61"/>
+    <stop offset=".5" stop-color="#b97912"/><stop offset=".72" stop-color="#ffe28a"/>
+    <stop offset="1" stop-color="#8b5209"/>
+  </linearGradient>
+  <linearGradient id="face" x1="0" y1="0" x2=".8" y2="1">
+    <stop offset="0" stop-color="#fff5c9"/><stop offset=".25" stop-color="#f5bd3e"/>
+    <stop offset=".62" stop-color="#c17a0c"/><stop offset="1" stop-color="#ffe18a"/>
+  </linearGradient>
+  <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur stdDeviation="13" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="10" result="blur"/>
+    <feOffset dy="12" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".8"/></feComponentTransfer>
+    <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+</defs>
+<rect width="1024" height="1024" rx="150" fill="#050505"/>
+<circle cx="512" cy="512" r="426" fill="none" stroke="#9a650e" stroke-width="27" opacity=".5" filter="url(#glow)"/>
+<circle cx="512" cy="512" r="426" fill="none" stroke="url(#gold)" stroke-width="19"/>
+<circle cx="512" cy="512" r="393" fill="none" stroke="#f8d778" stroke-width="5" opacity=".72"/>
+<g filter="url(#shadow)" fill="url(#face)" stroke="#8b570b" stroke-width="7" stroke-linejoin="bevel">
+  <path d="M205 286h112v170h180V286h112v452H497V565H317v173H205z"/>
+  <path d="M475 286h344v105H699v347H587V391H475z"/>
+</g>
+<path d="M210 291h102v8H210zM480 291h330v8H480z" fill="#fff4c5" opacity=".75"/>
+<circle cx="512" cy="512" r="448" fill="none" stroke="#fff0b0" stroke-width="3" opacity=".45"/>
 </svg>
