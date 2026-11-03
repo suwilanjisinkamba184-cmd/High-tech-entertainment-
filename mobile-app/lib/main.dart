@@ -1858,9 +1858,47 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(leading: const Icon(Icons.delete_outline), title: const Text('Request account deletion'), trailing: const Icon(Icons.open_in_new),
           onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html'), mode: LaunchMode.externalApplication)),
       ])),
-      const Padding(padding: EdgeInsets.all(20), child: Text('Quality Sound, Global Vibes.\nMusic. Beats. Production. Beyond.',
+      const Heading('About the developer'),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text('HIGH TECHNOLOGIES', style: TextStyle(color: Color(0xFFD9B96E), fontWeight: FontWeight.w800, letterSpacing: 1.5, fontSize: 16)),
+              SizedBox(height: 12),
+              _DeveloperDetail(label: 'Product', value: 'High-Tech Entertainment'),
+              _DeveloperDetail(label: 'Founder', value: 'Suwilanji Sinkamba'),
+              _DeveloperDetail(label: 'Location', value: 'Kitwe, Zambia'),
+              SizedBox(height: 10),
+              Text('Combining innovative technology, music, entertainment and digital experiences in one platform.', style: TextStyle(color: Colors.white70, height: 1.5)),
+              SizedBox(height: 12),
+              Text('Copyright 2026 High Technologies.', style: TextStyle(color: Colors.white54, fontSize: 12)),
+            ],
+          ),
+        ),
+      ),
+      const Padding(padding: EdgeInsets.all(20), child: Text('Quality Sound, Global Vibes.\\nMusic. Beats. Production. Beyond.',
         textAlign: TextAlign.center, style: TextStyle(color: Colors.white54))),
     ]),
+  );
+}
+
+class _DeveloperDetail extends StatelessWidget {
+  const _DeveloperDetail({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: 82, child: Text(label, style: const TextStyle(color: Colors.white54))),
+        Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600))),
+      ],
+    ),
   );
 }
 
