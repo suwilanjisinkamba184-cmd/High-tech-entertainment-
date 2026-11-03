@@ -1,4 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:crypto/crypto.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -1593,6 +1597,9 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   String version = 'Loading…';
   bool checking = false;
+  bool downloading = false;
+  double downloadProgress = 0;
+  String updateStatus = '';
   bool autoplaySetting = true;
   bool shuffleSetting = false;
 
@@ -1635,61 +1642,150 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _checkForUpdates() async {
-    setState(() => checking = true);
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      _message('In-app APK updates are available on Android devices.');
+      return;
+    }
+    setState(() { checking = true; updateStatus = 'Checking for updates…'; });
     try {
       final info = await PackageInfo.fromPlatform();
       final response = await http.get(
         Uri.https('api.github.com', '/repos/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest'),
         headers: {'Accept': 'application/vnd.github+json', 'User-Agent': 'High-Tech-Entertainment-App'},
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 20));
       if (!mounted) return;
       if (response.statusCode == 404) {
-        _message('No official app update has been published yet. Please check again later.');
+        _message('No official app update has been published yet.');
         return;
       }
       if (response.statusCode != 200) {
-        _message('Update check could not be completed (HTTP ${response.statusCode}). Please try again.');
+        _message('Update check failed (HTTP ${response.statusCode}). Please try again.');
         return;
       }
       final release = jsonDecode(response.body) as Map<String, dynamic>;
+      if (release['draft'] == true || release['prerelease'] == true) {
+        _message('No stable update is available yet.');
+        return;
+      }
       final latest = (release['tag_name'] ?? '').toString().replaceFirst(RegExp(r'^[vV]'), '');
       if (latest.isEmpty || _compareVersions(latest, info.version) <= 0) {
         _message('You are using the latest published version ($version).');
         return;
       }
       final assets = release['assets'] as List<dynamic>? ?? [];
-      String? apkUrl;
-      for (final item in assets) {
-        final asset = item as Map<String, dynamic>;
-        if ((asset['name'] ?? '').toString().toLowerCase().endsWith('.apk')) {
-          apkUrl = (asset['browser_download_url'] ?? '').toString();
-          break;
+      Map<String, dynamic>? apk;
+      for (final raw in assets) {
+        final item = raw as Map<String, dynamic>;
+        final name = (item['name'] ?? '').toString().toLowerCase();
+        if (name.endsWith('.apk') && (name.contains('high-tech') || apk == null)) {
+          apk = item;
+          if (name == 'high-tech-entertainment.apk') break;
         }
       }
-      final releaseUrl = (release['html_url'] ?? 'https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest').toString();
-      final hasApk = apkUrl != null && apkUrl.startsWith('https://');
+      if (apk == null) {
+        _message('Version $latest is published, but its Android APK is not attached yet.');
+        return;
+      }
+      final apkUrl = (apk['browser_download_url'] ?? '').toString();
+      final expectedSize = (apk['size'] as num?)?.toInt() ?? 0;
+      final digest = (apk['digest'] ?? '').toString();
+      if (!apkUrl.startsWith('https://') || expectedSize <= 0) {
+        _message('The published APK details are incomplete. Please try again later.');
+        return;
+      }
+      if (!mounted) return;
       await showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: const Text('Update available'),
-          content: Text('Version $latest is available. You have $version installed. ${hasApk ? 'Download the new APK to update the app.' : 'Open the release page for update details.'}'),
+          content: Text('High-Tech Entertainment $latest is available. You have $version installed. Download the APK now? Your account and app data will be kept.'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Later')),
             FilledButton(
-              onPressed: () async {
+              onPressed: () {
                 Navigator.pop(dialogContext);
-                final uri = Uri.tryParse(hasApk ? apkUrl! : releaseUrl);
-                if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                _downloadAndInstall(apk!, latest, expectedSize, digest);
               },
-              child: Text(hasApk ? 'Download APK' : 'View release'),
+              child: const Text('Download update'),
             ),
           ],
         ),
       );
-    } catch (_) {
+    } catch (error) {
       if (mounted) _message('Could not check for updates. Check your internet connection and try again.');
     } finally {
-      if (mounted) setState(() => checking = false);
+      if (mounted) setState(() { checking = false; updateStatus = ''; });
+    }
+  }
+
+  Future<void> _downloadAndInstall(
+    Map<String, dynamic> asset,
+    String latest,
+    int expectedSize,
+    String expectedDigest,
+  ) async {
+    if (downloading) return;
+    setState(() { downloading = true; downloadProgress = 0; updateStatus = 'Preparing update…'; });
+    File? apkFile;
+    try {
+      final url = (asset['browser_download_url'] ?? '').toString();
+      final client = http.Client();
+      try {
+        final request = http.Request('GET', Uri.parse(url));
+        request.headers['User-Agent'] = 'High-Tech-Entertainment-App';
+        final streamed = await client.send(request).timeout(const Duration(seconds: 45));
+        if (streamed.statusCode != 200) {
+          throw HttpException('APK download failed (HTTP ${streamed.statusCode}).');
+        }
+        final directory = await getTemporaryDirectory();
+        apkFile = File('${directory.path}/hte-update-$latest.apk');
+        if (await apkFile.exists()) await apkFile.delete();
+        final sink = apkFile.openWrite();
+        var received = 0;
+        setState(() => updateStatus = 'Downloading update…');
+        await for (final chunk in streamed.stream) {
+          sink.add(chunk);
+          received += chunk.length;
+          if (mounted) setState(() => downloadProgress = (received / expectedSize).clamp(0.0, 1.0));
+        }
+        await sink.flush();
+        await sink.close();
+        if (received != expectedSize) {
+          throw const FormatException('The downloaded APK is incomplete. Please retry.');
+        }
+      } finally {
+        client.close();
+      }
+
+      final firstBytes = await apkFile.openRead(0, 4).first;
+      if (firstBytes.length < 4 || firstBytes[0] != 0x50 || firstBytes[1] != 0x4b) {
+        throw const FormatException('The downloaded file is not a valid APK archive.');
+      }
+      if (expectedDigest.startsWith('sha256:')) {
+        final actualDigest = await sha256.bind(apkFile.openRead()).first;
+        if (actualDigest.toString().toLowerCase() != expectedDigest.substring(7).toLowerCase()) {
+          throw const FormatException('APK integrity verification failed. The update was not opened.');
+        }
+      }
+      if (!mounted) return;
+      setState(() => updateStatus = 'Download complete. Opening Android installer…');
+      final result = await OpenFilex.open(
+        apkFile.path,
+        type: 'application/vnd.android.package-archive',
+      );
+      if (!mounted) return;
+      if (result != 'done') {
+        _message('APK downloaded, but Android could not open the installer ($result). Allow High-Tech Entertainment to install unknown apps in Android Settings, then try again.');
+      } else {
+        _message('Update downloaded. Follow the Android installation prompt to finish updating.');
+      }
+    } catch (error) {
+      if (mounted) _message('Update could not be installed: $error');
+      if (apkFile != null && await apkFile.exists()) {
+        try { await apkFile.delete(); } catch (_) {}
+      }
+    } finally {
+      if (mounted) setState(() { downloading = false; downloadProgress = 0; updateStatus = ''; });
     }
   }
 
@@ -1705,12 +1801,22 @@ class _SettingsPageState extends State<SettingsPage> {
           leading: const Icon(Icons.system_update_alt, color: Color(0xFFD4AF37)),
           title: const Text('App updates'),
           subtitle: const Text('Check for the latest official Android version'),
-          trailing: checking ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.chevron_right),
-          onTap: checking ? null : _checkForUpdates,
+          subtitle: Text(downloading ? updateStatus : 'Check, download and install the latest official Android version'),
+          trailing: (checking || downloading) ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.chevron_right),
+          onTap: (checking || downloading) ? null : _checkForUpdates,
         ),
         const Divider(height: 1),
         ListTile(leading: const Icon(Icons.info_outline), title: const Text('App version'), subtitle: Text(version)),
       ])),
+      if (downloading) ...[
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(updateStatus, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
+          LinearProgressIndicator(value: downloadProgress),
+          const SizedBox(height: 6),
+          Text('${(downloadProgress * 100).toStringAsFixed(0)}% downloaded', style: const TextStyle(color: Colors.white60)),
+        ]))),
+      ],
       const SizedBox(height: 12),
       const Heading('Playback preferences'),
       Card(child: Column(children: [
