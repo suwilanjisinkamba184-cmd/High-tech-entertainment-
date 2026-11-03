@@ -35,5 +35,5 @@ jobs:
         run: find assets admin account -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
       - name: Validate sitemap XML
         run: python -c "import xml.etree.ElementTree as ET; ET.parse('sitemap.xml'); print('Sitemap XML is valid')"
-      - name: Validate Cloudflare static build
-        run: bash scripts/build-cloudflare.sh
+      - name: Validate shared static website build
+        run: bash scripts/build-website.sh
