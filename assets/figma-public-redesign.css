@@ -37,7 +37,7 @@ body{margin:0;background:var(--hte-bg);color:var(--hte-ink);font-family:Inter,Ar
 .hero:after{content:"MUSIC  •  BEATS  •  PRODUCTION  •  BEYOND     /     QUALITY SOUND. GLOBAL VIBES.";position:absolute;z-index:3;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;min-height:64px;padding:12px 24px;background:var(--hte-gold);color:#0b0a08;text-align:center;font-size:clamp(.65rem,1.2vw,.95rem);font-weight:800;letter-spacing:.13em}
 .section{padding:clamp(72px,8vw,108px) 0;border-bottom:1px solid rgba(199,150,69,.14)}
 main{display:flex;flex-direction:column}
-#home{order:1}#releases{order:2}#artists{order:3}#music{order:4}#videos{order:5}#about{order:6}#booking{order:7}#contact{order:8}#download-app{order:9}
+#home{order:1}#releases{order:2}#artists{order:3}#music{order:4}#videos{order:5}#download-app{order:6}#about{order:7}#booking{order:8}#contact{order:9}
 .section-head{max-width:800px;margin-bottom:38px}
 .section-head h2,.feature-band h2,.page-title{margin:12px 0;color:var(--hte-ink);font-family:Inter,Arial,sans-serif;font-size:clamp(2.6rem,4.8vw,4.25rem);font-weight:800;line-height:1.04;letter-spacing:-.055em}
 .section-head p,.muted{color:var(--hte-muted);font-size:.94rem;line-height:1.85}
@@ -90,3 +90,25 @@ footer a:hover,.footer a:hover{color:var(--hte-gold)}
  .section{padding:62px 0}.section-head{margin-bottom:26px}.section-head h2,.feature-band h2,.page-title{font-size:clamp(2.25rem,10vw,3rem)}.cards{gap:15px}.feature-band{padding:25px 20px}.contact-grid{gap:24px}.footer-row{flex-direction:column;gap:6px}
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
+
+
+/* 2026 finish pass: small, purposeful interaction and mobile refinements. */
+html{scroll-padding-top:112px}
+section[id]{scroll-margin-top:112px}
+.btn{transition:transform 160ms ease-out,background-color 180ms ease-out,border-color 180ms ease-out}
+.btn:active{transform:scale(.97)}
+img,video,iframe{max-width:100%}
+@media(hover:hover) and (pointer:fine){
+  .music-card:hover,.artist-card:hover,.release-card:hover,.video-card:hover{transform:translateY(-3px)}
+}
+@media(hover:none){
+  .music-card:hover,.artist-card:hover,.release-card:hover,.video-card:hover{transform:none}
+}
+@media(max-width:600px){
+  .navlinks{overflow-x:auto;flex-wrap:nowrap;justify-content:flex-start;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+  .navlinks a{flex:0 0 auto;scroll-snap-align:start}
+  .nav-actions{margin-left:auto}
+}
+@media(prefers-reduced-motion:reduce){
+  .btn:active{transform:none}
+}
