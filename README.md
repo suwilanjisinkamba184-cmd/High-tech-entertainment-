@@ -10,7 +10,7 @@ High-Tech Entertainment is a focused music and artist platform for discovering r
 - **Founder Studio:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/admin/
 - **Account:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account/
 
-GitHub Pages is the sole public website deployment target. The workflow `.github/workflows/publish-github-pages.yml` publishes the static website from `main` using GitHub Actions. Supabase remains the backend for authentication, database, media storage and serverless functions.
+GitHub and Cloudflare both publish the public website from the same `main` branch. GitHub Pages is deployed by `.github/workflows/publish-github-pages.yml`. Cloudflare Pages is intended to use its native GitHub integration for independent builds and deployments. Both hosts use `scripts/build-website.sh` and the same `dist/` output. Supabase remains the backend for authentication, database, media storage and serverless functions.
 
 ## Project components
 
@@ -100,7 +100,7 @@ The planned Android application ID is `com.hightechentertainment.app`. Verify th
 
 ## GitHub Actions
 
-- `.github/workflows/publish-github-pages.yml` — assembles and publishes the public website to GitHub Pages on every push to `main`.
+- `.github/workflows/publish-github-pages.yml` — assembles and publishes the public website to GitHub Pages on every push to `main`.\n- Cloudflare Pages — should be connected to the same GitHub repository and `main` branch using Cloudflare’s Git integration; configure the build command as `bash scripts/build-website.sh` and the output directory as `dist`.
 - `.github/workflows/deploy-pages.yml` — validation only: checks required website files, JavaScript syntax, package JSON and sitemap XML.
 - `.github/workflows/mobile-build.yml` — builds Android and Windows application packages and publishes releases when its required conditions and secrets are satisfied.
 
