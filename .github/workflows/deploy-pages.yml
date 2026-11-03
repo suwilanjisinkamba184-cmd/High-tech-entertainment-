@@ -28,7 +28,7 @@ jobs:
           test -s account/index.html
           test -s admin/index.html
           grep -q 'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/' index.html
-          grep -q 'https://OLD_GITHUB_PAGES_URL/sitemap.xml' robots.txt
+          grep -q 'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/sitemap.xml' robots.txt
           ! grep -R -n 'htmusic.pages.dev\|netlify.app' --include='*.html' --include='*.js' --include='*.txt' --include='*.xml' .
           python -m json.tool package.json >/dev/null
       - name: Check JavaScript syntax
