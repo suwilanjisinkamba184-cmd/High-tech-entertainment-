@@ -217,10 +217,8 @@ jobs:
       - name: Verify bundled offline startup advertisement
         working-directory: ${{ runner.temp }}/hte_app
         run: |
-          if [ ! -s assets/AUD-20261103-WA0002.mp3 ]; then
-            echo "::error::Missing mobile-app/assets/AUD-20261103-WA0002.mp3. Add the approved High-Tech Entertainment advert MP3 to that exact repository path so the startup advert works offline."
-            exit 1
-          fi
+          test -s assets/AUD-20261103-WA0002.mp3 || { echo "::error::The offline startup advertisement was not copied into the Flutter build workspace."; find assets -maxdepth 1 -type f -printf "%f %s bytes\\n"; exit 1; }
+          echo "PASS: Offline advert is bundled ($(stat -c%s assets/AUD-20261103-WA0002.mp3) bytes)."
       - name: Install dependencies and generate branded launcher icon
         working-directory: ${{ runner.temp }}/hte_app
         run: |
