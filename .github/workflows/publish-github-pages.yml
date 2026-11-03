@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
       - name: Assemble public website
-        run: bash scripts/build-cloudflare.sh
+        run: bash scripts/build-website.sh
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
