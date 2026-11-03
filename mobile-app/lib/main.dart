@@ -1800,7 +1800,6 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(
           leading: const Icon(Icons.system_update_alt, color: Color(0xFFD4AF37)),
           title: const Text('App updates'),
-          subtitle: const Text('Check for the latest official Android version'),
           subtitle: Text(downloading ? updateStatus : 'Check, download and install the latest official Android version'),
           trailing: (checking || downloading) ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.chevron_right),
           onTap: (checking || downloading) ? null : _checkForUpdates,
