@@ -1760,7 +1760,7 @@ class _SettingsPageState extends State<SettingsPage> {
         client.close();
       }
 
-      final downloadedApk = apkFile!;
+      final downloadedApk = apkFile;
       final firstBytes = await downloadedApk.openRead(0, 4).first;
       if (firstBytes.length < 4 || firstBytes[0] != 0x50 || firstBytes[1] != 0x4b) {
         throw const FormatException('The downloaded file is not a valid APK archive.');
