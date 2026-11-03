@@ -1,11 +1,11 @@
 # High-Tech Entertainment — Native Android App
 
-The Flutter application in this folder is the native Android client for High-Tech Entertainment.\n\nOfficial website: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/ Current app version: **2.1.5**.
+The Flutter application in this folder is the native Android client for High-Tech Entertainment.\n\nOfficial website: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/ Current app version: **2.1.6**.
 
 ## Experiences
 
 ### HT Music — public listener experience
-- Branded startup and required Supabase sign-in.
+- Branded animated startup, best-effort bundled startup advert, and required Supabase sign-in.
 - Google OAuth and email/password authentication.
 - Home, Discover, Releases, Library, Favourites, Playlists and Profile.
 - Artist catalogue, music videos, search, track sharing and notifications placeholder.
@@ -60,7 +60,7 @@ Windows source files are preserved, but Windows build execution and release pack
 
 HT Music uses one process-wide `HtePlayback.instance` service and one `just_audio` `AudioPlayer`. The service owns the active track, queue, completion handling, audio-ad insertion, and playback error state. The mini-player, full player, queue screen, and all catalogue screens must read and control that same service; do not create `AudioPlayer()` instances in widgets, tabs, routes, or screen state objects.
 
-- Background audio is initialized once at application startup with `JustAudioBackground.init` before the shared playback service is first accessed.
+- Background audio is initialized once at application startup with `JustAudioBackground.init` before the shared playback service is first accessed. Audio initialisation and the optional bundled startup advert are isolated from authentication startup: if either fails or the advert times out, the app continues to sign-in.
 - Track changes replace the source on the shared player; navigation must not dispose or recreate it.
 - The notification and lock-screen controls are backed by the same player and media metadata.
 - The service is exposed through `HtePlayback.instance`. The `HtePlayback()` factory remains as a compatibility entry point and returns the same singleton.
