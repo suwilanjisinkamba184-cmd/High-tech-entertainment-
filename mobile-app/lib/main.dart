@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
@@ -23,6 +24,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 const supabaseUrl = 'https://wqrxacjbsldbnoekbkbf.supabase.co';
 const supabaseKey = 'sb_publishable_hB_aRh-dnicpRQq3wiRtWg_JTdhmMda';
 const authRedirect = 'com.hightechentertainment.app://login-callback';
+const googleWebClientId = String.fromEnvironment('HTE_GOOGLE_WEB_CLIENT_ID');
 final db = Supabase.instance.client;
 bool _supabaseInitialized = false;
 bool _audioBackgroundInitialized = false;
@@ -1483,11 +1485,32 @@ class _AccountTabState extends State<AccountTab> {
   Future<void> signInWithGoogle() async {
     setState(() => busy = true);
     try {
-      await db.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: authRedirect,
-        authScreenLaunchMode: LaunchMode.externalApplication,
-      );
+      if (googleWebClientId.trim().isNotEmpty) {
+        final google = GoogleSignIn.instance;
+        await google.initialize(serverClientId: googleWebClientId.trim());
+        final account = await google.authenticate();
+        final authorization = await account.authorizationClient
+                .authorizationForScopes(const ['email', 'profile']) ??
+            await account.authorizationClient
+                .authorizeScopes(const ['email', 'profile']);
+        final idToken = account.authentication.idToken;
+        if (idToken == null) {
+          throw const AuthException('Google did not return an identity token. Check the Web OAuth client ID.');
+        }
+        await db.auth.signInWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: idToken,
+          accessToken: authorization.accessToken,
+        );
+      } else {
+        // Retain the configured Supabase OAuth flow until the Web client ID
+        // is supplied as a GitHub Actions secret.
+        await db.auth.signInWithOAuth(
+          OAuthProvider.google,
+          redirectTo: authRedirect,
+          authScreenLaunchMode: LaunchMode.externalApplication,
+        );
+      }
     } on AuthException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1497,7 +1520,7 @@ class _AccountTabState extends State<AccountTab> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not start Google sign-in: $error')),
+          SnackBar(content: Text('Google sign-in could not complete: $error')),
         );
       }
     } finally {
