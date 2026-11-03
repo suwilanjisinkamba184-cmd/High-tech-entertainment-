@@ -1,8 +1,8 @@
-name: Publish High-Tech Entertainment website to GitHub Pages
+name: Manual legacy GitHub Pages fallback
 
+# Cloudflare Pages is the primary deployment target. Keep this workflow manual-only
+# so pushes to main do not publish a second, competing canonical website.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -18,34 +18,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
       - name: Assemble public website
-        run: |
-          set -euo pipefail
-          mkdir -p _site
-          cp -R assets admin account _site/
-          cp index.html supabase-config.js robots.txt sitemap.xml account-deletion.html privacy-policy.html high-tech-logo.svg _site/
-          cp google31fdb4754075f7bd.html googled2aa97c2eb951371.html _site/ 2>/dev/null || true
-          touch _site/.nojekyll
-          test -s _site/index.html
-          test -s _site/privacy-policy.html
-          test -s _site/account-deletion.html
-          test -s _site/supabase-config.js
-          test -s _site/assets/premium-refresh.css
-          test -s _site/assets/admin-enhancements.css
-          test -s _site/assets/admin-enhancements.js
-          test -s _site/admin/index.html
-          node --check _site/assets/admin-enhancements.js
-          test -s _site/account/index.html
-          python -m json.tool package.json >/dev/null
-          python -c "import xml.etree.ElementTree as ET; ET.parse('_site/sitemap.xml')"
+        run: bash scripts/build-cloudflare.sh
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: dist
   deploy:
     environment:
       name: github-pages
