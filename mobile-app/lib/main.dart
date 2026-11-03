@@ -200,9 +200,10 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       }
       // HtePlayback is a process-wide singleton; never reassign it on retries.
 
-      // This source is an APK asset, not a remote URL. The splash remains up
-      // until the entire advert has finished playing.
-      await playback.playStartupAd();
+      // Startup tone is temporarily disabled while isolating the
+      // just_audio_background MediaItem initialisation failure. Keep the
+      // bundled MP3 in assets and retain scheduled in-player adverts.
+      // The splash must never wait for optional audio playback.
 
       // Authentication/data services initialise only after the offline
       // startup experience has completed.
