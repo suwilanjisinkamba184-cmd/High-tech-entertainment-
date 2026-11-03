@@ -176,6 +176,7 @@ class HtePlayback {
     } catch (error) {
       playbackError.value = _friendlyError(error);
       debugPrint('HTE bundled startup advert failed: $error');
+      rethrow; // Never silently bypass the required startup advertisement.
     } finally {
       _playingStartupAd = false;
       adPlaying.value = false;
@@ -194,7 +195,11 @@ class HtePlayback {
     _tracksSinceAd++;
     if (audioAdsEnabled && _tracksSinceAd >= adEvery) {
       _tracksSinceAd = 0;
-      if (await _playAd()) return;
+      final advertStarted = await _playAd();
+      if (advertStarted) return;
+      // Do not continue to the next song when a mandatory advert fails.
+      await player.stop();
+      return;
     }
     await _playNextTrack();
   }
