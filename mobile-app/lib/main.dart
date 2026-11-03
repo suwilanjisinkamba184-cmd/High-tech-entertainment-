@@ -1525,8 +1525,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool checking = false;
   bool autoplaySetting = true;
   bool shuffleSetting = false;
-  bool audioAdsSetting = true;
-  int adFrequency = 3;
+  int adFrequency = 8;
 
   @override
   void initState() { super.initState(); _loadVersion(); _loadPlaybackSettings(); }
@@ -1535,9 +1534,8 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs=await SharedPreferences.getInstance();
     autoplaySetting=prefs.getBool('hte_autoplay')??true;
     shuffleSetting=prefs.getBool('hte_shuffle')??false;
-    audioAdsSetting=prefs.getBool('hte_audio_ads')??true;
-    adFrequency=prefs.getInt('hte_ad_frequency')??3;
-    playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting; playback.audioAdsEnabled=audioAdsSetting; playback.adEvery=adFrequency;
+    adFrequency=HtePlayback.advertInterval;
+    playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting; playback.audioAdsEnabled=true; playback.adEvery=HtePlayback.advertInterval;
     if(mounted)setState((){});
   }
   Future<void> _savePlaybackSetting(String key,Object value) async {
@@ -1650,8 +1648,11 @@ class _SettingsPageState extends State<SettingsPage> {
       Card(child: Column(children: [
         SwitchListTile(title:const Text('Smart Autoplay'),subtitle:const Text('Continue with recommended music when the queue ends'),value:autoplaySetting,onChanged:(v){setState(()=>autoplaySetting=v);playback.autoplay=v;_savePlaybackSetting('hte_autoplay',v);}),
         SwitchListTile(title:const Text('Shuffle'),subtitle:const Text('Play queued tracks in random order'),value:shuffleSetting,onChanged:(v){setState(()=>shuffleSetting=v);playback.shuffle=v;player.setShuffleModeEnabled(v);_savePlaybackSetting('hte_shuffle',v);}),
-        SwitchListTile(title:const Text('HT Audio Ads'),subtitle:const Text('Play promotional audio between tracks'),value:audioAdsSetting,onChanged:(v){setState(()=>audioAdsSetting=v);playback.audioAdsEnabled=v;_savePlaybackSetting('hte_audio_ads',v);}),
-        ListTile(title:const Text('Ad interval'),subtitle:const Text('Play a promotional clip after this many songs'),trailing:DropdownButton<int>(value:adFrequency,items:const [DropdownMenuItem(value:3,child:Text('3 songs')),DropdownMenuItem(value:4,child:Text('4 songs'))],onChanged:(v){if(v!=null){setState(()=>adFrequency=v);playback.adEvery=v;_savePlaybackSetting('hte_ad_frequency',v);}})),
+        const ListTile(
+          leading: Icon(Icons.campaign_outlined, color: Color(0xFFD4AF37)),
+          title: Text('HT Audio Advertisements'),
+          subtitle: Text('The startup advert plays before the app opens. The same advert plays after every 8 completed songs. Advert playback cannot be skipped.'),
+        ),
       ])),
       const SizedBox(height: 12),
       Card(child: Column(children: [
