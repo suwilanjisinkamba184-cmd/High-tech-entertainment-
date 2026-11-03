@@ -10,7 +10,7 @@ High-Tech Entertainment is a focused music and artist platform for discovering r
 - **Founder Studio:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/admin/
 - **Account:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account/
 
-GitHub Pages is the sole public website deployment target. The workflow `.github/workflows/publish-github-pages.yml` publishes the static website from `main` using GitHub Actions. Netlify and Cloudflare are not used for public website deployment. Supabase remains the backend for authentication, database, media storage and serverless functions.
+GitHub Pages is the sole public website deployment target. The workflow `.github/workflows/publish-github-pages.yml` publishes the static website from `main` using GitHub Actions. Supabase remains the backend for authentication, database, media storage and serverless functions.
 
 ## Project components
 
