@@ -20,7 +20,7 @@ const supabaseKey = 'sb_publishable_hB_aRh-dnicpRQq3wiRtWg_JTdhmMda';
 const authRedirect = 'com.hightechentertainment.app://login-callback';
 final db = Supabase.instance.client;
 bool _supabaseInitialized = false;
-bool _audioBackgroundInitializationAttempted = false;
+bool _audioBackgroundInitialized = false;
 late final HtePlayback playback;
 late final AudioPlayer player;
 final ValueNotifier<int> favouritesRevision = ValueNotifier<int>(0);
@@ -161,17 +161,19 @@ class _StartupGateState extends State<StartupGate> {
         );
         _supabaseInitialized = true;
       }
-      // Initialise the background handler before constructing AudioPlayer.
-      // Keep the attempt flag so a later retry does not call Supabase.initialize
-      // a second time if audio-service setup failed after Supabase succeeded.
+      // The background audio handler MUST finish initialising before the
+      // singleton AudioPlayer is constructed. Mark it ready only after init
+      // succeeds: marking an attempt before awaiting it leaves just_audio's
+      // late _audioHandler unset if init throws, and a retry then creates a
+      // player against an uninitialised handler (the reported crash).
       if (defaultTargetPlatform == TargetPlatform.android &&
-          !_audioBackgroundInitializationAttempted) {
-        _audioBackgroundInitializationAttempted = true;
+          !_audioBackgroundInitialized) {
         await JustAudioBackground.init(
           androidNotificationChannelId: 'com.hightechentertainment.app.audio',
           androidNotificationChannelName: 'High-Tech Music Playback',
           androidNotificationOngoing: true,
         );
+        _audioBackgroundInitialized = true;
       }
       playback = HtePlayback();
       player = playback.player;
