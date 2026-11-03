@@ -1711,7 +1711,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
       );
-    } catch (error) {
+    } catch (_) {
       if (mounted) _message('Could not check for updates. Check your internet connection and try again.');
     } finally {
       if (mounted) setState(() { checking = false; updateStatus = ''; });
@@ -1743,13 +1743,16 @@ class _SettingsPageState extends State<SettingsPage> {
         final sink = apkFile.openWrite();
         var received = 0;
         setState(() => updateStatus = 'Downloading update…');
-        await for (final chunk in streamed.stream) {
-          sink.add(chunk);
-          received += chunk.length;
-          if (mounted) setState(() => downloadProgress = (received / expectedSize).clamp(0.0, 1.0).toDouble());
+        try {
+          await for (final chunk in streamed.stream) {
+            sink.add(chunk);
+            received += chunk.length;
+            if (mounted) setState(() => downloadProgress = (received / expectedSize).clamp(0.0, 1.0).toDouble());
+          }
+          await sink.flush();
+        } finally {
+          await sink.close();
         }
-        await sink.flush();
-        await sink.close();
         if (received != expectedSize) {
           throw const FormatException('The downloaded APK is incomplete. Please retry.');
         }
@@ -1757,12 +1760,14 @@ class _SettingsPageState extends State<SettingsPage> {
         client.close();
       }
 
-      final firstBytes = await apkFile.openRead(0, 4).first;
+      final downloadedApk = apkFile;
+      if (downloadedApk == null) throw const FileSystemException('The APK download did not complete.');
+      final firstBytes = await downloadedApk.openRead(0, 4).first;
       if (firstBytes.length < 4 || firstBytes[0] != 0x50 || firstBytes[1] != 0x4b) {
         throw const FormatException('The downloaded file is not a valid APK archive.');
       }
       if (expectedDigest.startsWith('sha256:')) {
-        final actualDigest = await sha256.bind(apkFile.openRead()).first;
+        final actualDigest = await sha256.bind(downloadedApk.openRead()).first;
         if (actualDigest.toString().toLowerCase() != expectedDigest.substring(7).toLowerCase()) {
           throw const FormatException('APK integrity verification failed. The update was not opened.');
         }
@@ -1770,7 +1775,7 @@ class _SettingsPageState extends State<SettingsPage> {
       if (!mounted) return;
       setState(() => updateStatus = 'Download complete. Opening Android installer…');
       final result = await OpenFilex.open(
-        apkFile.path,
+        downloadedApk.path,
         type: 'application/vnd.android.package-archive',
       );
       if (!mounted) return;
