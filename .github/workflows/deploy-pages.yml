@@ -22,6 +22,7 @@ jobs:
           test -s supabase-config.js
           test -s robots.txt
           test -s sitemap.xml
+          grep -q 'label for="booking-name"' index.html || { echo "Booking form labels must be programmatically associated" >&2; exit 1; }
           cmp -s high-tech-logo.svg mobile-app/assets/high-tech-logo.svg || { echo "Website logo must match the Android app logo" >&2; exit 1; }
           test -s assets/app.js
           test -s assets/site.css
