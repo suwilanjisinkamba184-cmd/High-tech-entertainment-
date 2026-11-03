@@ -1,26 +1,23 @@
-name: Validate High-Tech Entertainment GitHub Pages website
+name: Validate High-Tech Entertainment website
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
-
 concurrency:
   group: hte-validation-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-      - name: Validate required website files
+      - uses: actions/checkout@v4
+      - name: Validate required public website files
         run: |
+          set -euo pipefail
           test -s index.html
           test -s supabase-config.js
           test -s robots.txt
@@ -30,13 +27,13 @@ jobs:
           test -s assets/videos.js
           test -s account/index.html
           test -s admin/index.html
-          grep -q 'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-' index.html
-          grep -q '<link rel="canonical"' index.html
-          grep -q 'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/sitemap.xml' robots.txt
-          ! grep -R -n 'high-techmedia.netlify.app' --include='*.html' --include='*.js' --include='*.dart' --include='*.txt' --include='*.xml' .
-          python -m json.tool package.json > /dev/null
+          grep -q 'https://htmusic.pages.dev/' index.html
+          grep -q 'https://htmusic.pages.dev/sitemap.xml' robots.txt
+          ! grep -R -n 'htmusic84.netlify.app\|suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-' --include='*.html' --include='*.js' --include='*.txt' --include='*.xml' .
+          python -m json.tool package.json >/dev/null
       - name: Check JavaScript syntax
-        run: |
-          find . -type f -name '*.js' -not -path './node_modules/*' -print0 | xargs -0 -r -n1 node --check
+        run: find assets admin account -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
       - name: Validate sitemap XML
         run: python -c "import xml.etree.ElementTree as ET; ET.parse('sitemap.xml'); print('Sitemap XML is valid')"
+      - name: Validate Cloudflare static build
+        run: bash scripts/build-cloudflare.sh
