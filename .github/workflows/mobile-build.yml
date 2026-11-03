@@ -60,7 +60,11 @@ jobs:
           cp mobile-app/pubspec.yaml "$RUNNER_TEMP/hte_app/pubspec.yaml"
           rm -rf "$RUNNER_TEMP/hte_app/lib" "$RUNNER_TEMP/hte_app/test"
           cp -R mobile-app/lib "$RUNNER_TEMP/hte_app/lib"
-          cp -R mobile-app/test "$RUNNER_TEMP/hte_app/test"
+          if [ -d mobile-app/test ]; then
+            cp -R mobile-app/test "$RUNNER_TEMP/hte_app/test"
+          else
+            mkdir -p "$RUNNER_TEMP/hte_app/test"
+          fi
           mkdir -p "$RUNNER_TEMP/hte_app/assets"
           cp -R mobile-app/assets/. "$RUNNER_TEMP/hte_app/assets/"
           python3 -m pip install --quiet cairosvg
