@@ -51,22 +51,6 @@ class HtePlayback {
   bool autoplay = true, shuffle = false, audioAdsEnabled = true;
   bool _handlingCompletion = false;
   int adEvery = 3;
-    player.errorStream.listen((error) {
-      playbackError.value = _friendlyError(error);
-      debugPrint('HTE audio player error: $error');
-    });
-    player.processingStateStream.listen((state) {
-      if (state == ProcessingState.completed && !_handlingCompletion) {
-        _handlingCompletion = true;
-        _advanceAfterCompletion()
-            .catchError((Object error) {
-              playbackError.value = _friendlyError(error);
-              debugPrint('HTE queue advance failed: $error');
-            })
-            .whenComplete(() => _handlingCompletion = false);
-      }
-    });
-  }
 
   String _friendlyError(Object error) {
     final message = error.toString();
