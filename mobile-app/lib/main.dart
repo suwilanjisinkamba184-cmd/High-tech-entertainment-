@@ -25,6 +25,7 @@ const supabaseUrl = 'https://wqrxacjbsldbnoekbkbf.supabase.co';
 const supabaseKey = 'sb_publishable_hB_aRh-dnicpRQq3wiRtWg_JTdhmMda';
 const authRedirect = 'com.hightechentertainment.app://login-callback';
 const googleWebClientId = String.fromEnvironment('HTE_GOOGLE_WEB_CLIENT_ID');
+bool _googleSignInInitialized = false;
 final db = Supabase.instance.client;
 bool _supabaseInitialized = false;
 bool _audioBackgroundInitialized = false;
@@ -1487,7 +1488,10 @@ class _AccountTabState extends State<AccountTab> {
     try {
       if (googleWebClientId.trim().isNotEmpty) {
         final google = GoogleSignIn.instance;
-        await google.initialize(serverClientId: googleWebClientId.trim());
+        if (!_googleSignInInitialized) {
+          await google.initialize(serverClientId: googleWebClientId.trim());
+          _googleSignInInitialized = true;
+        }
         final account = await google.authenticate();
         final authorization = await account.authorizationClient
                 .authorizationForScopes(const ['email', 'profile']) ??
