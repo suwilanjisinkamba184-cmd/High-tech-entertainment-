@@ -27,7 +27,7 @@ jobs:
           test -s assets/videos.js
           test -s account/index.html
           test -s admin/index.html
-          grep -q 'softwareVersion\":\"2.1.5\"' index.html
+          grep -q '"softwareVersion":"2.1.5"' index.html
           grep -q 'Current official release: Android v2.1.5' index.html
           grep -q './assets/app.js?v=8' index.html
           grep -q '../assets/app.js?v=8' account/index.html
