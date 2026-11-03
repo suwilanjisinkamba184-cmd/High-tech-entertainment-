@@ -27,6 +27,11 @@ jobs:
           test -s assets/videos.js
           test -s account/index.html
           test -s admin/index.html
+          grep -q 'softwareVersion\":\"2.1.5\"' index.html
+          grep -q 'Current official release: Android v2.1.5' index.html
+          grep -q './assets/app.js?v=8' index.html
+          grep -q '../assets/app.js?v=8' account/index.html
+          grep -q '../assets/app.js?v=8' admin/index.html
           grep -q 'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/' index.html
           grep -q 'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/sitemap.xml' robots.txt
           grep -q "siteBasePath=()=>location.pathname.startsWith('/High-tech-entertainment-/')" assets/app.js
