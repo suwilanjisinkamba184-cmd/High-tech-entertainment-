@@ -112,7 +112,6 @@ class HteApp extends StatelessWidget {
         brightness: Brightness.light,
       ),
     ).copyWith(
-      useMaterial3: true,
       scaffoldBackgroundColor: const Color(0xFFF7F6F2),
       appBarTheme: const AppBarTheme(
         backgroundColor: Color(0xFFF7F6F2),
@@ -131,7 +130,6 @@ class HteApp extends StatelessWidget {
       ),
     ),
     darkTheme: ThemeData(
-      useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: const Color(0xFF08090B),
       colorScheme: ColorScheme.fromSeed(
@@ -1307,7 +1305,7 @@ class FullPlayerPage extends StatelessWidget {
                               itemBuilder: (_) => [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
                                   .map((speed) => PopupMenuItem<double>(
                                     value: speed,
-                                    child: Text(speed == 1.0 ? 'Normal (1×)' : '${speed}×'),
+                                    child: Text(speed == 1.0 ? 'Normal (1×)' : '$speed×'),
                                   )).toList(),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
@@ -2159,6 +2157,24 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _message(String value) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
 
+  Widget _themeChoiceTile(
+    BuildContext sheetContext,
+    ThemeMode value,
+    String title,
+    String subtitle,
+  ) {
+    final selected = AppThemeController.mode.value == value;
+    return ListTile(
+      leading: Icon(
+        selected ? Icons.radio_button_checked : Icons.radio_button_off,
+        color: selected ? const Color(0xFFD4AF37) : null,
+      ),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      onTap: () => Navigator.pop(sheetContext, value),
+    );
+  }
+
   Future<void> _chooseTheme() async {
     final selected = await showModalBottomSheet<ThemeMode>(
       context: context,
@@ -2173,26 +2189,23 @@ class _SettingsPageState extends State<SettingsPage> {
               const Text('Choose your appearance',
                 style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
               const SizedBox(height: 12),
-              RadioListTile<ThemeMode>(
-                value: ThemeMode.dark,
-                groupValue: AppThemeController.mode.value,
-                title: const Text('High-Tech dark'),
-                subtitle: const Text('Signature black with gold accents'),
-                onChanged: (value) => Navigator.pop(sheetContext, value),
+              _themeChoiceTile(
+                sheetContext,
+                ThemeMode.dark,
+                'High-Tech dark',
+                'Signature black with gold accents',
               ),
-              RadioListTile<ThemeMode>(
-                value: ThemeMode.light,
-                groupValue: AppThemeController.mode.value,
-                title: const Text('Light'),
-                subtitle: const Text('Bright, clean interface'),
-                onChanged: (value) => Navigator.pop(sheetContext, value),
+              _themeChoiceTile(
+                sheetContext,
+                ThemeMode.light,
+                'Light',
+                'Bright, clean interface',
               ),
-              RadioListTile<ThemeMode>(
-                value: ThemeMode.system,
-                groupValue: AppThemeController.mode.value,
-                title: const Text('System default'),
-                subtitle: const Text('Follow Android appearance settings'),
-                onChanged: (value) => Navigator.pop(sheetContext, value),
+              _themeChoiceTile(
+                sheetContext,
+                ThemeMode.system,
+                'System default',
+                'Follow Android appearance settings',
               ),
             ],
           ),
