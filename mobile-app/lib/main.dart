@@ -236,6 +236,11 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       });
     }
     try {
+      // Start the bundled startup sound before awaiting any background
+      // audio setup or network/authentication work. main() has already called
+      // WidgetsFlutterBinding.ensureInitialized().
+      unawaited(_playStartupSound());
+
       // Audio is an optional service: an audio-plugin initialisation
       // failure must never prevent the user from reaching sign-in.
       if (defaultTargetPlatform == TargetPlatform.android &&
@@ -253,12 +258,6 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         }
       }
 
-      // Start the branded sound immediately and independently of background
-      // music registration, authentication, network access, and advert playback.
-      // It uses a dedicated process-lifetime player and plays once per app launch.
-      unawaited(_playStartupSound());
-
-      // Audio background registration is independent of authentication.
       // Never play an advert during startup: reopening the app or returning
       // from a paused session must take the listener directly to sign-in.
       // Scheduled audio adverts are handled only after completed music tracks.
