@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
 import 'playback_engine.dart';
+import 'user_facing_errors.dart';
 
 /// Shared streamed and on-device video player with a real landscape mode.
 class HteVideoPlayerPage extends StatefulWidget {
@@ -48,7 +49,7 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
       return;
     }
 
-    _resumeMusic = music.player.playing;
+    _resumeMusic = _resumeMusic || music.player.playing;
     if (_resumeMusic) await music.player.pause();
     if (!mounted) return;
 
@@ -84,14 +85,28 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
     }
   }
 
-  String _friendlyVideoError(Object error) {
-    final value = error.toString();
-    if (value.contains('SocketException') || value.contains('Failed host lookup')) {
-      return 'The video could not load because there is no internet connection. Download it first or choose a local video.';
+  String _friendlyVideoError(Object error) => hteFriendlyError(
+    error,
+    fallback: 'This video could not be played. Check the file and try again.',
+  );
+
+  Future<void> _retryVideo() async {
+    final previous = _controller;
+    _controller = null;
+    if (previous != null) {
+      previous.removeListener(_onVideoChanged);
+      try {
+        await previous.dispose();
+      } catch (_) {
+        // A failed controller must not block a retry.
+      }
     }
-    if (value.contains('404')) return 'This video link is no longer available. Ask the administrator to upload it again.';
-    if (value.contains('403') || value.contains('401')) return 'This video is private or its access has expired.';
-    return 'Video playback failed. The file may use an unsupported format or damaged codec. Details: $value';
+    if (!mounted) return;
+    setState(() {
+      _error = null;
+      _ready = false;
+    });
+    await _initialize();
   }
 
   void _onVideoChanged() {
@@ -291,6 +306,11 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
                       const SizedBox(height: 14),
                       Text(_error!, textAlign: TextAlign.center),
                       const SizedBox(height: 18),
+                      OutlinedButton.icon(
+                        onPressed: _retryVideo,
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Refresh video'),
+                      ),
                       TextButton(onPressed: () => Navigator.of(context).maybePop(), child: const Text('Go back')),
                     ],
                   ),
