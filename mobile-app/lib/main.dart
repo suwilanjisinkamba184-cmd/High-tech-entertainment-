@@ -376,7 +376,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                   const SizedBox(height: 18),
                   FilledButton(
                     onPressed: _starting ? null : _initialize,
-                    child: const Text('Try again'),
+                    child: const Text('Refresh'),
                   ),
                 ],
               ],
@@ -2308,6 +2308,7 @@ class SpotifyEmbedPage extends StatefulWidget {
 class _SpotifyEmbedPageState extends State<SpotifyEmbedPage> {
   late final WebViewController controller;
   bool loading = true;
+  String? error;
 
   @override
   void initState() {
@@ -2318,6 +2319,16 @@ class _SpotifyEmbedPageState extends State<SpotifyEmbedPage> {
       ..setNavigationDelegate(NavigationDelegate(
         onPageFinished: (_) {
           if (mounted) setState(() => loading = false);
+        },
+        onWebResourceError: (failure) {
+          if (!mounted) return;
+          setState(() {
+            loading = false;
+            error = hteFriendlyError(
+              StateError(failure.description),
+              fallback: 'Spotify could not load this release right now.',
+            );
+          });
         },
       ))
       ..loadRequest(Uri.parse(widget.embedUrl));
@@ -2342,6 +2353,24 @@ class _SpotifyEmbedPageState extends State<SpotifyEmbedPage> {
       Expanded(child: Stack(children: [
         WebViewWidget(controller: controller),
         if (loading) const Center(child: CircularProgressIndicator(color: Color(0xFFD9B96E))),
+        if (error != null)
+          Center(child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.cloud_off_rounded, color: Color(0xFFD9B96E), size: 40),
+              const SizedBox(height: 12),
+              Text(error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
+              const SizedBox(height: 14),
+              OutlinedButton.icon(
+                onPressed: () {
+                  setState(() { error = null; loading = true; });
+                  controller.reload();
+                },
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Refresh'),
+              ),
+            ]),
+          )),
       ])),
     ]),
   );
