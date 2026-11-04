@@ -684,8 +684,8 @@ class ArtistList extends StatelessWidget {
   const ArtistList({super.key, this.horizontal = false});
   final bool horizontal;
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
-    future: rows('artists', 'name'),
+  Widget build(BuildContext context) => RetryFutureBuilder<List<Map<String, dynamic>>>(
+    future: () => rows('artists', 'name'),
     builder: (context, snapshot) {
       if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
       if (!snapshot.hasData) return const Busy();
@@ -751,8 +751,8 @@ class ArtistDetailPage extends StatelessWidget {
         Center(child:Text(name,style:const TextStyle(fontSize:24,fontWeight:FontWeight.bold))),
         Padding(padding:const EdgeInsets.all(20),child:Text((artist['bio']??'High-Tech Entertainment artist').toString(),textAlign:TextAlign.center,style:const TextStyle(color:Colors.white60))),
         const Heading('Artist releases'),
-        FutureBuilder<List<Map<String,dynamic>>>(
-          future:db.from('tracks').select().eq('is_published',true).eq('artist',name).order('created_at',ascending:false).then((data)=>List<Map<String,dynamic>>.from(data).where(_isPlayableTrack).toList()),
+        RetryFutureBuilder<List<Map<String,dynamic>>>(
+          future: () => db.from('tracks').select().eq('is_published',true).eq('artist',name).order('created_at',ascending:false).then((data)=>List<Map<String,dynamic>>.from(data).where(_isPlayableTrack).toList()),
           builder:(context,snapshot)=>snapshot.hasError?Notice(friendlyErrorMessage(snapshot.error!)):!snapshot.hasData?const Busy():snapshot.data!.isEmpty?const Notice('Published tracks by this artist will appear here.'):TrackList(items:snapshot.data!),
         ),
       ]),
@@ -764,8 +764,8 @@ class ReleaseList extends StatelessWidget {
   const ReleaseList({super.key, this.horizontal = false});
   final bool horizontal;
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
-    future: rows('releases', 'created_at'),
+  Widget build(BuildContext context) => RetryFutureBuilder<List<Map<String, dynamic>>>(
+    future: () => rows('releases', 'created_at'),
     builder: (context, snapshot) {
       if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
       if (!snapshot.hasData) return const Busy();
@@ -870,8 +870,8 @@ class TrackList extends StatelessWidget {
   final bool compact;
   final List<Map<String, dynamic>>? items;
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
-    future: items == null ? playableTracks() : Future.value(items!.where(_isPlayableTrack).toList()),
+  Widget build(BuildContext context) => RetryFutureBuilder<List<Map<String, dynamic>>>(
+    future: () => items == null ? playableTracks() : Future.value(items!.where(_isPlayableTrack).toList()),
     builder: (context, snapshot) {
       if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
       if (!snapshot.hasData) return const Busy();
@@ -1210,8 +1210,8 @@ class VideosTab extends StatelessWidget {
   Widget build(BuildContext context) => Column(children: [
     const Brand(),
     const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Videos', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)))),
-    Expanded(child: FutureBuilder<List<Map<String, dynamic>>>(
-      future: rows('videos', 'created_at'),
+    Expanded(child: RetryFutureBuilder<List<Map<String, dynamic>>>(
+      future: () => rows('videos', 'created_at'),
       builder: (context, snapshot) {
         if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
         if (!snapshot.hasData) return const Busy();
@@ -2218,6 +2218,42 @@ Future<List<Map<String, dynamic>>> rows(String table, String orderBy) async {
   return List<Map<String, dynamic>>.from(result);
 }
 
+/// A FutureBuilder with a real reload action for failed network requests.
+/// The loader is called again only when the user taps Retry.
+class RetryFutureBuilder<T> extends StatefulWidget {
+  const RetryFutureBuilder({super.key, required this.future, required this.builder});
+  final Future<T> Function() future;
+  final Widget Function(BuildContext, AsyncSnapshot<T>) builder;
+
+  @override
+  State<RetryFutureBuilder<T>> createState() => _RetryFutureBuilderState<T>();
+}
+
+class _RetryFutureBuilderState<T> extends State<RetryFutureBuilder<T>> {
+  late Future<T> _pending;
+
+  @override
+  void initState() {
+    super.initState();
+    _pending = widget.future();
+  }
+
+  void _retry() {
+    setState(() => _pending = widget.future());
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<T>(
+    future: _pending,
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return Notice(friendlyErrorMessage(snapshot.error!), onRetry: _retry);
+      }
+      return widget.builder(context, snapshot);
+    },
+  );
+}
+
 class Busy extends StatelessWidget {
   const Busy({super.key});
   @override
@@ -2227,11 +2263,22 @@ class Busy extends StatelessWidget {
 }
 
 class Notice extends StatelessWidget {
-  const Notice(this.message, {super.key});
+  const Notice(this.message, {super.key, this.onRetry});
   final String message;
+  final VoidCallback? onRetry;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.all(22),
-    child: Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)),
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)),
+      if (onRetry != null) ...[
+        const SizedBox(height: 14),
+        OutlinedButton.icon(
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('Retry'),
+        ),
+      ],
+    ]),
   );
 }
