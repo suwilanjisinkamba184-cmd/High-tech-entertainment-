@@ -318,11 +318,11 @@ jobs:
         working-directory: ${{ runner.temp }}/hte_app
         run: |
           APK="build/app/outputs/flutter-apk/app-su-release.apk"
-          AAB="build/app/outputs/bundle/release/app-su-release.aab"
-          test -s "$APK"
-          test -s "$AAB"
+          AAB="build/app/outputs/bundle/suRelease/app-su-release.aab"
+          test -s "$APK" || { echo "::error::Expected SU APK was not found: $APK"; exit 1; }
+          test -s "$AAB" || { echo "::error::Expected SU App Bundle was not found: $AAB"; find build/app/outputs/bundle -maxdepth 3 -type f -print; exit 1; }
           mv "$APK" "build/app/outputs/flutter-apk/High-Tech-Entertainment-v2.2.0-SU.apk"
-          mv "$AAB" "build/app/outputs/bundle/release/High-Tech-Entertainment-v2.2.0-SU.aab"
+          mv "$AAB" "build/app/outputs/bundle/suRelease/High-Tech-Entertainment-v2.2.0-SU.aab"
       - name: Upload standalone Android APK
         uses: actions/upload-artifact@v4
         with:
@@ -334,7 +334,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: High-Tech-Entertainment-v2.2.0-SU-AAB
-          path: ${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/High-Tech-Entertainment-v2.2.0-SU.aab
+          path: ${{ runner.temp }}/hte_app/build/app/outputs/bundle/suRelease/High-Tech-Entertainment-v2.2.0-SU.aab
           if-no-files-found: error
 
       - name: Publish public Android APK release
