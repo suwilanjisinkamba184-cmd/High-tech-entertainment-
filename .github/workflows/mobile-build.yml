@@ -327,14 +327,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: High-Tech-Entertainment-v2.2.0-SU-APK
-          path: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment.apk
+          path: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment-v2.2.0-SU.apk
           if-no-files-found: error
           compression-level: 0
       - name: Upload Android App Bundle separately
         uses: actions/upload-artifact@v4
         with:
           name: High-Tech-Entertainment-v2.2.0-SU-AAB
-          path: ${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/High-Tech-Entertainment.aab
+          path: ${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/High-Tech-Entertainment-v2.2.0-SU.aab
           if-no-files-found: error
 
       - name: Publish public Android APK release
@@ -348,6 +348,6 @@ jobs:
             Official High-Tech Entertainment Android SU flavour. The semantic app version remains 2.2.0; SU identifies this build flavour.
             Download the APK and install it on a compatible Android device.
             This release is signed with the project's private upload key.
-          files: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment.apk
+          files: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment-v2.2.0-SU.apk
           overwrite_files: true
           make_latest: true
