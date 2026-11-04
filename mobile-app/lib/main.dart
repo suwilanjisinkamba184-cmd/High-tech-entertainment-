@@ -767,9 +767,8 @@ class HomeTab extends StatelessWidget {
                 style: TextStyle(fontSize: 31, height: 1.08, fontWeight: FontWeight.w800,
                   letterSpacing: -1.0, color: Color(0xFFF7F3E9))),
               const SizedBox(height: 12),
-              const SizedBox(width: 265,
-                child: Text('Discover the artists, releases and original sound shaping High-Tech Entertainment.',
-                  style: TextStyle(color: Color(0xFFC4BFB4), height: 1.55, fontSize: 13))),
+              const Text('Discover the artists, releases and original sound shaping High-Tech Entertainment.',
+                style: TextStyle(color: Color(0xFFC4BFB4), height: 1.55, fontSize: 13)),
               const SizedBox(height: 22),
               FilledButton.icon(
                 onPressed: () => Navigator.of(context).push(
@@ -787,7 +786,7 @@ class HomeTab extends StatelessWidget {
                 const Icon(Icons.graphic_eq_rounded, color: Color(0xFFE2C47D), size: 16),
                 const SizedBox(width: 7),
                 Text('MUSIC  •  BEATS  •  PRODUCTION  •  BEYOND',
-                  style: TextStyle(color: Colors.white.withValues(alpha: .58),
+                  style: const TextStyle(color: Color(0x94FFFFFF),
                     fontSize: 8, fontWeight: FontWeight.w700, letterSpacing: 1.0)),
               ]),
             ]),
