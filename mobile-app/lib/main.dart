@@ -1008,7 +1008,24 @@ class PlayerBar extends StatelessWidget {
 
 class FullPlayerPage extends StatelessWidget {
   const FullPlayerPage({super.key});
-  String _time(Duration d) => '${d.inMinutes.toString().padLeft(2,'0')}:${(d.inSeconds%60).toString().padLeft(2,'0')}';
+
+  String _time(Duration value) {
+    final hours = value.inHours;
+    final minutes = value.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = value.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
+  }
+
+  Future<void> _seekBy(Duration delta) async {
+    final duration = player.duration ?? Duration.zero;
+    final target = player.position + delta;
+    final clamped = target < Duration.zero
+        ? Duration.zero
+        : target > duration
+            ? duration
+            : target;
+    await player.seek(clamped);
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -1035,69 +1052,139 @@ class FullPlayerPage extends StatelessWidget {
           valueListenable: playback.currentTrack,
           builder: (context, track, _) => track == null
             ? const Notice('Choose a track to start listening.')
-            : Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(22),
-                  child: SizedBox(width: 260, height: 260,
-                    child: MediaCover(url: track['cover_url']?.toString(), height: 260)),
-                ),
-                const SizedBox(height: 24),
-                Text((track['title'] ?? 'Now playing').toString(),
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center),
-                Text((track['artist'] ?? 'High-Tech Entertainment').toString(),
-                  style: const TextStyle(color: Colors.white60)),
-                ValueListenableBuilder<String?>(
-                  valueListenable: playback.playbackError,
-                  builder: (context, error, _) => error == null
-                    ? const SizedBox(height: 12)
-                    : Padding(padding: const EdgeInsets.only(top: 12),
-                      child: Text(error, textAlign: TextAlign.center,
-                        style: const TextStyle(color: Color(0xFFFFAAA4), fontSize: 12))),
-                ),
-                const SizedBox(height: 20),
-                StreamBuilder<Duration>(
-                  stream: player.positionStream,
-                  initialData: Duration.zero,
-                  builder: (context, pos) {
-                    final duration = player.duration ?? Duration.zero;
-                    final position = pos.data ?? Duration.zero;
-                    final value = duration.inMilliseconds == 0 ? 0.0 :
-                      position.inMilliseconds.clamp(0, duration.inMilliseconds).toDouble();
-                    return Column(children: [
-                      Slider(value: value,
-                        max: duration.inMilliseconds == 0 ? 1.0 : duration.inMilliseconds.toDouble(),
-                        onChanged: (v) => player.seek(Duration(milliseconds: v.round()))),
-                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [Text(_time(position)), Text(_time(duration))]),
-                    ]);
-                  },
-                ),
-                const SizedBox(height: 12),
-                Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-                  IconButton(onPressed: () => playback.toggleShuffle(),
-                    icon: Icon(playback.shuffle ? Icons.shuffle_on : Icons.shuffle)),
-                  IconButton(iconSize: 38, onPressed: () => playback.previous(),
-                    icon: const Icon(Icons.skip_previous)),
-                  StreamBuilder<PlayerState>(
-                    stream: player.playerStateStream,
-                    builder: (context, s) {
-                      final playing = s.data?.playing ?? false;
-                      return IconButton(iconSize: 64, color: const Color(0xFFD4AF37),
-                        onPressed: () => playing ? player.pause() : player.play(),
-                        icon: Icon(playing ? Icons.pause_circle_filled : Icons.play_circle_fill));
-                    },
+            : LayoutBuilder(
+              builder: (context, constraints) {
+                final artworkSize = (constraints.maxWidth - 56).clamp(150.0, 280.0).toDouble();
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight - 46),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: artworkSize,
+                          height: artworkSize,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: const [
+                              BoxShadow(color: Color(0x553D2C08), blurRadius: 28, spreadRadius: 2),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: MediaCover(url: track['cover_url']?.toString(), height: artworkSize),
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        Text((track['title'] ?? 'Now playing').toString(),
+                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 5),
+                        Text((track['artist'] ?? 'High-Tech Entertainment').toString(),
+                          style: const TextStyle(color: Colors.white60), textAlign: TextAlign.center),
+                        ValueListenableBuilder<String?>(
+                          valueListenable: playback.playbackError,
+                          builder: (context, error, _) => error == null
+                            ? const SizedBox(height: 10)
+                            : Padding(padding: const EdgeInsets.only(top: 10),
+                              child: Text(error, textAlign: TextAlign.center,
+                                style: const TextStyle(color: Color(0xFFFFAAA4), fontSize: 12))),
+                        ),
+                        StreamBuilder<Duration>(
+                          stream: player.positionStream,
+                          initialData: Duration.zero,
+                          builder: (context, positionSnapshot) {
+                            final duration = player.duration ?? Duration.zero;
+                            final position = positionSnapshot.data ?? Duration.zero;
+                            final maxMs = duration.inMilliseconds;
+                            final currentMs = maxMs <= 0
+                                ? 0.0
+                                : position.inMilliseconds.clamp(0, maxMs).toDouble();
+                            return Column(children: [
+                              Slider(
+                                value: currentMs,
+                                max: maxMs <= 0 ? 1.0 : maxMs.toDouble(),
+                                onChanged: maxMs <= 0
+                                    ? null
+                                    : (value) => player.seek(Duration(milliseconds: value.round())),
+                              ),
+                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(_time(position), style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                                  Text(_time(duration), style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                                ]),
+                            ]);
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            IconButton(
+                              tooltip: 'Shuffle',
+                              onPressed: () => playback.toggleShuffle(),
+                              icon: Icon(playback.shuffle ? Icons.shuffle_on : Icons.shuffle,
+                                color: playback.shuffle ? const Color(0xFFD4AF37) : null),
+                            ),
+                            IconButton(
+                              tooltip: 'Back 10 seconds',
+                              onPressed: () => _seekBy(const Duration(seconds: -10)),
+                              icon: const Icon(Icons.replay_10),
+                            ),
+                            IconButton(
+                              tooltip: 'Previous track',
+                              iconSize: 38,
+                              onPressed: () => playback.previous(),
+                              icon: const Icon(Icons.skip_previous),
+                            ),
+                            StreamBuilder<PlayerState>(
+                              stream: player.playerStateStream,
+                              builder: (context, snapshot) {
+                                final playing = snapshot.data?.playing ?? false;
+                                return IconButton(
+                                  tooltip: playing ? 'Pause' : 'Play',
+                                  iconSize: 66,
+                                  color: const Color(0xFFD4AF37),
+                                  onPressed: () => playing ? player.pause() : player.play(),
+                                  icon: Icon(playing ? Icons.pause_circle_filled : Icons.play_circle_fill),
+                                );
+                              },
+                            ),
+                            IconButton(
+                              tooltip: 'Next track',
+                              iconSize: 38,
+                              onPressed: () => playback.next(),
+                              icon: const Icon(Icons.skip_next),
+                            ),
+                            IconButton(
+                              tooltip: 'Forward 10 seconds',
+                              onPressed: () => _seekBy(const Duration(seconds: 10)),
+                              icon: const Icon(Icons.forward_10),
+                            ),
+                            StreamBuilder<LoopMode>(
+                              stream: player.loopModeStream,
+                              initialData: LoopMode.off,
+                              builder: (context, snapshot) {
+                                final repeating = snapshot.data == LoopMode.one;
+                                return IconButton(
+                                  tooltip: repeating ? 'Turn repeat off' : 'Repeat this track',
+                                  onPressed: () => playback.setRepeat(!repeating),
+                                  icon: Icon(Icons.repeat_one,
+                                    color: repeating ? const Color(0xFFD4AF37) : null),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        const Text('Quality Sound, Global Vibes',
+                          style: TextStyle(color: Colors.white54, fontSize: 12)),
+                      ],
+                    ),
                   ),
-                  IconButton(iconSize: 38, onPressed: () => playback.next(),
-                    icon: const Icon(Icons.skip_next)),
-                  IconButton(onPressed: () => playback.setRepeat(true),
-                    icon: const Icon(Icons.repeat_one)),
-                ]),
-                const Text('Quality Sound, Global Vibes',
-                  style: TextStyle(color: Colors.white54, fontSize: 12)),
-              ]),
+                );
+              },
             ),
         );
       },
