@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
@@ -186,27 +187,50 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       });
     }
     try {
-      // Initialise the one native audio service first. The bundled startup
-      // advert must play before any network-dependent Supabase work so it can
-      // run on the very first launch with airplane mode enabled.
+      // Audio is an optional service: an audio-plugin initialisation
+      // failure must never prevent the user from reaching sign-in.
       if (defaultTargetPlatform == TargetPlatform.android &&
           !_audioBackgroundInitialized) {
-        await JustAudioBackground.init(
-          androidNotificationChannelId: 'com.hightechentertainment.app.audio',
-          androidNotificationChannelName: 'High-Tech Music Playback',
-          androidNotificationOngoing: true,
-        );
-        _audioBackgroundInitialized = true;
+        try {
+          await JustAudioBackground.init(
+            androidNotificationChannelId: 'com.hightechentertainment.app.audio',
+            androidNotificationChannelName: 'High-Tech Music Playback',
+            androidNotificationOngoing: true,
+          );
+          _audioBackgroundInitialized = true;
+        } catch (audioError, stackTrace) {
+          debugPrint('HTE background audio initialisation failed: $audioError');
+          debugPrintStack(stackTrace: stackTrace);
+        }
       }
-      // HtePlayback is a process-wide singleton; never reassign it on retries.
 
-      // Startup tone is temporarily disabled while isolating the
-      // just_audio_background MediaItem initialisation failure. Keep the
-      // bundled MP3 in assets and retain scheduled in-player adverts.
-      // The splash must never wait for optional audio playback.
+      // HtePlayback is a process-wide singleton; initialise it only after
+      // JustAudioBackground has had its opportunity to register the handler.
+      // Play the bundled startup advert before network-dependent Supabase
+      // setup. Failure is non-fatal: the app must still reach authentication.
+      if (defaultTargetPlatform == TargetPlatform.android &&
+          _audioBackgroundInitialized) {
+        try {
+          await playback.playStartupAd().timeout(
+            const Duration(seconds: 45),
+            onTimeout: () {
+              unawaited(playback.player.stop());
+              debugPrint('HTE startup advert timed out; continuing startup.');
+            },
+          );
+        } catch (audioError, stackTrace) {
+          debugPrint('HTE startup advert failed; continuing startup: $audioError');
+          debugPrintStack(stackTrace: stackTrace);
+          try {
+            await playback.player.stop();
+          } catch (_) {
+            // Keep startup resilient even if the native player cannot stop.
+          }
+        }
+      }
 
-      // Authentication/data services initialise only after the offline
-      // startup experience has completed.
+      // Authentication/data services initialise after the optional offline
+      // startup advert has completed or failed.
       if (!_supabaseInitialized) {
         await Supabase.initialize(
           url: supabaseUrl,

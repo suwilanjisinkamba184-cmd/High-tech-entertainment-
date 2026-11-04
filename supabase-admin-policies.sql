@@ -138,3 +138,52 @@ update storage.buckets
 set public = false
 where id = 'ht storage'
   and not exists (select 1 from storage.objects where bucket_id = 'ht storage');
+
+
+-- Publicly readable artwork with founder-only uploads, updates and deletes.
+-- The Android founder studio uploads images to hte-artwork/releases.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'hte-artwork',
+  'hte-artwork',
+  true,
+  20971520,
+  array['image/jpeg','image/png','image/webp','image/avif']
+)
+on conflict (id) do update
+set public = true,
+    file_size_limit = 20971520,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "Public can read HTE artwork" on storage.objects;
+create policy "Public can read HTE artwork" on storage.objects
+for select to anon, authenticated
+using (bucket_id = 'hte-artwork');
+
+drop policy if exists "HTE admin can upload artwork" on storage.objects;
+create policy "HTE admin can upload artwork" on storage.objects
+for insert to authenticated
+with check (
+  bucket_id = 'hte-artwork'
+  and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
+);
+
+drop policy if exists "HTE admin can update artwork" on storage.objects;
+create policy "HTE admin can update artwork" on storage.objects
+for update to authenticated
+using (
+  bucket_id = 'hte-artwork'
+  and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
+)
+with check (
+  bucket_id = 'hte-artwork'
+  and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
+);
+
+drop policy if exists "HTE admin can delete artwork" on storage.objects;
+create policy "HTE admin can delete artwork" on storage.objects
+for delete to authenticated
+using (
+  bucket_id = 'hte-artwork'
+  and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
+);
