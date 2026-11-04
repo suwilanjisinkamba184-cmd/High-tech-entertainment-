@@ -1449,11 +1449,12 @@ class DiscoverTab extends StatefulWidget {
 
 class _DiscoverTabState extends State<DiscoverTab> {
   final controller = TextEditingController();
-  static const genres = ['All', 'Afrobeat', 'Dancehall', 'Drill', 'Choir'];
   List<Map<String, dynamic>> results = [];
+  List<String> availableGenres = [];
   String selectedGenre = 'All';
   bool loading = true;
   String? error;
+  int _requestNumber = 0;
 
   @override
   void initState() {
@@ -1463,99 +1464,116 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
   Future<void> search(String term, {String? genre}) async {
     if (!mounted) return;
+    final request = ++_requestNumber;
     setState(() {
       loading = true;
       error = null;
       if (genre != null) selectedGenre = genre;
     });
     try {
-      results = await publishedTracks(term, selectedGenre);
+      final tracks = await publishedTracks(term);
+      if (!mounted || request != _requestNumber) return;
+      final genres = tracks
+          .map((track) => (track['genre'] ?? '').toString().trim())
+          .where((value) => value.isNotEmpty && value.toLowerCase() != 'spotify')
+          .toSet()
+          .toList()
+        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      availableGenres = genres;
+      if (selectedGenre != 'All' && !availableGenres.contains(selectedGenre)) {
+        selectedGenre = 'All';
+      }
+      results = selectedGenre == 'All'
+          ? tracks
+          : tracks.where((track) => (track['genre'] ?? '').toString().trim() == selectedGenre).toList();
     } catch (e) {
+      if (!mounted || request != _requestNumber) return;
       error = hteFriendlyError(e, fallback: 'Music discovery is unavailable right now.');
     }
-    if (mounted) setState(() => loading = false);
+    if (mounted && request == _requestNumber) setState(() => loading = false);
   }
 
   @override
   void dispose() {
+    _requestNumber++;
     controller.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      const Brand(),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('FIND YOUR NEXT SOUND', style: TextStyle(color: Color(0xFFD9B96E), fontSize: 10, letterSpacing: 2, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 5),
-            const Text('Discover music', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 5),
-            const Text('Explore the sounds of High-Tech Entertainment.', style: TextStyle(color: Colors.white60, fontSize: 12)),
-          ],
-        ),
-      ),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: TextField(
-          controller: controller,
-          onChanged: (value) => search(value),
-          textInputAction: TextInputAction.search,
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.search_rounded),
-            hintText: 'Search tracks by title',
+  Widget build(BuildContext context) {
+    final genres = ['All', ...availableGenres];
+    return Column(
+      children: [
+        const Brand(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('FIND YOUR NEXT SOUND', style: TextStyle(color: Color(0xFFD9B96E), fontSize: 10, letterSpacing: 2, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 5),
+              const Text('Discover music', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 5),
+              const Text('Explore the sounds of High-Tech Entertainment.', style: TextStyle(color: Colors.white60, fontSize: 12)),
+            ],
           ),
         ),
-      ),
-      const SizedBox(height: 12),
-      SizedBox(
-        height: 42,
-        child: ListView.separated(
+        Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          scrollDirection: Axis.horizontal,
-          itemCount: genres.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 8),
-          itemBuilder: (context, index) {
-            final genre = genres[index];
-            final selected = genre == selectedGenre;
-            return ChoiceChip(
-              label: Text(genre),
-              selected: selected,
-              onSelected: (_) => search(controller.text, genre: genre),
-              selectedColor: const Color(0xFFD9B96E),
-              backgroundColor: const Color(0xFF151619),
-              side: BorderSide(color: selected ? const Color(0xFFD9B96E) : const Color(0xFF393A3B)),
-              labelStyle: TextStyle(color: selected ? const Color(0xFF17130B) : Colors.white70, fontWeight: FontWeight.w700, fontSize: 11),
-            );
-          },
+          child: TextField(
+            controller: controller,
+            onChanged: (value) => search(value),
+            textInputAction: TextInputAction.search,
+            decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Search tracks by title'),
+          ),
         ),
-      ),
-      Expanded(
-        child: loading
-            ? const Busy()
-            : error != null
-                ? Notice(error!, onRetry: () => search(controller.text))
-                : results.isEmpty
-                    ? const Notice('No tracks match this search yet. Try another genre or search term.')
-                    : Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-                            child: Row(children: [
-                              const Expanded(child: Text('AVAILABLE TO PLAY', style: TextStyle(color: Color(0xFFD9B96E), fontSize: 9, letterSpacing: 1.4, fontWeight: FontWeight.w800))),
-                              Text('${results.length} tracks', style: const TextStyle(color: Colors.white54, fontSize: 11)),
-                            ]),
-                          ),
-                          Expanded(child: TrackList(items: results)),
-                        ],
-                      ),
-      ),
-    ],
-  );
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 42,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            scrollDirection: Axis.horizontal,
+            itemCount: genres.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final genre = genres[index];
+              final selected = genre == selectedGenre;
+              return ChoiceChip(
+                label: Text(genre),
+                selected: selected,
+                onSelected: (_) => search(controller.text, genre: genre),
+                selectedColor: const Color(0xFFD9B96E),
+                backgroundColor: const Color(0xFF151619),
+                side: BorderSide(color: selected ? const Color(0xFFD9B96E) : const Color(0xFF393A3B)),
+                labelStyle: TextStyle(color: selected ? const Color(0xFF17130B) : Colors.white70, fontWeight: FontWeight.w700, fontSize: 11),
+              );
+            },
+          ),
+        ),
+        Expanded(
+          child: loading
+              ? const Busy()
+              : error != null
+                  ? Notice(error!, onRetry: () => search(controller.text))
+                  : results.isEmpty
+                      ? const Notice('No tracks match this search yet. Try another genre or search term.')
+                      : Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                              child: Row(children: [
+                                const Expanded(child: Text('AVAILABLE TO PLAY', style: TextStyle(color: Color(0xFFD9B96E), fontSize: 9, letterSpacing: 1.4, fontWeight: FontWeight.w800))),
+                                Text('${results.length} tracks', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                              ]),
+                            ),
+                            Expanded(child: TrackList(items: results)),
+                          ],
+                        ),
+        ),
+      ],
+    );
+  }
 }
 class SavedTab extends StatefulWidget {
   const SavedTab({super.key});
