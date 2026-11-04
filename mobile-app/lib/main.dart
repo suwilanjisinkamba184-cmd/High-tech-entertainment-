@@ -1054,7 +1054,7 @@ class FullPlayerPage extends StatelessWidget {
             ? const Notice('Choose a track to start listening.')
             : LayoutBuilder(
               builder: (context, constraints) {
-                final artworkSize = (constraints.maxWidth - 56).clamp(150.0, 280.0);
+                final artworkSize = (constraints.maxWidth - 56).clamp(150.0, 280.0).toDouble();
                 return SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
                   child: ConstrainedBox(
