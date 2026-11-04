@@ -69,8 +69,6 @@ class HtePlayback {
   final CompletedTrackAdCounter _adCounter = CompletedTrackAdCounter();
   bool autoplay = true, shuffle = false, audioAdsEnabled = true;
   bool _handlingCompletion = false;
-  bool _playingStartupAd = false;
-  bool _startupAdvertAttempted = false;
   // Only a successfully loaded music source can contribute one completion.
   // This prevents pause/resume, source replacement and advert completion
   // notifications from being mistaken for completed songs.
@@ -193,49 +191,8 @@ class HtePlayback {
     }
   }
 
-  /// Plays the bundled advert. Because this is an app asset, it works on the
-  /// very first launch without Wi-Fi, mobile data, Supabase or a cached file.
-  /// The splash remains visible until the complete audio source finishes.
-  Future<void> playStartupAd() async {
-    if (!audioAdsEnabled || _startupAdvertAttempted) return;
-    // StartupGate can be recreated after a recoverable initialization error.
-    // Do not replay the launch advert during the same process session.
-    _startupAdvertAttempted = true;
-    _playingStartupAd = true;
-    _currentSourceIsMusic = false;
-    _completionHandledForSource = true;
-    adPlaying.value = true;
-    currentTrack.value = {
-      'title': 'Advertisement',
-      'artist': 'High-Tech Entertainment',
-    };
-    try {
-      await player.setAudioSource(
-        AudioSource.asset(
-          startupAdvertAsset,
-          tag: MediaItem(
-            id: 'hte-audio-advert',
-            title: 'Advertisement',
-            artist: 'High-Tech Entertainment',
-            album: 'High-Tech Entertainment',
-          ),
-        ),
-        preload: true,
-      );
-      await player.play();
-    } catch (error) {
-      playbackError.value = _friendlyError(error);
-      debugPrint('HTE bundled startup advert failed: $error');
-      rethrow;
-    } finally {
-      _playingStartupAd = false;
-      adPlaying.value = false;
-      currentTrack.value = null;
-    }
-  }
-
   Future<void> _advanceAfterCompletion() async {
-    if (_playingStartupAd || _completionHandledForSource) return;
+    if (_completionHandledForSource) return;
     if (!_currentSourceIsMusic && !adPlaying.value) return;
     _completionHandledForSource = true;
     _currentSourceIsMusic = false;
