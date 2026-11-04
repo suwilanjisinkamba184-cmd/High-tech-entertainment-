@@ -141,6 +141,20 @@ jobs:
                   text, target_n = re.subn(r'(?m)^(\s*targetSdkVersion\s+)[^\n]+', r'\g<1>36', text)
               if min_n == 0 or compile_n == 0 or target_n == 0:
                   raise SystemExit(f"Could not configure minSdk 26, compileSdk 36 and targetSdk 36 in {path}")
+              if path.name == "build.gradle.kts" and 'create("su")' not in text:
+                  flavor = """    flavorDimensions += "edition"
+              productFlavors {
+                  create("su") { dimension = "edition"; versionNameSuffix = " SU" }
+              }
+          """
+                  text = text.replace("    buildTypes {", flavor + "    buildTypes {", 1)
+              elif path.name == "build.gradle" and "su {" not in text:
+                  flavor = """    flavorDimensions "edition"
+              productFlavors {
+                  su { dimension "edition"; versionNameSuffix " SU" }
+              }
+          """
+                  text = text.replace("    buildTypes {", flavor + "    buildTypes {", 1)
               path.write_text(text)
           if not found:
               raise SystemExit("Android app Gradle build file not found")
@@ -263,7 +277,7 @@ jobs:
           PY
       - name: Build signed Android APK
         working-directory: ${{ runner.temp }}/hte_app
-        run: flutter build apk --release --target-platform android-arm,android-arm64 --dart-define=HTE_GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: flutter build apk --flavor su --release --target-platform android-arm,android-arm64 --dart-define=HTE_GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
       - name: Verify release APK signature
         if: always()
         working-directory: ${{ runner.temp }}/hte_app
@@ -271,7 +285,7 @@ jobs:
           EXPECTED_CERT_SHA256: ${{ steps.android_signing.outputs.release_cert_sha256 }}
         shell: bash
         run: |
-          APK="build/app/outputs/flutter-apk/app-release.apk"
+          APK="build/app/outputs/flutter-apk/app-su-release.apk"
           APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
           if [ ! -s "$APK" ]; then
             echo "::error::Signed APK verification executed, but no APK was produced by the build step."
@@ -299,41 +313,41 @@ jobs:
           echo "PASS: APK signature is valid and matches the configured upload certificate."
       - name: Build Google Play App Bundle
         working-directory: ${{ runner.temp }}/hte_app
-        run: flutter build appbundle --release --dart-define=HTE_GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: flutter build appbundle --flavor su --release --dart-define=HTE_GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
       - name: Apply official High-Tech Entertainment download filenames
         working-directory: ${{ runner.temp }}/hte_app
         run: |
-          APK="build/app/outputs/flutter-apk/app-release.apk"
-          AAB="build/app/outputs/bundle/release/app-release.aab"
-          test -s "$APK"
-          test -s "$AAB"
-          mv "$APK" "build/app/outputs/flutter-apk/High-Tech-Entertainment.apk"
-          mv "$AAB" "build/app/outputs/bundle/release/High-Tech-Entertainment.aab"
+          APK="build/app/outputs/flutter-apk/app-su-release.apk"
+          AAB="build/app/outputs/bundle/suRelease/app-su-release.aab"
+          test -s "$APK" || { echo "::error::Expected SU APK was not found: $APK"; exit 1; }
+          test -s "$AAB" || { echo "::error::Expected SU App Bundle was not found: $AAB"; find build/app/outputs/bundle -maxdepth 3 -type f -print; exit 1; }
+          mv "$APK" "build/app/outputs/flutter-apk/High-Tech-Entertainment-v2.2.0-SU.apk"
+          mv "$AAB" "build/app/outputs/bundle/suRelease/High-Tech-Entertainment-v2.2.0-SU.aab"
       - name: Upload standalone Android APK
         uses: actions/upload-artifact@v4
         with:
-          name: High-Tech-Entertainment-APK
-          path: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment.apk
+          name: High-Tech-Entertainment-v2.2.0-SU-APK
+          path: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment-v2.2.0-SU.apk
           if-no-files-found: error
           compression-level: 0
       - name: Upload Android App Bundle separately
         uses: actions/upload-artifact@v4
         with:
-          name: High-Tech-Entertainment-AAB
-          path: ${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/High-Tech-Entertainment.aab
+          name: High-Tech-Entertainment-v2.2.0-SU-AAB
+          path: ${{ runner.temp }}/hte_app/build/app/outputs/bundle/suRelease/High-Tech-Entertainment-v2.2.0-SU.aab
           if-no-files-found: error
 
       - name: Publish public Android APK release
         if: github.event_name != 'pull_request' && steps.android_signing.outputs.release_signing_ready == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.app_version.outputs.version }}
-          name: High-Tech Entertainment Android v${{ steps.app_version.outputs.version }}
+          tag_name: v${{ steps.app_version.outputs.version }}-SU
+          name: High-Tech Entertainment v${{ steps.app_version.outputs.version }} SU
           target_commitish: ${{ github.sha }}
           body: |
-            Official High-Tech Entertainment Android app.
+            Official High-Tech Entertainment Android SU flavour. The semantic app version remains 2.2.0; SU identifies this build flavour.
             Download the APK and install it on a compatible Android device.
             This release is signed with the project's private upload key.
-          files: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment.apk
+          files: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment-v2.2.0-SU.apk
           overwrite_files: true
           make_latest: true
