@@ -1258,7 +1258,7 @@ class VideosTab extends StatelessWidget {
                       } catch (error) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Video download failed: $error')),
+                            SnackBar(content: Text(hteFriendlyError(error, fallback: 'The video could not be downloaded. Please try again.'))),
                           );
                         }
                       }
@@ -1479,7 +1479,7 @@ class _PlaylistsTabState extends State<PlaylistsTab> {
     final user=db.auth.currentUser;
     if(user==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sign in to create playlists.')));return;}
     try {await db.from('playlists').insert({'user_id':user.id,'name':name});await load();}
-    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Could not create playlist: $e')));}
+    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hteFriendlyError(e, fallback: 'The playlist could not be created. Please try again.'))));}
   }
   @override
   Widget build(BuildContext context)=>loading?const Busy():Column(children:[
@@ -1550,7 +1550,7 @@ class _PlaylistDetailPageState extends State<PlaylistDetailPage>{
         await db.from('playlist_tracks').insert({'playlist_id':widget.playlist['id'],'track_id':fresh[i]['id'],'position':tracks.length+i});
       }
       await load();
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Could not add tracks: $e')));}
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hteFriendlyError(e, fallback: 'The tracks could not be added. Please try again.'))));}
   }
   @override
   Widget build(BuildContext context)=>Scaffold(
@@ -1602,7 +1602,7 @@ class _ProfileEditPageState extends State<ProfileEditPage>{
     try{
       final row=await db.from('profiles').select('display_name,bio,phone,avatar_url').eq('id',user.id).maybeSingle();
       if(row!=null){_name.text=(row['display_name']??'').toString();_bio.text=(row['bio']??'').toString();_phone.text=(row['phone']??'').toString();_avatarUrl=(row['avatar_url']??'').toString();}
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Could not load profile: $e')));}
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hteFriendlyError(e, fallback: 'Your profile could not be loaded. Please try again.'))));}
     if(mounted)setState(()=>_loading=false);
   }
   Future<void> _save() async {
@@ -1612,7 +1612,7 @@ class _ProfileEditPageState extends State<ProfileEditPage>{
     try{
       await db.from('profiles').upsert({'id':user.id,'display_name':_name.text.trim(),'bio':_bio.text.trim(),'phone':_phone.text.trim(),'avatar_url':_avatarUrl,'updated_at':DateTime.now().toIso8601String()});
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profile updated.')));
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Profile update failed: $e')));}
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hteFriendlyError(e, fallback: 'Your profile could not be updated. Please try again.'))));}
     if(mounted)setState(()=>_saving=false);
   }
   @override
@@ -1654,7 +1654,7 @@ class _AccountTabState extends State<AccountTab> {
       if (mounted) setState(() {});
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication request completed. Check your email if confirmation is enabled.')));
     } on AuthException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(hteFriendlyError(error, fallback: 'We could not complete that account request. Please try again.'))));
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -1695,13 +1695,13 @@ class _AccountTabState extends State<AccountTab> {
     } on AuthException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google sign-in failed: ${error.message}')),
+          SnackBar(content: Text(hteFriendlyError(error, fallback: 'Google sign-in could not be completed. Please try again.'))),
         );
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google sign-in could not complete: $error')),
+          SnackBar(content: Text(hteFriendlyError(error, fallback: 'Google sign-in could not be completed. Please try again.'))),
         );
       }
     } finally {
@@ -2006,7 +2006,7 @@ class _SettingsPageState extends State<SettingsPage> {
         _message('Update downloaded. Follow the Android installation prompt to finish updating.');
       }
     } catch (error) {
-      if (mounted) _message('Update could not be installed: $error');
+      if (mounted) _message(hteFriendlyError(error, fallback: 'The update could not be installed. Please try again.'));
       if (apkFile != null && await apkFile.exists()) {
         try { await apkFile.delete(); } catch (_) {}
       }
