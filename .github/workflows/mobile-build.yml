@@ -144,14 +144,14 @@ jobs:
               if path.name == "build.gradle.kts" and 'create("su")' not in text:
                   flavor = """    flavorDimensions += "edition"
               productFlavors {
-                  create("su") { dimension = "edition" }
+                  create("su") { dimension = "edition"; versionNameSuffix = " SU" }
               }
           """
                   text = text.replace("    buildTypes {", flavor + "    buildTypes {", 1)
               elif path.name == "build.gradle" and "su {" not in text:
                   flavor = """    flavorDimensions "edition"
               productFlavors {
-                  su { dimension "edition" }
+                  su { dimension "edition"; versionNameSuffix " SU" }
               }
           """
                   text = text.replace("    buildTypes {", flavor + "    buildTypes {", 1)
