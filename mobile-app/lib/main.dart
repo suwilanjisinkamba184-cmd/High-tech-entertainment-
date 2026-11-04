@@ -60,18 +60,72 @@ String friendlyErrorMessage(Object error) {
 }
 
 
+class AppThemeController {
+  static const _preferenceKey = 'hte_theme_mode_v1';
+  static final ValueNotifier<ThemeMode> mode = ValueNotifier(ThemeMode.dark);
+
+  static Future<void> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_preferenceKey) ?? 'dark';
+    mode.value = switch (saved) {
+      'light' => ThemeMode.light,
+      'system' => ThemeMode.system,
+      _ => ThemeMode.dark,
+    };
+  }
+
+  static Future<void> setMode(ThemeMode value) async {
+    mode.value = value;
+    final prefs = await SharedPreferences.getInstance();
+    final saved = switch (value) {
+      ThemeMode.light => 'light',
+      ThemeMode.system => 'system',
+      ThemeMode.dark => 'dark',
+    };
+    await prefs.setString(_preferenceKey, saved);
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppThemeController.load();
   runApp(const HteApp());
 }
 
 class HteApp extends StatelessWidget {
   const HteApp({super.key});
   @override
-  Widget build(BuildContext context) => MaterialApp(
+  Widget build(BuildContext context) => ValueListenableBuilder<ThemeMode>(
+    valueListenable: AppThemeController.mode,
+    builder: (context, mode, child) => MaterialApp(
     title: 'High-Tech Entertainment',
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(
+    themeMode: mode,
+    theme: ThemeData.from(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFFD9B96E),
+        brightness: Brightness.light,
+      ),
+    ).copyWith(
+      useMaterial3: true,
+      scaffoldBackgroundColor: const Color(0xFFF7F6F2),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFFF7F6F2),
+        foregroundColor: Color(0xFF171717),
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+      ),
+      cardTheme: CardThemeData(
+        color: Colors.white,
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFFE5E0D5)),
+        ),
+      ),
+    ),
+    darkTheme: ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: const Color(0xFF08090B),
@@ -159,6 +213,7 @@ class HteApp extends StatelessWidget {
       visualDensity: VisualDensity.standard,
     ),
     home: const StartupGate(),
+    ),
   );
 }
 
@@ -2072,11 +2127,70 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _message(String value) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
 
+  Future<void> _chooseTheme() async {
+    final selected = await showModalBottomSheet<ThemeMode>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Choose your appearance',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 12),
+              RadioListTile<ThemeMode>(
+                value: ThemeMode.dark,
+                groupValue: AppThemeController.mode.value,
+                title: const Text('High-Tech dark'),
+                subtitle: const Text('Signature black with gold accents'),
+                onChanged: (value) => Navigator.pop(sheetContext, value),
+              ),
+              RadioListTile<ThemeMode>(
+                value: ThemeMode.light,
+                groupValue: AppThemeController.mode.value,
+                title: const Text('Light'),
+                subtitle: const Text('Bright, clean interface'),
+                onChanged: (value) => Navigator.pop(sheetContext, value),
+              ),
+              RadioListTile<ThemeMode>(
+                value: ThemeMode.system,
+                groupValue: AppThemeController.mode.value,
+                title: const Text('System default'),
+                subtitle: const Text('Follow Android appearance settings'),
+                onChanged: (value) => Navigator.pop(sheetContext, value),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selected != null) {
+      await AppThemeController.setMode(selected);
+      if (mounted) setState(() {});
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Settings')),
     body: ListView(padding: const EdgeInsets.all(18), children: [
       const Brand(tagline: 'APP PREFERENCES & INFORMATION'),
+      Card(child: Column(children: [
+        ListTile(
+          leading: const Icon(Icons.palette_outlined, color: Color(0xFFD4AF37)),
+          title: const Text('Appearance & themes'),
+          subtitle: Text(switch (AppThemeController.mode.value) {
+            ThemeMode.light => 'Light theme',
+            ThemeMode.system => 'Follow device theme',
+            ThemeMode.dark => 'High-Tech dark theme',
+          }),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _chooseTheme,
+        ),
+      ])),
       Card(child: Column(children: [
         ListTile(
           leading: const Icon(Icons.system_update_alt, color: Color(0xFFD4AF37)),
