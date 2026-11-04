@@ -70,7 +70,7 @@ jobs:
           python3 -m pip install --quiet cairosvg
           python3 -c "import cairosvg; cairosvg.svg2png(url='$RUNNER_TEMP/hte_app/assets/high-tech-logo.svg', write_to='$RUNNER_TEMP/hte_app/assets/high-tech-logo.png', output_width=1024, output_height=1024)"
       - name: Configure a Flutter-compatible Android Gradle toolchain
-        working-directory: \${{ runner.temp }}/hte_app
+        working-directory: ${{ runner.temp }}/hte_app
         shell: bash
         run: |
           python3 - <<'PY'
