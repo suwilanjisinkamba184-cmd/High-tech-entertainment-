@@ -104,8 +104,14 @@ jobs:
           app_text = app_gradle.read_text()
           if "dev.flutter.flutter-gradle-plugin" not in app_text:
               raise SystemExit("The Flutter Gradle plugin declaration is missing.")
-          if not re.search(r'id\("(?:kotlin-android|org\.jetbrains\.kotlin\.android)"\)', app_text):
-              plugin_block = re.search(r'(?m)^plugins\s*\{\s*
+          if 'id("kotlin-android")' not in app_text and 'id("org.jetbrains.kotlin.android")' not in app_text:
+              marker = "plugins {"
+              if marker not in app_text:
+                  raise SystemExit("Could not locate the Android app plugins block to apply Kotlin.")
+              app_text = app_text.replace(marker, marker + chr(10) + '    id("org.jetbrains.kotlin.android")', 1)
+              app_gradle.write_text(app_text)
+          if 'id("kotlin-android")' not in app_text and 'id("org.jetbrains.kotlin.android")' not in app_text:
+              raise SystemExit("Kotlin Android plugin could not be applied to the app module.")
 
           wrapper_lines = wrapper.read_text().splitlines()
           wrapper_lines = [
@@ -125,9 +131,9 @@ jobs:
           properties.write_text("\n".join(property_lines) + "\n")
 
           print("PASS: AGP 8.11.1 + Gradle 8.13 + Kotlin Gradle Plugin 2.2.20.")
-          print("PASS: legacy Kotlin Gradle Plugin mode is enabled for Flutter/plugin compatibility.")
+          print("PASS: the app module applies the Kotlin Android plugin.")
           PY
-          grep -n "com.android.application\|org.jetbrains.kotlin.android\|builtInKotlin\|distributionUrl" android/settings.gradle.kts android/gradle.properties android/gradle/wrapper/gradle-wrapper.properties
+          grep -n "com.android.application\|org.jetbrains.kotlin.android\|builtInKotlin\|distributionUrl" android/settings.gradle.kts android/app/build.gradle.kts android/gradle.properties android/gradle/wrapper/gradle-wrapper.properties
       - name: Set Play Store Android identity, SDK levels and target API
         working-directory: ${{ runner.temp }}/hte_app
         run: |
