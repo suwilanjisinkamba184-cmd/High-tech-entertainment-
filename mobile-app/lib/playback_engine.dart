@@ -70,6 +70,11 @@ class HtePlayback {
   bool autoplay = true, shuffle = false, audioAdsEnabled = true;
   bool _handlingCompletion = false;
   bool _playingStartupAd = false;
+  // Only a successfully loaded music source can contribute one completion.
+  // This prevents pause/resume, source replacement and advert completion
+  // notifications from being mistaken for completed songs.
+  bool _currentSourceIsMusic = false;
+  bool _completionHandledForSource = true;
   static const int advertInterval = 8;
   static const String startupAdvertAsset = 'assets/AUD-20261103-WA0002.mp3';
   int adEvery = advertInterval;
@@ -135,6 +140,9 @@ class HtePlayback {
     playbackError.value = null;
     currentTrack.value = track;
     adPlaying.value = false;
+    // Disarm completion handling while replacing the previous audio source.
+    _currentSourceIsMusic = false;
+    _completionHandledForSource = true;
 
     final title = (track['title'] ?? 'High-Tech Entertainment').toString();
     final artist = (track['artist'] ?? 'High-Tech Entertainment').toString();
@@ -153,6 +161,8 @@ class HtePlayback {
           : AudioSource.uri(uri!, tag: mediaTag),
       preload: true,
     );
+    _currentSourceIsMusic = true;
+    _completionHandledForSource = false;
     unawaited(_startPlayback());
 
     // Local files must remain playable without Supabase or internet access.
@@ -188,6 +198,8 @@ class HtePlayback {
   Future<void> playStartupAd() async {
     if (!audioAdsEnabled) return;
     _playingStartupAd = true;
+    _currentSourceIsMusic = false;
+    _completionHandledForSource = true;
     adPlaying.value = true;
     currentTrack.value = {
       'title': 'Advertisement',
@@ -219,7 +231,10 @@ class HtePlayback {
   }
 
   Future<void> _advanceAfterCompletion() async {
-    if (_playingStartupAd) return;
+    if (_playingStartupAd || _completionHandledForSource) return;
+    if (!_currentSourceIsMusic && !adPlaying.value) return;
+    _completionHandledForSource = true;
+    _currentSourceIsMusic = false;
     if (adPlaying.value) {
       // The interval is consumed only after the advert has actually completed.
       _adCounter.reset();
@@ -239,6 +254,8 @@ class HtePlayback {
   Future<bool> _playAd() async {
     try {
       adPlaying.value = true;
+      _currentSourceIsMusic = false;
+      _completionHandledForSource = true;
       playbackError.value = null;
       currentTrack.value = {
         'title': 'Advertisement',
