@@ -8,7 +8,7 @@ const cors = {
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" },
 });
-const FOUNDER_ID = "b268df9e-43b9-a38b-a38f-869b33add38b";
+const FOUNDER_ID = "b268df9e-eff5-43b9-a38f-869b33add38b";
 const PACKAGE = "com.hightechentertainment.app";
 const HOSTS = new Set(["github.com", "objects.githubusercontent.com", "github-releases.githubusercontent.com"]);
 
