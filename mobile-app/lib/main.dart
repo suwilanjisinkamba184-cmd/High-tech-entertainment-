@@ -2128,7 +2128,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _loadVersion() async {
     try {
       final info = await PackageInfo.fromPlatform();
-      if (mounted) setState(() => version = '${info.version} SU');
+      if (mounted) setState(() => version = info.version);
     } catch (_) {
       if (mounted) setState(() => version = 'Version unavailable');
     }
