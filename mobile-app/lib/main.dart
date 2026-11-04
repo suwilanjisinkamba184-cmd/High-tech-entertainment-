@@ -2213,7 +2213,13 @@ class _SettingsPageState extends State<SettingsPage> {
       final isSuRelease = releaseTag.toUpperCase().endsWith('-SU');
       final latest = releaseTag
           .replaceFirst(RegExp(r'^[vV]'), '')
-          .replaceFirst(RegExp(r'-SU
+          .replaceFirst(RegExp(r'-SU$', caseSensitive: false), '');
+      final installedSu = info.version.toUpperCase().contains(' SU');
+      final flavourUpgradeAvailable = isSuRelease && !installedSu;
+      if (latest.isEmpty || (_compareVersions(latest, info.version) <= 0 && !flavourUpgradeAvailable)) {
+        _message('You are using the latest published version ($version).');
+        return;
+      }
       final assets = release['assets'] as List<dynamic>? ?? [];
       Map<String, dynamic>? apk;
       for (final raw in assets) {
@@ -2676,3 +2682,5 @@ class Notice extends StatelessWidget {
       ],
     ]),
   );
+
+}
