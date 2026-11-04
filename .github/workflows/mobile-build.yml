@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version: '3.47.9'
           cache: true
       - name: Install Android 36 platform, build tools and native toolchain
         shell: bash
@@ -69,6 +69,71 @@ jobs:
           cp -R mobile-app/assets/. "$RUNNER_TEMP/hte_app/assets/"
           python3 -m pip install --quiet cairosvg
           python3 -c "import cairosvg; cairosvg.svg2png(url='$RUNNER_TEMP/hte_app/assets/high-tech-logo.svg', write_to='$RUNNER_TEMP/hte_app/assets/high-tech-logo.png', output_width=1024, output_height=1024)"
+      - name: Configure a Flutter-compatible Android Gradle toolchain
+        working-directory: ${{ runner.temp }}/hte_app
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          settings = Path("android/settings.gradle.kts")
+          app_gradle = Path("android/app/build.gradle.kts")
+          wrapper = Path("android/gradle/wrapper/gradle-wrapper.properties")
+          properties = Path("android/gradle.properties")
+          for path in (settings, app_gradle, wrapper, properties):
+              if not path.exists():
+                  raise SystemExit(f"Required Flutter Android scaffold file missing: {path}")
+
+          settings_lines = settings.read_text().splitlines()
+          agp_updated = False
+          kotlin_updated = False
+          for index, line in enumerate(settings_lines):
+              if 'id("com.android.application")' in line:
+                  settings_lines[index] = re.sub(r'version\s+"[^"]+"', 'version "8.11.1"', line, count=1)
+                  agp_updated = 'version "8.11.1"' in settings_lines[index]
+              if 'id("org.jetbrains.kotlin.android")' in line:
+                  settings_lines[index] = re.sub(r'version\s+"[^"]+"', 'version "2.2.20"', line, count=1)
+                  kotlin_updated = 'version "2.2.20"' in settings_lines[index]
+          if not agp_updated:
+              raise SystemExit("Could not pin the Android Gradle Plugin to 8.11.1.")
+          if not kotlin_updated:
+              raise SystemExit("Could not find and pin the Kotlin Gradle plugin to 2.2.20.")
+          settings.write_text("\n".join(settings_lines) + "\n")
+
+          app_text = app_gradle.read_text()
+          if "dev.flutter.flutter-gradle-plugin" not in app_text:
+              raise SystemExit("The Flutter Gradle plugin declaration is missing.")
+          if 'id("kotlin-android")' not in app_text and 'id("org.jetbrains.kotlin.android")' not in app_text:
+              marker = "plugins {"
+              if marker not in app_text:
+                  raise SystemExit("Could not locate the Android app plugins block to apply Kotlin.")
+              app_text = app_text.replace(marker, marker + chr(10) + '    id("org.jetbrains.kotlin.android")', 1)
+              app_gradle.write_text(app_text)
+          if 'id("kotlin-android")' not in app_text and 'id("org.jetbrains.kotlin.android")' not in app_text:
+              raise SystemExit("Kotlin Android plugin could not be applied to the app module.")
+
+          wrapper_lines = wrapper.read_text().splitlines()
+          wrapper_lines = [
+              "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.14-all.zip"
+              if line.startswith("distributionUrl=") else line
+              for line in wrapper_lines
+          ]
+          if not any("gradle-8.14-all.zip" in line for line in wrapper_lines):
+              raise SystemExit("Could not set the Gradle wrapper to 8.14.0.")
+          wrapper.write_text("\n".join(wrapper_lines) + "\n")
+
+          property_lines = [
+              line for line in properties.read_text().splitlines()
+              if not line.startswith(("android.builtInKotlin=", "android.newDsl="))
+          ]
+          property_lines.extend(["android.builtInKotlin=false", "android.newDsl=false"])
+          properties.write_text("\n".join(property_lines) + "\n")
+
+          print("PASS: AGP 8.11.1 + Gradle 8.14.0 + Kotlin Gradle Plugin 2.2.20.")
+          print("PASS: the app module applies the Kotlin Android plugin.")
+          PY
+          grep -n "com.android.application\|org.jetbrains.kotlin.android\|builtInKotlin\|distributionUrl" android/settings.gradle.kts android/app/build.gradle.kts android/gradle.properties android/gradle/wrapper/gradle-wrapper.properties
       - name: Set Play Store Android identity, SDK levels and target API
         working-directory: ${{ runner.temp }}/hte_app
         run: |
@@ -252,20 +317,23 @@ jobs:
               if count and updated != source:
                   gradle.write_text(updated)
                   changed.append(str(gradle))
-          picker = list(cache.glob("file_picker-*/android/build.gradle*"))
-          if not picker:
-              raise SystemExit("Resolved file_picker Android Gradle file was not found.")
-          picker_text = "\n".join(path.read_text() for path in picker)
-          if re.search(r"(?m)^\s*compileSdk(?:Version)?\s*(?:=\s*)?34\b", picker_text):
-              raise SystemExit("file_picker is still configured for Android API 34.")
+          stale = []
+          for gradle in cache.glob("*/android/build.gradle*"):
+              source = gradle.read_text()
+              for match in pattern.finditer(source):
+                  if int(match.group(2)) < 36:
+                      stale.append(f"{gradle}: compileSdk {match.group(2)}")
+          if stale:
+              raise SystemExit("Android plugins still declare compileSdk below 36:\n" + "\n".join(stale))
           print(f"Updated plugin Android compile SDK declarations: {len(changed)}")
           print("\n".join(changed))
+          print("PASS: all cached Android plugin compileSdk declarations are API 36 or newer.")
           PY
       - name: Build signed Android APK
         working-directory: ${{ runner.temp }}/hte_app
         run: flutter build apk --release --target-platform android-arm,android-arm64 --dart-define=HTE_GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
       - name: Verify release APK signature
-        if: always()
+        if: success()
         working-directory: ${{ runner.temp }}/hte_app
         env:
           EXPECTED_CERT_SHA256: ${{ steps.android_signing.outputs.release_cert_sha256 }}

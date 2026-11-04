@@ -72,6 +72,17 @@ Future<String> downloadRemoteMedia({
   }
 }
 
+class _LocalMediaFile {
+  const _LocalMediaFile({required this.name, required this.path, required this.size});
+  final String name;
+  final String? path;
+  final int size;
+  String? get extension {
+    final dot = name.lastIndexOf('.');
+    return dot < 0 ? null : name.substring(dot + 1).toLowerCase();
+  }
+}
+
 class LocalFilesTab extends StatefulWidget {
   const LocalFilesTab({super.key});
 
@@ -88,7 +99,7 @@ class _LocalFilesTabState extends State<LocalFilesTab> {
     'mp4', 'm4v', 'mov', 'mkv', 'webm', '3gp'
   };
 
-  List<PlatformFile> _files = [];
+  List<_LocalMediaFile> _files = [];
   bool _picking = false;
 
   @override
@@ -101,14 +112,14 @@ class _LocalFilesTabState extends State<LocalFilesTab> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getStringList(_savedFilesKey) ?? [];
-      final restored = <PlatformFile>[];
+      final restored = <_LocalMediaFile>[];
 
       for (final value in saved) {
         final item = jsonDecode(value) as Map<String, dynamic>;
         final path = item['path']?.toString() ?? '';
         final file = File(path);
         if (path.isNotEmpty && await file.exists()) {
-          restored.add(PlatformFile(
+          restored.add(_LocalMediaFile(
             name: item['name']?.toString() ?? file.uri.pathSegments.last,
             size: await file.length(),
             path: path
@@ -123,7 +134,7 @@ class _LocalFilesTabState extends State<LocalFilesTab> {
     }
   }
 
-  Future<void> _saveFileIndex(List<PlatformFile> files) async {
+  Future<void> _saveFileIndex(List<_LocalMediaFile> files) async {
     final prefs = await SharedPreferences.getInstance();
     final values = files
         .where((file) => file.path != null)
@@ -139,21 +150,19 @@ class _LocalFilesTabState extends State<LocalFilesTab> {
   Future<void> _browse() async {
     setState(() => _picking = true);
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: [..._audioExtensions, ..._videoExtensions],
-        allowMultiple: true,
-        withData: false,
       );
 
-      if (result == null || !mounted) return;
+      if (result.isEmpty || !mounted) return;
 
       final directory = await getApplicationSupportDirectory();
       final mediaDirectory = Directory('${directory.path}/hte_media');
       await mediaDirectory.create(recursive: true);
 
-      final persisted = <PlatformFile>[..._files];
-      for (final selected in result.files) {
+      final persisted = <_LocalMediaFile>[..._files];
+      for (final selected in result) {
         final sourcePath = selected.path;
         if (sourcePath == null) continue;
 
@@ -177,7 +186,7 @@ class _LocalFilesTabState extends State<LocalFilesTab> {
           final copied = await source.copy(destination.path);
 
           persisted.removeWhere((file) => file.name == selected.name);
-          persisted.add(PlatformFile(
+          persisted.add(_LocalMediaFile(
             name: selected.name,
             size: await copied.length(),
             path: copied.path
@@ -200,13 +209,13 @@ class _LocalFilesTabState extends State<LocalFilesTab> {
     }
   }
 
-  bool _isAudio(PlatformFile file) =>
+  bool _isAudio(_LocalMediaFile file) =>
       _audioExtensions.contains(file.extension?.toLowerCase());
 
-  bool _isVideo(PlatformFile file) =>
+  bool _isVideo(_LocalMediaFile file) =>
       _videoExtensions.contains(file.extension?.toLowerCase());
 
-  Future<void> _playAudio(PlatformFile selected) async {
+  Future<void> _playAudio(_LocalMediaFile selected) async {
     final audio = _files.where(_isAudio).toList();
     final queue = audio
         .map((file) => <String, dynamic>{
@@ -232,7 +241,7 @@ class _LocalFilesTabState extends State<LocalFilesTab> {
     }
   }
 
-  void _playVideo(PlatformFile file) {
+  void _playVideo(_LocalMediaFile file) {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => HteVideoPlayerPage(
         url: '',
@@ -242,7 +251,7 @@ class _LocalFilesTabState extends State<LocalFilesTab> {
     ));
   }
 
-  Future<void> _removeFile(PlatformFile file) async {
+  Future<void> _removeFile(_LocalMediaFile file) async {
     final path = file.path;
     if (path != null) {
       try {
