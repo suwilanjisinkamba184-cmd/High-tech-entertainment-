@@ -1,6 +1,6 @@
 # High-Tech Entertainment — Native Android App
 
-The Flutter application in this folder is the native Android client for High-Tech Entertainment.\n\nOfficial website: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/ Current app version: **2.1.7**.
+The Flutter application in this folder is the native Android client for High-Tech Entertainment.\n\nOfficial website: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/ Current app version: **2.1.8**.
 
 ## Experiences
 
@@ -67,3 +67,13 @@ HT Music uses one process-wide `HtePlayback.instance` service and one `just_audi
 - Run `flutter test` and `flutter analyze lib` after playback changes. Verify play/pause, previous/next, navigation persistence, notification controls, and locked-screen playback on a physical Android device.
 
 A singleton prevents duplicate app-owned player instances, but a successful build alone does not prove Android background playback on every device; physical-device verification remains required.
+
+## Network and error handling
+
+The app converts low-level connectivity and service exceptions into plain-language messages instead of exposing raw exception text, backend response codes or stack traces.
+
+- When a network request fails because the device is offline or cannot reach the service, the user sees: **“No internet connection. Connect to the internet and try again.”**
+- For other unexpected failures, the user sees: **“Something went wrong. Please try again.”**
+- During startup, the existing **Try again** button reruns service initialisation after the user reconnects.
+- Diagnostic exception details are retained only in developer logs where applicable; they are not included in these user-facing messages.
+
