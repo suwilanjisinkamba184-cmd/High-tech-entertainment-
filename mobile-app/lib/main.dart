@@ -187,9 +187,6 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(seconds: 7),
     )..repeat();
-    // Play the branded startup sting independently of the music/ad playback engine.
-    // Do not await it here: authentication and service setup continue in parallel.
-    unawaited(_playStartupSound());
     _initialize();
   }
 
@@ -251,6 +248,9 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       // Never play an advert during startup: reopening the app or returning
       // from a paused session must take the listener directly to sign-in.
       // Scheduled audio adverts are handled only after completed music tracks.
+      // Start the branded startup sting only after the audio plugin is registered.
+      // It uses its own AudioPlayer, separate from the music/ad playback engine.
+      unawaited(_playStartupSound());
 
       // Initialise authentication/data services without waiting for audio.
       if (!_supabaseInitialized) {
