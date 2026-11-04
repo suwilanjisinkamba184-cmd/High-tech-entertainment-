@@ -26,8 +26,15 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   final _spotifyUrl = TextEditingController();
   final _releaseCoverUrl = TextEditingController();
   final _coverUrl = TextEditingController();
+  final _videoTitle = TextEditingController();
+  final _videoArtist = TextEditingController();
+  final _videoDescription = TextEditingController();
+  final _notificationTitle = TextEditingController();
+  final _notificationBody = TextEditingController();
   PlatformFile? _audio;
   PlatformFile? _artwork;
+  PlatformFile? _video;
+  List<Map<String,dynamic>> _videos = [];
   List<Map<String,dynamic>> _tracks = [];
   List<Map<String,dynamic>> _artists = [];
   List<Map<String,dynamic>> _releases = [];
@@ -35,14 +42,14 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   List<Map<String,dynamic>> _users = [];
   Map<String,dynamic> _analytics = {};
   Map<String,int> _metrics = {};
-  static const _sections = ['Overview','Music uploads','Tracks','Artists','Releases','Artwork','Users','Analytics','Activity'];
+  static const _sections = ['Overview','Music uploads','Tracks','Artists','Releases','Artwork','Users','Analytics','Activity','Videos','Notifications'];
 
   @override
   void initState() { super.initState(); _loadAll(); }
   @override
   void dispose() {
     _title.dispose(); _artist.dispose(); _genre.dispose();
-    _artistName.dispose(); _artistBio.dispose(); _releaseTitle.dispose(); _spotifyUrl.dispose(); _releaseCoverUrl.dispose(); _coverUrl.dispose();
+    _artistName.dispose(); _artistBio.dispose(); _releaseTitle.dispose(); _spotifyUrl.dispose(); _releaseCoverUrl.dispose(); _coverUrl.dispose(); _videoTitle.dispose(); _videoArtist.dispose(); _videoDescription.dispose(); _notificationTitle.dispose(); _notificationBody.dispose();
     super.dispose();
   }
 
@@ -62,6 +69,8 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       _tracks = List<Map<String,dynamic>>.from(values[0]);
       _artists = List<Map<String,dynamic>>.from(values[1]);
       _releases = List<Map<String,dynamic>>.from(values[2]);
+      final videoRows = await _supabase.from('videos').select().order('created_at', ascending: false).limit(100);
+      _videos = List<Map<String,dynamic>>.from(videoRows);
       try {
         final files = await _supabase.storage.from('hte-artwork').list(path: 'releases');
         _artworkFiles = files.map((file) => {'name':file.name}).toList();
@@ -80,7 +89,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         'Tracks': _tracks.length, 'Published': _tracks.where((e)=>e['is_published']==true).length,
         'Artists': _artists.length, 'Releases': _releases.length, 'Users': _users.length,
       };
-    } catch (e) { _error = e.toString(); }
+    } catch (e) { debugPrint('Founder Studio load failed: $e'); _error = 'Could not load Founder Studio data. Check your connection and retry.'; }
     if (mounted) setState(() => _busy = false);
   }
 
@@ -117,6 +126,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       'mp3':'audio/mpeg','m4a':'audio/x-m4a','aac':'audio/aac',
       'wav':'audio/wav','ogg':'audio/ogg','flac':'audio/flac',
       'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','avif':'image/avif',
+      'mp4':'video/mp4','m4v':'video/x-m4v','mov':'video/quicktime','webm':'video/webm',
     }[ext];
     await _supabase.storage.from(bucket).upload(path, localFile,
       fileOptions: FileOptions(upsert: false, contentType: mime));
@@ -173,6 +183,124 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     try { await _supabase.from('releases').update({'is_published':published}).eq('id',item['id']); await _loadAll(); }
     catch(e) { _toast('Could not update release: $e'); }
   }
+  Future<void> _pickVideo() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['mp4','m4v','mov','webm'],
+      withData: false,
+    );
+    if (mounted && result != null && result.files.isNotEmpty) {
+      setState(() => _video = result.files.first);
+    }
+  }
+
+  Future<void> _saveVideo() async {
+    if (_videoTitle.text.trim().isEmpty || _video == null) {
+      _toast('Enter a video title and choose a video file.');
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final url = await _uploadFile(_video!, 'videos', 'hte-videos');
+      await _supabase.from('videos').insert({
+        'title': _videoTitle.text.trim(),
+        'artist': _videoArtist.text.trim().isEmpty ? 'High-Tech Entertainment' : _videoArtist.text.trim(),
+        'description': _videoDescription.text.trim(),
+        'video_url': url,
+        'is_published': false,
+      });
+      _videoTitle.clear(); _videoArtist.clear(); _videoDescription.clear();
+      setState(() => _video = null);
+      await _loadAll();
+      _toast('Video uploaded as a draft. Publish it when ready.');
+    } catch (error) {
+      debugPrint('Founder video upload failed: $error');
+      _toast('Video upload failed. Check your connection, file size and permissions.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _publishVideo(Map<String,dynamic> item, bool published) async {
+    try {
+      await _supabase.from('videos').update({'is_published': published}).eq('id', item['id']);
+      await _loadAll();
+      _toast(published ? 'Video published in HT Music.' : 'Video moved to drafts.');
+    } catch (error) {
+      debugPrint('Video publication update failed: $error');
+      _toast('Could not update this video. Please retry.');
+    }
+  }
+
+  Future<void> _deleteVideo(Map<String,dynamic> item) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete video?'),
+        content: Text('Delete "${item['title']}" from the video catalogue?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (yes != true) return;
+    try {
+      await _supabase.from('videos').delete().eq('id', item['id']);
+      await _loadAll();
+      _toast('Video removed from the catalogue.');
+    } catch (error) {
+      debugPrint('Video deletion failed: $error');
+      _toast('Could not delete this video. Please retry.');
+    }
+  }
+
+  Future<void> _sendNotification() async {
+    final title = _notificationTitle.text.trim();
+    final body = _notificationBody.text.trim();
+    if (title.isEmpty || body.isEmpty) {
+      _toast('Enter both a notification title and message.');
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await _supabase.from('app_notifications').insert({
+        'user_id': null,
+        'title': title,
+        'body': body,
+        'category': 'announcement',
+      });
+      _notificationTitle.clear(); _notificationBody.clear();
+      _toast('Announcement sent to the in-app notification inbox.');
+    } catch (error) {
+      debugPrint('Announcement send failed: $error');
+      _toast('Announcement could not be sent. Check founder permissions and retry.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Widget _videoRows() => _videos.isEmpty
+      ? const _AdminEmpty('No videos have been uploaded yet.')
+      : Column(children: _videos.map((item) {
+          final published = item['is_published'] == true;
+          return Card(child: ListTile(
+            leading: const Icon(Icons.video_library_outlined, color: _gold),
+            title: Text((item['title'] ?? 'Video').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
+            subtitle: Text('${item['artist'] ?? 'High-Tech Entertainment'} · ${published ? 'Published' : 'Draft'}'),
+            trailing: PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'toggle') _publishVideo(item, !published);
+                if (value == 'delete') _deleteVideo(item);
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'toggle', child: Text(published ? 'Move to drafts' : 'Publish')),
+                const PopupMenuItem(value: 'delete', child: Text('Delete')),
+              ],
+            ),
+          ));
+        }).toList());
+
   Future<void> _saveRelease() async {
     if (_releaseTitle.text.trim().isEmpty) { _toast('Enter a release title.'); return; }
     try {
@@ -340,6 +468,29 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         )),
         const SizedBox(height:8),Text('Total catalogue tracks: ${_analytics['total_tracks']??_metrics['Tracks']??0}',style:const TextStyle(color:Colors.white60)),
       ]);
+      case 9: return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _header('VIDEO LIBRARY', 'Videos', 'Upload MP4, M4V, MOV or WebM files. New uploads stay unpublished until ready.'),
+        TextField(controller: _videoTitle, decoration: const InputDecoration(labelText: 'Video title')),
+        const SizedBox(height: 10),
+        TextField(controller: _videoArtist, decoration: const InputDecoration(labelText: 'Artist / creator')),
+        const SizedBox(height: 10),
+        TextField(controller: _videoDescription, maxLines: 3, decoration: const InputDecoration(labelText: 'Description')),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(onPressed: _busy ? null : _pickVideo, icon: const Icon(Icons.video_file_outlined), label: Text(_video?.name ?? 'Choose video file')),
+        const SizedBox(height: 12),
+        SizedBox(width: double.infinity, child: FilledButton(onPressed: _busy ? null : _saveVideo, child: _busy ? const CircularProgressIndicator() : const Text('Upload video draft'))),
+        const SizedBox(height: 20),
+        const Text('Uploaded videos', style: TextStyle(fontWeight: FontWeight.w700)),
+        _videoRows(),
+      ]);
+      case 10: return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _header('APP COMMUNICATION', 'Notifications', 'Send an in-app announcement to all signed-in High-Tech Entertainment users.'),
+        TextField(controller: _notificationTitle, maxLength: 120, decoration: const InputDecoration(labelText: 'Notification title')),
+        const SizedBox(height: 10),
+        TextField(controller: _notificationBody, maxLines: 4, maxLength: 1000, decoration: const InputDecoration(labelText: 'Message')),
+        const SizedBox(height: 12),
+        SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: _busy ? null : _sendNotification, icon: const Icon(Icons.send), label: const Text('Send announcement'))),
+      ]);
       default: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         _header('AUDIT TRAIL','Platform activity','Recent tracks, artist profiles and releases from the live catalogue. A full actor-by-actor audit trail requires a dedicated audit-log table.'),
         const Text('Recent tracks',style:TextStyle(fontWeight:FontWeight.w700)),_trackRows(),
@@ -368,7 +519,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         actions:[IconButton(tooltip:'Refresh',onPressed:_busy?null:_loadAll,icon:const Icon(Icons.refresh))],
       ),
       body:_busy && _tracks.isEmpty ? const Center(child:CircularProgressIndicator(color:_gold)) :
-        _error!=null ? Center(child:Padding(padding:const EdgeInsets.all(20),child:Text('Could not load admin data: $_error'))) :
+        _error!=null ? Center(child:Padding(padding:const EdgeInsets.all(20),child:Text(_error ?? 'Could not load Founder Studio data. Please retry.'))) :
         RefreshIndicator(onRefresh:_loadAll,child:SingleChildScrollView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.fromLTRB(16,16,16,30),child:_page())),
       bottomNavigationBar:SafeArea(top:false,child:Container(
         decoration:const BoxDecoration(color:Color(0xFF0B0C0E),border:Border(top:BorderSide(color:Color(0xFF302A20)))),
