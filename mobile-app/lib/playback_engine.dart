@@ -255,7 +255,7 @@ class HtePlayback {
     try {
       adPlaying.value = true;
       _currentSourceIsMusic = false;
-      _completionHandledForSource = true;
+      _completionHandledForSource = false;
       playbackError.value = null;
       currentTrack.value = {
         'title': 'Advertisement',
