@@ -44,3 +44,6 @@ drop policy if exists "HTE admins delete videos" on storage.objects;
 create policy "HTE admins delete videos" on storage.objects
   for delete to authenticated
   using (bucket_id = 'hte-videos' and private.hte_has_role(array['owner','admin']));
+
+create index if not exists app_notifications_user_created_idx
+  on public.app_notifications (user_id, created_at desc);
