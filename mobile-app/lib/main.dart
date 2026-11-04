@@ -2535,7 +2535,7 @@ class Notice extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.cloud_off_rounded, color: Color(0xFFD9B96E), size: 38),
+          Icon(onRetry != null ? Icons.cloud_off_rounded : Icons.music_note_rounded, color: const Color(0xFFD9B96E), size: 38),
           const SizedBox(height: 12),
           Text(message, textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white70, height: 1.45)),
