@@ -1477,7 +1477,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
     setState(() { loading = true; error = null; });
     try {
       results = await publishedTracks(term);
-    } catch (e) { error = e.toString(); }
+    } catch (e) { error = friendlyErrorMessage(e); }
     if (mounted) setState(() => loading = false);
   }
   @override
