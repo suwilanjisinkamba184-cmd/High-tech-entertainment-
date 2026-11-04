@@ -35,6 +35,8 @@ bool _audioBackgroundInitialized = false;
 // audio background handler has been initialized in StartupGate.
 final HtePlayback playback = HtePlayback.instance;
 final AudioPlayer player = HtePlayback.instance.player;
+// Separate from the music/ad player and retained across StartupGate -> AuthGate.
+final AudioPlayer _startupSoundPlayer = AudioPlayer();
 final ValueNotifier<int> favouritesRevision = ValueNotifier<int>(0);
 
 /// Convert low-level exceptions into clear, user-safe messages.
@@ -194,16 +196,20 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   Future<void> _playStartupSound() async {
     if (_startupSoundStarted) return;
     _startupSoundStarted = true;
-    final startupPlayer = AudioPlayer();
     try {
-      await startupPlayer.setAsset('assets/high-tech-startup.mp3');
-      await startupPlayer.play();
+      // Keep this player alive for the process lifetime. StartupGate is replaced
+      // by AuthGate as soon as services are ready, so a widget-owned player can
+      // otherwise be torn down while the sound is still starting.
+      await _startupSoundPlayer.setAudioSource(
+        AudioSource.asset('assets/high-tech-startup.mp3'),
+      );
+      await _startupSoundPlayer.setVolume(1.0);
+      await _startupSoundPlayer.setLoopMode(LoopMode.off);
+      await _startupSoundPlayer.play();
     } catch (error, stackTrace) {
       // Startup audio is optional and must never block sign-in or show raw errors.
       debugPrint('HTE startup sound could not be played: $error');
       debugPrintStack(stackTrace: stackTrace);
-    } finally {
-      await startupPlayer.dispose();
     }
   }
 
@@ -247,13 +253,15 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         }
       }
 
+      // Start the branded sound immediately and independently of background
+      // music registration, authentication, network access, and advert playback.
+      // It uses a dedicated process-lifetime player and plays once per app launch.
+      unawaited(_playStartupSound());
+
       // Audio background registration is independent of authentication.
       // Never play an advert during startup: reopening the app or returning
       // from a paused session must take the listener directly to sign-in.
       // Scheduled audio adverts are handled only after completed music tracks.
-      // Start the branded startup sting only after the audio plugin is registered.
-      // It uses its own AudioPlayer, separate from the music/ad playback engine.
-      unawaited(_playStartupSound());
 
       // Initialise authentication/data services without waiting for audio.
       if (!_supabaseInitialized) {
