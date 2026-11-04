@@ -89,7 +89,7 @@ class HtePlayback {
     if (message.contains('404')) {
       return 'This audio file could not be found. Ask the administrator to upload it again.';
     }
-    return 'Playback could not start. Check that this track is a valid MP3, AAC or supported audio file. ($message)';
+    return 'Playback could not start. Check your connection or try another audio track.';
   }
 
   static Uri? directAudioUri(Object? value) {
@@ -206,7 +206,10 @@ class HtePlayback {
     if (_adCounter.recordCompletion(interval: adEvery, enabled: audioAdsEnabled)) {
       final advertStarted = await _playAd();
       if (advertStarted) return;
-      await player.stop();
+      // Do not strand the queue when the bundled advert is missing or corrupt.
+      _adCounter.reset();
+      adPlaying.value = false;
+      await _playNextTrack();
       return;
     }
     await _playNextTrack();
