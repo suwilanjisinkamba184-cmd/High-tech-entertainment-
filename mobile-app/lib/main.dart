@@ -872,9 +872,15 @@ class ArtistDetailPage extends StatelessWidget {
         Center(child:Text(name,style:const TextStyle(fontSize:24,fontWeight:FontWeight.bold))),
         Padding(padding:const EdgeInsets.all(20),child:Text((artist['bio']??'High-Tech Entertainment artist').toString(),textAlign:TextAlign.center,style:const TextStyle(color:Colors.white60))),
         const Heading('Artist releases'),
-        FutureBuilder<List<Map<String,dynamic>>>(
-          future:db.from('tracks').select().eq('is_published',true).eq('artist',name).order('created_at',ascending:false).then((data)=>List<Map<String,dynamic>>.from(data).where(_isPlayableTrack).toList()),
-          builder:(context,snapshot)=>snapshot.hasError?const Notice('Unable to load this artist’s tracks.'):!snapshot.hasData?const Busy():snapshot.data!.isEmpty?const Notice('Published tracks by this artist will appear here.'):TrackList(items:snapshot.data!),
+        HteFutureBuilder<List<Map<String,dynamic>>>(
+          loader: () => db.from('tracks').select().eq('is_published', true).eq('artist', name).order('created_at', ascending: false).then((data) => List<Map<String, dynamic>>.from(data).where(_isPlayableTrack).toList()),
+          builder: (context, snapshot, retry) => snapshot.hasError
+              ? Notice(hteFriendlyError(snapshot.error!, fallback: 'This artist’s tracks could not be loaded right now.'), onRetry: retry)
+              : !snapshot.hasData
+                  ? const Busy()
+                  : snapshot.data!.isEmpty
+                      ? const Notice('Published tracks by this artist will appear here.')
+                      : TrackList(items: snapshot.data!),
         ),
       ]),
     );
