@@ -579,13 +579,14 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int tab = 0;
-  final pages = const [HomeTab(), DiscoverTab(), ReleasesTab(), LibraryTab(), AccountTab()];
+  final pages = const [HomeTab(), DiscoverTab(), ReleasesTab(), LibraryTab(), AccountTab(), MoreTab()];
   static const _items = [
     (Icons.home_rounded, 'Home'),
     (Icons.explore_rounded, 'Discover'),
     (Icons.album_rounded, 'Releases'),
     (Icons.library_music_rounded, 'Library'),
     (Icons.person_rounded, 'Profile'),
+    (Icons.grid_view_rounded, 'More'),
   ];
 
   @override
@@ -1802,18 +1803,64 @@ class _PlaylistDetailPageState extends State<PlaylistDetailPage>{
   );
 }
 
-class NotificationsPage extends StatelessWidget {
+class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
   @override
-  Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('Notifications')),
-    body:const Center(child:Padding(padding:EdgeInsets.all(28),child:Column(
-      mainAxisSize:MainAxisSize.min,children:[
-        Icon(Icons.notifications_none,color:Color(0xFFD9B96E),size:58),
-        SizedBox(height:14),Text('You are all caught up',style:TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
-        SizedBox(height:8),Text('Release alerts and account notifications will appear here when notifications are enabled.',textAlign:TextAlign.center,style:TextStyle(color:Colors.white60)),
-      ],
-    ))),
+  State<NotificationsPage> createState() => _NotificationsPageState();
+}
+class _NotificationsPageState extends State<NotificationsPage> {
+  late Future<List<Map<String,dynamic>>> _notifications;
+  @override
+  void initState() { super.initState(); _notifications = _load(); }
+  Future<List<Map<String,dynamic>>> _load() async {
+    final user = db.auth.currentUser;
+    if (user == null) return [];
+    final rows = await db.from('app_notifications')
+      .select('id,title,body,category,created_at')
+      .or('user_id.eq.${user.id},user_id.is.null')
+      .order('created_at', ascending: false)
+      .limit(100);
+    return List<Map<String,dynamic>>.from(rows);
+  }
+  void _retry() => setState(() => _notifications = _load());
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Notifications'), actions: [
+      IconButton(tooltip: 'Refresh', onPressed: _retry, icon: const Icon(Icons.refresh)),
+    ]),
+    body: FutureBuilder<List<Map<String,dynamic>>>(
+      future: _notifications,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!), onRetry: _retry);
+        if (!snapshot.hasData) return const Busy();
+        final items = snapshot.data!;
+        if (items.isEmpty) return const Notice('You are all caught up. New release and account announcements will appear here.');
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            final category = (item['category'] ?? 'announcement').toString();
+            final date = DateTime.tryParse((item['created_at'] ?? '').toString());
+            return Card(child: ListTile(
+              leading: Icon(category == 'release' ? Icons.album_outlined : Icons.notifications_active_outlined, color: const Color(0xFFD9B96E)),
+              title: Text((item['title'] ?? 'High-Tech Entertainment').toString()),
+              subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text((item['body'] ?? '').toString()),
+                  if (date != null) ...[
+                    const SizedBox(height: 6),
+                    Text(date.toLocal().toString().split('.').first, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                  ],
+                ],
+              )),
+              isThreeLine: true,
+            ));
+          },
+        );
+      },
+    ),
   );
 }
 
