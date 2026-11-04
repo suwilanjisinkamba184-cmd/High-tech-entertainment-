@@ -836,7 +836,7 @@ class ReleaseList extends StatelessWidget {
                               } catch (error) {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Could not open Spotify: $error')),
+                                    SnackBar(content: Text(friendlyErrorMessage(error))),
                                   );
                                 }
                               }
@@ -1478,7 +1478,7 @@ class _PlaylistsTabState extends State<PlaylistsTab> {
     final user=db.auth.currentUser;
     if(user==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sign in to create playlists.')));return;}
     try {await db.from('playlists').insert({'user_id':user.id,'name':name});await load();}
-    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Could not create playlist: $e')));}
+    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
   }
   @override
   Widget build(BuildContext context)=>loading?const Busy():Column(children:[
@@ -1549,7 +1549,7 @@ class _PlaylistDetailPageState extends State<PlaylistDetailPage>{
         await db.from('playlist_tracks').insert({'playlist_id':widget.playlist['id'],'track_id':fresh[i]['id'],'position':tracks.length+i});
       }
       await load();
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Could not add tracks: $e')));}
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
   }
   @override
   Widget build(BuildContext context)=>Scaffold(
@@ -1601,7 +1601,7 @@ class _ProfileEditPageState extends State<ProfileEditPage>{
     try{
       final row=await db.from('profiles').select('display_name,bio,phone,avatar_url').eq('id',user.id).maybeSingle();
       if(row!=null){_name.text=(row['display_name']??'').toString();_bio.text=(row['bio']??'').toString();_phone.text=(row['phone']??'').toString();_avatarUrl=(row['avatar_url']??'').toString();}
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Could not load profile: $e')));}
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
     if(mounted)setState(()=>_loading=false);
   }
   Future<void> _save() async {
@@ -1611,7 +1611,7 @@ class _ProfileEditPageState extends State<ProfileEditPage>{
     try{
       await db.from('profiles').upsert({'id':user.id,'display_name':_name.text.trim(),'bio':_bio.text.trim(),'phone':_phone.text.trim(),'avatar_url':_avatarUrl,'updated_at':DateTime.now().toIso8601String()});
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profile updated.')));
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Profile update failed: $e')));}
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
     if(mounted)setState(()=>_saving=false);
   }
   @override
@@ -1880,7 +1880,7 @@ class _SettingsPageState extends State<SettingsPage> {
         return;
       }
       if (response.statusCode != 200) {
-        _message('Update check failed (HTTP ${response.statusCode}). Please try again.');
+        _message(friendlyErrorMessage(HttpException('Update request failed with HTTP ${response.statusCode}')));
         return;
       }
       final release = jsonDecode(response.body) as Map<String, dynamic>;
