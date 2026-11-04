@@ -2209,8 +2209,477 @@ class _SettingsPageState extends State<SettingsPage> {
         _message('No stable update is available yet.');
         return;
       }
-      final latest = (release['tag_name'] ?? '').toString().replaceFirst(RegExp(r'^[vV]'), '');
-      if (latest.isEmpty || _compareVersions(latest, info.version) <= 0) {
+      final releaseTag = (release['tag_name'] ?? '').toString();
+      final isSuRelease = releaseTag.toUpperCase().endsWith('-SU');
+      final latest = releaseTag
+          .replaceFirst(RegExp(r'^[vV]'), '')
+          .replaceFirst(RegExp(r'-SU
+      final assets = release['assets'] as List<dynamic>? ?? [];
+      Map<String, dynamic>? apk;
+      for (final raw in assets) {
+        final item = raw as Map<String, dynamic>;
+        final name = (item['name'] ?? '').toString().toLowerCase();
+        if (name.endsWith('.apk') && (name.contains('high-tech') || apk == null)) {
+          apk = item;
+          if (name == 'high-tech-entertainment.apk') break;
+        }
+      }
+      if (apk == null) {
+        _message('Version $latest is published, but its Android APK is not attached yet.');
+        return;
+      }
+      final apkUrl = (apk['browser_download_url'] ?? '').toString();
+      final expectedSize = (apk['size'] as num?)?.toInt() ?? 0;
+      final digest = (apk['digest'] ?? '').toString();
+      if (!apkUrl.startsWith('https://') || expectedSize <= 0) {
+        _message('The published APK details are incomplete. Please try again later.');
+        return;
+      }
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Update available'),
+          content: Text('High-Tech Entertainment $latest is available. You have $version installed. Download the APK now? Your account and app data will be kept.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Later')),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _downloadAndInstall(apk!, latest, expectedSize, digest);
+              },
+              child: const Text('Download update'),
+            ),
+          ],
+        ),
+      );
+    } catch (_) {
+      if (mounted) _message('Could not check for updates. Check your internet connection and try again.');
+    } finally {
+      if (mounted) setState(() { checking = false; updateStatus = ''; });
+    }
+  }
+
+  Future<void> _downloadAndInstall(
+    Map<String, dynamic> asset,
+    String latest,
+    int expectedSize,
+    String expectedDigest,
+  ) async {
+    if (downloading) return;
+    setState(() { downloading = true; downloadProgress = 0; updateStatus = 'Preparing update…'; });
+    File? apkFile;
+    try {
+      final url = (asset['browser_download_url'] ?? '').toString();
+      final client = http.Client();
+      try {
+        final request = http.Request('GET', Uri.parse(url));
+        request.headers['User-Agent'] = 'High-Tech-Entertainment-App';
+        final streamed = await client.send(request).timeout(const Duration(seconds: 45));
+        if (streamed.statusCode != 200) {
+          throw HttpException('APK download failed (HTTP ${streamed.statusCode}).');
+        }
+        final directory = await getTemporaryDirectory();
+        apkFile = File('${directory.path}/hte-update-$latest.apk');
+        if (await apkFile.exists()) await apkFile.delete();
+        final sink = apkFile.openWrite();
+        var received = 0;
+        setState(() => updateStatus = 'Downloading update…');
+        try {
+          await for (final chunk in streamed.stream) {
+            sink.add(chunk);
+            received += chunk.length;
+            if (mounted) setState(() => downloadProgress = (received / expectedSize).clamp(0.0, 1.0).toDouble());
+          }
+          await sink.flush();
+        } finally {
+          await sink.close();
+        }
+        if (received != expectedSize) {
+          throw const FormatException('The downloaded APK is incomplete. Please retry.');
+        }
+      } finally {
+        client.close();
+      }
+
+      final downloadedApk = apkFile;
+      final firstBytes = await downloadedApk.openRead(0, 4).first;
+      if (firstBytes.length < 4 || firstBytes[0] != 0x50 || firstBytes[1] != 0x4b) {
+        throw const FormatException('The downloaded file is not a valid APK archive.');
+      }
+      if (expectedDigest.startsWith('sha256:')) {
+        final actualDigest = await sha256.bind(downloadedApk.openRead()).first;
+        if (actualDigest.toString().toLowerCase() != expectedDigest.substring(7).toLowerCase()) {
+          throw const FormatException('APK integrity verification failed. The update was not opened.');
+        }
+      }
+      if (!mounted) return;
+      setState(() => updateStatus = 'Download complete. Opening Android installer…');
+      final result = await OpenFilex.open(
+        downloadedApk.path,
+        type: 'application/vnd.android.package-archive',
+      );
+      if (!mounted) return;
+      if (result.type != ResultType.done) {
+        _message('APK downloaded, but Android could not open the installer (${result.message}). Allow High-Tech Entertainment to install unknown apps in Android Settings, then try again.');
+      } else {
+        _message('Update downloaded. Follow the Android installation prompt to finish updating.');
+      }
+    } catch (error) {
+      if (mounted) _message(friendlyErrorMessage(error));
+      if (apkFile != null && await apkFile.exists()) {
+        try { await apkFile.delete(); } catch (_) {}
+      }
+    } finally {
+      if (mounted) setState(() { downloading = false; downloadProgress = 0; updateStatus = ''; });
+    }
+  }
+
+  void _message(String value) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
+
+  Widget _themeChoiceTile(
+    BuildContext sheetContext,
+    ThemeMode value,
+    String title,
+    String subtitle,
+  ) {
+    final selected = AppThemeController.mode.value == value;
+    return ListTile(
+      leading: Icon(
+        selected ? Icons.radio_button_checked : Icons.radio_button_off,
+        color: selected ? const Color(0xFFD4AF37) : null,
+      ),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      onTap: () => Navigator.pop(sheetContext, value),
+    );
+  }
+
+  Future<void> _chooseTheme() async {
+    final selected = await showModalBottomSheet<ThemeMode>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Choose your appearance',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 12),
+              _themeChoiceTile(
+                sheetContext,
+                ThemeMode.dark,
+                'High-Tech dark',
+                'Signature black with gold accents',
+              ),
+              _themeChoiceTile(
+                sheetContext,
+                ThemeMode.light,
+                'Light',
+                'Bright, clean interface',
+              ),
+              _themeChoiceTile(
+                sheetContext,
+                ThemeMode.system,
+                'System default',
+                'Follow Android appearance settings',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selected != null) {
+      await AppThemeController.setMode(selected);
+      if (mounted) setState(() {});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Settings')),
+    body: ListView(padding: const EdgeInsets.all(18), children: [
+      const Brand(tagline: 'APP PREFERENCES & INFORMATION'),
+      Card(child: Column(children: [
+        ListTile(
+          leading: const Icon(Icons.palette_outlined, color: Color(0xFFD4AF37)),
+          title: const Text('Appearance & themes'),
+          subtitle: Text(switch (AppThemeController.mode.value) {
+            ThemeMode.light => 'Light theme',
+            ThemeMode.system => 'Follow device theme',
+            ThemeMode.dark => 'High-Tech dark theme',
+          }),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _chooseTheme,
+        ),
+      ])),
+      Card(child: Column(children: [
+        ListTile(
+          leading: const Icon(Icons.system_update_alt, color: Color(0xFFD4AF37)),
+          title: const Text('App updates'),
+          subtitle: Text(downloading ? updateStatus : 'Check, download and install the latest official Android version'),
+          trailing: (checking || downloading) ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.chevron_right),
+          onTap: (checking || downloading) ? null : _checkForUpdates,
+        ),
+        const Divider(height: 1),
+        ListTile(leading: const Icon(Icons.info_outline), title: const Text('App version'), subtitle: Text(version)),
+      ])),
+      if (downloading) ...[
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(updateStatus, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
+          LinearProgressIndicator(value: downloadProgress),
+          const SizedBox(height: 6),
+          Text('${(downloadProgress * 100).toStringAsFixed(0)}% downloaded', style: const TextStyle(color: Colors.white60)),
+        ]))),
+      ],
+      const SizedBox(height: 12),
+      const Heading('Playback preferences'),
+      Card(child: Column(children: [
+        SwitchListTile(title:const Text('Smart Autoplay'),subtitle:const Text('Continue with recommended music when the queue ends'),value:autoplaySetting,onChanged:(v){setState(()=>autoplaySetting=v);playback.autoplay=v;_savePlaybackSetting('hte_autoplay',v);}),
+        SwitchListTile(title:const Text('Shuffle'),subtitle:const Text('Play queued tracks in random order'),value:shuffleSetting,onChanged:(v){setState(()=>shuffleSetting=v);playback.shuffle=v;player.setShuffleModeEnabled(v);_savePlaybackSetting('hte_shuffle',v);}),
+        const ListTile(
+          leading: Icon(Icons.campaign_outlined, color: Color(0xFFD4AF37)),
+          title: Text('HT Audio Advertisements'),
+          subtitle: Text('No advert plays when the app opens or when you pause and resume. A sponsored audio advert may play only after 8 completed songs.'),
+        ),
+      ])),
+      const SizedBox(height: 12),
+      Card(child: Column(children: [
+        ListTile(leading: const Icon(Icons.language), title: const Text('High-Tech Entertainment website'), trailing: const Icon(Icons.open_in_new),
+          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/'), mode: LaunchMode.externalApplication)),
+        ListTile(leading: const Icon(Icons.privacy_tip_outlined), title: const Text('Privacy policy'), trailing: const Icon(Icons.open_in_new),
+          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication)),
+        ListTile(leading: const Icon(Icons.delete_outline), title: const Text('Request account deletion'), trailing: const Icon(Icons.open_in_new),
+          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html'), mode: LaunchMode.externalApplication)),
+      ])),
+      const Heading('About the developer'),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text('HIGH TECHNOLOGIES', style: TextStyle(color: Color(0xFFD9B96E), fontWeight: FontWeight.w800, letterSpacing: 1.5, fontSize: 16)),
+              SizedBox(height: 12),
+              _DeveloperDetail(label: 'Product', value: 'High-Tech Entertainment'),
+              _DeveloperDetail(label: 'Founder', value: 'Suwilanji Sinkamba'),
+              _DeveloperDetail(label: 'Location', value: 'Kitwe, Zambia'),
+              SizedBox(height: 10),
+              Text('Combining innovative technology, music, entertainment and digital experiences in one platform.', style: TextStyle(color: Colors.white70, height: 1.5)),
+              SizedBox(height: 12),
+              Text('Copyright 2026 High Technologies.', style: TextStyle(color: Colors.white54, fontSize: 12)),
+            ],
+          ),
+        ),
+      ),
+      const Padding(padding: EdgeInsets.all(20), child: Text('Quality Sound, Global Vibes.\\nMusic. Beats. Production. Beyond.',
+        textAlign: TextAlign.center, style: TextStyle(color: Colors.white54))),
+    ]),
+  );
+}
+
+class _DeveloperDetail extends StatelessWidget {
+  const _DeveloperDetail({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: 82, child: Text(label, style: const TextStyle(color: Colors.white54))),
+        Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600))),
+      ],
+    ),
+  );
+}
+
+bool isSpotifyUrl(String raw) {
+  final value = raw.trim();
+  if (value.startsWith('spotify:')) return true;
+  final uri = Uri.tryParse(value);
+  final host = (uri?.host ?? '').toLowerCase();
+  return host == 'spotify.com' || host.endsWith('.spotify.com') || host == 'spotify.link';
+}
+
+String? spotifyEmbedUrl(String raw) {
+  final value = raw.trim();
+  final uri = Uri.tryParse(value);
+  String? type;
+  String? id;
+  if (value.startsWith('spotify:')) {
+    final parts = value.split(':');
+    if (parts.length == 3) {
+      type = parts[1];
+      id = parts[2];
+    }
+  } else if (uri != null && (uri.host == 'open.spotify.com' || uri.host.endsWith('.spotify.com'))) {
+    final parts = uri.pathSegments;
+    final offset = parts.isNotEmpty && parts.first == 'embed' ? 1 : 0;
+    if (parts.length > offset + 1) {
+      type = parts[offset];
+      id = parts[offset + 1];
+    }
+  }
+  const supported = {'track', 'album', 'playlist', 'episode', 'show'};
+  final validId = id != null && id.isNotEmpty && id.codeUnits.every((unit) =>
+      (unit >= 48 && unit <= 57) ||
+      (unit >= 65 && unit <= 90) ||
+      (unit >= 97 && unit <= 122));
+  if (type == null || !supported.contains(type) || !validId) return null;
+  return 'https://open.spotify.com/embed/$type/$id?utm_source=generator&theme=0';
+}
+
+bool _isPlayableTrack(Map<String, dynamic> track) {
+  final title = (track['title'] ?? '').toString().trim();
+  final audioUrl = (track['audio_url'] ?? '').toString().trim();
+  final uri = Uri.tryParse(audioUrl);
+  return title.isNotEmpty &&
+      (isSpotifyUrl(audioUrl) || (uri != null && uri.scheme == 'https' && uri.host.isNotEmpty));
+}
+
+Future<List<Map<String, dynamic>>> publishedTracks([String term = '']) async {
+  var query = db.from('tracks')
+      .select()
+      .eq('is_published', true);
+  if (term.trim().isNotEmpty) {
+    query = query.ilike('title', '%${term.trim()}%');
+  }
+  final data = await query.order('created_at', ascending: false).limit(100);
+  return List<Map<String, dynamic>>.from(data).where(_isPlayableTrack).toList();
+}
+
+Future<List<Map<String, dynamic>>> playableTracks() => publishedTracks();
+
+class SpotifyEmbedPage extends StatefulWidget {
+  const SpotifyEmbedPage({super.key, required this.title, required this.artist, required this.embedUrl});
+  final String title;
+  final String artist;
+  final String embedUrl;
+  @override
+  State<SpotifyEmbedPage> createState() => _SpotifyEmbedPageState();
+}
+
+class _SpotifyEmbedPageState extends State<SpotifyEmbedPage> {
+  late final WebViewController controller;
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF08090B))
+      ..setNavigationDelegate(NavigationDelegate(
+        onPageFinished: (_) {
+          if (mounted) setState(() => loading = false);
+        },
+      ))
+      ..loadRequest(Uri.parse(widget.embedUrl));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis)),
+    body: Column(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(widget.artist, style: const TextStyle(
+            color: Color(0xFFD9B96E), letterSpacing: 1.2, fontSize: 11, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 5),
+          const Text('Now playing on Spotify', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          const Text('Playback is provided by Spotify. Sign in to Spotify if prompted.',
+            style: TextStyle(color: Colors.white60, fontSize: 12)),
+        ]),
+      ),
+      Expanded(child: Stack(children: [
+        WebViewWidget(controller: controller),
+        if (loading) const Center(child: CircularProgressIndicator(color: Color(0xFFD9B96E))),
+      ])),
+    ]),
+  );
+}
+
+Future<List<Map<String, dynamic>>> rows(String table, String orderBy) async {
+  final result = await db.from(table).select().eq('is_published', true).order(orderBy, ascending: false);
+  return List<Map<String, dynamic>>.from(result);
+}
+
+/// A FutureBuilder with a real reload action for failed network requests.
+/// The loader is called again only when the user taps Retry.
+class RetryFutureBuilder<T> extends StatefulWidget {
+  const RetryFutureBuilder({super.key, required this.future, required this.builder});
+  final Future<T> Function() future;
+  final Widget Function(BuildContext, AsyncSnapshot<T>) builder;
+
+  @override
+  State<RetryFutureBuilder<T>> createState() => _RetryFutureBuilderState<T>();
+}
+
+class _RetryFutureBuilderState<T> extends State<RetryFutureBuilder<T>> {
+  late Future<T> _pending;
+
+  @override
+  void initState() {
+    super.initState();
+    _pending = widget.future();
+  }
+
+  void _retry() {
+    setState(() => _pending = widget.future());
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<T>(
+    future: _pending,
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return Notice(friendlyErrorMessage(snapshot.error!), onRetry: _retry);
+      }
+      return widget.builder(context, snapshot);
+    },
+  );
+}
+
+class Busy extends StatelessWidget {
+  const Busy({super.key});
+  @override
+  Widget build(BuildContext context) => const Center(
+    child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
+  );
+}
+
+class Notice extends StatelessWidget {
+  const Notice(this.message, {super.key, this.onRetry});
+  final String message;
+  final VoidCallback? onRetry;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(22),
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)),
+      if (onRetry != null) ...[
+        const SizedBox(height: 14),
+        OutlinedButton.icon(
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('Retry'),
+        ),
+      ],
+    ]),
+  );
+}, caseSensitive: false), '');
+      final installedSu = info.version.toUpperCase().contains(' SU');
+      final flavourUpgradeAvailable = isSuRelease && !installedSu;
+      if (latest.isEmpty || (_compareVersions(latest, info.version) <= 0 && !flavourUpgradeAvailable)) {
         _message('You are using the latest published version ($version).');
         return;
       }
