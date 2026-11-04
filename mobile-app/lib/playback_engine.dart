@@ -70,6 +70,7 @@ class HtePlayback {
   bool autoplay = true, shuffle = false, audioAdsEnabled = true;
   bool _handlingCompletion = false;
   bool _playingStartupAd = false;
+  bool _startupAdvertAttempted = false;
   // Only a successfully loaded music source can contribute one completion.
   // This prevents pause/resume, source replacement and advert completion
   // notifications from being mistaken for completed songs.
@@ -196,7 +197,10 @@ class HtePlayback {
   /// very first launch without Wi-Fi, mobile data, Supabase or a cached file.
   /// The splash remains visible until the complete audio source finishes.
   Future<void> playStartupAd() async {
-    if (!audioAdsEnabled) return;
+    if (!audioAdsEnabled || _startupAdvertAttempted) return;
+    // StartupGate can be recreated after a recoverable initialization error.
+    // Do not replay the launch advert during the same process session.
+    _startupAdvertAttempted = true;
     _playingStartupAd = true;
     _currentSourceIsMusic = false;
     _completionHandledForSource = true;
