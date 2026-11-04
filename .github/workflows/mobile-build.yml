@@ -102,10 +102,310 @@ jobs:
           settings.write_text("\n".join(settings_lines) + "\n")
 
           app_text = app_gradle.read_text()
-          if not re.search(r'id\("(?:kotlin-android|org\.jetbrains\.kotlin\.android)"\)', app_text):
-              raise SystemExit("The Android app module does not apply the Kotlin Android plugin.")
           if "dev.flutter.flutter-gradle-plugin" not in app_text:
               raise SystemExit("The Flutter Gradle plugin declaration is missing.")
+          if not re.search(r'id\("(?:kotlin-android|org\.jetbrains\.kotlin\.android)"\)', app_text):
+              plugin_block = re.search(r'(?m)^plugins\s*\{\s*
+
+          wrapper_lines = wrapper.read_text().splitlines()
+          wrapper_lines = [
+              "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.13-all.zip"
+              if line.startswith("distributionUrl=") else line
+              for line in wrapper_lines
+          ]
+          if not any("gradle-8.13-all.zip" in line for line in wrapper_lines):
+              raise SystemExit("Could not set the Gradle wrapper to 8.13.")
+          wrapper.write_text("\n".join(wrapper_lines) + "\n")
+
+          property_lines = [
+              line for line in properties.read_text().splitlines()
+              if not line.startswith(("android.builtInKotlin=", "android.newDsl="))
+          ]
+          property_lines.extend(["android.builtInKotlin=false", "android.newDsl=false"])
+          properties.write_text("\n".join(property_lines) + "\n")
+
+          print("PASS: AGP 8.11.1 + Gradle 8.13 + Kotlin Gradle Plugin 2.2.20.")
+          print("PASS: legacy Kotlin Gradle Plugin mode is enabled for Flutter/plugin compatibility.")
+          PY
+          grep -n "com.android.application\|org.jetbrains.kotlin.android\|builtInKotlin\|distributionUrl" android/settings.gradle.kts android/gradle.properties android/gradle/wrapper/gradle-wrapper.properties
+      - name: Set Play Store Android identity, SDK levels and target API
+        working-directory: ${{ runner.temp }}/hte_app
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          text = manifest.read_text()
+          if 'xmlns:tools=' not in text:
+              text = text.replace('<manifest ', '<manifest xmlns:tools="http://schemas.android.com/tools" ', 1)
+          required_permissions = [
+              "android.permission.INTERNET",
+              "android.permission.WAKE_LOCK",
+              "android.permission.FOREGROUND_SERVICE",
+              "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+              "android.permission.REQUEST_INSTALL_PACKAGES",
+          ]
+          for permission in required_permissions:
+              if permission not in text:
+                  text = text.replace("<application", f'    <uses-permission android:name="{permission}" />\n    <application', 1)
+          text = re.sub(r'android:label="[^"]*"', 'android:label="High-Tech Entertainment"', text)
+          activity_pattern = r'(<activity\b(?:(?!>).)*?\bandroid:name=")[^"]+"'
+          text, activity_count = re.subn(
+              activity_pattern,
+              r'\1com.ryanheise.audioservice.AudioServiceActivity"',
+              text,
+              count=1,
+              flags=re.S,
+          )
+          if activity_count != 1 or 'android:name="com.ryanheise.audioservice.AudioServiceActivity"' not in text:
+              raise SystemExit("Could not set the required AudioServiceActivity in AndroidManifest.xml")
+          if "android:scheme=\"com.hightechentertainment.app\"" not in text:
+              intent = """<intent-filter>
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="com.hightechentertainment.app" android:host="login-callback" />
+                      </intent-filter>"""
+              text = text.replace("</activity>", intent + "\n                  </activity>", 1)
+          if 'android:name="com.ryanheise.audioservice.AudioService"' not in text:
+              components = """<service android:name="com.ryanheise.audioservice.AudioService"
+                      android:foregroundServiceType="mediaPlayback"
+                      android:exported="true" tools:ignore="Instantiatable">
+                      <intent-filter>
+                          <action android:name="android.media.browse.MediaBrowserService" />
+                      </intent-filter>
+                  </service>
+                  <receiver android:name="com.ryanheise.audioservice.MediaButtonReceiver"
+                      android:exported="true" tools:ignore="Instantiatable">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MEDIA_BUTTON" />
+                      </intent-filter>
+                  </receiver>"""
+              text = text.replace("</application>", components + "\n    </application>", 1)
+          manifest.write_text(text)
+          gradle_files = [Path("android/app/build.gradle"), Path("android/app/build.gradle.kts")]
+          found = False
+          for path in gradle_files:
+              if not path.exists():
+                  continue
+              found = True
+              text = path.read_text()
+              if path.name == "build.gradle.kts":
+                  text, min_n = re.subn(r'(?m)^(\s*minSdk\s*=\s*)[^\n]+', r'\g<1>26', text)
+                  text, compile_n = re.subn(r'(?m)^(\s*compileSdk\s*=\s*)[^\n]+', r'\g<1>36', text)
+                  text, target_n = re.subn(r'(?m)^(\s*targetSdk\s*=\s*)[^\n]+', r'\g<1>36', text)
+              else:
+                  text, min_n = re.subn(r'(?m)^(\s*minSdkVersion\s+)[^\n]+', r'\g<1>26', text)
+                  text, compile_n = re.subn(r'(?m)^(\s*compileSdkVersion?\s+)[^\n]+', r'\g<1>36', text)
+                  text, target_n = re.subn(r'(?m)^(\s*targetSdkVersion\s+)[^\n]+', r'\g<1>36', text)
+              if min_n == 0 or compile_n == 0 or target_n == 0:
+                  raise SystemExit(f"Could not configure minSdk 26, compileSdk 36 and targetSdk 36 in {path}")
+              path.write_text(text)
+          if not found:
+              raise SystemExit("Android app Gradle build file not found")
+          PY
+          grep -R -E "minSdk|compileSdk|targetSdk" android/app/build.gradle*
+      - name: Configure Android upload-key signing
+        id: android_signing
+        working-directory: ${{ runner.temp }}/hte_app
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_STORE_PASSWORD" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hte-upload-key.p12"
+            keytool -list -keystore "$RUNNER_TEMP/hte-upload-key.p12" -storepass "$ANDROID_STORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
+            CERT_SHA256="$(keytool -list -v -keystore "$RUNNER_TEMP/hte-upload-key.p12" -storepass "$ANDROID_STORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" | awk -F': ' '/SHA256:/{print $2; exit}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+            if [ -z "$CERT_SHA256" ]; then
+              echo "::error::Could not read the upload certificate SHA-256 fingerprint."
+              exit 1
+            fi
+            echo "release_cert_sha256=$CERT_SHA256" >> "$GITHUB_OUTPUT"
+            cat > android/key.properties <<EOF
+          storePassword=$ANDROID_STORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=$RUNNER_TEMP/hte-upload-key.p12
+          EOF
+            python3 - <<'PY'
+          from pathlib import Path
+          kts = Path("android/app/build.gradle.kts")
+          groovy = Path("android/app/build.gradle")
+          if kts.exists():
+              text = kts.read_text()
+              imports = 'import java.util.Properties\nimport java.io.FileInputStream\n\nval keystoreProperties = Properties()\nval keystorePropertiesFile = rootProject.file("key.properties")\nif (keystorePropertiesFile.exists()) { keystoreProperties.load(FileInputStream(keystorePropertiesFile)) }\n\n'
+              if "val keystorePropertiesFile" not in text:
+                  text = imports + text
+              block = """    signingConfigs {
+                  create("release") {
+                      keyAlias = keystoreProperties["keyAlias"] as String
+                      keyPassword = keystoreProperties["keyPassword"] as String
+                      storeFile = file(keystoreProperties["storeFile"] as String)
+                      storePassword = keystoreProperties["storePassword"] as String
+                  }
+              }
+          """
+              if 'create("release")' not in text:
+                  text = text.replace("    buildTypes {", block + "    buildTypes {")
+              text = text.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
+              kts.write_text(text)
+          elif groovy.exists():
+              text = groovy.read_text()
+              imports = "def keystoreProperties = new Properties()\ndef keystorePropertiesFile = rootProject.file('key.properties')\nif (keystorePropertiesFile.exists()) { keystoreProperties.load(new FileInputStream(keystorePropertiesFile)) }\n\n"
+              if "keystorePropertiesFile" not in text:
+                  text = imports + text
+              block = """    signingConfigs {
+              release {
+                  keyAlias keystoreProperties['keyAlias']
+                  keyPassword keystoreProperties['keyPassword']
+                  storeFile file(keystoreProperties['storeFile'])
+                  storePassword keystoreProperties['storePassword']
+              }
+          }
+          """
+              if "signingConfigs {" not in text:
+                  text = text.replace("    buildTypes {", block + "    buildTypes {")
+              text = text.replace("signingConfig signingConfigs.debug", "signingConfig signingConfigs.release")
+              groovy.write_text(text)
+          else:
+              raise SystemExit("Android Gradle build file not found")
+          PY
+            echo "release_signing_ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::One or more required Android signing secrets are missing or empty. Add all four repository Actions secrets before building a distributable APK."
+            exit 1
+          fi
+      - name: Verify bundled offline startup advertisement
+        working-directory: ${{ runner.temp }}/hte_app
+        run: |
+          test -s assets/AUD-20261103-WA0002.mp3 || { echo "::error::The offline startup advertisement was not copied into the Flutter build workspace."; find assets -maxdepth 1 -type f -printf "%f %s bytes\\n"; exit 1; }
+          echo "PASS: Offline advert is bundled ($(stat -c%s assets/AUD-20261103-WA0002.mp3) bytes)."
+      - name: Install dependencies and generate branded launcher icon
+        working-directory: ${{ runner.temp }}/hte_app
+        run: |
+          flutter pub get
+          dart run flutter_launcher_icons
+          flutter test
+          flutter analyze lib
+      - name: Align Android plugin compile SDK with API 36
+        working-directory: ${{ runner.temp }}/hte_app
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          cache = Path.home() / ".pub-cache" / "hosted" / "pub.dev"
+          if not cache.exists():
+              raise SystemExit("Pub package cache was not found.")
+          pattern = re.compile(r"(?m)^(\s*compileSdk(?:Version)?\s*(?:=\s*)?)(\d+)(\s*(?://.*)?$)")
+          changed = []
+          for gradle in cache.glob("*/android/build.gradle*"):
+              source = gradle.read_text()
+              updated, count = pattern.subn(
+                  lambda match: match.group(1) + "36" + match.group(3)
+                  if int(match.group(2)) < 36 else match.group(0),
+                  source,
+              )
+              if count and updated != source:
+                  gradle.write_text(updated)
+                  changed.append(str(gradle))
+          stale = []
+          for gradle in cache.glob("*/android/build.gradle*"):
+              source = gradle.read_text()
+              for match in pattern.finditer(source):
+                  if int(match.group(2)) < 36:
+                      stale.append(f"{gradle}: compileSdk {match.group(2)}")
+          if stale:
+              raise SystemExit("Android plugins still declare compileSdk below 36:\n" + "\n".join(stale))
+          print(f"Updated plugin Android compile SDK declarations: {len(changed)}")
+          print("\n".join(changed))
+          print("PASS: all cached Android plugin compileSdk declarations are API 36 or newer.")
+          PY
+      - name: Build signed Android APK
+        working-directory: ${{ runner.temp }}/hte_app
+        run: flutter build apk --release --target-platform android-arm,android-arm64 --dart-define=HTE_GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+      - name: Verify release APK signature
+        if: success()
+        working-directory: ${{ runner.temp }}/hte_app
+        env:
+          EXPECTED_CERT_SHA256: ${{ steps.android_signing.outputs.release_cert_sha256 }}
+        shell: bash
+        run: |
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          if [ ! -s "$APK" ]; then
+            echo "::error::Signed APK verification executed, but no APK was produced by the build step."
+            exit 1
+          fi
+          if [ ! -x "$APKSIGNER" ]; then
+            echo "::error::Android apksigner was not installed."
+            exit 1
+          fi
+          if [ -z "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::Expected upload certificate fingerprint is missing."
+            exit 1
+          fi
+          VERIFY_OUTPUT="$("$APKSIGNER" verify --verbose --print-certs "$APK" 2>&1)" || {
+            printf '%s\n' "$VERIFY_OUTPUT"
+            echo "::error::APK signature verification failed."
+            exit 1
+          }
+          printf '%s\n' "$VERIFY_OUTPUT"
+          ACTUAL_CERT_SHA256="$(printf '%s\n' "$VERIFY_OUTPUT" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print $2; exit}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          if [ -z "$ACTUAL_CERT_SHA256" ] || [ "$ACTUAL_CERT_SHA256" != "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::APK is not signed with the configured High-Tech Entertainment upload certificate."
+            exit 1
+          fi
+          echo "PASS: APK signature is valid and matches the configured upload certificate."
+      - name: Build Google Play App Bundle
+        working-directory: ${{ runner.temp }}/hte_app
+        run: flutter build appbundle --release --dart-define=HTE_GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+      - name: Apply official High-Tech Entertainment download filenames
+        working-directory: ${{ runner.temp }}/hte_app
+        run: |
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          AAB="build/app/outputs/bundle/release/app-release.aab"
+          test -s "$APK"
+          test -s "$AAB"
+          mv "$APK" "build/app/outputs/flutter-apk/High-Tech-Entertainment.apk"
+          mv "$AAB" "build/app/outputs/bundle/release/High-Tech-Entertainment.aab"
+      - name: Upload standalone Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: High-Tech-Entertainment-APK
+          path: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment.apk
+          if-no-files-found: error
+          compression-level: 0
+      - name: Upload Android App Bundle separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: High-Tech-Entertainment-AAB
+          path: ${{ runner.temp }}/hte_app/build/app/outputs/bundle/release/High-Tech-Entertainment.aab
+          if-no-files-found: error
+
+      - name: Publish public Android APK release
+        if: github.event_name != 'pull_request' && steps.android_signing.outputs.release_signing_ready == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.app_version.outputs.version }}
+          name: High-Tech Entertainment Android v${{ steps.app_version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          body: |
+            Official High-Tech Entertainment Android app.
+            Download the APK and install it on a compatible Android device.
+            This release is signed with the project's private upload key.
+          files: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment.apk
+          overwrite_files: true
+          make_latest: true
+, app_text)
+              if not plugin_block:
+                  raise SystemExit("Could not locate the Android app plugins block to apply Kotlin.")
+              app_text = app_text[:plugin_block.end()] + '\n    id("org.jetbrains.kotlin.android")' + app_text[plugin_block.end():]
+              app_gradle.write_text(app_text)
+          if not re.search(r'id\("(?:kotlin-android|org\.jetbrains\.kotlin\.android)"\)', app_text):
+              raise SystemExit("Kotlin Android plugin could not be applied to the app module.")
 
           wrapper_lines = wrapper.read_text().splitlines()
           wrapper_lines = [
