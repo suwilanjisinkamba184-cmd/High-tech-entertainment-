@@ -187,7 +187,24 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(seconds: 7),
     )..repeat();
+    // Play the branded startup sting independently of the music/ad playback engine.
+    // Do not await it here: authentication and service setup continue in parallel.
+    unawaited(_playStartupSound());
     _initialize();
+  }
+
+  Future<void> _playStartupSound() async {
+    final startupPlayer = AudioPlayer();
+    try {
+      await startupPlayer.setAsset('assets/high-tech-startup.mp3');
+      await startupPlayer.play();
+    } catch (error, stackTrace) {
+      // Startup audio is optional and must never block sign-in or show raw errors.
+      debugPrint('HTE startup sound could not be played: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    } finally {
+      await startupPlayer.dispose();
+    }
   }
 
   /// Coalesce overlapping startup/retry requests into one initialization.
