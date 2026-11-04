@@ -115,12 +115,12 @@ jobs:
 
           wrapper_lines = wrapper.read_text().splitlines()
           wrapper_lines = [
-              "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.13-all.zip"
+              "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.14-all.zip"
               if line.startswith("distributionUrl=") else line
               for line in wrapper_lines
           ]
-          if not any("gradle-8.13-all.zip" in line for line in wrapper_lines):
-              raise SystemExit("Could not set the Gradle wrapper to 8.13.")
+          if not any("gradle-8.14-all.zip" in line for line in wrapper_lines):
+              raise SystemExit("Could not set the Gradle wrapper to 8.14.0.")
           wrapper.write_text("\n".join(wrapper_lines) + "\n")
 
           property_lines = [
@@ -130,7 +130,7 @@ jobs:
           property_lines.extend(["android.builtInKotlin=false", "android.newDsl=false"])
           properties.write_text("\n".join(property_lines) + "\n")
 
-          print("PASS: AGP 8.11.1 + Gradle 8.13 + Kotlin Gradle Plugin 2.2.20.")
+          print("PASS: AGP 8.11.1 + Gradle 8.14.0 + Kotlin Gradle Plugin 2.2.20.")
           print("PASS: the app module applies the Kotlin Android plugin.")
           PY
           grep -n "com.android.application\|org.jetbrains.kotlin.android\|builtInKotlin\|distributionUrl" android/settings.gradle.kts android/app/build.gradle.kts android/gradle.properties android/gradle/wrapper/gradle-wrapper.properties
