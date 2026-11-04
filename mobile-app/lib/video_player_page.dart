@@ -30,6 +30,7 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
   bool _resumeMusic = false;
   bool _lastPlaying = false;
   bool _isFullscreen = false;
+  double _playbackSpeed = 1.0;
   String? _error;
 
   @override
@@ -273,6 +274,27 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
                 title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
                 backgroundColor: Colors.black,
                 actions: [
+                  PopupMenuButton<double>(
+                    tooltip: 'Playback speed',
+                    enabled: _ready,
+                    initialValue: _playbackSpeed,
+                    onSelected: (speed) async {
+                      final current = _controller;
+                      if (current == null) return;
+                      await current.setPlaybackSpeed(speed);
+                      if (mounted) setState(() => _playbackSpeed = speed);
+                    },
+                    itemBuilder: (_) => [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+                        .map((speed) => PopupMenuItem<double>(
+                          value: speed,
+                          child: Text(speed == 1.0 ? 'Normal (1×)' : '${speed}×'),
+                        )).toList(),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Center(child: Text('${_playbackSpeed}×',
+                        style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.w700))),
+                    ),
+                  ),
                   IconButton(
                     tooltip: 'Full screen',
                     onPressed: _ready ? () => _setFullscreen(true) : null,
