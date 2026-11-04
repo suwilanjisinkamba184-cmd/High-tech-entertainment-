@@ -1366,30 +1366,117 @@ class DiscoverTab extends StatefulWidget {
   @override
   State<DiscoverTab> createState() => _DiscoverTabState();
 }
+
 class _DiscoverTabState extends State<DiscoverTab> {
   final controller = TextEditingController();
-  List<Map<String,dynamic>> results = [];
+  static const genres = ['All', 'Afrobeat', 'Dancehall', 'Drill', 'Choir'];
+  List<Map<String, dynamic>> results = [];
+  String selectedGenre = 'All';
   bool loading = true;
   String? error;
+
   @override
-  void initState() { super.initState(); search(''); }
-  Future<void> search(String term) async {
-    setState(() { loading = true; error = null; });
+  void initState() {
+    super.initState();
+    search('');
+  }
+
+  Future<void> search(String term, {String? genre}) async {
+    if (!mounted) return;
+    setState(() {
+      loading = true;
+      error = null;
+      if (genre != null) selectedGenre = genre;
+    });
     try {
-      results = await publishedTracks(term);
-    } catch (e) { error = hteFriendlyError(e, fallback: 'Search is unavailable right now.'); }
+      results = await publishedTracks(term, selectedGenre);
+    } catch (e) {
+      error = hteFriendlyError(e, fallback: 'Music discovery is unavailable right now.');
+    }
     if (mounted) setState(() => loading = false);
   }
-  @override
-  void dispose() { controller.dispose(); super.dispose(); }
-  @override
-  Widget build(BuildContext context) => Column(children: [
-    const Brand(),
-    Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: TextField(controller: controller, onChanged: search, decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search tracks by title'))),
-    Expanded(child: loading ? const Busy() : error != null ? Notice(error!, onRetry: () => search(controller.text)) : TrackList(items: results)),
-  ]);
-}
 
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      const Brand(),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('FIND YOUR NEXT SOUND', style: TextStyle(color: Color(0xFFD9B96E), fontSize: 10, letterSpacing: 2, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 5),
+            const Text('Discover music', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 5),
+            const Text('Explore the sounds of High-Tech Entertainment.', style: TextStyle(color: Colors.white60, fontSize: 12)),
+          ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: TextField(
+          controller: controller,
+          onChanged: (value) => search(value),
+          textInputAction: TextInputAction.search,
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.search_rounded),
+            hintText: 'Search tracks by title',
+          ),
+        ),
+      ),
+      const SizedBox(height: 12),
+      SizedBox(
+        height: 42,
+        child: ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          scrollDirection: Axis.horizontal,
+          itemCount: genres.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (context, index) {
+            final genre = genres[index];
+            final selected = genre == selectedGenre;
+            return ChoiceChip(
+              label: Text(genre),
+              selected: selected,
+              onSelected: (_) => search(controller.text, genre: genre),
+              selectedColor: const Color(0xFFD9B96E),
+              backgroundColor: const Color(0xFF151619),
+              side: BorderSide(color: selected ? const Color(0xFFD9B96E) : const Color(0xFF393A3B)),
+              labelStyle: TextStyle(color: selected ? const Color(0xFF17130B) : Colors.white70, fontWeight: FontWeight.w700, fontSize: 11),
+            );
+          },
+        ),
+      ),
+      Expanded(
+        child: loading
+            ? const Busy()
+            : error != null
+                ? Notice(error!, onRetry: () => search(controller.text))
+                : results.isEmpty
+                    ? const Notice('No tracks match this search yet. Try another genre or search term.')
+                    : Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                            child: Row(children: [
+                              const Expanded(child: Text('AVAILABLE TO PLAY', style: TextStyle(color: Color(0xFFD9B96E), fontSize: 9, letterSpacing: 1.4, fontWeight: FontWeight.w800))),
+                              Text('${results.length} tracks', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                            ]),
+                          ),
+                          Expanded(child: TrackList(items: results)),
+                        ],
+                      ),
+      ),
+    ],
+  );
+}
 class SavedTab extends StatefulWidget {
   const SavedTab({super.key});
   @override
@@ -2190,12 +2277,18 @@ bool _isPlayableTrack(Map<String, dynamic> track) {
       (isSpotifyUrl(audioUrl) || (uri != null && uri.scheme == 'https' && uri.host.isNotEmpty));
 }
 
-Future<List<Map<String, dynamic>>> publishedTracks([String term = '']) async {
+Future<List<Map<String, dynamic>>> publishedTracks([
+  String term = '',
+  String genre = 'All',
+]) async {
   var query = db.from('tracks')
       .select()
       .eq('is_published', true);
   if (term.trim().isNotEmpty) {
     query = query.ilike('title', '%${term.trim()}%');
+  }
+  if (genre != 'All') {
+    query = query.eq('genre', genre);
   }
   final data = await query.order('created_at', ascending: false).limit(100);
   return List<Map<String, dynamic>>.from(data).where(_isPlayableTrack).toList();
