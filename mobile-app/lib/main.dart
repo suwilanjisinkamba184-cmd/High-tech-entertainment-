@@ -216,8 +216,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
           );
           _audioBackgroundInitialized = true;
         } catch (audioError, stackTrace) {
-          debugPrint('HTE background audio initialisation failed: $audioError');
-          debugPrintStack(stackTrace: stackTrace);
+          // Optional audio failure is intentionally silent to the user.
         }
       }
 
@@ -1668,7 +1667,7 @@ class _AccountTabState extends State<AccountTab> {
       if (mounted) setState(() {});
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication request completed. Check your email if confirmation is enabled.')));
     } on AuthException catch (error) {
-      debugPrint('HTE authentication failure: $error');
+      // Keep provider diagnostics out of customer-visible and release logs.
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sign-in could not be completed. Check your details and try again.')));
     } finally {
       if (mounted) setState(() => busy = false);
@@ -2021,7 +2020,7 @@ class _SettingsPageState extends State<SettingsPage> {
         _message('Update downloaded. Follow the Android installation prompt to finish updating.');
       }
     } catch (error) {
-      debugPrint('HTE update installation failure: $error');
+      // Show only the safe, user-facing fallback below.
       if (mounted) _message(_friendlyError(error, fallback: 'The update could not be installed. Please try again.'));
       if (apkFile != null && await apkFile.exists()) {
         try { await apkFile.delete(); } catch (_) {}
