@@ -30,6 +30,18 @@ bool _googleSignInInitialized = false;
 final db = Supabase.instance.client;
 bool _supabaseInitialized = false;
 bool _audioBackgroundInitialized = false;
+
+/// Keep backend diagnostics in developer logs only. Never show raw Supabase,
+/// HTTP, socket, or platform exception text in the customer-facing UI.
+String _friendlyError(Object error, {String fallback = 'Something went wrong. Please try again.'}) {
+  if (error is SocketException || error is TimeoutException || error is http.ClientException) {
+    return 'You are offline or your connection is unstable. Check your internet connection and try again.';
+  }
+  if (error is AuthException) {
+    return 'Sign-in could not be completed. Check your details and try again.';
+  }
+  return fallback;
+}
 // Both references resolve to the single process-wide playback service.
 // Top-level finals are lazy, so the service is first created after the Android
 // audio background handler has been initialized in StartupGate.
@@ -153,6 +165,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   String? _error;
   Future<void>? _initialization;
   late final AnimationController _startupAnimation;
+  late final AnimationController _ringAnimation;
 
   @override
   void initState() {
@@ -161,6 +174,10 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
+    _ringAnimation = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 7),
+    )..repeat();
     _initialize();
   }
 
@@ -226,7 +243,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
     } catch (error) {
       if (mounted) {
         setState(() {
-          _error = 'We could not initialise the app services. Check your connection and try again.\n$error';
+          _error = _friendlyError(error, fallback: 'Something went wrong while preparing the app. Please try again.');
           _starting = false;
         });
       }
@@ -236,6 +253,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   @override
   void dispose() {
     _startupAnimation.dispose();
+    _ringAnimation.dispose();
     super.dispose();
   }
 
@@ -252,7 +270,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 AnimatedBuilder(
-                  animation: _startupAnimation,
+                  animation: Listenable.merge([_startupAnimation, _ringAnimation]),
                   builder: (context, child) {
                     final pulse = _startupAnimation.value;
                     return Transform.scale(
@@ -271,11 +289,29 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                             ),
                           ],
                         ),
-                        child: SvgPicture.asset(
-                          'assets/high-tech-logo.svg',
-                          width: 214,
-                          height: 214,
-                          semanticsLabel: 'High-Tech Entertainment app logo',
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Transform.rotate(
+                              angle: _ringAnimation.value * 6.283185307179586,
+                              child: Container(
+                                width: 218,
+                                height: 218,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: const Color(0xFFD9B96E).withValues(alpha: 0.72), width: 1.6),
+                                  gradient: const SweepGradient(colors: [Color(0x00D9B96E), Color(0xFFD9B96E), Color(0x00D9B96E)]),
+                                  boxShadow: [BoxShadow(color: const Color(0xFFD9A52B).withValues(alpha: 0.18 + (pulse * 0.12)), blurRadius: 16, spreadRadius: 1)],
+                                ),
+                              ),
+                            ),
+                            SvgPicture.asset(
+                              'assets/high-tech-logo.svg',
+                              width: 184,
+                              height: 184,
+                              semanticsLabel: 'High-Tech Entertainment app logo',
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -666,7 +702,7 @@ class ArtistList extends StatelessWidget {
   Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
     future: rows('artists', 'name'),
     builder: (context, snapshot) {
-      if (snapshot.hasError) return Notice('Unable to load artists: ${snapshot.error}. Check connection, Data API access and RLS.');
+      if (snapshot.hasError) return const Notice('You are offline or something went wrong while loading artists. Check your connection and try again.');
       if (!snapshot.hasData) return const Busy();
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published artist profiles will appear here.');
@@ -746,7 +782,7 @@ class ReleaseList extends StatelessWidget {
   Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
     future: rows('releases', 'created_at'),
     builder: (context, snapshot) {
-      if (snapshot.hasError) return Notice('Unable to load releases: ${snapshot.error}.');
+      if (snapshot.hasError) return const Notice('You are offline or something went wrong while loading releases. Check your connection and try again.');
       if (!snapshot.hasData) return const Busy();
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published releases will appear here.');
@@ -815,7 +851,7 @@ class ReleaseList extends StatelessWidget {
                               } catch (error) {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Could not open Spotify: $error')),
+                                    SnackBar(content: Text(_friendlyError(error, fallback: 'Could not open Spotify. Please try again.'))),
                                   );
                                 }
                               }
@@ -852,7 +888,7 @@ class TrackList extends StatelessWidget {
   Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
     future: items == null ? playableTracks() : Future.value(items!.where(_isPlayableTrack).toList()),
     builder: (context, snapshot) {
-      if (snapshot.hasError) return Notice('Unable to load tracks: ${snapshot.error}. Check connection, Data API access and RLS.');
+      if (snapshot.hasError) return const Notice('You are offline or something went wrong while loading music. Check your connection and try again.');
       if (!snapshot.hasData) return const Busy();
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published tracks will appear here.');
@@ -891,7 +927,7 @@ class TrackList extends StatelessWidget {
                   } catch (error) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Download failed: $error')),
+                        SnackBar(content: Text(_friendlyError(error, fallback: 'Download failed. Please try again.'))),
                       );
                     }
                   }
@@ -928,7 +964,7 @@ class TrackList extends StatelessWidget {
                 } catch (error) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Playback failed: $error')),
+                      SnackBar(content: Text(_friendlyError(error, fallback: 'Playback could not start. Please try again.'))),
                     );
                   }
                 }
@@ -1236,7 +1272,7 @@ class VideosTab extends StatelessWidget {
                       } catch (error) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Video download failed: $error')),
+                            SnackBar(content: Text(_friendlyError(error, fallback: 'Video download failed. Please try again.'))),
                           );
                         }
                       }
@@ -1315,7 +1351,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
     setState(() { loading = true; error = null; });
     try {
       results = await publishedTracks(term);
-    } catch (e) { error = e.toString(); }
+    } catch (e) { error = _friendlyError(e, fallback: 'Search could not be completed. Please try again.'); }
     if (mounted) setState(() => loading = false);
   }
   @override
@@ -1632,7 +1668,8 @@ class _AccountTabState extends State<AccountTab> {
       if (mounted) setState(() {});
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication request completed. Check your email if confirmation is enabled.')));
     } on AuthException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      debugPrint('HTE authentication failure: $error');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sign-in could not be completed. Check your details and try again.')));
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -1673,13 +1710,13 @@ class _AccountTabState extends State<AccountTab> {
     } on AuthException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google sign-in failed: ${error.message}')),
+          const SnackBar(content: Text('Google sign-in could not be completed. Please try again.')),
         );
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google sign-in could not complete: $error')),
+          SnackBar(content: Text(_friendlyError(error, fallback: 'Google sign-in could not be completed. Please try again.'))),
         );
       }
     } finally {
@@ -1984,7 +2021,8 @@ class _SettingsPageState extends State<SettingsPage> {
         _message('Update downloaded. Follow the Android installation prompt to finish updating.');
       }
     } catch (error) {
-      if (mounted) _message('Update could not be installed: $error');
+      debugPrint('HTE update installation failure: $error');
+      if (mounted) _message(_friendlyError(error, fallback: 'The update could not be installed. Please try again.'));
       if (apkFile != null && await apkFile.exists()) {
         try { await apkFile.delete(); } catch (_) {}
       }
