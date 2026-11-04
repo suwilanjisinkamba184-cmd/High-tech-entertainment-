@@ -146,14 +146,14 @@ class _LocalFilesTabState extends State<LocalFilesTab> {
         withData: false,
       );
 
-      if (result == null || !mounted) return;
+      if (result.isEmpty || !mounted) return;
 
       final directory = await getApplicationSupportDirectory();
       final mediaDirectory = Directory('${directory.path}/hte_media');
       await mediaDirectory.create(recursive: true);
 
       final persisted = <PlatformFile>[..._files];
-      for (final selected in result.files) {
+      for (final selected in result) {
         final sourcePath = selected.path;
         if (sourcePath == null) continue;
 
