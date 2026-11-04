@@ -117,7 +117,10 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
       _lastPlaying = playing;
       setState(() {
         if (video.value.hasError) {
-          _error = video.value.errorDescription ?? 'The video could not be decoded.';
+          _error = hteFriendlyError(
+            StateError(video.value.errorDescription ?? 'Video decoder error'),
+            fallback: 'This video could not be played. Please try another video.',
+          );
         }
       });
     }
