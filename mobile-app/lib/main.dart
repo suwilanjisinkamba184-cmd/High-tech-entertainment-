@@ -868,7 +868,7 @@ class TrackList extends StatelessWidget {
             title: Text((item['title'] ?? 'Track').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
             subtitle: Text((item['artist'] ?? 'High-Tech Entertainment').toString()),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              IconButton(tooltip: 'Share track', onPressed: () => Share.share('${item['title']} — ${item['artist']}\nHigh-Tech Entertainment'), icon: const Icon(Icons.share_outlined, size: 20)),
+              IconButton(tooltip: 'Share track', onPressed: () => SharePlus.instance.share(ShareParams(text: '${item['title']} — ${item['artist']}\nHigh-Tech Entertainment')), icon: const Icon(Icons.share_outlined, size: 20)),
               IconButton(
                 tooltip: 'Download for offline listening',
                 icon: const Icon(Icons.download_for_offline_outlined, size: 21),
