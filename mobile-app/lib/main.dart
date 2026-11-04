@@ -18,6 +18,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'playback_engine.dart';
 import 'video_player_page.dart';
+import 'user_facing_errors.dart';
 import 'local_files_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -247,7 +248,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
     } catch (error) {
       if (mounted) {
         setState(() {
-          _error = 'We could not initialise the app services. Check your connection and try again.\n$error';
+          _error = hteFriendlyError(error, fallback: 'High-Tech Entertainment could not start right now. Please try again.');
           _starting = false;
         });
       }
@@ -684,10 +685,10 @@ class ArtistList extends StatelessWidget {
   const ArtistList({super.key, this.horizontal = false});
   final bool horizontal;
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
-    future: rows('artists', 'name'),
-    builder: (context, snapshot) {
-      if (snapshot.hasError) return Notice('Unable to load artists: ${snapshot.error}. Check connection, Data API access and RLS.');
+  Widget build(BuildContext context) => HteFutureBuilder<List<Map<String, dynamic>>>(
+    loader: () => rows('artists', 'name'),
+    builder: (context, snapshot, retry) {
+      if (snapshot.hasError) return Notice(hteFriendlyError(snapshot.error!, fallback: 'We could not load artists right now.'), onRetry: retry);
       if (!snapshot.hasData) return const Busy();
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published artist profiles will appear here.');
@@ -764,10 +765,10 @@ class ReleaseList extends StatelessWidget {
   const ReleaseList({super.key, this.horizontal = false});
   final bool horizontal;
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
-    future: rows('releases', 'created_at'),
-    builder: (context, snapshot) {
-      if (snapshot.hasError) return Notice('Unable to load releases: ${snapshot.error}.');
+  Widget build(BuildContext context) => HteFutureBuilder<List<Map<String, dynamic>>>(
+    loader: () => rows('releases', 'created_at'),
+    builder: (context, snapshot, retry) {
+      if (snapshot.hasError) return Notice(hteFriendlyError(snapshot.error!, fallback: 'We could not load releases right now.'), onRetry: retry);
       if (!snapshot.hasData) return const Busy();
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published releases will appear here.');
@@ -836,7 +837,7 @@ class ReleaseList extends StatelessWidget {
                               } catch (error) {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Could not open Spotify: $error')),
+                                    SnackBar(content: Text(hteFriendlyError(error, fallback: 'Spotify could not be opened right now.'))),
                                   );
                                 }
                               }
@@ -870,10 +871,10 @@ class TrackList extends StatelessWidget {
   final bool compact;
   final List<Map<String, dynamic>>? items;
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
-    future: items == null ? playableTracks() : Future.value(items!.where(_isPlayableTrack).toList()),
-    builder: (context, snapshot) {
-      if (snapshot.hasError) return Notice('Unable to load tracks: ${snapshot.error}. Check connection, Data API access and RLS.');
+  Widget build(BuildContext context) => HteFutureBuilder<List<Map<String, dynamic>>>(
+    loader: () => items == null ? playableTracks() : Future.value(items!.where(_isPlayableTrack).toList()),
+    builder: (context, snapshot, retry) {
+      if (snapshot.hasError) return Notice(hteFriendlyError(snapshot.error!, fallback: 'We could not load music right now.'), onRetry: retry);
       if (!snapshot.hasData) return const Busy();
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published tracks will appear here.');
@@ -912,7 +913,7 @@ class TrackList extends StatelessWidget {
                   } catch (error) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Download failed: $error')),
+                        SnackBar(content: Text(hteFriendlyError(error, fallback: 'The download could not be completed. Please try again.'))),
                       );
                     }
                   }
@@ -949,7 +950,7 @@ class TrackList extends StatelessWidget {
                 } catch (error) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Playback failed: $error')),
+                      SnackBar(content: Text(hteFriendlyError(error, fallback: 'This track could not be played. Please try again.'))),
                     );
                   }
                 }
@@ -1210,10 +1211,10 @@ class VideosTab extends StatelessWidget {
   Widget build(BuildContext context) => Column(children: [
     const Brand(),
     const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Videos', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)))),
-    Expanded(child: FutureBuilder<List<Map<String, dynamic>>>(
-      future: rows('videos', 'created_at'),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) return const Notice('Unable to load videos.');
+    Expanded(child: HteFutureBuilder<List<Map<String, dynamic>>>(
+      loader: () => rows('videos', 'created_at'),
+      builder: (context, snapshot, retry) {
+        if (snapshot.hasError) return Notice(hteFriendlyError(snapshot.error!, fallback: 'We could not load videos right now.'), onRetry: retry);
         if (!snapshot.hasData) return const Busy();
         final items = snapshot.data!;
         if (items.isEmpty) return const Notice('Published videos will appear here.');
@@ -1336,7 +1337,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
     setState(() { loading = true; error = null; });
     try {
       results = await publishedTracks(term);
-    } catch (e) { error = e.toString(); }
+    } catch (e) { error = hteFriendlyError(e, fallback: 'Search is unavailable right now.'); }
     if (mounted) setState(() => loading = false);
   }
   @override
@@ -1345,7 +1346,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
   Widget build(BuildContext context) => Column(children: [
     const Brand(),
     Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: TextField(controller: controller, onChanged: search, decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search tracks by title'))),
-    Expanded(child: loading ? const Busy() : error != null ? Notice('Search failed: $error') : TrackList(items: results)),
+    Expanded(child: loading ? const Busy() : error != null ? Notice(error!, onRetry: () => search(controller.text)) : TrackList(items: results)),
   ]);
 }
 
@@ -2226,12 +2227,62 @@ class Busy extends StatelessWidget {
   );
 }
 
-class Notice extends StatelessWidget {
-  const Notice(this.message, {super.key});
-  final String message;
+
+class HteFutureBuilder<T> extends StatefulWidget {
+  const HteFutureBuilder({super.key, required this.loader, required this.builder});
+  final Future<T> Function() loader;
+  final Widget Function(BuildContext, AsyncSnapshot<T>, VoidCallback) builder;
+
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(22),
-    child: Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)),
+  State<HteFutureBuilder<T>> createState() => _HteFutureBuilderState<T>();
+}
+
+class _HteFutureBuilderState<T> extends State<HteFutureBuilder<T>> {
+  late Future<T> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = widget.loader();
+  }
+
+  void _retry() {
+    setState(() => _future = widget.loader());
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<T>(
+    future: _future,
+    builder: (context, snapshot) => widget.builder(context, snapshot, _retry),
+  );
+}
+
+class Notice extends StatelessWidget {
+  const Notice(this.message, {super.key, this.onRetry});
+  final String message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.cloud_off_rounded, color: Color(0xFFD9B96E), size: 38),
+          const SizedBox(height: 12),
+          Text(message, textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white70, height: 1.45)),
+          if (onRetry != null) ...[
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Refresh'),
+            ),
+          ],
+        ],
+      ),
+    ),
   );
 }
