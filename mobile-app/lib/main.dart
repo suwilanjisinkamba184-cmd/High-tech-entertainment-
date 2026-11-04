@@ -204,33 +204,12 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         }
       }
 
-      // HtePlayback is a process-wide singleton; initialise it only after
-      // JustAudioBackground has had its opportunity to register the handler.
-      // Play the bundled startup advert before network-dependent Supabase
-      // setup. Failure is non-fatal: the app must still reach authentication.
-      if (defaultTargetPlatform == TargetPlatform.android &&
-          _audioBackgroundInitialized) {
-        try {
-          await playback.playStartupAd().timeout(
-            const Duration(seconds: 45),
-            onTimeout: () {
-              unawaited(playback.player.stop());
-              debugPrint('HTE startup advert timed out; continuing startup.');
-            },
-          );
-        } catch (audioError, stackTrace) {
-          debugPrint('HTE startup advert failed; continuing startup: $audioError');
-          debugPrintStack(stackTrace: stackTrace);
-          try {
-            await playback.player.stop();
-          } catch (_) {
-            // Keep startup resilient even if the native player cannot stop.
-          }
-        }
-      }
+      // Audio background registration is independent of authentication.
+      // Never play an advert during startup: reopening the app or returning
+      // from a paused session must take the listener directly to sign-in.
+      // Scheduled audio adverts are handled only after completed music tracks.
 
-      // Authentication/data services initialise after the optional offline
-      // startup advert has completed or failed.
+      // Initialise authentication/data services without waiting for audio.
       if (!_supabaseInitialized) {
         await Supabase.initialize(
           url: supabaseUrl,
@@ -2049,7 +2028,7 @@ class _SettingsPageState extends State<SettingsPage> {
         const ListTile(
           leading: Icon(Icons.campaign_outlined, color: Color(0xFFD4AF37)),
           title: Text('HT Audio Advertisements'),
-          subtitle: Text('The startup advert plays before the app opens. The same advert plays after every 8 completed songs. Advert playback cannot be skipped.'),
+          subtitle: Text('No advert plays when the app opens or when you pause and resume. A sponsored audio advert may play only after 8 completed songs.'),
         ),
       ])),
       const SizedBox(height: 12),
