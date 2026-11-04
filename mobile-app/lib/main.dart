@@ -716,7 +716,7 @@ class VideoPreviewList extends StatelessWidget {
                             children: [
                               ClipRRect(borderRadius: BorderRadius.circular(14), child: MediaCover(url: item['thumbnail_url']?.toString(), height: 126)),
                               const Center(child: Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 48)),
-                              Positioned(left: 8, bottom: 8, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: BoxDecoration(color: Colors.black.withValues(alpha: .72), borderRadius: BorderRadius.circular(6)), child: const Text('HT VIDEO', style: TextStyle(fontSize: 8, letterSpacing: 1.1, fontWeight: FontWeight.w800, color: Color(0xFFE8CB8B)))),
+                              Positioned(left: 8, bottom: 8, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: BoxDecoration(color: Colors.black.withValues(alpha: .72), borderRadius: BorderRadius.circular(6)), child: const Text('HT VIDEO', style: TextStyle(fontSize: 8, letterSpacing: 1.1, fontWeight: FontWeight.w800, color: Color(0xFFE8CB8B))))),
                             ],
                           ),
                         ),
