@@ -174,6 +174,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   String? _error;
   Future<void>? _initialization;
   late final AnimationController _startupAnimation;
+  late final AnimationController _ringAnimation;
 
   @override
   void initState() {
@@ -182,6 +183,10 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
+    _ringAnimation = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 7),
+    )..repeat();
     _initialize();
   }
 
@@ -257,6 +262,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   @override
   void dispose() {
     _startupAnimation.dispose();
+    _ringAnimation.dispose();
     super.dispose();
   }
 
@@ -273,7 +279,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 AnimatedBuilder(
-                  animation: _startupAnimation,
+                  animation: Listenable.merge([_startupAnimation, _ringAnimation]),
                   builder: (context, child) {
                     final pulse = _startupAnimation.value;
                     return Transform.scale(
@@ -292,11 +298,29 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                             ),
                           ],
                         ),
-                        child: SvgPicture.asset(
-                          'assets/high-tech-logo.svg',
-                          width: 214,
-                          height: 214,
-                          semanticsLabel: 'High-Tech Entertainment app logo',
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Transform.rotate(
+                              angle: _ringAnimation.value * 6.283185307179586,
+                              child: Container(
+                                width: 218,
+                                height: 218,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: const Color(0xFFD9B96E).withValues(alpha: 0.72), width: 1.6),
+                                  gradient: const SweepGradient(colors: [Color(0x00D9B96E), Color(0xFFD9B96E), Color(0x00D9B96E)]),
+                                  boxShadow: [BoxShadow(color: const Color(0xFFD9A52B).withValues(alpha: 0.18 + (pulse * 0.12)), blurRadius: 16, spreadRadius: 1)],
+                                ),
+                              ),
+                            ),
+                            SvgPicture.asset(
+                              'assets/high-tech-logo.svg',
+                              width: 184,
+                              height: 184,
+                              semanticsLabel: 'High-Tech Entertainment app logo',
+                            ),
+                          ],
                         ),
                       ),
                     );
