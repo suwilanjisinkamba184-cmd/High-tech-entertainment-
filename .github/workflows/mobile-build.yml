@@ -285,7 +285,7 @@ jobs:
           EXPECTED_CERT_SHA256: ${{ steps.android_signing.outputs.release_cert_sha256 }}
         shell: bash
         run: |
-          APK="build/app/outputs/flutter-apk/app-release.apk"
+          APK="build/app/outputs/flutter-apk/app-su-release.apk"
           APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
           if [ ! -s "$APK" ]; then
             echo "::error::Signed APK verification executed, but no APK was produced by the build step."
@@ -318,7 +318,7 @@ jobs:
         working-directory: ${{ runner.temp }}/hte_app
         run: |
           APK="build/app/outputs/flutter-apk/app-release.apk"
-          AAB="build/app/outputs/bundle/release/app-release.aab"
+          AAB="build/app/outputs/bundle/release/app-su-release.aab"
           test -s "$APK"
           test -s "$AAB"
           mv "$APK" "build/app/outputs/flutter-apk/High-Tech-Entertainment-v2.2.0-SU.apk"
