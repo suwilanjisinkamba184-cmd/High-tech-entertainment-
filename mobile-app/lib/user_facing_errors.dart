@@ -19,7 +19,10 @@ String hteFriendlyError(
       value.contains('connection reset') ||
       value.contains('clientexception') ||
       value.contains('timed out') ||
-      value.contains('no address associated with hostname')) {
+      value.contains('no address associated with hostname') ||
+      value.contains('err_internet_disconnected') ||
+      value.contains('err_name_not_resolved') ||
+      value.contains('network error')) {
     return 'No internet connection. Check your connection and try again.';
   }
 
