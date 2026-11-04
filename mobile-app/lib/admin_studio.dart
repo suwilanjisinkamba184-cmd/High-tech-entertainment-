@@ -85,8 +85,8 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   }
 
   Future<void> _pickArtwork() async {
-    final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['jpg','jpeg','png','webp','avif'], withData: false);
-    if (mounted && result.isNotEmpty) setState(() => _artwork = result.first);
+    final result = await FilePicker.pickFile(type: FileType.custom, allowedExtensions: ['jpg','jpeg','png','webp','avif']);
+    if (mounted && result != null) setState(() => _artwork = result);
   }
   Future<void> _uploadArtwork() async {
     if (_artwork == null) { _toast('Choose an image first.'); return; }
@@ -101,9 +101,9 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     finally { if(mounted)setState(()=>_busy=false); }
   }
   Future<void> _pickAudio() async {
-    final result = await FilePicker.pickFiles(type: FileType.custom,
-      allowedExtensions: ['mp3','m4a','aac','wav','ogg','flac'], withData: false);
-    if (mounted && result.isNotEmpty) setState(() => _audio = result.first);
+    final result = await FilePicker.pickFile(type: FileType.custom,
+      allowedExtensions: ['mp3','m4a','aac','wav','ogg','flac']);
+    if (mounted && result != null) setState(() => _audio = result);
   }
   String _extension(PlatformFile file) => (file.extension ?? 'bin').toLowerCase();
   Future<String> _uploadFile(PlatformFile file, String folder, String bucket) async {
