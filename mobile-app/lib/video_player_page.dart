@@ -181,7 +181,6 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
   }
 
   Widget _videoSurface(VideoPlayerController video) {
-    final size = video.value.size;
     final ratio = video.value.aspectRatio;
     return Center(
       child: AspectRatio(
