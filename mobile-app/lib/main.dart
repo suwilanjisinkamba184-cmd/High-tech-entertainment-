@@ -171,6 +171,7 @@ class StartupGate extends StatefulWidget {
 class _StartupGateState extends State<StartupGate> with SingleTickerProviderStateMixin {
   bool _ready = false;
   bool _starting = true;
+  bool _startupSoundStarted = false;
   String? _error;
   Future<void>? _initialization;
   late final AnimationController _startupAnimation;
@@ -191,6 +192,8 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   }
 
   Future<void> _playStartupSound() async {
+    if (_startupSoundStarted) return;
+    _startupSoundStarted = true;
     final startupPlayer = AudioPlayer();
     try {
       await startupPlayer.setAsset('assets/high-tech-startup.mp3');
