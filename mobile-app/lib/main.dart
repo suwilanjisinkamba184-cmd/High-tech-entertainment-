@@ -1993,6 +1993,28 @@ class _AccountTabState extends State<AccountTab> {
     }
   }
 
+  Future<void> signInWithProvider(OAuthProvider provider, String label) async {
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      await db.auth.signInWithOAuth(
+        provider,
+        redirectTo: authRedirect,
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
+    } on AuthException catch (error) {
+      final message = error.message.toLowerCase();
+      final friendly = message.contains('provider is not enabled') || message.contains('unsupported provider')
+          ? '$label sign-in is not enabled yet. The provider must first be configured in Supabase Auth.'
+          : friendlyErrorMessage(error);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendly)));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = db.auth.currentUser;
@@ -2054,6 +2076,20 @@ class _AccountTabState extends State<AccountTab> {
             side: const BorderSide(color: Color(0xFFD4AF37)),
           ),
         ),
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(child: OutlinedButton.icon(
+            onPressed: busy ? null : () => signInWithProvider(OAuthProvider.facebook, 'Facebook'),
+            icon: const Icon(Icons.facebook),
+            label: const Text('Facebook'),
+          )),
+          const SizedBox(width: 10),
+          Expanded(child: OutlinedButton.icon(
+            onPressed: busy ? null : () => signInWithProvider(OAuthProvider.twitter, 'X'),
+            icon: const Icon(Icons.alternate_email),
+            label: const Text('Continue with X'),
+          )),
+        ]),
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 12),
           child: Row(children: [
