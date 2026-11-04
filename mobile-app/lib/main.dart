@@ -580,20 +580,70 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int tab = 0;
   final pages = const [HomeTab(), DiscoverTab(), ReleasesTab(), LibraryTab(), AccountTab()];
+  static const _items = [
+    (Icons.home_rounded, 'Home'),
+    (Icons.explore_rounded, 'Discover'),
+    (Icons.album_rounded, 'Releases'),
+    (Icons.library_music_rounded, 'Library'),
+    (Icons.person_rounded, 'Profile'),
+  ];
+
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(child: IndexedStack(index: tab, children: pages)),
-    bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [const PlayerBar(), NavigationBar(
-      selectedIndex: tab,
-      onDestinationSelected: (value) => setState(() => tab = value),
-      destinations: const [
-        NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
-        NavigationDestination(icon: Icon(Icons.search), label: 'Discover'),
-        NavigationDestination(icon: Icon(Icons.album_outlined), label: 'Releases'),
-        NavigationDestination(icon: Icon(Icons.library_music_outlined), label: 'Library'),
-        NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
-      ],
-    )]),
+    bottomNavigationBar: Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF090A0C),
+        border: Border(top: BorderSide(color: Color(0xFF29251D))),
+      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const PlayerBar(),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 7, 8, 7),
+            child: Row(
+              children: List.generate(_items.length, (index) {
+                final selected = tab == index;
+                final item = _items[index];
+                return Expanded(
+                  child: Semantics(
+                    button: true,
+                    selected: selected,
+                    label: item.$2,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(15),
+                      onTap: () => setState(() => tab = index),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: selected ? const Color(0xFF302615) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(
+                            color: selected ? const Color(0xFF8C713B) : Colors.transparent,
+                          ),
+                        ),
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(item.$1, size: 21,
+                            color: selected ? const Color(0xFFE2C47D) : const Color(0xFF85827B)),
+                          const SizedBox(height: 3),
+                          Text(item.$2, maxLines: 1,
+                            style: TextStyle(fontSize: 10, fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                              color: selected ? const Color(0xFFE2C47D) : const Color(0xFF85827B))),
+                        ]),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+      ]),
+    ),
   );
 }
 
@@ -677,110 +727,158 @@ class HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.only(bottom: 28),
+    padding: const EdgeInsets.only(bottom: 30),
     children: [
       const Brand(),
       Container(
-        margin: const EdgeInsets.fromLTRB(18, 4, 18, 22),
-        padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
+        margin: const EdgeInsets.fromLTRB(16, 3, 16, 22),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: const Color(0xFF111214),
-          border: Border.all(color: const Color(0xFF51452E)),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: const Color(0xFF70582F), width: 1),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF302516), Color(0xFF171719), Color(0xFF0D0E10)],
+          ),
+          boxShadow: const [BoxShadow(color: Color(0x332D210D), blurRadius: 28, offset: Offset(0, 12))],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'INDEPENDENT MUSIC.\nBUILT TO TRAVEL.',
-                    style: TextStyle(
-                      color: Color(0xFFD9B96E),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 2.0,
-                      height: 1.7,
-                    ),
-                  ),
-                ),
-                SvgPicture.asset(
-                  'assets/high-tech-logo.svg',
-                  width: 74,
-                  height: 74,
-                  semanticsLabel: 'HT crest',
-                ),
-              ],
-            ),
-            const SizedBox(height: 22),
-            const Text(
-              'Quality sound.\nGlobal ambition.',
-              style: TextStyle(
-                fontSize: 34,
-                height: 1.08,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -1.2,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Discover official releases, meet the artists and listen to the sounds of High-Tech Entertainment.',
-              style: TextStyle(
-                color: Color(0xFFB9B6AE),
-                height: 1.65,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 22),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
+        child: Stack(children: [
+          Positioned(right: -54, top: -54,
+            child: Container(width: 210, height: 210,
+              decoration: BoxDecoration(shape: BoxShape.circle,
+                border: Border.all(color: const Color(0x337E6638), width: 1.2))),
+          ),
+          Positioned(right: 4, top: 38,
+            child: Opacity(opacity: .16,
+              child: SvgPicture.asset('assets/high-tech-logo.svg', width: 150, height: 150))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(width: 7, height: 7,
+                  decoration: const BoxDecoration(color: Color(0xFFE2C47D), shape: BoxShape.circle)),
+                const SizedBox(width: 8),
+                const Text('THE SOUND OF WHAT’S NEXT',
+                  style: TextStyle(color: Color(0xFFE2C47D), fontSize: 9,
+                    fontWeight: FontWeight.w800, letterSpacing: 2.0)),
+              ]),
+              const SizedBox(height: 24),
+              const Text('QUALITY SOUND.\nGLOBAL AMBITION.',
+                style: TextStyle(fontSize: 31, height: 1.08, fontWeight: FontWeight.w800,
+                  letterSpacing: -1.0, color: Color(0xFFF7F3E9))),
+              const SizedBox(height: 12),
+              const SizedBox(width: 265,
+                child: Text('Discover the artists, releases and original sound shaping High-Tech Entertainment.',
+                  style: TextStyle(color: Color(0xFFC4BFB4), height: 1.55, fontSize: 13))),
+              const SizedBox(height: 22),
+              FilledButton.icon(
                 onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MusicTab()),
-                ),
-                icon: const Icon(Icons.headphones_rounded, size: 18),
+                  MaterialPageRoute(builder: (_) => const MusicTab())),
+                icon: const Icon(Icons.play_arrow_rounded, size: 20),
                 label: const Text('Explore the music'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 46),
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
               ),
-            ),
-          ],
-        ),
+              const SizedBox(height: 18),
+              Row(children: [
+                const Icon(Icons.graphic_eq_rounded, color: Color(0xFFE2C47D), size: 16),
+                const SizedBox(width: 7),
+                Text('MUSIC  •  BEATS  •  PRODUCTION  •  BEYOND',
+                  style: TextStyle(color: Colors.white.withValues(alpha: .58),
+                    fontSize: 8, fontWeight: FontWeight.w700, letterSpacing: 1.0)),
+              ]),
+            ]),
+          ),
+        ]),
+      ),
+      const Heading('Made for your next discovery'),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        child: Row(children: [
+          Expanded(child: _HomeQuickAction(icon: Icons.album_rounded, title: 'New releases',
+            subtitle: 'Fresh from HTE', onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Releases')), body: const ReleasesTab()))))),
+          const SizedBox(width: 10),
+          Expanded(child: _HomeQuickAction(icon: Icons.people_alt_rounded, title: 'Artists',
+            subtitle: 'Meet the creators', onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Artists')), body: const ArtistsTab()))))),
+        ]),
       ),
       const Heading('Latest releases'),
       const ReleaseList(horizontal: true),
       const Heading('Featured artists'),
       const ArtistList(horizontal: true),
-      Card(child: ListTile(
-        leading: const Icon(Icons.people_outline, color: Color(0xFFD9B96E)),
-        title: const Text('Explore all artists'),
-        subtitle: const Text('Meet the creators behind the sound'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Artists')), body: const ArtistsTab()))),
-      )),
-      const Heading('Watch & explore'),
-      Card(child: ListTile(
-        leading: const Icon(Icons.video_library_outlined, color: Color(0xFFD9B96E)),
-        title: const Text('Music videos'),
-        subtitle: const Text('Watch official High-Tech visual releases'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Videos')), body: const VideosTab()))),
-      )),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF121315),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFF34302A)),
+          ),
+          child: Row(children: [
+            const Icon(Icons.video_library_rounded, color: Color(0xFFD9B96E), size: 27),
+            const SizedBox(width: 13),
+            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Beyond the audio', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              SizedBox(height: 3),
+              Text('Watch official music videos and visual releases.',
+                style: TextStyle(color: Color(0xFFAAA69E), fontSize: 11)),
+            ])),
+            IconButton(
+              tooltip: 'Explore videos',
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => Scaffold(appBar: AppBar(title: const Text('Videos')), body: const VideosTab()))),
+              icon: const Icon(Icons.arrow_forward_rounded, color: Color(0xFFE2C47D)),
+            ),
+          ]),
+        ),
+      ),
       const Heading('Released music'),
       const TrackList(compact: true),
       const Padding(
         padding: EdgeInsets.fromLTRB(20, 24, 20, 8),
-        child: Text(
-          'HIGH-TECH ENTERTAINMENT  ·  MUSIC. BEATS. PRODUCTION. BEYOND.',
+        child: Text('HIGH-TECH ENTERTAINMENT  ·  MUSIC. BEATS. PRODUCTION. BEYOND.',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Color(0xFF77736B),
-            fontSize: 9,
-            letterSpacing: 1.1,
-            height: 1.8,
-          ),
-        ),
+          style: TextStyle(color: Color(0xFF77736B), fontSize: 9, letterSpacing: 1.1, height: 1.8)),
       ),
     ],
+  );
+}
+
+class _HomeQuickAction extends StatelessWidget {
+  const _HomeQuickAction({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(16),
+    child: Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141517),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF34302A)),
+      ),
+      child: Row(children: [
+        Icon(icon, color: const Color(0xFFD9B96E), size: 22),
+        const SizedBox(width: 9),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 3),
+          Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 9, color: Color(0xFF9B978F))),
+        ])),
+      ]),
+    ),
   );
 }
 
