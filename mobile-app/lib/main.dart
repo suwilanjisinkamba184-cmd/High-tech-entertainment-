@@ -637,13 +637,7 @@ class HomeTab extends StatelessWidget {
         onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Artists')), body: const ArtistsTab()))),
       )),
       const Heading('Watch & explore'),
-      Card(child: ListTile(
-        leading: const Icon(Icons.video_library_outlined, color: Color(0xFFD9B96E)),
-        title: const Text('Music videos'),
-        subtitle: const Text('Watch official High-Tech visual releases'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Videos')), body: const VideosTab()))),
-      )),
+      const VideoPreviewList(),
       const Heading('Released music'),
       const TrackList(compact: true),
       const Padding(
@@ -663,6 +657,92 @@ class HomeTab extends StatelessWidget {
   );
 }
 
+class VideoPreviewList extends StatelessWidget {
+  const VideoPreviewList({super.key});
+
+  Future<void> _openVideo(BuildContext context, Map<String, dynamic> item) async {
+    final raw = (item['video_url'] ?? '').toString().trim();
+    final uri = Uri.tryParse(raw);
+    if (uri == null || (uri.scheme != 'https' && uri.scheme != 'http') || uri.host.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This video is not available yet.')));
+      return;
+    }
+    final isWebVideo = raw.contains('youtube.com') || raw.contains('youtu.be') || raw.contains('vimeo.com');
+    if (isWebVideo) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      return;
+    }
+    if (!context.mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => HteVideoPlayerPage(url: raw, title: (item['title'] ?? 'High-Tech video').toString())));
+  }
+
+  @override
+  Widget build(BuildContext context) => HteFutureBuilder<List<Map<String, dynamic>>>(
+    loader: () => rows('videos', 'created_at'),
+    builder: (context, snapshot, retry) {
+      if (snapshot.hasError) return Notice(hteFriendlyError(snapshot.error!, fallback: 'Music videos could not be loaded right now.'), onRetry: retry);
+      if (!snapshot.hasData) return const Busy();
+      final videos = snapshot.data!;
+      if (videos.isEmpty) {
+        return Card(child: ListTile(
+          leading: const Icon(Icons.video_library_outlined, color: Color(0xFFD9B96E)),
+          title: const Text('Music videos'),
+          subtitle: const Text('Official High-Tech visual releases will appear here.'),
+        ));
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 174,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: videos.take(8).length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final item = videos[index];
+                return SizedBox(
+                  width: 230,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => _openVideo(context, item),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              ClipRRect(borderRadius: BorderRadius.circular(14), child: MediaCover(url: item['thumbnail_url']?.toString(), height: 126)),
+                              const Center(child: Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 48)),
+                              Positioned(left: 8, bottom: 8, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: BoxDecoration(color: Colors.black.withValues(alpha: .72), borderRadius: BorderRadius.circular(6)), child: const Text('HT VIDEO', style: TextStyle(fontSize: 8, letterSpacing: 1.1, fontWeight: FontWeight.w800, color: Color(0xFFE8CB8B)))),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        Text((item['title'] ?? 'Music video').toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                        Text((item['artist'] ?? 'High-Tech Entertainment').toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white54, fontSize: 10)),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Videos')), body: const VideosTab()))),
+              icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+              label: const Text('View all videos'),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
 class ContinueListeningCard extends StatelessWidget {
   const ContinueListeningCard({super.key});
 
