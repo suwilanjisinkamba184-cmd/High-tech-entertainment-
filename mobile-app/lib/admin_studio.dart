@@ -87,7 +87,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       } catch (e) { debugPrint('Secure platform analytics unavailable: $e'); }
       _metrics = {
         'Tracks': _tracks.length, 'Published': _tracks.where((e)=>e['is_published']==true).length,
-        'Artists': _artists.length, 'Releases': _releases.length, 'Users': _users.length,
+        'Artists': _artists.length, 'Releases': _releases.length, 'Users': _users.length, 'Videos': _videos.length,
       };
     } catch (e) { debugPrint('Founder Studio load failed: $e'); _error = 'Could not load Founder Studio data. Check your connection and retry.'; }
     if (mounted) setState(() => _busy = false);
@@ -246,9 +246,16 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     );
     if (yes != true) return;
     try {
+      final videoUri = Uri.tryParse((item['video_url'] ?? '').toString());
+      final segments = videoUri?.pathSegments ?? const <String>[];
+      final bucketIndex = segments.indexOf('hte-videos');
+      if (bucketIndex >= 0 && bucketIndex + 1 < segments.length) {
+        final objectPath = segments.skip(bucketIndex + 1).join('/');
+        await _supabase.storage.from('hte-videos').remove([objectPath]);
+      }
       await _supabase.from('videos').delete().eq('id', item['id']);
       await _loadAll();
-      _toast('Video removed from the catalogue.');
+      _toast('Video and its stored file were removed.');
     } catch (error) {
       debugPrint('Video deletion failed: $error');
       _toast('Could not delete this video. Please retry.');
