@@ -30,24 +30,33 @@ bool _googleSignInInitialized = false;
 final db = Supabase.instance.client;
 bool _supabaseInitialized = false;
 bool _audioBackgroundInitialized = false;
-
-/// Keep backend diagnostics in developer logs only. Never show raw Supabase,
-/// HTTP, socket, or platform exception text in the customer-facing UI.
-String _friendlyError(Object error, {String fallback = 'Something went wrong. Please try again.'}) {
-  if (error is SocketException || error is TimeoutException || error is http.ClientException) {
-    return 'You are offline or your connection is unstable. Check your internet connection and try again.';
-  }
-  if (error is AuthException) {
-    return 'Sign-in could not be completed. Check your details and try again.';
-  }
-  return fallback;
-}
 // Both references resolve to the single process-wide playback service.
 // Top-level finals are lazy, so the service is first created after the Android
 // audio background handler has been initialized in StartupGate.
 final HtePlayback playback = HtePlayback.instance;
 final AudioPlayer player = HtePlayback.instance.player;
 final ValueNotifier<int> favouritesRevision = ValueNotifier<int>(0);
+
+/// Convert low-level exceptions into clear, user-safe messages.
+String friendlyErrorMessage(Object error) {
+  final details = error.toString().toLowerCase();
+  final offline = error is SocketException ||
+      error is TimeoutException ||
+      details.contains('socketexception') ||
+      details.contains('failed host lookup') ||
+      details.contains('network is unreachable') ||
+      details.contains('no address associated') ||
+      details.contains('connection timed out') ||
+      details.contains('connection reset') ||
+      details.contains('clientexception') ||
+      details.contains('failed to fetch') ||
+      details.contains('internet connection');
+  if (offline) {
+    return 'No internet connection. Connect to the internet and try again.';
+  }
+  return 'Something went wrong. Please try again.';
+}
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -216,7 +225,8 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
           );
           _audioBackgroundInitialized = true;
         } catch (audioError, stackTrace) {
-          // Optional audio failure is intentionally silent to the user.
+          debugPrint('HTE background audio initialisation failed: $audioError');
+          debugPrintStack(stackTrace: stackTrace);
         }
       }
 
@@ -242,7 +252,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
     } catch (error) {
       if (mounted) {
         setState(() {
-          _error = _friendlyError(error, fallback: 'Something went wrong while preparing the app. Please try again.');
+          _error = friendlyErrorMessage(error);
           _starting = false;
         });
       }
@@ -698,10 +708,10 @@ class ArtistList extends StatelessWidget {
   const ArtistList({super.key, this.horizontal = false});
   final bool horizontal;
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
-    future: rows('artists', 'name'),
+  Widget build(BuildContext context) => RetryFutureBuilder<List<Map<String, dynamic>>>(
+    future: () => rows('artists', 'name'),
     builder: (context, snapshot) {
-      if (snapshot.hasError) return const Notice('You are offline or something went wrong while loading artists. Check your connection and try again.');
+      if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
       if (!snapshot.hasData) return const Busy();
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published artist profiles will appear here.');
@@ -765,9 +775,9 @@ class ArtistDetailPage extends StatelessWidget {
         Center(child:Text(name,style:const TextStyle(fontSize:24,fontWeight:FontWeight.bold))),
         Padding(padding:const EdgeInsets.all(20),child:Text((artist['bio']??'High-Tech Entertainment artist').toString(),textAlign:TextAlign.center,style:const TextStyle(color:Colors.white60))),
         const Heading('Artist releases'),
-        FutureBuilder<List<Map<String,dynamic>>>(
-          future:db.from('tracks').select().eq('is_published',true).eq('artist',name).order('created_at',ascending:false).then((data)=>List<Map<String,dynamic>>.from(data).where(_isPlayableTrack).toList()),
-          builder:(context,snapshot)=>snapshot.hasError?const Notice('Unable to load this artist’s tracks.'):!snapshot.hasData?const Busy():snapshot.data!.isEmpty?const Notice('Published tracks by this artist will appear here.'):TrackList(items:snapshot.data!),
+        RetryFutureBuilder<List<Map<String,dynamic>>>(
+          future: () => db.from('tracks').select().eq('is_published',true).eq('artist',name).order('created_at',ascending:false).then((data)=>List<Map<String,dynamic>>.from(data).where(_isPlayableTrack).toList()),
+          builder:(context,snapshot)=>snapshot.hasError?Notice(friendlyErrorMessage(snapshot.error!)):!snapshot.hasData?const Busy():snapshot.data!.isEmpty?const Notice('Published tracks by this artist will appear here.'):TrackList(items:snapshot.data!),
         ),
       ]),
     );
@@ -778,10 +788,10 @@ class ReleaseList extends StatelessWidget {
   const ReleaseList({super.key, this.horizontal = false});
   final bool horizontal;
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
-    future: rows('releases', 'created_at'),
+  Widget build(BuildContext context) => RetryFutureBuilder<List<Map<String, dynamic>>>(
+    future: () => rows('releases', 'created_at'),
     builder: (context, snapshot) {
-      if (snapshot.hasError) return const Notice('You are offline or something went wrong while loading releases. Check your connection and try again.');
+      if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
       if (!snapshot.hasData) return const Busy();
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published releases will appear here.');
@@ -850,7 +860,7 @@ class ReleaseList extends StatelessWidget {
                               } catch (error) {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(_friendlyError(error, fallback: 'Could not open Spotify. Please try again.'))),
+                                    SnackBar(content: Text(friendlyErrorMessage(error))),
                                   );
                                 }
                               }
@@ -884,10 +894,10 @@ class TrackList extends StatelessWidget {
   final bool compact;
   final List<Map<String, dynamic>>? items;
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
-    future: items == null ? playableTracks() : Future.value(items!.where(_isPlayableTrack).toList()),
+  Widget build(BuildContext context) => RetryFutureBuilder<List<Map<String, dynamic>>>(
+    future: () => items == null ? playableTracks() : Future.value(items!.where(_isPlayableTrack).toList()),
     builder: (context, snapshot) {
-      if (snapshot.hasError) return const Notice('You are offline or something went wrong while loading music. Check your connection and try again.');
+      if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
       if (!snapshot.hasData) return const Busy();
       final items = snapshot.data!;
       if (items.isEmpty) return const Notice('Published tracks will appear here.');
@@ -926,7 +936,7 @@ class TrackList extends StatelessWidget {
                   } catch (error) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(_friendlyError(error, fallback: 'Download failed. Please try again.'))),
+                        SnackBar(content: Text(friendlyErrorMessage(error))),
                       );
                     }
                   }
@@ -963,7 +973,7 @@ class TrackList extends StatelessWidget {
                 } catch (error) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(_friendlyError(error, fallback: 'Playback could not start. Please try again.'))),
+                      SnackBar(content: Text(friendlyErrorMessage(error))),
                     );
                   }
                 }
@@ -1224,10 +1234,10 @@ class VideosTab extends StatelessWidget {
   Widget build(BuildContext context) => Column(children: [
     const Brand(),
     const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Videos', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)))),
-    Expanded(child: FutureBuilder<List<Map<String, dynamic>>>(
-      future: rows('videos', 'created_at'),
+    Expanded(child: RetryFutureBuilder<List<Map<String, dynamic>>>(
+      future: () => rows('videos', 'created_at'),
       builder: (context, snapshot) {
-        if (snapshot.hasError) return const Notice('Unable to load videos.');
+        if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
         if (!snapshot.hasData) return const Busy();
         final items = snapshot.data!;
         if (items.isEmpty) return const Notice('Published videos will appear here.');
@@ -1271,7 +1281,7 @@ class VideosTab extends StatelessWidget {
                       } catch (error) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(_friendlyError(error, fallback: 'Video download failed. Please try again.'))),
+                            SnackBar(content: Text(friendlyErrorMessage(error))),
                           );
                         }
                       }
@@ -1350,7 +1360,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
     setState(() { loading = true; error = null; });
     try {
       results = await publishedTracks(term);
-    } catch (e) { error = _friendlyError(e, fallback: 'Search could not be completed. Please try again.'); }
+    } catch (e) { error = e.toString(); }
     if (mounted) setState(() => loading = false);
   }
   @override
@@ -1359,7 +1369,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
   Widget build(BuildContext context) => Column(children: [
     const Brand(),
     Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: TextField(controller: controller, onChanged: search, decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search tracks by title'))),
-    Expanded(child: loading ? const Busy() : error != null ? Notice('Search failed: $error') : TrackList(items: results)),
+    Expanded(child: loading ? const Busy() : error != null ? Notice(friendlyErrorMessage(error!)) : TrackList(items: results)),
   ]);
 }
 
@@ -1492,7 +1502,7 @@ class _PlaylistsTabState extends State<PlaylistsTab> {
     final user=db.auth.currentUser;
     if(user==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sign in to create playlists.')));return;}
     try {await db.from('playlists').insert({'user_id':user.id,'name':name});await load();}
-    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_friendlyError(e, fallback: 'Could not create the playlist. Please try again.'))));}
+    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
   }
   @override
   Widget build(BuildContext context)=>loading?const Busy():Column(children:[
@@ -1563,7 +1573,7 @@ class _PlaylistDetailPageState extends State<PlaylistDetailPage>{
         await db.from('playlist_tracks').insert({'playlist_id':widget.playlist['id'],'track_id':fresh[i]['id'],'position':tracks.length+i});
       }
       await load();
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_friendlyError(e, fallback: 'Could not add the selected tracks. Please try again.'))));}
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
   }
   @override
   Widget build(BuildContext context)=>Scaffold(
@@ -1615,7 +1625,7 @@ class _ProfileEditPageState extends State<ProfileEditPage>{
     try{
       final row=await db.from('profiles').select('display_name,bio,phone,avatar_url').eq('id',user.id).maybeSingle();
       if(row!=null){_name.text=(row['display_name']??'').toString();_bio.text=(row['bio']??'').toString();_phone.text=(row['phone']??'').toString();_avatarUrl=(row['avatar_url']??'').toString();}
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_friendlyError(e, fallback: 'Could not load your profile. Please try again.'))));}
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
     if(mounted)setState(()=>_loading=false);
   }
   Future<void> _save() async {
@@ -1625,7 +1635,7 @@ class _ProfileEditPageState extends State<ProfileEditPage>{
     try{
       await db.from('profiles').upsert({'id':user.id,'display_name':_name.text.trim(),'bio':_bio.text.trim(),'phone':_phone.text.trim(),'avatar_url':_avatarUrl,'updated_at':DateTime.now().toIso8601String()});
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profile updated.')));
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_friendlyError(e, fallback: 'Your profile could not be updated. Please try again.'))));}
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
     if(mounted)setState(()=>_saving=false);
   }
   @override
@@ -1667,8 +1677,7 @@ class _AccountTabState extends State<AccountTab> {
       if (mounted) setState(() {});
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication request completed. Check your email if confirmation is enabled.')));
     } on AuthException catch (error) {
-      // Keep provider diagnostics out of customer-visible and release logs.
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sign-in could not be completed. Check your details and try again.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -1709,13 +1718,13 @@ class _AccountTabState extends State<AccountTab> {
     } on AuthException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Google sign-in could not be completed. Please try again.')),
+          SnackBar(content: Text(friendlyErrorMessage(error))),
         );
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_friendlyError(error, fallback: 'Google sign-in could not be completed. Please try again.'))),
+          SnackBar(content: Text(friendlyErrorMessage(error))),
         );
       }
     } finally {
@@ -1895,7 +1904,7 @@ class _SettingsPageState extends State<SettingsPage> {
         return;
       }
       if (response.statusCode != 200) {
-        _message('Update check failed (HTTP ${response.statusCode}). Please try again.');
+        _message(friendlyErrorMessage(HttpException('Update request failed with HTTP ${response.statusCode}')));
         return;
       }
       final release = jsonDecode(response.body) as Map<String, dynamic>;
@@ -2020,8 +2029,7 @@ class _SettingsPageState extends State<SettingsPage> {
         _message('Update downloaded. Follow the Android installation prompt to finish updating.');
       }
     } catch (error) {
-      // Show only the safe, user-facing fallback below.
-      if (mounted) _message(_friendlyError(error, fallback: 'The update could not be installed. Please try again.'));
+      if (mounted) _message(friendlyErrorMessage(error));
       if (apkFile != null && await apkFile.exists()) {
         try { await apkFile.delete(); } catch (_) {}
       }
@@ -2234,6 +2242,42 @@ Future<List<Map<String, dynamic>>> rows(String table, String orderBy) async {
   return List<Map<String, dynamic>>.from(result);
 }
 
+/// A FutureBuilder with a real reload action for failed network requests.
+/// The loader is called again only when the user taps Retry.
+class RetryFutureBuilder<T> extends StatefulWidget {
+  const RetryFutureBuilder({super.key, required this.future, required this.builder});
+  final Future<T> Function() future;
+  final Widget Function(BuildContext, AsyncSnapshot<T>) builder;
+
+  @override
+  State<RetryFutureBuilder<T>> createState() => _RetryFutureBuilderState<T>();
+}
+
+class _RetryFutureBuilderState<T> extends State<RetryFutureBuilder<T>> {
+  late Future<T> _pending;
+
+  @override
+  void initState() {
+    super.initState();
+    _pending = widget.future();
+  }
+
+  void _retry() {
+    setState(() => _pending = widget.future());
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<T>(
+    future: _pending,
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return Notice(friendlyErrorMessage(snapshot.error!), onRetry: _retry);
+      }
+      return widget.builder(context, snapshot);
+    },
+  );
+}
+
 class Busy extends StatelessWidget {
   const Busy({super.key});
   @override
@@ -2243,11 +2287,22 @@ class Busy extends StatelessWidget {
 }
 
 class Notice extends StatelessWidget {
-  const Notice(this.message, {super.key});
+  const Notice(this.message, {super.key, this.onRetry});
   final String message;
+  final VoidCallback? onRetry;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.all(22),
-    child: Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)),
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)),
+      if (onRetry != null) ...[
+        const SizedBox(height: 14),
+        OutlinedButton.icon(
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('Retry'),
+        ),
+      ],
+    ]),
   );
 }
