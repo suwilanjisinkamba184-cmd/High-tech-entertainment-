@@ -69,12 +69,13 @@ jobs:
           cp -R mobile-app/assets/. "$RUNNER_TEMP/hte_app/assets/"
           python3 -m pip install --quiet cairosvg
           python3 -c "import cairosvg; cairosvg.svg2png(url='$RUNNER_TEMP/hte_app/assets/high-tech-logo.svg', write_to='$RUNNER_TEMP/hte_app/assets/high-tech-logo.png', output_width=1024, output_height=1024)"
-      - name: Enable Flutter built-in Kotlin and align Android Gradle tooling
+      - name: Configure a Flutter-compatible Android Gradle toolchain
         working-directory: ${{ runner.temp }}/hte_app
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           settings = Path("android/settings.gradle.kts")
           app_gradle = Path("android/app/build.gradle.kts")
@@ -84,76 +85,54 @@ jobs:
               if not path.exists():
                   raise SystemExit(f"Required Flutter Android scaffold file missing: {path}")
 
-          settings_lines = settings.read_text().splitlines()
-          updated_settings = []
-          agp_updated = False
-          for line in settings_lines:
-              if "org.jetbrains.kotlin.android" in line:
-                  continue
-              if 'id("com.android.application")' in line and "version" in line:
-                  prefix = line.split("version", 1)[0]
-                  line = prefix + 'version "9.0.1" apply false'
-                  agp_updated = True
-              updated_settings.append(line)
-          if not agp_updated:
-              raise SystemExit("Could not locate Android Gradle Plugin declaration in settings.gradle.kts")
-          settings.write_text("\n".join(updated_settings) + "\n")
+          settings_text = settings.read_text()
+          settings_text, agp_count = re.subn(
+              r'(id\\("com\\.android\\.application"\\)\\s+version\\s+")([^"]+)(")',
+              r'\\g<1>8.11.1\\g<3>',
+              settings_text,
+              count=1,
+          )
+          if agp_count != 1:
+              raise SystemExit("Could not pin the Android Gradle Plugin to 8.11.1.")
 
-          app_lines = app_gradle.read_text().splitlines()
-          app_lines = [line for line in app_lines if "kotlin-android" not in line and "org.jetbrains.kotlin.android" not in line]
-          app_gradle.write_text("\n".join(app_lines) + "\n")
+          settings_text, kotlin_count = re.subn(
+              r'(id\\("org\\.jetbrains\\.kotlin\\.android"\\)\\s+version\\s+")([^"]+)(")',
+              r'\\g<1>2.2.20\\g<3>',
+              settings_text,
+              count=1,
+          )
+          if kotlin_count != 1:
+              raise SystemExit("Could not find and pin the Kotlin Gradle plugin to 2.2.20.")
+          settings.write_text(settings_text)
 
-          wrapper_lines = wrapper.read_text().splitlines()
-          wrapper_lines = [
-              "distributionUrl=https\\://services.gradle.org/distributions/gradle-9.1.0-all.zip"
-              if line.startswith("distributionUrl=") else line
-              for line in wrapper_lines
-          ]
-          wrapper.write_text("\n".join(wrapper_lines) + "\n")
+          app_text = app_gradle.read_text()
+          if not re.search(r'id\\("(?:kotlin-android|org\\.jetbrains\\.kotlin\\.android)"\\)', app_text):
+              raise SystemExit("The Android app module does not apply the Kotlin Android plugin.")
+          if "dev.flutter.flutter-gradle-plugin" not in app_text:
+              raise SystemExit("The Flutter Gradle plugin declaration is missing.")
+
+          wrapper_text = wrapper.read_text()
+          wrapper_text, wrapper_count = re.subn(
+              r'(?m)^distributionUrl=.*$',
+              r'distributionUrl=https\\://services.gradle.org/distributions/gradle-8.13-all.zip',
+              wrapper_text,
+              count=1,
+          )
+          if wrapper_count != 1:
+              raise SystemExit("Could not set the Gradle wrapper to 8.13.")
+          wrapper.write_text(wrapper_text)
 
           property_lines = [
               line for line in properties.read_text().splitlines()
               if not line.startswith(("android.builtInKotlin=", "android.newDsl="))
           ]
-          property_lines.extend(["android.builtInKotlin=true", "android.newDsl=false"])
-          properties.write_text("\n".join(property_lines) + "\n")
+          property_lines.extend(["android.builtInKotlin=false", "android.newDsl=false"])
+          properties.write_text("\\n".join(property_lines) + "\\n")
 
-          root_gradle_candidates = [Path("android/build.gradle.kts"), Path("android/build.gradle")]
-          root_gradle = next((path for path in root_gradle_candidates if path.exists()), None)
-          if root_gradle is None:
-              raise SystemExit("Could not locate the root Android Gradle build file.")
-          root_text = root_gradle.read_text()
-          if "org.jetbrains.kotlin:kotlin-gradle-plugin" not in root_text:
-              if root_gradle.name.endswith(".kts"):
-                  kotlin_override = (
-                      'buildscript {\n'
-                      '    repositories {\n'
-                      '        google()\n'
-                      '        mavenCentral()\n'
-                      '        gradlePluginPortal()\n'
-                      '    }\n'
-                      '    dependencies {\n'
-                      '        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.20")\n'
-                      '    }\n'
-                      '}\n\n'
-                  )
-              else:
-                  kotlin_override = (
-                      'buildscript {\n'
-                      '    repositories {\n'
-                      '        google()\n'
-                      '        mavenCentral()\n'
-                      '        gradlePluginPortal()\n'
-                      '    }\n'
-                      '    dependencies {\n'
-                      '        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.20"\n'
-                      '    }\n'
-                      '}\n\n'
-                  )
-              root_gradle.write_text(kotlin_override + root_text)
-          print("Enabled AGP 9 built-in Kotlin with KGP 2.2.20 override and legacy-compatible AGP DSL.")
+          print("PASS: AGP 8.11.1 + Gradle 8.13 + Kotlin Gradle Plugin 2.2.20.")
+          print("PASS: legacy Kotlin Gradle Plugin mode is enabled for Flutter/plugin compatibility.")
           PY
-          grep -n "com.android.application\|org.jetbrains.kotlin.android\|builtInKotlin\|distributionUrl" android/settings.gradle.kts android/gradle.properties android/gradle/wrapper/gradle-wrapper.properties
+          grep -n "com.android.application\\|org.jetbrains.kotlin.android\\|builtInKotlin\\|distributionUrl" android/settings.gradle.kts android/gradle.properties android/gradle/wrapper/gradle-wrapper.properties
       - name: Set Play Store Android identity, SDK levels and target API
         working-directory: ${{ runner.temp }}/hte_app
         run: |
