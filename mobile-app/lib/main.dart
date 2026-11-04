@@ -65,13 +65,17 @@ class AppThemeController {
   static final ValueNotifier<ThemeMode> mode = ValueNotifier(ThemeMode.dark);
 
   static Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString(_preferenceKey) ?? 'dark';
-    mode.value = switch (saved) {
-      'light' => ThemeMode.light,
-      'system' => ThemeMode.system,
-      _ => ThemeMode.dark,
-    };
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(_preferenceKey) ?? 'dark';
+      mode.value = switch (saved) {
+        'light' => ThemeMode.light,
+        'system' => ThemeMode.system,
+        _ => ThemeMode.dark,
+      };
+    } catch (error) {
+      debugPrint('HTE theme preference could not be loaded: $error');
+    }
   }
 
   static Future<void> setMode(ThemeMode value) async {
@@ -88,8 +92,9 @@ class AppThemeController {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AppThemeController.load();
   runApp(const HteApp());
+  // Load the saved appearance without delaying the startup animation or sound.
+  unawaited(AppThemeController.load());
 }
 
 class HteApp extends StatelessWidget {
