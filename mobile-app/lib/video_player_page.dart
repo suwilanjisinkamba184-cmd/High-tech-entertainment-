@@ -30,6 +30,7 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
   bool _resumeMusic = false;
   bool _lastPlaying = false;
   bool _isFullscreen = false;
+  double _playbackSpeed = 1.0;
   String? _error;
 
   @override
@@ -86,12 +87,12 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
 
   String _friendlyVideoError(Object error) {
     final value = error.toString();
-    if (value.contains('SocketException') || value.contains('Failed host lookup')) {
+    if (value.contains('SocketException') || value.contains('Failed host lookup') || value.contains('Connection timed out') || value.contains('Network is unreachable') || value.contains('Connection reset')) {
       return 'The video could not load because there is no internet connection. Download it first or choose a local video.';
     }
     if (value.contains('404')) return 'This video link is no longer available. Ask the administrator to upload it again.';
     if (value.contains('403') || value.contains('401')) return 'This video is private or its access has expired.';
-    return 'Video playback failed. The file may use an unsupported format or damaged codec. Details: $value';
+    return 'This video could not be played. Check your connection or try another video file.';
   }
 
   void _onVideoChanged() {
@@ -102,7 +103,7 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
       _lastPlaying = playing;
       setState(() {
         if (video.value.hasError) {
-          _error = video.value.errorDescription ?? 'The video could not be decoded.';
+          _error = 'Video playback stopped unexpectedly. Please try again or choose another video.';
         }
       });
     }
@@ -273,6 +274,27 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
                 title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
                 backgroundColor: Colors.black,
                 actions: [
+                  PopupMenuButton<double>(
+                    tooltip: 'Playback speed',
+                    enabled: _ready,
+                    initialValue: _playbackSpeed,
+                    onSelected: (speed) async {
+                      final current = _controller;
+                      if (current == null) return;
+                      await current.setPlaybackSpeed(speed);
+                      if (mounted) setState(() => _playbackSpeed = speed);
+                    },
+                    itemBuilder: (_) => [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+                        .map((speed) => PopupMenuItem<double>(
+                          value: speed,
+                          child: Text(speed == 1.0 ? 'Normal (1×)' : '$speed×'),
+                        )).toList(),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Center(child: Text('$_playbackSpeed×',
+                        style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.w700))),
+                    ),
+                  ),
                   IconButton(
                     tooltip: 'Full screen',
                     onPressed: _ready ? () => _setFullscreen(true) : null,

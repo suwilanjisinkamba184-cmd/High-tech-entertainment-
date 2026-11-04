@@ -183,18 +183,45 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   }
 
   Widget _header(String eyebrow, String title, String subtitle) => Padding(
-    padding: const EdgeInsets.only(bottom: 18),
+    padding: const EdgeInsets.only(bottom: 20),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children:[
-      Text(eyebrow,style:const TextStyle(color:_gold,fontSize:10,letterSpacing:2.2,fontWeight:FontWeight.w700)),
-      const SizedBox(height:7), Text(title,style:const TextStyle(fontSize:26,fontWeight:FontWeight.w800)),
-      const SizedBox(height:6), Text(subtitle,style:const TextStyle(color:Colors.white60,height:1.45)),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2C2416),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: const Color(0xFF66512E)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.lock_rounded, size: 11, color: _gold),
+          const SizedBox(width: 6),
+          Text(eyebrow,style:const TextStyle(color:_gold,fontSize:9,letterSpacing:1.6,fontWeight:FontWeight.w800)),
+        ]),
+      ),
+      const SizedBox(height:12),
+      Text(title,style:const TextStyle(fontSize:28,fontWeight:FontWeight.w800,letterSpacing:-.5)),
+      const SizedBox(height:7),
+      Text(subtitle,style:const TextStyle(color:Colors.white60,height:1.5,fontSize:12)),
     ]));
-  Widget _metric(String label, int value, IconData icon) => Card(child:Padding(
-    padding:const EdgeInsets.all(15),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Icon(icon,color:_gold),const SizedBox(height:13),
-      Text('$value',style:const TextStyle(fontSize:26,fontWeight:FontWeight.w800)),
-      Text(label,style:const TextStyle(color:Colors.white60,fontSize:12)),
-    ])));
+  Widget _metric(String label, int value, IconData icon) => Container(
+    padding: const EdgeInsets.all(15),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(18),
+      gradient: const LinearGradient(begin: Alignment.topLeft,end: Alignment.bottomRight,
+        colors:[Color(0xFF1C1B18),Color(0xFF111214)]),
+      border: Border.all(color: const Color(0xFF403625)),
+    ),
+    child: Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Row(children:[
+        Container(width:32,height:32,decoration:BoxDecoration(color:const Color(0xFF342A19),borderRadius:BorderRadius.circular(10)),
+          child:Icon(icon,color:_gold,size:18)),
+        const Spacer(),
+        const Icon(Icons.north_east_rounded,color:Color(0xFF777064),size:14),
+      ]),
+      const Spacer(),
+      Text('$value',style:const TextStyle(fontSize:27,fontWeight:FontWeight.w800,letterSpacing:-.6)),
+      Text(label,style:const TextStyle(color:Colors.white60,fontSize:11)),
+    ]));
   Widget _trackRows() => _tracks.isEmpty ? const _AdminEmpty('No tracks found. Upload your first release.') :
     ListView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),itemCount:_tracks.length,itemBuilder:(ctx,i){
       final item=_tracks[i]; final published=item['is_published']==true;
@@ -326,21 +353,48 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   Widget build(BuildContext context) {
     if (!_isFounder) return Scaffold(appBar:AppBar(title:const Text('HT Admin')),body:const _AdminEmpty('Founder authorization required.'));
     return Scaffold(
-      appBar:AppBar(title:const Text('HT FOUNDER STUDIO'),actions:[
-        IconButton(tooltip:'Refresh',onPressed:_busy?null:_loadAll,icon:const Icon(Icons.refresh)),
-      ]),
+      appBar:AppBar(
+        title:Row(children:[
+          Container(width:32,height:32,decoration:BoxDecoration(
+            color:const Color(0xFF2C2416),borderRadius:BorderRadius.circular(10),
+            border:Border.all(color:const Color(0xFF66512E))),
+            child:const Icon(Icons.diamond_outlined,color:_gold,size:19)),
+          const SizedBox(width:10),
+          const Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+            Text('HT FOUNDER STUDIO',style:TextStyle(fontSize:12,fontWeight:FontWeight.w800,letterSpacing:1.1)),
+            Text('PRIVATE CONTROL CENTRE',style:TextStyle(fontSize:8,color:Colors.white54,letterSpacing:1.2)),
+          ]),
+        ]),
+        actions:[IconButton(tooltip:'Refresh',onPressed:_busy?null:_loadAll,icon:const Icon(Icons.refresh))],
+      ),
       body:_busy && _tracks.isEmpty ? const Center(child:CircularProgressIndicator(color:_gold)) :
         _error!=null ? Center(child:Padding(padding:const EdgeInsets.all(20),child:Text('Could not load admin data: $_error'))) :
         RefreshIndicator(onRefresh:_loadAll,child:SingleChildScrollView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.fromLTRB(16,16,16,30),child:_page())),
       bottomNavigationBar:SafeArea(top:false,child:Container(
-        height:68,color:const Color(0xFF101113),
-        child:SingleChildScrollView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:8),
-          child:Row(children:List.generate(_sections.length,(i)=>Padding(
-            padding:const EdgeInsets.symmetric(horizontal:3,vertical:8),
-            child:ChoiceChip(label:Text(_sections[i]),selected:_section==i,
-              selectedColor:_gold,labelStyle:TextStyle(color:_section==i?Colors.black:Colors.white70,fontSize:11),
-              onSelected:(_)=>setState(()=>_section=i)),
-          ))),
+        decoration:const BoxDecoration(color:Color(0xFF0B0C0E),border:Border(top:BorderSide(color:Color(0xFF302A20)))),
+        child:SingleChildScrollView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:10,vertical:10),
+          child:Row(children:List.generate(_sections.length,(i){
+            final selected=_section==i;
+            return Padding(
+              padding:const EdgeInsets.symmetric(horizontal:3),
+              child:InkWell(
+                borderRadius:BorderRadius.circular(13),
+                onTap:()=>setState(()=>_section=i),
+                child:AnimatedContainer(
+                  duration:const Duration(milliseconds:180),
+                  padding:const EdgeInsets.symmetric(horizontal:13,vertical:10),
+                  decoration:BoxDecoration(
+                    color:selected?const Color(0xFF342A19):const Color(0xFF151619),
+                    borderRadius:BorderRadius.circular(13),
+                    border:Border.all(color:selected?const Color(0xFF8A6D38):const Color(0xFF292A2C)),
+                  ),
+                  child:Text(_sections[i],style:TextStyle(
+                    color:selected?const Color(0xFFE5C984):Colors.white60,
+                    fontSize:11,fontWeight:selected?FontWeight.w800:FontWeight.w500)),
+                ),
+              ),
+            );
+          })),
         ),
       )),
     );

@@ -35,6 +35,8 @@ bool _audioBackgroundInitialized = false;
 // audio background handler has been initialized in StartupGate.
 final HtePlayback playback = HtePlayback.instance;
 final AudioPlayer player = HtePlayback.instance.player;
+// Separate from the music/ad player and retained across StartupGate -> AuthGate.
+final AudioPlayer _startupSoundPlayer = AudioPlayer();
 final ValueNotifier<int> favouritesRevision = ValueNotifier<int>(0);
 
 /// Convert low-level exceptions into clear, user-safe messages.
@@ -58,19 +60,76 @@ String friendlyErrorMessage(Object error) {
 }
 
 
+class AppThemeController {
+  static const _preferenceKey = 'hte_theme_mode_v1';
+  static final ValueNotifier<ThemeMode> mode = ValueNotifier(ThemeMode.dark);
+
+  static Future<void> load() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(_preferenceKey) ?? 'dark';
+      mode.value = switch (saved) {
+        'light' => ThemeMode.light,
+        'system' => ThemeMode.system,
+        _ => ThemeMode.dark,
+      };
+    } catch (error) {
+      debugPrint('HTE theme preference could not be loaded: $error');
+    }
+  }
+
+  static Future<void> setMode(ThemeMode value) async {
+    mode.value = value;
+    final prefs = await SharedPreferences.getInstance();
+    final saved = switch (value) {
+      ThemeMode.light => 'light',
+      ThemeMode.system => 'system',
+      ThemeMode.dark => 'dark',
+    };
+    await prefs.setString(_preferenceKey, saved);
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const HteApp());
+  // Load the saved appearance without delaying the startup animation or sound.
+  unawaited(AppThemeController.load());
 }
 
 class HteApp extends StatelessWidget {
   const HteApp({super.key});
   @override
-  Widget build(BuildContext context) => MaterialApp(
+  Widget build(BuildContext context) => ValueListenableBuilder<ThemeMode>(
+    valueListenable: AppThemeController.mode,
+    builder: (context, mode, child) => MaterialApp(
     title: 'High-Tech Entertainment',
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      useMaterial3: true,
+    themeMode: mode,
+    theme: ThemeData.from(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFFD9B96E),
+        brightness: Brightness.light,
+      ),
+    ).copyWith(
+      scaffoldBackgroundColor: const Color(0xFFF7F6F2),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFFF7F6F2),
+        foregroundColor: Color(0xFF171717),
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+      ),
+      cardTheme: CardThemeData(
+        color: Colors.white,
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFFE5E0D5)),
+        ),
+      ),
+    ),
+    darkTheme: ThemeData(
       brightness: Brightness.dark,
       scaffoldBackgroundColor: const Color(0xFF08090B),
       colorScheme: ColorScheme.fromSeed(
@@ -157,6 +216,7 @@ class HteApp extends StatelessWidget {
       visualDensity: VisualDensity.standard,
     ),
     home: const StartupGate(),
+    ),
   );
 }
 
@@ -194,16 +254,20 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   Future<void> _playStartupSound() async {
     if (_startupSoundStarted) return;
     _startupSoundStarted = true;
-    final startupPlayer = AudioPlayer();
     try {
-      await startupPlayer.setAsset('assets/high-tech-startup.mp3');
-      await startupPlayer.play();
+      // Keep this player alive for the process lifetime. StartupGate is replaced
+      // by AuthGate as soon as services are ready, so a widget-owned player can
+      // otherwise be torn down while the sound is still starting.
+      await _startupSoundPlayer.setAudioSource(
+        AudioSource.asset('assets/high-tech-startup.mp3'),
+      );
+      await _startupSoundPlayer.setVolume(1.0);
+      await _startupSoundPlayer.setLoopMode(LoopMode.off);
+      await _startupSoundPlayer.play();
     } catch (error, stackTrace) {
       // Startup audio is optional and must never block sign-in or show raw errors.
       debugPrint('HTE startup sound could not be played: $error');
       debugPrintStack(stackTrace: stackTrace);
-    } finally {
-      await startupPlayer.dispose();
     }
   }
 
@@ -230,6 +294,11 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       });
     }
     try {
+      // Start the bundled startup sound before awaiting any background
+      // audio setup or network/authentication work. main() has already called
+      // WidgetsFlutterBinding.ensureInitialized().
+      unawaited(_playStartupSound());
+
       // Audio is an optional service: an audio-plugin initialisation
       // failure must never prevent the user from reaching sign-in.
       if (defaultTargetPlatform == TargetPlatform.android &&
@@ -247,13 +316,9 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         }
       }
 
-      // Audio background registration is independent of authentication.
       // Never play an advert during startup: reopening the app or returning
       // from a paused session must take the listener directly to sign-in.
       // Scheduled audio adverts are handled only after completed music tracks.
-      // Start the branded startup sting only after the audio plugin is registered.
-      // It uses its own AudioPlayer, separate from the music/ad playback engine.
-      unawaited(_playStartupSound());
 
       // Initialise authentication/data services without waiting for audio.
       if (!_supabaseInitialized) {
@@ -334,11 +399,16 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                                 ),
                               ),
                             ),
-                            SvgPicture.asset(
-                              'assets/high-tech-logo.svg',
-                              width: 184,
-                              height: 184,
-                              semanticsLabel: 'High-Tech Entertainment app logo',
+                            // The logo itself rotates smoothly as requested; the
+                            // independent outer ring continues its own motion.
+                            Transform.rotate(
+                              angle: -_ringAnimation.value * 6.283185307179586,
+                              child: SvgPicture.asset(
+                                'assets/high-tech-logo.svg',
+                                width: 184,
+                                height: 184,
+                                semanticsLabel: 'High-Tech Entertainment app logo',
+                              ),
                             ),
                           ],
                         ),
@@ -510,20 +580,70 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int tab = 0;
   final pages = const [HomeTab(), DiscoverTab(), ReleasesTab(), LibraryTab(), AccountTab()];
+  static const _items = [
+    (Icons.home_rounded, 'Home'),
+    (Icons.explore_rounded, 'Discover'),
+    (Icons.album_rounded, 'Releases'),
+    (Icons.library_music_rounded, 'Library'),
+    (Icons.person_rounded, 'Profile'),
+  ];
+
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(child: IndexedStack(index: tab, children: pages)),
-    bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [const PlayerBar(), NavigationBar(
-      selectedIndex: tab,
-      onDestinationSelected: (value) => setState(() => tab = value),
-      destinations: const [
-        NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
-        NavigationDestination(icon: Icon(Icons.search), label: 'Discover'),
-        NavigationDestination(icon: Icon(Icons.album_outlined), label: 'Releases'),
-        NavigationDestination(icon: Icon(Icons.library_music_outlined), label: 'Library'),
-        NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
-      ],
-    )]),
+    bottomNavigationBar: Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF090A0C),
+        border: Border(top: BorderSide(color: Color(0xFF29251D))),
+      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const PlayerBar(),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 7, 8, 7),
+            child: Row(
+              children: List.generate(_items.length, (index) {
+                final selected = tab == index;
+                final item = _items[index];
+                return Expanded(
+                  child: Semantics(
+                    button: true,
+                    selected: selected,
+                    label: item.$2,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(15),
+                      onTap: () => setState(() => tab = index),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: selected ? const Color(0xFF302615) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(
+                            color: selected ? const Color(0xFF8C713B) : Colors.transparent,
+                          ),
+                        ),
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(item.$1, size: 21,
+                            color: selected ? const Color(0xFFE2C47D) : const Color(0xFF85827B)),
+                          const SizedBox(height: 3),
+                          Text(item.$2, maxLines: 1,
+                            style: TextStyle(fontSize: 10, fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                              color: selected ? const Color(0xFFE2C47D) : const Color(0xFF85827B))),
+                        ]),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+      ]),
+    ),
   );
 }
 
@@ -607,110 +727,157 @@ class HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.only(bottom: 28),
+    padding: const EdgeInsets.only(bottom: 30),
     children: [
       const Brand(),
       Container(
-        margin: const EdgeInsets.fromLTRB(18, 4, 18, 22),
-        padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
+        margin: const EdgeInsets.fromLTRB(16, 3, 16, 22),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: const Color(0xFF111214),
-          border: Border.all(color: const Color(0xFF51452E)),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: const Color(0xFF70582F), width: 1),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF302516), Color(0xFF171719), Color(0xFF0D0E10)],
+          ),
+          boxShadow: const [BoxShadow(color: Color(0x332D210D), blurRadius: 28, offset: Offset(0, 12))],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'INDEPENDENT MUSIC.\nBUILT TO TRAVEL.',
-                    style: TextStyle(
-                      color: Color(0xFFD9B96E),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 2.0,
-                      height: 1.7,
-                    ),
-                  ),
-                ),
-                SvgPicture.asset(
-                  'assets/high-tech-logo.svg',
-                  width: 74,
-                  height: 74,
-                  semanticsLabel: 'HT crest',
-                ),
-              ],
-            ),
-            const SizedBox(height: 22),
-            const Text(
-              'Quality sound.\nGlobal ambition.',
-              style: TextStyle(
-                fontSize: 34,
-                height: 1.08,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -1.2,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Discover official releases, meet the artists and listen to the sounds of High-Tech Entertainment.',
-              style: TextStyle(
-                color: Color(0xFFB9B6AE),
-                height: 1.65,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 22),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
+        child: Stack(children: [
+          Positioned(right: -54, top: -54,
+            child: Container(width: 210, height: 210,
+              decoration: BoxDecoration(shape: BoxShape.circle,
+                border: Border.all(color: const Color(0x337E6638), width: 1.2))),
+          ),
+          Positioned(right: 4, top: 38,
+            child: Opacity(opacity: .16,
+              child: SvgPicture.asset('assets/high-tech-logo.svg', width: 150, height: 150))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(width: 7, height: 7,
+                  decoration: const BoxDecoration(color: Color(0xFFE2C47D), shape: BoxShape.circle)),
+                const SizedBox(width: 8),
+                const Text('THE SOUND OF WHAT’S NEXT',
+                  style: TextStyle(color: Color(0xFFE2C47D), fontSize: 9,
+                    fontWeight: FontWeight.w800, letterSpacing: 2.0)),
+              ]),
+              const SizedBox(height: 24),
+              const Text('QUALITY SOUND.\nGLOBAL AMBITION.',
+                style: TextStyle(fontSize: 31, height: 1.08, fontWeight: FontWeight.w800,
+                  letterSpacing: -1.0, color: Color(0xFFF7F3E9))),
+              const SizedBox(height: 12),
+              const Text('Discover the artists, releases and original sound shaping High-Tech Entertainment.',
+                style: TextStyle(color: Color(0xFFC4BFB4), height: 1.55, fontSize: 13)),
+              const SizedBox(height: 22),
+              FilledButton.icon(
                 onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MusicTab()),
-                ),
-                icon: const Icon(Icons.headphones_rounded, size: 18),
+                  MaterialPageRoute(builder: (_) => const MusicTab())),
+                icon: const Icon(Icons.play_arrow_rounded, size: 20),
                 label: const Text('Explore the music'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 46),
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
               ),
-            ),
-          ],
-        ),
+              const SizedBox(height: 18),
+              Row(children: [
+                const Icon(Icons.graphic_eq_rounded, color: Color(0xFFE2C47D), size: 16),
+                const SizedBox(width: 7),
+                Text('MUSIC  •  BEATS  •  PRODUCTION  •  BEYOND',
+                  style: const TextStyle(color: Color(0x94FFFFFF),
+                    fontSize: 8, fontWeight: FontWeight.w700, letterSpacing: 1.0)),
+              ]),
+            ]),
+          ),
+        ]),
+      ),
+      const Heading('Made for your next discovery'),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        child: Row(children: [
+          Expanded(child: _HomeQuickAction(icon: Icons.album_rounded, title: 'New releases',
+            subtitle: 'Fresh from HTE', onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Releases')), body: const ReleasesTab()))))),
+          const SizedBox(width: 10),
+          Expanded(child: _HomeQuickAction(icon: Icons.people_alt_rounded, title: 'Artists',
+            subtitle: 'Meet the creators', onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Artists')), body: const ArtistsTab()))))),
+        ]),
       ),
       const Heading('Latest releases'),
       const ReleaseList(horizontal: true),
       const Heading('Featured artists'),
       const ArtistList(horizontal: true),
-      Card(child: ListTile(
-        leading: const Icon(Icons.people_outline, color: Color(0xFFD9B96E)),
-        title: const Text('Explore all artists'),
-        subtitle: const Text('Meet the creators behind the sound'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Artists')), body: const ArtistsTab()))),
-      )),
-      const Heading('Watch & explore'),
-      Card(child: ListTile(
-        leading: const Icon(Icons.video_library_outlined, color: Color(0xFFD9B96E)),
-        title: const Text('Music videos'),
-        subtitle: const Text('Watch official High-Tech visual releases'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Videos')), body: const VideosTab()))),
-      )),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF121315),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFF34302A)),
+          ),
+          child: Row(children: [
+            const Icon(Icons.video_library_rounded, color: Color(0xFFD9B96E), size: 27),
+            const SizedBox(width: 13),
+            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Beyond the audio', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              SizedBox(height: 3),
+              Text('Watch official music videos and visual releases.',
+                style: TextStyle(color: Color(0xFFAAA69E), fontSize: 11)),
+            ])),
+            IconButton(
+              tooltip: 'Explore videos',
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => Scaffold(appBar: AppBar(title: const Text('Videos')), body: const VideosTab()))),
+              icon: const Icon(Icons.arrow_forward_rounded, color: Color(0xFFE2C47D)),
+            ),
+          ]),
+        ),
+      ),
       const Heading('Released music'),
       const TrackList(compact: true),
       const Padding(
         padding: EdgeInsets.fromLTRB(20, 24, 20, 8),
-        child: Text(
-          'HIGH-TECH ENTERTAINMENT  ·  MUSIC. BEATS. PRODUCTION. BEYOND.',
+        child: Text('HIGH-TECH ENTERTAINMENT  ·  MUSIC. BEATS. PRODUCTION. BEYOND.',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Color(0xFF77736B),
-            fontSize: 9,
-            letterSpacing: 1.1,
-            height: 1.8,
-          ),
-        ),
+          style: TextStyle(color: Color(0xFF77736B), fontSize: 9, letterSpacing: 1.1, height: 1.8)),
       ),
     ],
+  );
+}
+
+class _HomeQuickAction extends StatelessWidget {
+  const _HomeQuickAction({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(16),
+    child: Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141517),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF34302A)),
+      ),
+      child: Row(children: [
+        Icon(icon, color: const Color(0xFFD9B96E), size: 22),
+        const SizedBox(width: 9),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 3),
+          Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 9, color: Color(0xFF9B978F))),
+        ])),
+      ]),
+    ),
   );
 }
 
@@ -1222,6 +1389,33 @@ class FullPlayerPage extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.speed, size: 18, color: Color(0xFFD9B96E)),
+                            const SizedBox(width: 8),
+                            const Text('Playback speed'),
+                            const SizedBox(width: 10),
+                            PopupMenuButton<double>(
+                              tooltip: 'Choose audio playback speed',
+                              onSelected: (speed) => player.setSpeed(speed),
+                              itemBuilder: (_) => [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+                                  .map((speed) => PopupMenuItem<double>(
+                                    value: speed,
+                                    child: Text(speed == 1.0 ? 'Normal (1×)' : '$speed×'),
+                                  )).toList(),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: const Color(0xFFD9B96E)),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text('Change', style: TextStyle(color: Color(0xFFD9B96E))),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
                         const Text('Quality Sound, Global Vibes',
                           style: TextStyle(color: Colors.white54, fontSize: 12)),
                       ],
@@ -1380,7 +1574,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
     setState(() { loading = true; error = null; });
     try {
       results = await publishedTracks(term);
-    } catch (e) { error = e.toString(); }
+    } catch (e) { error = friendlyErrorMessage(e); }
     if (mounted) setState(() => loading = false);
   }
   @override
@@ -2060,11 +2254,85 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _message(String value) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
 
+  Widget _themeChoiceTile(
+    BuildContext sheetContext,
+    ThemeMode value,
+    String title,
+    String subtitle,
+  ) {
+    final selected = AppThemeController.mode.value == value;
+    return ListTile(
+      leading: Icon(
+        selected ? Icons.radio_button_checked : Icons.radio_button_off,
+        color: selected ? const Color(0xFFD4AF37) : null,
+      ),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      onTap: () => Navigator.pop(sheetContext, value),
+    );
+  }
+
+  Future<void> _chooseTheme() async {
+    final selected = await showModalBottomSheet<ThemeMode>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Choose your appearance',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 12),
+              _themeChoiceTile(
+                sheetContext,
+                ThemeMode.dark,
+                'High-Tech dark',
+                'Signature black with gold accents',
+              ),
+              _themeChoiceTile(
+                sheetContext,
+                ThemeMode.light,
+                'Light',
+                'Bright, clean interface',
+              ),
+              _themeChoiceTile(
+                sheetContext,
+                ThemeMode.system,
+                'System default',
+                'Follow Android appearance settings',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selected != null) {
+      await AppThemeController.setMode(selected);
+      if (mounted) setState(() {});
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Settings')),
     body: ListView(padding: const EdgeInsets.all(18), children: [
       const Brand(tagline: 'APP PREFERENCES & INFORMATION'),
+      Card(child: Column(children: [
+        ListTile(
+          leading: const Icon(Icons.palette_outlined, color: Color(0xFFD4AF37)),
+          title: const Text('Appearance & themes'),
+          subtitle: Text(switch (AppThemeController.mode.value) {
+            ThemeMode.light => 'Light theme',
+            ThemeMode.system => 'Follow device theme',
+            ThemeMode.dark => 'High-Tech dark theme',
+          }),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _chooseTheme,
+        ),
+      ])),
       Card(child: Column(children: [
         ListTile(
           leading: const Icon(Icons.system_update_alt, color: Color(0xFFD4AF37)),
