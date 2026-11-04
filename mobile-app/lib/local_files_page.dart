@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'playback_engine.dart';
 import 'video_player_page.dart';
+import 'user_facing_errors.dart';
 
 /// Downloads a direct media file into persistent app storage.
 /// The response is streamed to disk so large videos are not buffered in RAM.
@@ -192,7 +193,7 @@ class _LocalFilesTabState extends State<LocalFilesTab> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not import local media: $error')),
+          SnackBar(content: Text(hteFriendlyError(error, fallback: 'The selected media could not be imported. Please try again.'))),
         );
       }
     } finally {
@@ -226,7 +227,7 @@ class _LocalFilesTabState extends State<LocalFilesTab> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Local playback failed: $error')),
+          SnackBar(content: Text(hteFriendlyError(error, fallback: 'This saved media could not be played. Please try again.'))),
         );
       }
     }

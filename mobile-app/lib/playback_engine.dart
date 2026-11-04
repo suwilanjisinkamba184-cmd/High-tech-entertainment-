@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'user_facing_errors.dart';
 
 /// Counts completed music tracks independently of track selection.
 ///
@@ -80,19 +81,10 @@ class HtePlayback {
   static const String startupAdvertAsset = 'assets/AUD-20261103-WA0002.mp3';
   int adEvery = advertInterval;
 
-  String _friendlyError(Object error) {
-    final message = error.toString();
-    if (message.contains('SocketException') || message.contains('Failed host lookup')) {
-      return 'Cannot reach the audio server. Check your internet connection.';
-    }
-    if (message.contains('403') || message.contains('401')) {
-      return 'This audio file is private or access has expired. Check its storage permissions.';
-    }
-    if (message.contains('404')) {
-      return 'This audio file could not be found. Ask the administrator to upload it again.';
-    }
-    return 'Playback could not start. Check that this track is a valid MP3, AAC or supported audio file. ($message)';
-  }
+  String _friendlyError(Object error) => hteFriendlyError(
+    error,
+    fallback: 'Playback could not start. Please try another track or try again later.',
+  );
 
   static Uri? directAudioUri(Object? value) {
     final raw = (value ?? '').toString().trim();
