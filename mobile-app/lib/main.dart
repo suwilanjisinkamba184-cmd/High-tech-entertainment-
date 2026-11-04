@@ -171,6 +171,7 @@ class StartupGate extends StatefulWidget {
 class _StartupGateState extends State<StartupGate> with SingleTickerProviderStateMixin {
   bool _ready = false;
   bool _starting = true;
+  bool _startupSoundStarted = false;
   String? _error;
   Future<void>? _initialization;
   late final AnimationController _startupAnimation;
@@ -188,6 +189,22 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       duration: const Duration(seconds: 7),
     )..repeat();
     _initialize();
+  }
+
+  Future<void> _playStartupSound() async {
+    if (_startupSoundStarted) return;
+    _startupSoundStarted = true;
+    final startupPlayer = AudioPlayer();
+    try {
+      await startupPlayer.setAsset('assets/high-tech-startup.mp3');
+      await startupPlayer.play();
+    } catch (error, stackTrace) {
+      // Startup audio is optional and must never block sign-in or show raw errors.
+      debugPrint('HTE startup sound could not be played: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    } finally {
+      await startupPlayer.dispose();
+    }
   }
 
   /// Coalesce overlapping startup/retry requests into one initialization.
@@ -234,6 +251,9 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       // Never play an advert during startup: reopening the app or returning
       // from a paused session must take the listener directly to sign-in.
       // Scheduled audio adverts are handled only after completed music tracks.
+      // Start the branded startup sting only after the audio plugin is registered.
+      // It uses its own AudioPlayer, separate from the music/ad playback engine.
+      unawaited(_playStartupSound());
 
       // Initialise authentication/data services without waiting for audio.
       if (!_supabaseInitialized) {
