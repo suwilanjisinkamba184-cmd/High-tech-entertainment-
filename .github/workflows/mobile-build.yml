@@ -317,7 +317,7 @@ jobs:
       - name: Apply official High-Tech Entertainment download filenames
         working-directory: ${{ runner.temp }}/hte_app
         run: |
-          APK="build/app/outputs/flutter-apk/app-release.apk"
+          APK="build/app/outputs/flutter-apk/app-su-release.apk"
           AAB="build/app/outputs/bundle/release/app-su-release.aab"
           test -s "$APK"
           test -s "$AAB"
