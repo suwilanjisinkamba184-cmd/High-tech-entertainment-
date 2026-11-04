@@ -287,11 +287,11 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
                     itemBuilder: (_) => [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
                         .map((speed) => PopupMenuItem<double>(
                           value: speed,
-                          child: Text(speed == 1.0 ? 'Normal (1×)' : '${speed}×'),
+                          child: Text(speed == 1.0 ? 'Normal (1×)' : '$speed×'),
                         )).toList(),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Center(child: Text('${_playbackSpeed}×',
+                      child: Center(child: Text('$_playbackSpeed×',
                         style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.w700))),
                     ),
                   ),
