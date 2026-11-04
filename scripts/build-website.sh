@@ -8,7 +8,7 @@ rm -rf dist
 mkdir -p dist
 
 cp -R assets admin account dist/
-cp index.html app-download.html supabase-config.js robots.txt sitemap.xml account-deletion.html privacy-policy.html high-tech-logo.svg dist/
+cp index.html app-download.html supabase-config.js robots.txt sitemap.xml account-deletion.html privacy-policy.html terms-of-service.html high-tech-logo.svg dist/
 
 for file in google31fdb4754075f7bd.html googled2aa97c2eb951371.html; do
   if [ -s "$file" ]; then cp "$file" dist/; fi
@@ -17,7 +17,7 @@ done
 touch dist/.nojekyll
 
 # Required output checks shared by GitHub Pages and Cloudflare Pages.
-for file in index.html app-download.html robots.txt sitemap.xml supabase-config.js account-deletion.html privacy-policy.html admin/index.html account/index.html assets/site.css assets/app.js assets/videos.js; do
+for file in index.html app-download.html robots.txt sitemap.xml supabase-config.js account-deletion.html privacy-policy.html terms-of-service.html admin/index.html account/index.html assets/site.css assets/app.js assets/videos.js; do
   test -s "dist/$file" || { echo "Missing required build output: dist/$file" >&2; exit 1; }
 done
 
