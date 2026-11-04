@@ -10,7 +10,6 @@ String hteFriendlyError(
   final value = error.toString().toLowerCase();
 
   if (error is SocketException ||
-      error is HttpException ||
       error is HandshakeException ||
       error is TimeoutException ||
       value.contains('socketexception') ||
