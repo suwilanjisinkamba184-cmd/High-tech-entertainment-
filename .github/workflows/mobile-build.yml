@@ -300,14 +300,17 @@ jobs:
               if count and updated != source:
                   gradle.write_text(updated)
                   changed.append(str(gradle))
-          picker = list(cache.glob("file_picker-*/android/build.gradle*"))
-          if not picker:
-              raise SystemExit("Resolved file_picker Android Gradle file was not found.")
-          picker_text = "\n".join(path.read_text() for path in picker)
-          if re.search(r"(?m)^\s*compileSdk(?:Version)?\s*(?:=\s*)?34\b", picker_text):
-              raise SystemExit("file_picker is still configured for Android API 34.")
+          stale = []
+          for gradle in cache.glob("*/android/build.gradle*"):
+              source = gradle.read_text()
+              for match in pattern.finditer(source):
+                  if int(match.group(2)) < 36:
+                      stale.append(f"{gradle}: compileSdk {match.group(2)}")
+          if stale:
+              raise SystemExit("Android plugins still declare compileSdk below 36:\n" + "\n".join(stale))
           print(f"Updated plugin Android compile SDK declarations: {len(changed)}")
           print("\n".join(changed))
+          print("PASS: all cached Android plugin compileSdk declarations are API 36 or newer.")
           PY
       - name: Build signed Android APK
         working-directory: ${{ runner.temp }}/hte_app
