@@ -341,11 +341,16 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                                 ),
                               ),
                             ),
-                            SvgPicture.asset(
-                              'assets/high-tech-logo.svg',
-                              width: 184,
-                              height: 184,
-                              semanticsLabel: 'High-Tech Entertainment app logo',
+                            // The logo itself rotates smoothly as requested; the
+                            // independent outer ring continues its own motion.
+                            Transform.rotate(
+                              angle: -_ringAnimation.value * 6.283185307179586,
+                              child: SvgPicture.asset(
+                                'assets/high-tech-logo.svg',
+                                width: 184,
+                                height: 184,
+                                semanticsLabel: 'High-Tech Entertainment app logo',
+                              ),
                             ),
                           ],
                         ),
