@@ -106,7 +106,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       _coverUrl.text = url;
       setState(() => _artwork = null);
       _toast('Artwork uploaded. Its public URL is ready to attach to a track.');
-    } catch(e) { _toast('Artwork upload failed: $e'); }
+    } catch(e) { debugPrint('Artwork upload failed: $e'); _toast('Artwork upload failed. Check the image format, connection and permissions.'); }
     finally { if(mounted)setState(()=>_busy=false); }
   }
   Future<void> _pickAudio() async {
@@ -150,13 +150,13 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       _title.clear(); _artist.clear(); _genre.text = 'Afrobeat';
       setState(() { _audio = null; _coverUrl.clear(); _section = 2; });
       await _loadAll(); _toast('Track uploaded and saved as a draft.');
-    } catch (e) { _toast('Upload failed: $e'); if (mounted) setState(() => _busy = false); }
+    } catch (e) { debugPrint('Track upload failed: $e'); _toast('Track upload failed. Check the audio file, connection and storage permissions.'); if (mounted) setState(() => _busy = false); }
   }
   Future<void> _publishTrack(Map<String,dynamic> item, bool published) async {
     try {
       await _supabase.from('tracks').update({'is_published':published}).eq('id', item['id']);
       await _loadAll(); _toast(published ? 'Track published in HT Music.' : 'Track moved to drafts.');
-    } catch(e) { _toast('Could not update track: $e'); }
+    } catch(e) { debugPrint('Track update failed: $e'); _toast('Could not update this track. Please retry.'); }
   }
   Future<void> _deleteTrack(Map<String,dynamic> item) async {
     final yes = await showDialog<bool>(context: context, builder: (ctx)=>AlertDialog(
@@ -165,7 +165,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Delete'))]));
     if (yes != true) return;
     try { await _supabase.from('tracks').delete().eq('id',item['id']); await _loadAll(); }
-    catch(e) { _toast('Could not delete track: $e'); }
+    catch(e) { debugPrint('Track deletion failed: $e'); _toast('Could not delete this track. Please retry.'); }
   }
   Future<void> _saveArtist() async {
     if (_artistName.text.trim().isEmpty) { _toast('Enter an artist name.'); return; }
@@ -173,15 +173,15 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       await _supabase.from('artists').insert({'name':_artistName.text.trim(),'bio':_artistBio.text.trim(),'is_published':false});
       if (!mounted) return;
       _artistName.clear(); _artistBio.clear(); await _loadAll(); _toast('Artist saved as a draft.');
-    } catch(e) { _toast('Could not save artist: $e'); }
+    } catch(e) { debugPrint('Artist save failed: $e'); _toast('Could not save this artist. Please retry.'); }
   }
   Future<void> _publishArtist(Map<String,dynamic> item, bool published) async {
     try { await _supabase.from('artists').update({'is_published':published}).eq('id',item['id']); await _loadAll(); }
-    catch(e) { _toast('Could not update artist: $e'); }
+    catch(e) { debugPrint('Artist update failed: $e'); _toast('Could not update this artist. Please retry.'); }
   }
   Future<void> _publishRelease(Map<String,dynamic> item, bool published) async {
     try { await _supabase.from('releases').update({'is_published':published}).eq('id',item['id']); await _loadAll(); }
-    catch(e) { _toast('Could not update release: $e'); }
+    catch(e) { debugPrint('Release update failed: $e'); _toast('Could not update this release. Please retry.'); }
   }
   Future<void> _pickVideo() async {
     final result = await FilePicker.platform.pickFiles(
@@ -314,7 +314,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       await _supabase.from('releases').insert({'title':_releaseTitle.text.trim(),'spotify_url':_spotifyUrl.text.trim().isEmpty?null:_spotifyUrl.text.trim(),'cover_url':_releaseCoverUrl.text.trim().isEmpty?null:_releaseCoverUrl.text.trim(),'is_published':false});
       if (!mounted) return;
       _releaseTitle.clear(); _spotifyUrl.clear(); _releaseCoverUrl.clear(); await _loadAll(); _toast('Release saved as a draft.');
-    } catch(e) { _toast('Could not save release: $e'); }
+    } catch(e) { debugPrint('Release save failed: $e'); _toast('Could not save this release. Please retry.'); }
   }
 
   Widget _header(String eyebrow, String title, String subtitle) => Padding(
