@@ -1289,6 +1289,33 @@ class FullPlayerPage extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.speed, size: 18, color: Color(0xFFD9B96E)),
+                            const SizedBox(width: 8),
+                            const Text('Playback speed'),
+                            const SizedBox(width: 10),
+                            PopupMenuButton<double>(
+                              tooltip: 'Choose audio playback speed',
+                              onSelected: (speed) => player.setSpeed(speed),
+                              itemBuilder: (_) => [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+                                  .map((speed) => PopupMenuItem<double>(
+                                    value: speed,
+                                    child: Text(speed == 1.0 ? 'Normal (1×)' : '${speed}×'),
+                                  )).toList(),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: const Color(0xFFD9B96E)),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text('Change', style: TextStyle(color: Color(0xFFD9B96E))),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
                         const Text('Quality Sound, Global Vibes',
                           style: TextStyle(color: Colors.white54, fontSize: 12)),
                       ],
