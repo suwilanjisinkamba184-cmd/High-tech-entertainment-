@@ -85,7 +85,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   }
 
   Future<void> _pickArtwork() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['jpg','jpeg','png','webp','avif'], withData: false);
+    final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['jpg','jpeg','png','webp','avif'], withData: false);
     if (mounted && result.isNotEmpty) setState(() => _artwork = result.first);
   }
   Future<void> _uploadArtwork() async {
@@ -101,7 +101,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     finally { if(mounted)setState(()=>_busy=false); }
   }
   Future<void> _pickAudio() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.custom,
+    final result = await FilePicker.pickFiles(type: FileType.custom,
       allowedExtensions: ['mp3','m4a','aac','wav','ogg','flac'], withData: false);
     if (mounted && result.isNotEmpty) setState(() => _audio = result.first);
   }
