@@ -127,6 +127,11 @@ jobs:
               if root_gradle.name.endswith(".kts"):
                   kotlin_override = (
                       'buildscript {\n'
+                      '    repositories {\n'
+                      '        google()\n'
+                      '        mavenCentral()\n'
+                      '        gradlePluginPortal()\n'
+                      '    }\n'
                       '    dependencies {\n'
                       '        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.20")\n'
                       '    }\n'
@@ -135,6 +140,11 @@ jobs:
               else:
                   kotlin_override = (
                       'buildscript {\n'
+                      '    repositories {\n'
+                      '        google()\n'
+                      '        mavenCentral()\n'
+                      '        gradlePluginPortal()\n'
+                      '    }\n'
                       '    dependencies {\n'
                       '        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.20"\n'
                       '    }\n'
