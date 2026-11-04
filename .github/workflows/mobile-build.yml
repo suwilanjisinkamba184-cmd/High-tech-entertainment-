@@ -92,7 +92,7 @@ jobs:
                   continue
               if 'id("com.android.application")' in line and "version" in line:
                   prefix = line.split("version", 1)[0]
-                  line = prefix + 'version "9.0.0" apply false'
+                  line = prefix + 'version "9.0.1" apply false'
                   agp_updated = True
               updated_settings.append(line)
           if not agp_updated:
@@ -111,10 +111,37 @@ jobs:
           ]
           wrapper.write_text("\n".join(wrapper_lines) + "\n")
 
-          property_lines = [line for line in properties.read_text().splitlines() if not line.startswith("android.builtInKotlin=")]
-          property_lines.append("android.builtInKotlin=true")
+          property_lines = [
+              line for line in properties.read_text().splitlines()
+              if not line.startswith(("android.builtInKotlin=", "android.newDsl="))
+          ]
+          property_lines.extend(["android.builtInKotlin=true", "android.newDsl=false"])
           properties.write_text("\n".join(property_lines) + "\n")
-          print("Enabled AGP 9 built-in Kotlin; removed explicit Kotlin Gradle Plugin application.")
+
+          root_gradle_candidates = [Path("android/build.gradle.kts"), Path("android/build.gradle")]
+          root_gradle = next((path for path in root_gradle_candidates if path.exists()), None)
+          if root_gradle is None:
+              raise SystemExit("Could not locate the root Android Gradle build file.")
+          root_text = root_gradle.read_text()
+          if "org.jetbrains.kotlin:kotlin-gradle-plugin" not in root_text:
+              if root_gradle.name.endswith(".kts"):
+                  kotlin_override = (
+                      'buildscript {\n'
+                      '    dependencies {\n'
+                      '        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.20")\n'
+                      '    }\n'
+                      '}\n\n'
+                  )
+              else:
+                  kotlin_override = (
+                      'buildscript {\n'
+                      '    dependencies {\n'
+                      '        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.20"\n'
+                      '    }\n'
+                      '}\n\n'
+                  )
+              root_gradle.write_text(kotlin_override + root_text)
+          print("Enabled AGP 9 built-in Kotlin with KGP 2.2.20 override and legacy-compatible AGP DSL.")
           PY
           grep -n "com.android.application\|org.jetbrains.kotlin.android\|builtInKotlin\|distributionUrl" android/settings.gradle.kts android/gradle.properties android/gradle/wrapper/gradle-wrapper.properties
       - name: Set Play Store Android identity, SDK levels and target API
@@ -316,7 +343,7 @@ jobs:
         working-directory: ${{ runner.temp }}/hte_app
         run: flutter build apk --release --target-platform android-arm,android-arm64 --dart-define=HTE_GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
       - name: Verify release APK signature
-        if: always()
+        if: success()
         working-directory: ${{ runner.temp }}/hte_app
         env:
           EXPECTED_CERT_SHA256: ${{ steps.android_signing.outputs.release_cert_sha256 }}
