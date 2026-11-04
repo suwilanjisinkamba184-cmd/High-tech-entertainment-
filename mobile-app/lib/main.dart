@@ -568,71 +568,63 @@ class HomeTab extends StatelessWidget {
     children: [
       const Brand(),
       Container(
-        margin: const EdgeInsets.fromLTRB(18, 4, 18, 22),
-        padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
+        margin: const EdgeInsets.fromLTRB(16, 4, 16, 20),
         decoration: BoxDecoration(
-          color: const Color(0xFF111214),
-          border: Border.all(color: const Color(0xFF51452E)),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: const Color(0xFF8D6A2E).withValues(alpha: .65)),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF493416), Color(0xFF211A11), Color(0xFF101114)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: const [BoxShadow(color: Color(0x553A270A), blurRadius: 28, offset: Offset(0, 12))],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
           children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'INDEPENDENT MUSIC.\nBUILT TO TRAVEL.',
-                    style: TextStyle(
-                      color: Color(0xFFD9B96E),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 2.0,
-                      height: 1.7,
-                    ),
+            Positioned(
+              right: -58, top: -72,
+              child: Container(width: 230, height: 230, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFFD9B96E).withValues(alpha: .20), width: 1.2))),
+            ),
+            Positioned(
+              right: -22, top: -34,
+              child: Container(width: 158, height: 158, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFFD9B96E).withValues(alpha: .14), width: 1.2))),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: const Color(0xFFD9B96E).withValues(alpha: .12), borderRadius: BorderRadius.circular(30), border: Border.all(color: const Color(0xFFD9B96E).withValues(alpha: .35))), child: const Text('HT MUSIC  ·  OFFICIAL', style: TextStyle(color: Color(0xFFE8CB8B), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1.5))),
+                      const Spacer(),
+                      SvgPicture.asset('assets/high-tech-logo.svg', width: 66, height: 66, semanticsLabel: 'High-Tech crest'),
+                    ],
                   ),
-                ),
-                SvgPicture.asset(
-                  'assets/high-tech-logo.svg',
-                  width: 74,
-                  height: 74,
-                  semanticsLabel: 'HT crest',
-                ),
-              ],
-            ),
-            const SizedBox(height: 22),
-            const Text(
-              'Quality sound.\nGlobal ambition.',
-              style: TextStyle(
-                fontSize: 34,
-                height: 1.08,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -1.2,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Discover official releases, meet the artists and listen to the sounds of High-Tech Entertainment.',
-              style: TextStyle(
-                color: Color(0xFFB9B6AE),
-                height: 1.65,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 22),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MusicTab()),
-                ),
-                icon: const Icon(Icons.headphones_rounded, size: 18),
-                label: const Text('Explore the music'),
+                  const SizedBox(height: 16),
+                  const Text('YOUR SOUND. YOUR WORLD.', style: TextStyle(color: Color(0xFFE8CB8B), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 2.1)),
+                  const SizedBox(height: 9),
+                  const Text('Feel the\nfrequency.', style: TextStyle(fontSize: 36, height: 1.02, fontWeight: FontWeight.w800, letterSpacing: -1.3, color: Color(0xFFF8F4EA))),
+                  const SizedBox(height: 12),
+                  const Text('Discover fresh releases, exclusive sounds and the artists shaping the next wave.', style: TextStyle(color: Color(0xFFD0C7B7), height: 1.55, fontSize: 13)),
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MusicTab())),
+                    icon: const Icon(Icons.headphones_rounded, size: 18),
+                    label: const Text('Explore the music'),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(mainAxisAlignment: MainAxisAlignment.end, crossAxisAlignment: CrossAxisAlignment.end, children: [
+                    ...[14.0, 25.0, 18.0, 34.0, 22.0, 43.0, 28.0, 19.0, 36.0, 24.0, 31.0, 16.0].map((height) => Container(width: 3, height: height, margin: const EdgeInsets.symmetric(horizontal: 2), decoration: BoxDecoration(color: const Color(0xFFD9B96E).withValues(alpha: .8), borderRadius: BorderRadius.circular(4)))),
+                  ]),
+                ],
               ),
             ),
           ],
         ),
       ),
+      const ContinueListeningCard(),
       const Heading('Latest releases'),
       const ReleaseList(horizontal: true),
       const Heading('Featured artists'),
@@ -671,6 +663,54 @@ class HomeTab extends StatelessWidget {
   );
 }
 
+class ContinueListeningCard extends StatelessWidget {
+  const ContinueListeningCard({super.key});
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<Map<String, dynamic>?>( 
+    valueListenable: playback.currentTrack,
+    builder: (context, track, _) {
+      if (track == null) return const SizedBox.shrink();
+      return ValueListenableBuilder<bool>(
+        valueListenable: playback.adPlaying,
+        builder: (context, isAd, _) {
+          if (isAd) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Heading('Continue listening'),
+                Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FullPlayerPage())),
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Row(
+                        children: [
+                          SizedBox(width: 58, height: 58, child: MediaCover(url: track['cover_url']?.toString(), height: 58)),
+                          const SizedBox(width: 12),
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            const Text('PICK UP WHERE YOU LEFT OFF', style: TextStyle(color: Color(0xFFD9B96E), fontSize: 9, letterSpacing: 1.1, fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 5),
+                            Text((track['title'] ?? 'Now playing').toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+                            Text((track['artist'] ?? 'High-Tech Entertainment').toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                          ])),
+                          const Icon(Icons.play_circle_fill_rounded, color: Color(0xFFD9B96E), size: 34),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
 class ArtistsTab extends StatelessWidget {
   const ArtistsTab({super.key});
   @override
