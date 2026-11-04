@@ -153,8 +153,6 @@ class _LocalFilesTabState extends State<LocalFilesTab> {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: [..._audioExtensions, ..._videoExtensions],
-        allowMultiple: true,
-        withData: false,
       );
 
       if (result.isEmpty || !mounted) return;
