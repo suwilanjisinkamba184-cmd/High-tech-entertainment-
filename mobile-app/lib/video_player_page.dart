@@ -2,15 +2,12 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
 import 'playback_engine.dart';
 
-/// Shared video screen for streamed and on-device media.
-///
-/// The music service remains the only just_audio AudioPlayer in the app.
-/// Music is paused while a video is playing so the two audio streams never
-/// compete; previously playing music resumes only after video disposal ends.
+/// Shared streamed and on-device video player with a real landscape mode.
 class HteVideoPlayerPage extends StatefulWidget {
   const HteVideoPlayerPage({
     super.key,
@@ -32,6 +29,7 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
   bool _ready = false;
   bool _resumeMusic = false;
   bool _lastPlaying = false;
+  bool _isFullscreen = false;
   String? _error;
 
   @override
@@ -42,9 +40,6 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
 
   Future<void> _initialize() async {
     final music = HtePlayback.instance;
-
-    // An advertisement is non-interruptible. Do not let opening a video pause
-    // or replace the advert that is currently playing.
     if (music.adPlaying.value) {
       if (mounted) {
         setState(() => _error =
@@ -54,16 +49,12 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
     }
 
     _resumeMusic = music.player.playing;
-    if (_resumeMusic) {
-      await music.player.pause();
-    }
-    // The route may have been closed while the asynchronous pause was pending.
+    if (_resumeMusic) await music.player.pause();
     if (!mounted) return;
 
     try {
-      final String? path = widget.filePath;
+      final path = widget.filePath;
       late final VideoPlayerController video;
-
       if (path != null && path.trim().isNotEmpty) {
         final file = File(path);
         if (!await file.exists()) {
@@ -83,32 +74,23 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
 
       _controller = video;
       await video.initialize();
-      // dispose() owns controller cleanup if the route was closed meanwhile.
       if (!mounted) return;
-
       _lastPlaying = video.value.isPlaying;
       video.addListener(_onVideoChanged);
       setState(() => _ready = true);
       await video.play();
     } catch (error) {
-      if (mounted) {
-        setState(() => _error = _friendlyVideoError(error));
-      }
+      if (mounted) setState(() => _error = _friendlyVideoError(error));
     }
   }
 
   String _friendlyVideoError(Object error) {
     final value = error.toString();
-    if (value.contains('SocketException') ||
-        value.contains('Failed host lookup')) {
+    if (value.contains('SocketException') || value.contains('Failed host lookup')) {
       return 'The video could not load because there is no internet connection. Download it first or choose a local video.';
     }
-    if (value.contains('404')) {
-      return 'This video link is no longer available. Ask the administrator to upload it again.';
-    }
-    if (value.contains('403') || value.contains('401')) {
-      return 'This video is private or its access has expired.';
-    }
+    if (value.contains('404')) return 'This video link is no longer available. Ask the administrator to upload it again.';
+    if (value.contains('403') || value.contains('401')) return 'This video is private or its access has expired.';
     return 'Video playback failed. The file may use an unsupported format or damaged codec. Details: $value';
   }
 
@@ -136,6 +118,24 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
     }
   }
 
+  Future<void> _setFullscreen(bool value) async {
+    if (!mounted || _isFullscreen == value) return;
+    setState(() => _isFullscreen = value);
+    if (value) {
+      await SystemChrome.setPreferredOrientations(const [
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    } else {
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      await SystemChrome.setPreferredOrientations(const [
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+    }
+  }
+
   Future<void> _disposeVideoThenResume(VideoPlayerController video) async {
     try {
       await video.dispose();
@@ -148,7 +148,6 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
   Future<void> _resumeMusicAfterVideo() async {
     if (!_resumeMusic) return;
     final music = HtePlayback.instance;
-    // Never restart music over a mandatory advertisement.
     if (music.adPlaying.value) return;
     try {
       await music.player.play();
@@ -159,10 +158,14 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
 
   @override
   void dispose() {
+    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+    unawaited(SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]));
     final video = _controller;
     if (video != null) {
       video.removeListener(_onVideoChanged);
-      // Wait for the video audio session to be released before resuming music.
       unawaited(_disposeVideoThenResume(video));
     } else {
       unawaited(_resumeMusicAfterVideo());
@@ -170,85 +173,141 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final video = _controller;
-    final ratio = video?.value.aspectRatio ?? 16 / 9;
+  String _time(Duration value) {
+    final minutes = value.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = value.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final hours = value.inHours;
+    return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
+  }
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-        backgroundColor: Colors.black,
-      ),
-      body: Center(
-        child: _error != null
-            ? Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.error_outline, color: Colors.amber, size: 44),
-                    const SizedBox(height: 14),
-                    Text(_error!, textAlign: TextAlign.center),
-                    const SizedBox(height: 18),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      child: const Text('Go back'),
+  Widget _videoSurface(VideoPlayerController video) {
+    final size = video.value.size;
+    final ratio = video.value.aspectRatio;
+    return Center(
+      child: AspectRatio(
+        aspectRatio: ratio.isFinite && ratio > 0 ? ratio : 16 / 9,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            VideoPlayer(video),
+            GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _togglePlayback,
+              child: Center(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Icon(
+                      video.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
+                      size: 62,
+                      color: Colors.white,
                     ),
-                  ],
+                  ),
                 ),
-              )
-            : !_ready || video == null
-                ? const Column(
-                    mainAxisSize: MainAxisSize.min,
+              ),
+            ),
+            Positioned(
+              left: 10,
+              right: 10,
+              bottom: 4,
+              child: Material(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(14),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  child: Row(
                     children: [
-                      CircularProgressIndicator(color: Color(0xFFD4AF37)),
-                      SizedBox(height: 14),
-                      Text('Loading video…', style: TextStyle(color: Colors.white70)),
-                    ],
-                  )
-                : AspectRatio(
-                    aspectRatio: ratio.isFinite && ratio > 0 ? ratio : 16 / 9,
-                    child: Stack(
-                      alignment: Alignment.bottomCenter,
-                      children: [
-                        VideoPlayer(video),
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: _togglePlayback,
-                          child: Center(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: Colors.black54,
-                                borderRadius: BorderRadius.circular(48),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(10),
-                                child: Icon(
-                                  video.value.isPlaying
-                                      ? Icons.pause_circle_filled
-                                      : Icons.play_circle_fill,
-                                  size: 62,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        VideoProgressIndicator(
+                      IconButton(
+                        tooltip: video.value.isPlaying ? 'Pause video' : 'Play video',
+                        onPressed: _togglePlayback,
+                        icon: Icon(video.value.isPlaying ? Icons.pause : Icons.play_arrow, color: Colors.white),
+                      ),
+                      Text(_time(video.value.position), style: const TextStyle(color: Colors.white, fontSize: 11)),
+                      Expanded(
+                        child: VideoProgressIndicator(
                           video,
                           allowScrubbing: true,
-                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                           colors: const VideoProgressColors(
                             playedColor: Color(0xFFD4AF37),
                             bufferedColor: Colors.white38,
                             backgroundColor: Colors.white24,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      Text(_time(video.value.duration), style: const TextStyle(color: Colors.white, fontSize: 11)),
+                      IconButton(
+                        tooltip: _isFullscreen ? 'Exit full screen' : 'Full screen',
+                        onPressed: () => _setFullscreen(!_isFullscreen),
+                        icon: Icon(_isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen, color: const Color(0xFFD4AF37)),
+                      ),
+                    ],
                   ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final video = _controller;
+    return WillPopScope(
+      onWillPop: () async {
+        if (_isFullscreen) {
+          await _setFullscreen(false);
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        appBar: _isFullscreen
+            ? null
+            : AppBar(
+                title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                backgroundColor: Colors.black,
+                actions: [
+                  IconButton(
+                    tooltip: 'Full screen',
+                    onPressed: _ready ? () => _setFullscreen(true) : null,
+                    icon: const Icon(Icons.fullscreen, color: Color(0xFFD4AF37)),
+                  ),
+                ],
+              ),
+        body: Center(
+          child: _error != null
+              ? Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.amber, size: 44),
+                      const SizedBox(height: 14),
+                      Text(_error!, textAlign: TextAlign.center),
+                      const SizedBox(height: 18),
+                      TextButton(onPressed: () => Navigator.of(context).maybePop(), child: const Text('Go back')),
+                    ],
+                  ),
+                )
+              : !_ready || video == null
+                  ? const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: Color(0xFFD4AF37)),
+                        SizedBox(height: 14),
+                        Text('Loading video…', style: TextStyle(color: Colors.white70)),
+                      ],
+                    )
+                  : _videoSurface(video),
+        ),
       ),
     );
   }
