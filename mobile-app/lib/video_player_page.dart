@@ -258,13 +258,12 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
   @override
   Widget build(BuildContext context) {
     final video = _controller;
-    return WillPopScope(
-      onWillPop: () async {
-        if (_isFullscreen) {
-          await _setFullscreen(false);
-          return false;
+    return PopScope(
+      canPop: !_isFullscreen,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _isFullscreen) {
+          unawaited(_setFullscreen(false));
         }
-        return true;
       },
       child: Scaffold(
         backgroundColor: Colors.black,
