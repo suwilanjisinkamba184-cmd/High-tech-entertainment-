@@ -58,6 +58,10 @@ void main() {
         friendlyErrorMessage(Exception('Payload too large')),
         contains('file is too large'),
       );
+      expect(
+        friendlyErrorMessage(const FormatException('Choose a profile image smaller than 5 MB.')),
+        contains('profile image smaller than 5 MB'),
+      );
     });
   });
   group('Scheduled audio advertisement counter', () {
