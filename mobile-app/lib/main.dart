@@ -43,7 +43,6 @@ final AudioPlayer _startupSoundPlayer = AudioPlayer();
 /// animated loading screen and sound finish together. This is never an advert.
 Future<void> playStartupJingle({bool force = false}) async {
   try {
-    final preferences = await SharedPreferences.getInstance();
     // The branded launch ident is mandatory and is not user-disableable.
     // Keep the legacy preference key ignored so older installs also play it.
     await _startupSoundPlayer.stop();
