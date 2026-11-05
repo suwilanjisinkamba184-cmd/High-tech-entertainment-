@@ -2283,6 +2283,7 @@ class SavedTab extends StatefulWidget {
 class _SavedTabState extends State<SavedTab> {
   List<Map<String,dynamic>> saved = [];
   bool loading = true;
+  String? loadError;
   @override
   void initState() {
     super.initState();
@@ -2323,6 +2324,7 @@ class _SavedTabState extends State<SavedTab> {
       }
     } catch (error) {
       saved = [];
+      loadError = friendlyErrorMessage(error);
       debugPrint('Could not load synced favourites: $error');
     }
     if (mounted) setState(() => loading = false);
@@ -2331,7 +2333,13 @@ class _SavedTabState extends State<SavedTab> {
   Widget build(BuildContext context) => Column(children: [
     const Brand(),
     const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Your favourites', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)))),
-    Expanded(child: loading ? const Busy() : saved.isEmpty ? const Notice('No saved tracks yet. Tap the heart beside a track to add it here.') : TrackList(items: saved)),
+    Expanded(child: loading
+      ? const Busy()
+      : loadError != null
+          ? Notice(loadError!, onRetry: load)
+          : saved.isEmpty
+              ? const Notice('No saved tracks yet. Tap the heart beside a track to add it here.')
+              : TrackList(items: saved)),
   ]);
 }
 
@@ -2413,17 +2421,21 @@ class PlaylistsTab extends StatefulWidget {
 class _PlaylistsTabState extends State<PlaylistsTab> {
   List<Map<String,dynamic>> items=[];
   bool loading=true;
+  String? loadError;
   @override
   void initState(){super.initState();load();}
   Future<void> load() async {
-    setState(()=>loading=true);
+    if(mounted)setState(()=>{loading=true,loadError=null});
     try {
       final user=db.auth.currentUser;
       if(user==null){items=[];} else {
         final data=await db.from('playlists').select().eq('user_id',user.id).order('created_at',ascending:false);
         items=List<Map<String,dynamic>>.from(data);
       }
-    } catch(e){debugPrint('Playlist load failed: $e');}
+    } catch(e){
+      loadError=friendlyErrorMessage(e);
+      debugPrint('Playlist load failed: $e');
+    }
     if(mounted)setState(()=>loading=false);
   }
   Future<void> create() async {
@@ -2443,7 +2455,11 @@ class _PlaylistsTabState extends State<PlaylistsTab> {
     catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
   }
   @override
-  Widget build(BuildContext context)=>loading?const Busy():Column(children:[
+  Widget build(BuildContext context)=>loading
+    ? const Busy()
+    : loadError != null
+        ? Notice(loadError!, onRetry: load)
+        : Column(children:[
     Padding(padding:const EdgeInsets.fromLTRB(16,12,16,6),child:Row(children:[
       const Expanded(child:Text('Your playlists',style:TextStyle(fontWeight:FontWeight.w700))),
       FilledButton.tonalIcon(onPressed:create,icon:const Icon(Icons.add),label:const Text('Create')),
@@ -2471,10 +2487,11 @@ class PlaylistDetailPage extends StatefulWidget {
 class _PlaylistDetailPageState extends State<PlaylistDetailPage>{
   List<Map<String,dynamic>> tracks=[];
   bool loading=true;
+  String? loadError;
   @override
   void initState(){super.initState();load();}
   Future<void> load() async {
-    setState(()=>loading=true);
+    if(mounted)setState(()=>{loading=true,loadError=null});
     try {
       final links=await db.from('playlist_tracks').select('track_id').eq('playlist_id',widget.playlist['id']).order('position');
       final ids=links.map((e)=>e['track_id'].toString()).toList();
@@ -2483,7 +2500,10 @@ class _PlaylistDetailPageState extends State<PlaylistDetailPage>{
         final byId={for(final row in data) row['id'].toString():Map<String,dynamic>.from(row)};
         tracks=ids.where(byId.containsKey).map((id)=>byId[id]!).toList();
       }
-    }catch(e){debugPrint('Playlist tracks load failed: $e');}
+    }catch(e){
+      loadError=friendlyErrorMessage(e);
+      debugPrint('Playlist tracks load failed: $e');
+    }
     if(mounted)setState(()=>loading=false);
   }
   Future<void> addTracks() async {
@@ -2516,7 +2536,11 @@ class _PlaylistDetailPageState extends State<PlaylistDetailPage>{
   @override
   Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:Text((widget.playlist['name']??'Playlist').toString())),
-    body:loading?const Busy():Column(children:[
+    body:loading
+      ? const Busy()
+      : loadError != null
+          ? Notice(loadError!, onRetry: load)
+          : Column(children:[
       Padding(padding:const EdgeInsets.all(16),child:Row(children:[
         Expanded(child:Text('${tracks.length} tracks',style:const TextStyle(color:Colors.white60))),
         FilledButton.tonalIcon(onPressed:addTracks,icon:const Icon(Icons.add),label:const Text('Add tracks')),
