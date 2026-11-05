@@ -177,9 +177,13 @@ class HtePlayback {
       return;
     }
     if (id != null) {
-      final sourceIndex = _queue.indexWhere(
-        (item) => item['id']?.toString() == id && _queue.indexOf(item) > _index,
-      );
+      var sourceIndex = -1;
+      for (var i = _index + 1; i < _queue.length; i++) {
+        if (_queue[i]['id']?.toString() == id) {
+          sourceIndex = i;
+          break;
+        }
+      }
       if (sourceIndex >= 0) _queue.removeAt(sourceIndex);
       _manualQueue.removeWhere((item) => item['id']?.toString() == id);
     }
