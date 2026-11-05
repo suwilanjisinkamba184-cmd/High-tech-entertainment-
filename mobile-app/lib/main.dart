@@ -2193,7 +2193,12 @@ class _SettingsPageState extends State<SettingsPage> {
       final info = await PackageInfo.fromPlatform();
       final response = await http.get(
         Uri.https('api.github.com', '/repos/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest'),
-        headers: {'Accept': 'application/vnd.github+json', 'User-Agent': 'High-Tech-Entertainment-App'},
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'High-Tech-Entertainment-App',
+          'Cache-Control': 'no-cache',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
       ).timeout(const Duration(seconds: 20));
       if (!mounted) return;
       if (response.statusCode == 404) {
@@ -2201,7 +2206,10 @@ class _SettingsPageState extends State<SettingsPage> {
         return;
       }
       if (response.statusCode != 200) {
-        _message(friendlyErrorMessage(HttpException('Update request failed with HTTP ${response.statusCode}')));
+        final detail = response.statusCode == 403 || response.statusCode == 429
+            ? 'GitHub is temporarily limiting update checks. Please try again in a few minutes.'
+            : 'Update service returned HTTP ${response.statusCode}. Please retry.';
+        _message(detail);
         return;
       }
       final release = jsonDecode(response.body) as Map<String, dynamic>;
@@ -2214,9 +2222,23 @@ class _SettingsPageState extends State<SettingsPage> {
       final latest = releaseTag
           .replaceFirst(RegExp(r'^[vV]'), '')
           .replaceFirst(RegExp(r'-SU$', caseSensitive: false), '');
+      // Compare semantic version, Android build number and SU flavour separately.
+      // This catches same-version hotfixes and SU flavour upgrades reliably.
       final installedSu = info.version.toUpperCase().contains(' SU');
+      final installedSemanticVersion = info.version.replaceFirst(
+        RegExp(r'\s+SU$', caseSensitive: false), '').trim();
+      final installedBuild = int.tryParse(info.buildNumber) ?? 0;
+      final releaseBody = (release['body'] ?? '').toString();
+      final releaseBuildMatch = RegExp(
+        r'Android build:\s*(\d+)', caseSensitive: false).firstMatch(releaseBody);
+      final latestBuild = int.tryParse(releaseBuildMatch?.group(1) ?? '') ?? 0;
+      final versionComparison = _compareVersions(latest, installedSemanticVersion);
+      final buildUpgradeAvailable = latestBuild > 0 && latestBuild > installedBuild;
       final flavourUpgradeAvailable = isSuRelease && !installedSu;
-      if (latest.isEmpty || (_compareVersions(latest, info.version) <= 0 && !flavourUpgradeAvailable)) {
+      final updateAvailable = versionComparison > 0 ||
+          (versionComparison == 0 && buildUpgradeAvailable) ||
+          flavourUpgradeAvailable;
+      if (latest.isEmpty || !updateAvailable) {
         _message('You are using the latest published version ($version).');
         return;
       }
