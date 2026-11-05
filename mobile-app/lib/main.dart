@@ -2194,20 +2194,36 @@ class DiscoverTab extends StatefulWidget {
 }
 class _DiscoverTabState extends State<DiscoverTab> {
   final controller = TextEditingController();
+  Timer? _searchDebounce;
+  int _searchRequest = 0;
   List<Map<String,dynamic>> results = [];
   bool loading = true;
   String? error;
   @override
   void initState() { super.initState(); search(''); }
   Future<void> search(String term) async {
-    setState(() { loading = true; error = null; });
+    final requestId = ++_searchRequest;
+    if (mounted) setState(() { loading = true; error = null; });
     try {
-      results = await publishedTracks(term);
-    } catch (e) { error = friendlyErrorMessage(e); }
-    if (mounted) setState(() => loading = false);
+      final found = await publishedTracks(term);
+      // Ignore stale responses when a newer search has already started.
+      if (!mounted || requestId != _searchRequest) return;
+      results = found;
+    } catch (e) {
+      if (!mounted || requestId != _searchRequest) return;
+      error = friendlyErrorMessage(e);
+    }
+    if (mounted && requestId == _searchRequest) {
+      setState(() => loading = false);
+    }
   }
   @override
-  void dispose() { controller.dispose(); super.dispose(); }
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchRequest++;
+    controller.dispose();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) => Column(children: [
     const Brand(tagline: 'FIND YOUR NEXT FREQUENCY'),
@@ -2229,7 +2245,13 @@ class _DiscoverTabState extends State<DiscoverTab> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: TextField(
         controller: controller,
-        onChanged: search,
+        onChanged: (value) {
+          _searchDebounce?.cancel();
+          _searchDebounce = Timer(
+            const Duration(milliseconds: 300),
+            () => search(value),
+          );
+        },
         decoration: InputDecoration(
           prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFFE3BD70)),
           hintText: 'Search tracks by title',
@@ -2245,7 +2267,11 @@ class _DiscoverTabState extends State<DiscoverTab> {
       child: Align(alignment: Alignment.centerLeft,
         child: Text('AVAILABLE TO PLAY', style: TextStyle(color: Color(0xFFE3BD70), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.4))),
     ),
-    Expanded(child: loading ? const Busy() : error != null ? Notice(friendlyErrorMessage(error!)) : TrackList(items: results)),
+    Expanded(child: loading
+      ? const Busy()
+      : error != null
+          ? Notice(friendlyErrorMessage(error!), onRetry: () => search(controller.text))
+          : TrackList(items: results)),
   ]);
 }
 
