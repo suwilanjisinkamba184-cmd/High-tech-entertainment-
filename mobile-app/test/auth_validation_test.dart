@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:high_tech_entertainment/playback_engine.dart' show CompletedTrackAdCounter;
 import 'package:high_tech_entertainment/main.dart'
     show friendlyErrorMessage, isValidEmailAddress, isValidPasswordPair;
 
@@ -46,4 +47,36 @@ void main() {
       );
     });
   });
+  group('Scheduled audio advertisement counter', () {
+    test('triggers only on the eighth completed music track', () {
+      final counter = CompletedTrackAdCounter();
+      for (var track = 1; track <= 7; track++) {
+        expect(counter.recordCompletion(interval: 8, enabled: true), isFalse);
+      }
+      expect(counter.completedTracks, 7);
+      expect(counter.recordCompletion(interval: 8, enabled: true), isTrue);
+    });
+
+    test('does not count completions while ads are disabled', () {
+      final counter = CompletedTrackAdCounter();
+      for (var track = 0; track < 12; track++) {
+        expect(counter.recordCompletion(interval: 8, enabled: false), isFalse);
+      }
+      expect(counter.completedTracks, 0);
+    });
+
+    test('resets after an advert has completed', () {
+      final counter = CompletedTrackAdCounter();
+      for (var track = 0; track < 8; track++) {
+        counter.recordCompletion(interval: 8, enabled: true);
+      }
+      expect(counter.completedTracks, 8);
+      counter.reset();
+      expect(counter.completedTracks, 0);
+      for (var track = 0; track < 7; track++) {
+        expect(counter.recordCompletion(interval: 8, enabled: true), isFalse);
+      }
+    });
+  });
+
 }
