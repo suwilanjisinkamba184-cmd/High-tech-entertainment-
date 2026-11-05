@@ -46,6 +46,19 @@ void main() {
         contains('format is not supported'),
       );
     });
+
+    test('does not expose raw storage permission errors', () {
+      final message = friendlyErrorMessage(Exception('new row violates row-level security policy'));
+      expect(message, contains('not permitted for the current account'));
+      expect(message, isNot(contains('row-level security')));
+    });
+
+    test('explains oversized uploads in plain language', () {
+      expect(
+        friendlyErrorMessage(Exception('Payload too large')),
+        contains('file is too large'),
+      );
+    });
   });
   group('Scheduled audio advertisement counter', () {
     test('triggers only on the eighth completed music track', () {
