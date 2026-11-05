@@ -1,6 +1,6 @@
 # High-Tech Entertainment — Native Android App
 
-The Flutter application in this folder is the native Android client for High-Tech Entertainment.\n\nOfficial website: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/ Current app version: **2.2.2**.
+The Flutter application in this folder is the native Android client for High-Tech Entertainment.\n\nOfficial website: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/ Current app version: **2.2.3**.
 
 ## Experiences
 
@@ -47,6 +47,11 @@ Required repository Actions secrets:
 - `ANDROID_STORE_PASSWORD`
 - `ANDROID_KEY_PASSWORD`
 - `GOOGLE_WEB_CLIENT_ID` (optional; enables the native Google account chooser instead of the Supabase OAuth deep-link fallback)
+- `SHOREBIRD_TOKEN` (required; used only by GitHub Actions to publish signed OTA patches and Shorebird releases)
+
+## OTA updates
+
+The Android release workflow initializes Shorebird on the first production build and commits the generated `shorebird.yaml` configuration to `mobile-app/`. Dart-only changes under `mobile-app/lib/` automatically publish a patch to the stable track. Changes to assets, dependencies, app configuration, or build workflows trigger a full signed Shorebird APK release; increment the app version/build number in `pubspec.yaml` before that release. Pull requests run validation only. You can also run the workflow manually and choose `patch` or `release`. Shorebird patches cannot update native Android code, permissions, native plugin changes, or bundled assets; those require users to install a new APK.
 
 Build locally from this directory:
 ```bash
