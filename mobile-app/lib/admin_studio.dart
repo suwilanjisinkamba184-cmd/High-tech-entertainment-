@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:share_plus/share_plus.dart';
+import 'diagnostics_service.dart';
 
 const _founderId = 'b268df9e-eff5-43b9-a38f-869b33add38b';
 const _gold = Color(0xFFE3BD70);
@@ -42,7 +44,8 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   List<Map<String,dynamic>> _users = [];
   Map<String,dynamic> _analytics = {};
   Map<String,int> _metrics = {};
-  static const _sections = ['Overview','Music uploads','Tracks','Artists','Releases','Artwork','Users','Analytics','Activity','Videos','Notifications'];
+  List<Map<String,dynamic>> _diagnostics = [];
+  static const _sections = ['Overview','Music uploads','Tracks','Artists','Releases','Artwork','Users','Analytics','Activity','Videos','Notifications','Developer diagnostics'];
 
   @override
   void initState() { super.initState(); _loadAll(); }
@@ -51,6 +54,22 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     _title.dispose(); _artist.dispose(); _genre.dispose();
     _artistName.dispose(); _artistBio.dispose(); _releaseTitle.dispose(); _spotifyUrl.dispose(); _releaseCoverUrl.dispose(); _coverUrl.dispose(); _videoTitle.dispose(); _videoArtist.dispose(); _videoDescription.dispose(); _notificationTitle.dispose(); _notificationBody.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadDiagnostics() async {
+    final events = await HteDiagnostics.read();
+    if (mounted) setState(() => _diagnostics = events);
+  }
+
+  Future<void> _shareDiagnostics() async {
+    final report = await HteDiagnostics.exportReport();
+    await Share.share(report, subject: 'High-Tech Entertainment diagnostic report');
+  }
+
+  Future<void> _clearDiagnostics() async {
+    await HteDiagnostics.clear();
+    await _loadDiagnostics();
+    _toast('Local diagnostic history cleared.');
   }
 
   bool get _isFounder => _supabase.auth.currentUser?.id == _founderId;
@@ -498,6 +517,50 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         const SizedBox(height: 12),
         SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: _busy ? null : _sendNotification, icon: const Icon(Icons.send), label: const Text('Send announcement'))),
       ]);
+      case 11: return FutureBuilder<List<Map<String,dynamic>>>(
+        future: HteDiagnostics.read(),
+        builder: (context, snapshot) {
+          final events = snapshot.data ?? _diagnostics;
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            _header('PRIVATE DEVELOPER TOOL', 'Error diagnostics',
+              'On-device error journal for troubleshooting. Reports redact common credentials and are shared only when you choose to export them.'),
+            Row(children: [
+              Expanded(child: FilledButton(
+                onPressed: _shareDiagnostics,
+                child: const Text('Export diagnostic report'),
+              )),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: events.isEmpty ? null : _clearDiagnostics,
+                child: const Text('Clear'),
+              ),
+            ]),
+            const SizedBox(height: 12),
+            Text('Recorded errors: ${events.length} (maximum 100)',
+              style: const TextStyle(color: Colors.white70)),
+            const SizedBox(height: 8),
+            if (snapshot.connectionState == ConnectionState.waiting && events.isEmpty)
+              const Center(child: CircularProgressIndicator()),
+            if (events.isEmpty)
+              const _AdminEmpty('No captured runtime errors are stored on this device. Framework and uncaught platform errors will appear here when they occur.'),
+            ...events.map((event) => Card(
+              child: ExpansionTile(
+                title: Text((event['error'] ?? 'Unknown error').toString(),
+                  maxLines: 2, overflow: TextOverflow.ellipsis),
+                subtitle: Text('${event['time'] ?? 'Unknown time'} · ${event['source'] ?? 'runtime'}'),
+                childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                children: [
+                  Align(alignment: Alignment.centerLeft,
+                    child: SelectableText((event['stack'] ?? '').toString())),
+                ],
+              ),
+            )),
+            const SizedBox(height: 12),
+            const Text('Privacy: reports contain technical error messages and stack traces. Review the exported report before sending it. No automatic upload to a server is performed.',
+              style: TextStyle(color: Colors.white54, fontSize: 11, height: 1.5)),
+          ]);
+        },
+      );
       default: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         _header('AUDIT TRAIL','Platform activity','Recent tracks, artist profiles and releases from the live catalogue. A full actor-by-actor audit trail requires a dedicated audit-log table.'),
         const Text('Recent tracks',style:TextStyle(fontWeight:FontWeight.w700)),_trackRows(),
