@@ -37,6 +37,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/high-tech-startup.mp3
     - assets/high-tech-logo.svg
     - shorebird.yaml
 
