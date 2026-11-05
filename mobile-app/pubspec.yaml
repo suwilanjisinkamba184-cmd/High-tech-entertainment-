@@ -1,7 +1,7 @@
 name: high_tech_entertainment
 description: Official High-Tech Entertainment native app.
 publish_to: 'none'
-version: 2.2.1+18
+version: 2.2.2+19
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
