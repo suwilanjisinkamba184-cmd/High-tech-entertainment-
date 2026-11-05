@@ -522,10 +522,8 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       // Prepare backend services while the launch jingle plays. The splash
       // remains visible until both tasks finish; once the jingle completes,
       // there is no artificial minimum display delay.
-      await Future.wait<void>([
-        _playStartupSound(),
-        _initializeCoreServices(),
-      ]);
+      await _initializeCoreServices();
+      await _playStartupSound();
 
       if (!_startupSoundHandled) {
         debugPrint('HTE startup audio failed; continuing into the app interface.');
