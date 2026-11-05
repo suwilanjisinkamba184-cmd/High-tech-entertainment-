@@ -38,6 +38,39 @@ final HtePlayback playback = HtePlayback.instance;
 final AudioPlayer player = HtePlayback.instance.player;
 // Separate from the music/ad player and retained across StartupGate -> AuthGate.
 final AudioPlayer _startupSoundPlayer = AudioPlayer();
+
+/// Plays the bundled launch ident once and waits for its completion so the
+/// animated loading screen and sound finish together. This is never an advert.
+Future<void> playStartupJingle({bool force = false}) async {
+  try {
+    final preferences = await SharedPreferences.getInstance();
+    if (!force && !(preferences.getBool('hte_startup_sound_enabled') ?? true)) {
+      return;
+    }
+    await _startupSoundPlayer.stop();
+    await _startupSoundPlayer.setAudioSource(
+      AudioSource.asset('assets/high-tech-startup.mp3'),
+      preload: true,
+    );
+    await _startupSoundPlayer.setVolume(1.0);
+    await _startupSoundPlayer.setLoopMode(LoopMode.off);
+    final duration = _startupSoundPlayer.duration ?? const Duration(seconds: 8);
+    final timeout = duration > const Duration(seconds: 45)
+        ? const Duration(seconds: 50)
+        : duration + const Duration(seconds: 8);
+    await _startupSoundPlayer.play().timeout(
+      timeout,
+      onTimeout: () async {
+        await _startupSoundPlayer.stop();
+      },
+    );
+  } catch (error, stackTrace) {
+    // A failed sound must never prevent sign-in or app startup.
+    debugPrint('HTE startup sound playback failed: $error');
+    debugPrintStack(stackTrace: stackTrace);
+  }
+}
+
 final ValueNotifier<int> favouritesRevision = ValueNotifier<int>(0);
 
 /// Lightweight client-side validation; Supabase remains the authority.
@@ -318,7 +351,7 @@ class StartupGate extends StatefulWidget {
 class _StartupGateState extends State<StartupGate> with SingleTickerProviderStateMixin {
   bool _ready = false;
   bool _starting = true;
-  bool _startupSoundStarted = false;
+  bool _startupSoundHandled = false;
   String? _error;
   Future<void>? _initialization;
   late final AnimationController _startupAnimation;
@@ -339,29 +372,9 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   }
 
   Future<void> _playStartupSound() async {
-    if (_startupSoundStarted) return;
-    try {
-      // This is the dedicated startup jingle, not the separate advert asset.
-      // Prepare it only after JustAudioBackground has configured Android audio;
-      // configuring the background session afterwards can interrupt this player.
-      await _startupSoundPlayer.setAudioSource(
-        AudioSource.asset('assets/high-tech-startup.mp3'),
-        preload: true,
-      );
-      await _startupSoundPlayer.setVolume(1.0);
-      await _startupSoundPlayer.setLoopMode(LoopMode.off);
-      _startupSoundStarted = true;
-      // Do not hold authentication behind the full jingle duration. The player
-      // is process-wide and continues while StartupGate transitions to AuthGate.
-      unawaited(_startupSoundPlayer.play().catchError((Object error) {
-        debugPrint('HTE startup sound playback failed: $error');
-      }));
-    } catch (error, stackTrace) {
-      _startupSoundStarted = false;
-      // Startup audio is optional and must never block sign-in or show raw errors.
-      debugPrint('HTE startup sound could not be prepared: $error');
-      debugPrintStack(stackTrace: stackTrace);
-    }
+    if (_startupSoundHandled) return;
+    _startupSoundHandled = true;
+    await playStartupJingle();
   }
 
   /// Coalesce overlapping startup/retry requests into one initialization.
@@ -405,25 +418,13 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         }
       }
 
-      // Play the dedicated, bundled startup jingle after audio-session setup.
-      // It works offline and is independent from the scheduled advertisement.
-      await _playStartupSound();
-
-      // Never play an advert during startup: reopening the app or returning
-      // from a paused session must take the listener directly to sign-in.
-      // Scheduled audio adverts are handled only after completed music tracks.
-      // Restore the completed-track count so an app restart does not reset the
-      // promised eight-song advert interval.
-      await playback.restoreAdCounter();
-
-      // Initialise authentication/data services without waiting for audio.
-      if (!_supabaseInitialized) {
-        await Supabase.initialize(
-          url: supabaseUrl,
-          publishableKey: supabaseKey,
-        );
-        _supabaseInitialized = true;
-      }
+      // Keep the animated loading screen visible until BOTH the supplied
+      // startup jingle and essential app services have finished initialising.
+      // The audio runs offline while Supabase connects in parallel.
+      await Future.wait<void>([
+        _playStartupSound(),
+        _initializeCoreServices(),
+      ]);
       if (mounted) {
         setState(() {
           _ready = true;
@@ -437,6 +438,19 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
           _starting = false;
         });
       }
+    }
+  }
+
+  Future<void> _initializeCoreServices() async {
+    // Never play an advert during startup. Restore the eight-completed-song
+    // counter independently from the launch jingle.
+    await playback.restoreAdCounter();
+    if (!_supabaseInitialized) {
+      await Supabase.initialize(
+        url: supabaseUrl,
+        publishableKey: supabaseKey,
+      );
+      _supabaseInitialized = true;
     }
   }
 
@@ -3152,6 +3166,8 @@ class _SettingsPageState extends State<SettingsPage> {
   String updateStatus = '';
   bool autoplaySetting = true;
   bool shuffleSetting = false;
+  bool startupSoundSetting = true;
+  bool audioAdsSetting = true;
   double videoSpeedSetting = 1.0;
 
   @override
@@ -3167,17 +3183,39 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _loadPlaybackSettings() async {
-    final prefs=await SharedPreferences.getInstance();
-    autoplaySetting=prefs.getBool('hte_autoplay')??true;
-    shuffleSetting=prefs.getBool('hte_shuffle')??false;
-    videoSpeedSetting=prefs.getDouble('hte_video_speed')??1.0;
-    playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting; playback.audioAdsEnabled=true; playback.adEvery=HtePlayback.advertInterval;
-    if(mounted)setState((){});
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      autoplaySetting = prefs.getBool('hte_autoplay') ?? true;
+      shuffleSetting = prefs.getBool('hte_shuffle') ?? false;
+      startupSoundSetting = prefs.getBool('hte_startup_sound_enabled') ?? true;
+      audioAdsSetting = prefs.getBool('hte_audio_ads_enabled') ?? true;
+      videoSpeedSetting = prefs.getDouble('hte_video_speed') ?? 1.0;
+      playback.autoplay = autoplaySetting;
+      playback.shuffle = shuffleSetting;
+      playback.audioAdsEnabled = audioAdsSetting;
+      playback.adEvery = HtePlayback.advertInterval;
+      await player.setShuffleModeEnabled(shuffleSetting);
+    } catch (error) {
+      debugPrint('HTE settings could not be loaded: $error');
+    }
+    if (mounted) setState(() {});
   }
-  Future<void> _savePlaybackSetting(String key,Object value) async {
-    final prefs=await SharedPreferences.getInstance();
-    if(value is bool) await prefs.setBool(key,value);
-    if(value is int) await prefs.setInt(key,value);
+
+  Future<void> _savePlaybackSetting(String key, Object value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (value is bool) await prefs.setBool(key, value);
+      if (value is int) await prefs.setInt(key, value);
+      if (value is double) await prefs.setDouble(key, value);
+    } catch (error) {
+      debugPrint('HTE setting $key could not be saved: $error');
+      if (mounted) _message('This setting could not be saved. Please try again.');
+    }
+  }
+
+  Future<void> _previewStartupSound() async {
+    _message('Playing your High-Tech startup sound…');
+    await playStartupJingle(force: true);
   }
 
   Future<void> _loadVersion() async {
@@ -3614,8 +3652,43 @@ class _SettingsPageState extends State<SettingsPage> {
       const SizedBox(height: 12),
       const Heading('Playback preferences'),
       Card(child: Column(children: [
-        SwitchListTile(title:const Text('Smart Autoplay'),subtitle:const Text('Continue with recommended music when the queue ends'),value:autoplaySetting,onChanged:(v){setState(()=>autoplaySetting=v);playback.autoplay=v;_savePlaybackSetting('hte_autoplay',v);}),
-        SwitchListTile(title:const Text('Shuffle'),subtitle:const Text('Play queued tracks in random order'),value:shuffleSetting,onChanged:(v){setState(()=>shuffleSetting=v);playback.shuffle=v;player.setShuffleModeEnabled(v);_savePlaybackSetting('hte_shuffle',v);}),
+        SwitchListTile(
+          title: const Text('Smart Autoplay'),
+          subtitle: const Text('Continue with recommended music when the queue ends'),
+          value: autoplaySetting,
+          onChanged: (value) {
+            setState(() => autoplaySetting = value);
+            playback.autoplay = value;
+            unawaited(_savePlaybackSetting('hte_autoplay', value));
+          },
+        ),
+        SwitchListTile(
+          title: const Text('Shuffle'),
+          subtitle: const Text('Play queued tracks in random order'),
+          value: shuffleSetting,
+          onChanged: (value) {
+            setState(() => shuffleSetting = value);
+            playback.shuffle = value;
+            unawaited(player.setShuffleModeEnabled(value));
+            unawaited(_savePlaybackSetting('hte_shuffle', value));
+          },
+        ),
+        SwitchListTile(
+          title: const Text('Startup sound'),
+          subtitle: const Text('Play your supplied High-Tech jingle with the animated loading screen'),
+          value: startupSoundSetting,
+          onChanged: (value) {
+            setState(() => startupSoundSetting = value);
+            unawaited(_savePlaybackSetting('hte_startup_sound_enabled', value));
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.volume_up_outlined, color: Color(0xFFD4AF37)),
+          title: const Text('Preview startup sound'),
+          subtitle: const Text('Test the bundled launch jingle now'),
+          trailing: const Icon(Icons.play_circle_outline),
+          onTap: _previewStartupSound,
+        ),
         ListTile(
           leading: const Icon(Icons.slow_motion_video_outlined, color: Color(0xFFD4AF37)),
           title: const Text('Default video playback speed'),
@@ -3624,10 +3697,15 @@ class _SettingsPageState extends State<SettingsPage> {
           onTap: _chooseVideoSpeed,
         ),
         const Divider(height: 1),
-        const ListTile(
-          leading: Icon(Icons.campaign_outlined, color: Color(0xFFD4AF37)),
-          title: Text('HT Audio Advertisements'),
-          subtitle: Text('No advert plays when the app opens or when you pause and resume. A sponsored audio advert may play only after 8 completed songs.'),
+        SwitchListTile(
+          title: const Text('Sponsored audio adverts'),
+          subtitle: const Text('When enabled, an advert may play only after 8 completed songs. Never on app launch, pause or resume.'),
+          value: audioAdsSetting,
+          onChanged: (value) {
+            setState(() => audioAdsSetting = value);
+            playback.audioAdsEnabled = value;
+            unawaited(_savePlaybackSetting('hte_audio_ads_enabled', value));
+          },
         ),
       ])),
       const SizedBox(height: 12),
