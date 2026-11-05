@@ -115,41 +115,6 @@ jobs:
           cp -R mobile-app/assets/. "$RUNNER_TEMP/hte_app/assets/"
           python3 -m pip install --quiet cairosvg
           python3 -c "import cairosvg; cairosvg.svg2png(url='$RUNNER_TEMP/hte_app/assets/high-tech-logo.svg', write_to='$RUNNER_TEMP/hte_app/assets/high-tech-logo.png', output_width=1024, output_height=1024)"
-      - name: Configure Shorebird app identity
-        if: steps.ota_mode.outputs.mode != 'validate'
-        working-directory: ${{ runner.temp }}/hte_app
-        env:
-          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
-        shell: bash
-        run: |
-          if [ -z "$SHOREBIRD_TOKEN" ]; then
-            echo "::error::SHOREBIRD_TOKEN is missing from repository Actions secrets."
-            exit 1
-          fi
-          if [ -f "$GITHUB_WORKSPACE/mobile-app/shorebird.yaml" ]; then
-            cp "$GITHUB_WORKSPACE/mobile-app/shorebird.yaml" shorebird.yaml
-            python3 - <<'PY'
-          from pathlib import Path
-          path = Path("pubspec.yaml")
-          text = path.read_text()
-          if "    - shorebird.yaml" not in text:
-              marker = "  assets:" + chr(10)
-              if marker not in text:
-                  raise SystemExit("Could not find Flutter assets section in pubspec.yaml")
-              path.write_text(text.replace(marker, marker + "    - shorebird.yaml" + chr(10), 1))
-          PY
-          else
-            shorebird init --display-name "High-Tech Entertainment"
-            cp shorebird.yaml "$GITHUB_WORKSPACE/mobile-app/shorebird.yaml"
-            cp pubspec.yaml "$GITHUB_WORKSPACE/mobile-app/pubspec.yaml"
-            cd "$GITHUB_WORKSPACE"
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add mobile-app/shorebird.yaml mobile-app/pubspec.yaml
-            git commit -m "Initialize Shorebird OTA updates"
-            git push origin "HEAD:${{ github.ref_name }}"
-            cd "$RUNNER_TEMP/hte_app"
-          fi
       - name: Set Play Store Android identity, SDK levels and target API
         working-directory: ${{ runner.temp }}/hte_app
         run: |
@@ -241,6 +206,41 @@ jobs:
               raise SystemExit("Android app Gradle build file not found")
           PY
           grep -R -E "minSdk|compileSdk|targetSdk" android/app/build.gradle*
+      - name: Configure Shorebird app identity
+        if: steps.ota_mode.outputs.mode != 'validate'
+        working-directory: ${{ runner.temp }}/hte_app
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+        shell: bash
+        run: |
+          if [ -z "$SHOREBIRD_TOKEN" ]; then
+            echo "::error::SHOREBIRD_TOKEN is missing from repository Actions secrets."
+            exit 1
+          fi
+          if [ -f "$GITHUB_WORKSPACE/mobile-app/shorebird.yaml" ]; then
+            cp "$GITHUB_WORKSPACE/mobile-app/shorebird.yaml" shorebird.yaml
+            python3 - <<'PY'
+          from pathlib import Path
+          path = Path("pubspec.yaml")
+          text = path.read_text()
+          if "    - shorebird.yaml" not in text:
+              marker = "  assets:" + chr(10)
+              if marker not in text:
+                  raise SystemExit("Could not find Flutter assets section in pubspec.yaml")
+              path.write_text(text.replace(marker, marker + "    - shorebird.yaml" + chr(10), 1))
+          PY
+          else
+            shorebird init --display-name "High-Tech Entertainment"
+            cp shorebird.yaml "$GITHUB_WORKSPACE/mobile-app/shorebird.yaml"
+            cp pubspec.yaml "$GITHUB_WORKSPACE/mobile-app/pubspec.yaml"
+            cd "$GITHUB_WORKSPACE"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add mobile-app/shorebird.yaml mobile-app/pubspec.yaml
+            git commit -m "Initialize Shorebird OTA updates"
+            git push origin "HEAD:${{ github.ref_name }}"
+            cd "$RUNNER_TEMP/hte_app"
+          fi
       - name: Configure Android upload-key signing
         id: android_signing
         working-directory: ${{ runner.temp }}/hte_app
