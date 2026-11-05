@@ -28,6 +28,18 @@ This is a directional synthesis of current 2025–2026 product coverage, communi
 - web.dev — offline UX guidance: make Save offline explicit, show what is available offline and explain storage: https://web.dev/articles/offline-ux-design-guidelines
 - Shorebird official docs — automatic patches download in the background and load on the next process start; a Flutter widget/engine rebuild is not a substitute for a process restart: https://docs.shorebird.dev/code-push/update-strategies/ and https://docs.shorebird.dev/code-push/faq/
 
+## Embedded self-healing engineer
+
+The OTA candidate now includes a conservative local recovery service:
+
+- Captures Flutter framework and platform runtime errors in a bounded, local diagnostic journal with credential redaction.
+- Repairs only known invalid local preference values (autoplay, shuffle, video speed and theme).
+- Runs the same safe checks before startup services read settings.
+- Exposes a hidden Engineer Mode through seven taps on the App version row in Settings. It can run a manual repair check and copy a diagnostic report.
+- Never clears all app storage, signs users out, deletes downloads, edits server data or executes downloaded scripts.
+
+This is a first recovery layer, not a universal code-repair AI. Native crashes, arbitrary code defects, backend outages and unsupported plugin faults still require a verified app/OTA fix. A repair that would risk a user's account or media must ask for consent rather than silently deleting data.
+
 ## Current High-Tech app audit
 
 ### Already present in the inspected Android code
