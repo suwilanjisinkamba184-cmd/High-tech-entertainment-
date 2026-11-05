@@ -100,11 +100,34 @@ String friendlyErrorMessage(Object error) {
     return 'Your device could not access this file. Check available storage and permissions.';
   }
   if (details.contains('row level security') ||
-      details.contains('permission denied')) {
+      details.contains('row-level security') ||
+      details.contains('permission denied') ||
+      details.contains('not authorized')) {
     return 'This action is not permitted for the current account.';
   }
   if (details.contains('bucket not found')) {
     return 'Media storage is not configured correctly. Please contact support.';
+  }
+  if (details.contains('payload too large') ||
+      details.contains('file size exceeds') ||
+      details.contains('maximum allowed size')) {
+    return 'This file is too large. Choose a smaller file and try again.';
+  }
+  if (details.contains('duplicate key') ||
+      details.contains('already exists')) {
+    return 'This item already exists. Refresh the list and try a different name.';
+  }
+  if (details.contains('pgrst116') ||
+      details.contains('no rows found') ||
+      details.contains('object not found')) {
+    return 'This item is no longer available. Refresh and try again.';
+  }
+  if (details.contains('storageexception') ||
+      details.contains('storage api')) {
+    return 'Media storage could not complete the request. Check your connection and access, then retry.';
+  }
+  if (details.contains('relation') && details.contains('does not exist')) {
+    return 'This feature is temporarily unavailable. Please try again later.';
   }
   return 'Something went wrong. Please try again.';
 }
