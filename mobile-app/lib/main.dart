@@ -730,7 +730,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                   const SizedBox(height: 18),
                   OutlinedButton.icon(
                     onPressed: _starting ? null : _restartApplication,
-                    icon: const Icon(Icons.restart_alt_rounded),
+                    icon: const Icon(Icons.refresh_rounded),
                     label: const Text('Restart application'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFE5C77F),
@@ -1595,7 +1595,7 @@ class ContinueListeningCard extends StatelessWidget {
                             style: const TextStyle(color: Colors.white54, fontSize: 12)),
                         ],
                       )),
-                      const Icon(Icons.play_circle_fill_rounded,
+                      const Icon(Icons.play_circle_fill,
                         color: Color(0xFFD9B96E), size: 34),
                     ]),
                   ),
@@ -1668,7 +1668,7 @@ class VideoPreviewList extends StatelessWidget {
                         url: item['thumbnail_url']?.toString(),
                         height: 126),
                     ),
-                    const Center(child: Icon(Icons.play_circle_fill_rounded,
+                    const Center(child: Icon(Icons.play_circle_fill,
                       color: Colors.white, size: 48)),
                     Positioned(
                       left: 8, bottom: 8,
