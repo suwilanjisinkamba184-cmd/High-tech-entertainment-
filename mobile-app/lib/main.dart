@@ -2425,7 +2425,7 @@ class _PlaylistsTabState extends State<PlaylistsTab> {
   @override
   void initState(){super.initState();load();}
   Future<void> load() async {
-    if(mounted)setState(()=>{loading=true,loadError=null});
+    if (mounted) setState(() { loading = true; loadError = null; });
     try {
       final user=db.auth.currentUser;
       if(user==null){items=[];} else {
@@ -2491,7 +2491,7 @@ class _PlaylistDetailPageState extends State<PlaylistDetailPage>{
   @override
   void initState(){super.initState();load();}
   Future<void> load() async {
-    if(mounted)setState(()=>{loading=true,loadError=null});
+    if (mounted) setState(() { loading = true; loadError = null; });
     try {
       final links=await db.from('playlist_tracks').select('track_id').eq('playlist_id',widget.playlist['id']).order('position');
       final ids=links.map((e)=>e['track_id'].toString()).toList();
