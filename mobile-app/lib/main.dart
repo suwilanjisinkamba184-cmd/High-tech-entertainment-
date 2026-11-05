@@ -1603,7 +1603,14 @@ class HomeTab extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(20, 24, 20, 8),
         child: Text('HIGH-TECH ENTERTAINMENT  ·  QUALITY SOUND, GLOBAL VIBES',
           textAlign: TextAlign.center,
-          style: Texclass ContinueListeningCard extends StatelessWidget {
+          style: TextStyle(color: Color(0xFF72808D), fontSize: 8,
+            letterSpacing: 1.2, height: 1.8)),
+      ),
+    ],
+  );
+}
+
+class ContinueListeningCard extends StatelessWidget {
   const ContinueListeningCard({super.key});
 
   @override
@@ -1750,12 +1757,6 @@ class VideoPreviewList extends StatelessWidget {
   );
 }
 
-tStyle(color: Color(0xFF72808D), fontSize: 8,
-            letterSpacing: 1.2, height: 1.8)),
-      ),
-    ],
-  );
-}
 
 class _HomeQuickAction extends StatelessWidget {
   const _HomeQuickAction({required this.icon, required this.title, required this.subtitle, required this.onTap});
