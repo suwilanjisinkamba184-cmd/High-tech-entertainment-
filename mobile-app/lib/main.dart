@@ -520,9 +520,14 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<AuthState>(
       stream: db.auth.onAuthStateChange,
       builder: (context, snapshot) {
+        final authState = snapshot.data;
         final session = snapshot.hasData
-            ? snapshot.data!.session
+            ? authState!.session
             : db.auth.currentSession;
+        if (session != null &&
+            authState?.event == AuthChangeEvent.passwordRecovery) {
+          return const PasswordRecoveryPage();
+        }
         return session == null ? const LoginPage() : const MainScreen();
       },
     );
@@ -535,48 +540,234 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF080808),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(26, 36, 26, 28),
-              shrinkWrap: true,
-              children: [
-                const SizedBox(height: 18),
-                Center(child: SvgPicture.asset(
-                  'assets/high-tech-logo.svg',
-                  width: 132,
-                  height: 132,
-                  semanticsLabel: 'High-Tech Entertainment',
-                )),
-                const SizedBox(height: 22),
-                const Text('HIGH-TECH ENTERTAINMENT',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900,
-                    letterSpacing: 2, color: Color(0xFFD4AF37))),
-                const SizedBox(height: 8),
-                const Text('Music. Beats. Production. Beyond.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70)),
-                const SizedBox(height: 30),
-                const Text('Welcome back',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                const Text('Sign in to continue to High-Tech Entertainment.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white60)),
-                const SizedBox(height: 22),
-                const AccountTab(embedded: true),
-              ],
+      body: Stack(children: [
+        const Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF17130D), Color(0xFF090E14), Color(0xFF06080C)],
+              ),
             ),
           ),
         ),
-      ),
+        Positioned(
+          top: -170, right: -125,
+          child: IgnorePointer(child: Container(
+            width: 390, height: 390,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0x2DE1BD72), width: 1.2),
+            ),
+          )),
+        ),
+        Positioned(
+          top: -125, right: -82,
+          child: IgnorePointer(child: Container(
+            width: 290, height: 290,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0x223F7894), width: 1.1),
+            ),
+          )),
+        ),
+        SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(24, 26, 24, 30),
+                children: [
+                  const SizedBox(height: 10),
+                  Center(child: Container(
+                    width: 142, height: 142,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const SweepGradient(colors: [
+                        Color(0xFF78572A), Color(0xFFE8C979),
+                        Color(0xFF5B8095), Color(0xFF78572A),
+                      ]),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0x447E622F), blurRadius: 35, spreadRadius: 3),
+                      ],
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF090D12)),
+                      child: SvgPicture.asset(
+                        'assets/high-tech-logo.svg',
+                        semanticsLabel: 'High-Tech Entertainment',
+                      ),
+                    ),
+                  )),
+                  const SizedBox(height: 22),
+                  const Text('HIGH-TECH ENTERTAINMENT',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900,
+                      letterSpacing: 2.2, color: Color(0xFFE4C477))),
+                  const SizedBox(height: 8),
+                  const Text('MUSIC. BEATS. PRODUCTION. BEYOND.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Color(0xFF9EADB8), fontSize: 9,
+                      fontWeight: FontWeight.w800, letterSpacing: 1.4)),
+                  const SizedBox(height: 28),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(18, 21, 18, 19),
+                    decoration: BoxDecoration(
+                      color: const Color(0xD9101720),
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(color: const Color(0xFF344453)),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0x66000000), blurRadius: 30, offset: Offset(0, 14)),
+                      ],
+                    ),
+                    child: const Column(children: [
+                      Text('YOUR SOUND. YOUR SPACE.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900,
+                          letterSpacing: -.5, color: Color(0xFFF6F2E9))),
+                      SizedBox(height: 7),
+                      Text('Sign in to enter the High-Tech experience.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Color(0xFFAAB6C0), fontSize: 11)),
+                      SizedBox(height: 20),
+                      AccountTab(embedded: true),
+                    ]),
+                  ),
+                  const SizedBox(height: 20),
+                  const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.shield_outlined, size: 13, color: Color(0xFF8796A2)),
+                    SizedBox(width: 7),
+                    Text('SECURE ACCOUNT ACCESS',
+                      style: TextStyle(color: Color(0xFF8796A2), fontSize: 8,
+                        fontWeight: FontWeight.w800, letterSpacing: 1.3)),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ]),
     );
   }
+}
+
+class PasswordRecoveryPage extends StatefulWidget {
+  const PasswordRecoveryPage({super.key});
+
+  @override
+  State<PasswordRecoveryPage> createState() => _PasswordRecoveryPageState();
+}
+
+class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
+  final _password = TextEditingController();
+  final _confirmPassword = TextEditingController();
+  bool _busy = false;
+  bool _showPassword = false;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    _confirmPassword.dispose();
+    super.dispose();
+  }
+
+  Future<void> _savePassword() async {
+    final password = _password.text;
+    if (password.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Choose a password with at least 8 characters.')),
+      );
+      return;
+    }
+    if (password != _confirmPassword.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The passwords do not match. Please check and try again.')),
+      );
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await db.auth.updateUser(UserAttributes(password: password));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Your password has been updated successfully.')),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Stack(children: [
+      const Positioned.fill(child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF17130D), Color(0xFF090E14), Color(0xFF06080C)],
+          ),
+        ),
+      )),
+      SafeArea(child: Center(child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: const Color(0xFF111923),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFF465565)),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const Icon(Icons.lock_reset_rounded, color: Color(0xFFE4C477), size: 48),
+              const SizedBox(height: 14),
+              const Text('RESET YOUR PASSWORD',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900,
+                  letterSpacing: 1.1)),
+              const SizedBox(height: 8),
+              const Text('Choose a new password for your High-Tech account.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFFAAB6C0), fontSize: 12)),
+              const SizedBox(height: 22),
+              TextField(
+                controller: _password,
+                obscureText: !_showPassword,
+                autofillHints: const [AutofillHints.newPassword],
+                decoration: const InputDecoration(labelText: 'New password', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _confirmPassword,
+                obscureText: !_showPassword,
+                autofillHints: const [AutofillHints.newPassword],
+                decoration: const InputDecoration(labelText: 'Confirm new password', border: OutlineInputBorder()),
+              ),
+              Align(alignment: Alignment.centerRight, child: TextButton(
+                onPressed: () => setState(() => _showPassword = !_showPassword),
+                child: Text(_showPassword ? 'Hide passwords' : 'Show passwords'),
+              )),
+              const SizedBox(height: 8),
+              FilledButton(
+                onPressed: _busy ? null : _savePassword,
+                child: Text(_busy ? 'Updating…' : 'Update password'),
+              ),
+            ]),
+          ),
+        ),
+      ))),
+    ]),
+  );
 }
 
 class MainScreen extends StatefulWidget {
@@ -2132,17 +2323,69 @@ class _AccountTabState extends State<AccountTab> {
   @override
   void dispose() { email.dispose(); password.dispose(); super.dispose(); } 
   Future<void> authenticate() async {
+    if (busy) return;
+    final address = email.text.trim();
+    if (address.isEmpty || !RegExp(r'^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$').hasMatch(address)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid email address to continue.')),
+      );
+      return;
+    }
+    if (password.text.isEmpty || (signup && password.text.length < 8)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(signup
+          ? 'Choose a password with at least 8 characters.'
+          : 'Enter your password to sign in.')),
+      );
+      return;
+    }
     setState(() => busy = true);
     try {
       if (signup) {
-        await db.auth.signUp(email: email.text.trim(), password: password.text);
+        await db.auth.signUp(email: address, password: password.text);
       } else {
-        await db.auth.signInWithPassword(email: email.text.trim(), password: password.text);
+        await db.auth.signInWithPassword(email: address, password: password.text);
       }
-      if (mounted) setState(() {});
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication request completed. Check your email if confirmation is enabled.')));
-    } on AuthException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Authentication request completed. Check your email if confirmation is enabled.'),
+        ));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> requestPasswordReset() async {
+    final address = email.text.trim();
+    if (address.isEmpty || !RegExp(r'^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$').hasMatch(address)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter your account email address first.')),
+      );
+      return;
+    }
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      await db.auth.resetPasswordForEmail(address, redirectTo: authRedirect);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('If this email belongs to an account, a password reset link has been sent. Open it on this device.'),
+          duration: Duration(seconds: 6),
+        ));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -2172,12 +2415,8 @@ class _AccountTabState extends State<AccountTab> {
           accessToken: authorization.accessToken,
         );
       } else {
-        // Retain the configured Supabase OAuth flow until the Web client ID
-        // is supplied as a GitHub Actions secret.
-        await db.auth.signInWithOAuth(
-          OAuthProvider.google,
-          redirectTo: authRedirect,
-          authScreenLaunchMode: LaunchMode.externalApplication,
+        throw const AuthException(
+          'Native Google sign-in is not configured in this app build. Please contact High-Tech Entertainment support.',
         );
       }
     } on AuthException catch (error) {
@@ -2307,10 +2546,31 @@ class _AccountTabState extends State<AccountTab> {
         ),
         TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
         const SizedBox(height: 12),
-        TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder())),
-        const SizedBox(height: 14),
-        FilledButton(onPressed: busy ? null : authenticate, child: Text(busy ? 'Please wait' : (signup ? 'Create account' : 'Sign in'))),
-        TextButton(onPressed: () => setState(() => signup = !signup), child: Text(signup ? 'Already registered? Sign in' : 'Create a new account')),
+        TextField(
+          controller: password,
+          obscureText: true,
+          autofillHints: [signup ? AutofillHints.newPassword : AutofillHints.password],
+          decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
+          onSubmitted: (_) => busy ? null : authenticate(),
+        ),
+        if (!signup) Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: busy ? null : requestPasswordReset,
+            child: const Text('Forgot password?'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        FilledButton(
+          onPressed: busy ? null : authenticate,
+          child: busy
+            ? const SizedBox(width: 19, height: 19, child: CircularProgressIndicator(strokeWidth: 2))
+            : Text(signup ? 'Create account' : 'Sign in'),
+        ),
+        TextButton(
+          onPressed: busy ? null : () => setState(() => signup = !signup),
+          child: Text(signup ? 'Already registered? Sign in' : 'Create a new account'),
+        ),
         TextButton.icon(
           onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication),
           icon: const Icon(Icons.privacy_tip_outlined),
