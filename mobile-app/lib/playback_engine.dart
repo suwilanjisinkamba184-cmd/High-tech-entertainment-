@@ -72,7 +72,9 @@ class HtePlayback {
   final ValueNotifier<String?> playbackError = ValueNotifier(null);
 
   List<Map<String, dynamic>> _queue = [];
+  final List<Map<String, dynamic>> _manualQueue = [];
   int _index = -1;
+  bool _playingManualQueueTrack = false;
   final CompletedTrackAdCounter _adCounter = CompletedTrackAdCounter();
   bool autoplay = true, shuffle = false, audioAdsEnabled = true;
   bool _handlingCompletion = false;
@@ -131,6 +133,17 @@ class HtePlayback {
     return uri;
   }
 
+  void _publishQueue() {
+    final visible = <Map<String, dynamic>>[];
+    final current = currentTrack.value;
+    if (current != null && !adPlaying.value) visible.add(current);
+    visible.addAll(_manualQueue);
+    if (_index >= 0 && _index + 1 < _queue.length) {
+      visible.addAll(_queue.skip(_index + 1));
+    }
+    queueView.value = visible;
+  }
+
   Future<void> playTrack(
     Map<String, dynamic> track, [
     List<Map<String, dynamic>>? source,
@@ -139,6 +152,8 @@ class HtePlayback {
     _queue = source == null || source.isEmpty
         ? [track]
         : List<Map<String, dynamic>>.from(source);
+    _manualQueue.clear();
+    _playingManualQueueTrack = false;
     _index = _queue.indexWhere(
       (item) => item['id']?.toString() == track['id']?.toString(),
     );
@@ -146,11 +161,55 @@ class HtePlayback {
       _queue.insert(0, track);
       _index = 0;
     }
-    queueView.value = List<Map<String, dynamic>>.from(_queue);
     // Do not reset the advert counter here: users may select tracks manually.
     // Only eight genuinely completed music tracks should trigger an advert.
     adPlaying.value = false;
     await _startTrack(track);
+  }
+
+  /// Prioritise a manually selected track ahead of the source playlist/autoplay.
+  void playNext(Map<String, dynamic> track) {
+    if (adPlaying.value) return;
+    final id = track['id']?.toString();
+    if (id != null && id == currentTrack.value?['id']?.toString()) return;
+    if (_queue.isEmpty || _index < 0) {
+      unawaited(playTrack(track));
+      return;
+    }
+    if (id != null) {
+      final sourceIndex = _queue.indexWhere(
+        (item) => item['id']?.toString() == id && _queue.indexOf(item) > _index,
+      );
+      if (sourceIndex >= 0) _queue.removeAt(sourceIndex);
+      _manualQueue.removeWhere((item) => item['id']?.toString() == id);
+    }
+    _manualQueue.add(Map<String, dynamic>.from(track));
+    _publishQueue();
+  }
+
+  /// Append a track after the current source queue.
+  void addToQueue(Map<String, dynamic> track) {
+    if (adPlaying.value) return;
+    if (_queue.isEmpty || _index < 0) {
+      unawaited(playTrack(track));
+      return;
+    }
+    final id = track['id']?.toString();
+    if (id != null &&
+        (_queue.any((item) => item['id']?.toString() == id) ||
+         _manualQueue.any((item) => item['id']?.toString() == id))) {
+      return;
+    }
+    _queue.add(Map<String, dynamic>.from(track));
+    _publishQueue();
+  }
+
+  void clearQueue() {
+    _queue.clear();
+    _manualQueue.clear();
+    _index = -1;
+    _playingManualQueueTrack = false;
+    queueView.value = [];
   }
 
   Future<void> _startTrack(Map<String, dynamic> track) async {
@@ -165,6 +224,7 @@ class HtePlayback {
     playbackError.value = null;
     currentTrack.value = track;
     adPlaying.value = false;
+    _publishQueue();
     // Disarm completion handling while replacing the previous audio source.
     _currentSourceIsMusic = false;
     _completionHandledForSource = true;
@@ -270,6 +330,7 @@ class HtePlayback {
         'title': 'Advertisement',
         'artist': 'High-Tech Entertainment',
       };
+      _publishQueue();
       await player.setAudioSource(
         AudioSource.asset(
           startupAdvertAsset,
@@ -293,6 +354,14 @@ class HtePlayback {
   }
 
   Future<void> _playNextTrack() async {
+    if (_manualQueue.isNotEmpty) {
+      final nextTrack = _manualQueue.removeAt(0);
+      _playingManualQueueTrack = true;
+      _publishQueue();
+      await _startTrack(nextTrack);
+      return;
+    }
+    if (_playingManualQueueTrack) _playingManualQueueTrack = false;
     if (_queue.isEmpty) return;
     if (shuffle && _queue.length > 1) {
       final choices = List<int>.generate(_queue.length, (i) => i)..remove(_index);
