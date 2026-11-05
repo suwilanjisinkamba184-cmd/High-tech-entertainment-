@@ -10,11 +10,11 @@ class HteDiagnostics {
   static String _redact(String value) {
     var result = value;
     result = result.replaceAll(
-      RegExp(r'(?i)(bearer\s+)[A-Za-z0-9._~+/-]+=*'),
+      RegExp(r'(bearer\s+)[A-Za-z0-9._~+/-]+=*', caseSensitive: false),
       r'$1[REDACTED]',
     );
     result = result.replaceAll(
-      RegExp(r'(?i)(apikey|api_key|access_token|refresh_token|password)(\s*[:=]\s*)[^\s,;]+'),
+      RegExp(r'(apikey|api_key|access_token|refresh_token|password)(\s*[:=]\s*)[^\s,;]+', caseSensitive: false),
       r'$1$2[REDACTED]',
     );
     result = result.replaceAll(
