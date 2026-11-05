@@ -3168,7 +3168,6 @@ class _SettingsPageState extends State<SettingsPage> {
   String updateStatus = '';
   bool autoplaySetting = true;
   bool shuffleSetting = false;
-  bool audioAdsSetting = true;
   double videoSpeedSetting = 1.0;
 
   @override
@@ -3188,11 +3187,12 @@ class _SettingsPageState extends State<SettingsPage> {
       final prefs = await SharedPreferences.getInstance();
       autoplaySetting = prefs.getBool('hte_autoplay') ?? true;
       shuffleSetting = prefs.getBool('hte_shuffle') ?? false;
-      audioAdsSetting = prefs.getBool('hte_audio_ads_enabled') ?? true;
       videoSpeedSetting = prefs.getDouble('hte_video_speed') ?? 1.0;
       playback.autoplay = autoplaySetting;
       playback.shuffle = shuffleSetting;
-      playback.audioAdsEnabled = audioAdsSetting;
+      // Sponsored audio is controlled by High-Tech Entertainment, not by listeners.
+      // Ignore legacy local preferences so older installs cannot disable adverts.
+      playback.audioAdsEnabled = true;
       playback.adEvery = HtePlayback.advertInterval;
       await player.setShuffleModeEnabled(shuffleSetting);
     } catch (error) {
@@ -3694,15 +3694,11 @@ class _SettingsPageState extends State<SettingsPage> {
           onTap: _chooseVideoSpeed,
         ),
         const Divider(height: 1),
-        SwitchListTile(
+        ListTile(
+          leading: const Icon(Icons.campaign_outlined, color: Color(0xFFD4AF37)),
           title: const Text('Sponsored audio adverts'),
-          subtitle: const Text('When enabled, an advert may play only after 8 completed songs. Never on app launch, pause or resume.'),
-          value: audioAdsSetting,
-          onChanged: (value) {
-            setState(() => audioAdsSetting = value);
-            playback.audioAdsEnabled = value;
-            unawaited(_savePlaybackSetting('hte_audio_ads_enabled', value));
-          },
+          subtitle: const Text('Managed by High-Tech Entertainment. A promotion may play after 8 completed songs, never on app launch, pause or resume.'),
+          trailing: const Icon(Icons.lock_outline, color: Color(0xFFD4AF37)),
         ),
       ])),
       const SizedBox(height: 12),
