@@ -4,7 +4,10 @@ on:
   push:
     branches: [main]
     paths:
-      - 'mobile-app/**'
+      - 'mobile-app/lib/**'
+      - 'mobile-app/assets/**'
+      - 'mobile-app/pubspec.yaml'
+      - 'mobile-app/shorebird.yaml'
       - '.github/workflows/mobile-build.yml'
   pull_request:
     branches: [main]
@@ -29,8 +32,6 @@ permissions:
 
 jobs:
   android:
-    # Skip expensive Android/OTA jobs for documentation-only commits.
-    if: github.event_name != 'push' || contains(join(github.event.head_commit.modified, ','), 'mobile-app/lib/') || contains(join(github.event.head_commit.modified, ','), '.github/workflows/mobile-build.yml') || contains(join(github.event.head_commit.modified, ','), 'mobile-app/shorebird.yaml') || contains(join(github.event.head_commit.modified, ','), 'mobile-app/pubspec.yaml') || contains(join(github.event.head_commit.modified, ','), 'mobile-app/assets/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
