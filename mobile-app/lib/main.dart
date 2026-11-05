@@ -2296,7 +2296,7 @@ class _SavedTabState extends State<SavedTab> {
     super.dispose();
   }
   Future<void> load() async {
-    if (mounted) setState(() => loading = true);
+    if (mounted) setState(() { loading = true; loadError = null; });
     try {
       final user = db.auth.currentUser;
       if (user == null) {
