@@ -537,14 +537,12 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         _playStartupSound(),
         _initializeCoreServices(),
       ]);
+      // Startup audio is best-effort: whether playback completes, reports an
+      // error, or the bundled asset cannot be loaded, startup must continue.
+      // This mirrors the native SplashActivity contract: audio never traps
+      // the user on the splash screen or blocks access to the app.
       if (!_startupSoundHandled) {
-        if (mounted) {
-          setState(() {
-            _starting = false;
-            _error = 'The mandatory High-Tech startup sound could not play. Restart the application to try again.';
-          });
-        }
-        return;
+        debugPrint('HTE startup audio did not complete; continuing app startup.');
       }
 
       // Keep the branded splash visible for at least eight seconds while the
