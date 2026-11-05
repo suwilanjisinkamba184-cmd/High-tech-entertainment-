@@ -59,6 +59,7 @@ This is a directional synthesis of current 2025–2026 product coverage, communi
 - Remove the duplicate manual OTA request from the splash sequence. A Flutter root-widget rebuild is not a process restart and cannot activate a Shorebird patch.
 - Make the user-requested restart a genuine Android process restart.
 - When a user manually checks OTA, compare the running patch with the staged patch. If a patch is ready, offer **Restart now** or **Later**; never interrupt a song with an unannounced forced restart.
+- Re-check and stage OTA patches when the authenticated app resumes from the background, because a foreground audio service can keep the Android process alive. Show a restart action rather than interrupting playback.
 - Preserve the full APK installer as a separate fallback for native Android changes, Flutter engine/SDK upgrades, permissions, plugins or other changes Shorebird cannot patch.
 
 ## Not in scope for a blind one-pass implementation
