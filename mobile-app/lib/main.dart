@@ -2143,6 +2143,27 @@ class TrackList extends StatelessWidget {
             title: Text((item['title'] ?? 'Track').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
             subtitle: Text((item['artist'] ?? 'High-Tech Entertainment').toString()),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              PopupMenuButton<String>(
+                tooltip: 'Queue options',
+                onSelected: (value) {
+                  if (value == 'play_next') {
+                    playback.playNext(item);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Track added to play next.')),
+                    );
+                  } else if (value == 'add_queue') {
+                    playback.addToQueue(item);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Track added to your queue.')),
+                    );
+                  }
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'play_next', child: Text('Play next')),
+                  PopupMenuItem(value: 'add_queue', child: Text('Add to queue')),
+                ],
+                icon: const Icon(Icons.more_vert, size: 20),
+              ),
               IconButton(tooltip: 'Share track', onPressed: () => Share.share('${item['title']} — ${item['artist']}\nHigh-Tech Entertainment'), icon: const Icon(Icons.share_outlined, size: 20)),
               IconButton(
                 tooltip: 'Download for offline listening',
@@ -2180,7 +2201,7 @@ class TrackList extends StatelessWidget {
                 if (isSpotifyUrl(rawUrl)) {
                   await player.stop();
                   playback.currentTrack.value = null;
-                  playback.queueView.value = [];
+                  playback.clearQueue();
                   if (embedUrl != null && defaultTargetPlatform == TargetPlatform.android) {
                     if (context.mounted) {
                       await Navigator.of(context).push(MaterialPageRoute(
