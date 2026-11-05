@@ -42,32 +42,67 @@ final AudioPlayer _startupSoundPlayer = AudioPlayer();
 
 /// Plays the bundled launch ident once and waits for its completion so the
 /// animated loading screen and sound finish together. This is never an advert.
-Future<void> playStartupJingle({bool force = false}) async {
-  try {
-    // The branded launch ident is mandatory and is not user-disableable.
-    // Keep the legacy preference key ignored so older installs also play it.
-    await _startupSoundPlayer.stop();
-    await _startupSoundPlayer.setAudioSource(
-      AudioSource.asset('assets/high-tech-startup.mp3'),
-      preload: true,
-    );
-    await _startupSoundPlayer.setVolume(1.0);
-    await _startupSoundPlayer.setLoopMode(LoopMode.off);
-    final duration = _startupSoundPlayer.duration ?? const Duration(seconds: 8);
-    final timeout = duration > const Duration(seconds: 45)
-        ? const Duration(seconds: 50)
-        : duration + const Duration(seconds: 8);
-    await _startupSoundPlayer.play().timeout(
-      timeout,
-      onTimeout: () async {
+Future<bool> playStartupJingle({bool force = false}) async {
+  // Retry once after a clean player reset. The startup ident has its own player
+  // and must never compete with music, adverts, or the background player.
+  for (var attempt = 1; attempt <= 2; attempt++) {
+    StreamSubscription<PlayerState>? stateSubscription;
+    try {
+      await _startupSoundPlayer.stop();
+      await _startupSoundPlayer.setVolume(1.0);
+      await _startupSoundPlayer.setLoopMode(LoopMode.off);
+      await _startupSoundPlayer.setAudioSource(
+        AudioSource.asset('assets/high-tech-startup.mp3'),
+        preload: true,
+      );
+
+      final duration = _startupSoundPlayer.duration;
+      if (duration == null || duration <= Duration.zero) {
+        throw StateError('The bundled High-Tech startup sound has no valid duration.');
+      }
+
+      // Do not treat a returned play() future as proof that audio actually
+      // started: wait for just_audio to report the playing state first.
+      final started = Completer<void>();
+      stateSubscription = _startupSoundPlayer.playerStateStream.listen((state) {
+        if (state.playing && !started.isCompleted) {
+          started.complete();
+        }
+      });
+
+      final playback = _startupSoundPlayer.play();
+      await started.future.timeout(const Duration(seconds: 5));
+      final timeout = duration > const Duration(seconds: 45)
+          ? const Duration(seconds: 55)
+          : duration + const Duration(seconds: 12);
+      await playback.timeout(
+        timeout,
+        onTimeout: () async {
+          await _startupSoundPlayer.stop();
+          throw TimeoutException('High-Tech startup sound exceeded its playback duration.');
+        },
+      );
+      await stateSubscription.cancel();
+      debugPrint('HTE startup sound completed successfully on attempt $attempt.');
+      return true;
+    } catch (error, stackTrace) {
+      await stateSubscription?.cancel();
+      debugPrint('HTE startup sound attempt $attempt failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      try {
         await _startupSoundPlayer.stop();
-      },
-    );
-  } catch (error, stackTrace) {
-    // A failed sound must never prevent sign-in or app startup.
-    debugPrint('HTE startup sound playback failed: $error');
-    debugPrintStack(stackTrace: stackTrace);
+      } catch (_) {
+        // Preserve the original playback failure and allow the retry.
+      }
+      if (attempt < 2) {
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+      }
+    }
   }
+
+  // Sound failure must not lock the user out of the application. The splash
+  // remains visible for its minimum duration, then startup continues safely.
+  return false;
 }
 
 /// Centralised Shorebird OTA checker. All checks target the public Stable track.
@@ -403,12 +438,15 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   bool _startupSoundHandled = false;
   String? _error;
   Future<void>? _initialization;
+  final Stopwatch _startupClock = Stopwatch();
+  static const Duration _minimumStartupScreenDuration = Duration(seconds: 8);
   late final AnimationController _startupAnimation;
   late final AnimationController _ringAnimation;
 
   @override
   void initState() {
     super.initState();
+    _startupClock.start();
     _startupAnimation = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -422,8 +460,10 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
 
   Future<void> _playStartupSound() async {
     if (_startupSoundHandled) return;
-    _startupSoundHandled = true;
-    await playStartupJingle();
+    final played = await playStartupJingle();
+    // Mark it handled only after confirmed playback completion. A failed
+    // attempt remains eligible for retry on the next startup initialization.
+    _startupSoundHandled = played;
   }
 
   /// Coalesce overlapping startup/retry requests into one initialization.
@@ -474,6 +514,14 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         _playStartupSound(),
         _initializeCoreServices(),
       ]);
+
+      // Keep the branded splash visible for at least eight seconds, and never
+      // leave it before the startup ident and core initialization have ended.
+      final remaining = _minimumStartupScreenDuration - _startupClock.elapsed;
+      if (remaining > Duration.zero) {
+        await Future<void>.delayed(remaining);
+      }
+
       if (mounted) {
         setState(() {
           _ready = true;
