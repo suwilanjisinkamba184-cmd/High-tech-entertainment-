@@ -779,8 +779,15 @@ class Heading extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
-    child: Text(text, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+    padding: const EdgeInsets.fromLTRB(19, 20, 19, 10),
+    child: Row(children: [
+      Container(width: 3, height: 17,
+        decoration: BoxDecoration(color: const Color(0xFFE3BD70), borderRadius: BorderRadius.circular(4))),
+      const SizedBox(width: 9),
+      Expanded(child: Text(text.toUpperCase(),
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900,
+          letterSpacing: 1.15, color: Color(0xFFE7E3D9)))),
+    ]),
   );
 }
 
@@ -1285,36 +1292,61 @@ class PlayerBar extends StatelessWidget {
     builder: (context, track, _) {
       if (track == null) return const SizedBox.shrink();
       if (playback.adPlaying.value) {
-        return const Material(
-          color: Color(0xFF1B1B1B),
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(children: [
-              Icon(Icons.campaign, color: Color(0xFFD9B96E)),
-              SizedBox(width: 10),
-              Expanded(child: Text('High-Tech Entertainment • Advertisement')),
-              Icon(Icons.graphic_eq, color: Color(0xFFD9B96E)),
-            ]),
+        return Container(
+          margin: const EdgeInsets.fromLTRB(10, 8, 10, 2),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF2B2418), Color(0xFF171B20)]),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF6B5735)),
           ),
+          child: const Row(children: [
+            Icon(Icons.campaign_rounded, color: Color(0xFFE3BD70), size: 19),
+            SizedBox(width: 10),
+            Expanded(child: Text('HIGH-TECH PROMOTION  ·  SPONSORED AUDIO',
+              style: TextStyle(color: Color(0xFFE8D9B8), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: .7))),
+            Icon(Icons.graphic_eq_rounded, color: Color(0xFFE3BD70), size: 18),
+          ]),
         );
       }
-      return Material(
-        color: const Color(0xFF1B1B1B),
-        child: InkWell(
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FullPlayerPage())),
-          child: Padding(padding: const EdgeInsets.symmetric(horizontal:12,vertical:6),child:Row(children:[
-            SizedBox(width:42,height:42,child:MediaCover(url:track['cover_url']?.toString(),height:42)),
-            const SizedBox(width:10),
-            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
-              Text((track['title']??'High-Tech Player').toString(),maxLines:1,overflow:TextOverflow.ellipsis),
-              Text((track['artist']??'').toString(),style:const TextStyle(color:Colors.white54,fontSize:12),maxLines:1),
+      return Container(
+        margin: const EdgeInsets.fromLTRB(10, 7, 10, 2),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(begin: Alignment.centerLeft, end: Alignment.centerRight,
+            colors: [Color(0xFF1C2832), Color(0xFF121923)]),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: const Color(0xFF405464)),
+          boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 12, offset: Offset(0, 4))],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(15),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FullPlayerPage())),
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal:9,vertical:5),child:Row(children:[
+              ClipRRect(borderRadius: BorderRadius.circular(9),
+                child: SizedBox(width:40,height:40,child:MediaCover(url:track['cover_url']?.toString(),height:40))),
+              const SizedBox(width:10),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+                Text((track['title']??'High-Tech Player').toString(),maxLines:1,overflow:TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+                Text((track['artist']??'').toString(),style:const TextStyle(color:Color(0xFF9EADB8),fontSize:10),maxLines:1),
+              ])),
+              StreamBuilder<PlayerState>(stream:player.playerStateStream,builder:(context,s){
+                final playing=s.data?.playing??false;
+                return IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: playing ? 'Pause' : 'Play',
+                  onPressed:()=>playing?player.pause():player.play(),
+                  icon:Icon(playing?Icons.pause_rounded:Icons.play_arrow_rounded,color:const Color(0xFFE3BD70),size:24));
+              }),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: 'Next track',
+                onPressed:()=>playback.next(),
+                icon:const Icon(Icons.skip_next_rounded,color:Color(0xFFB9C7D1))),
             ])),
-            StreamBuilder<PlayerState>(stream:player.playerStateStream,builder:(context,s){
-              final playing=s.data?.playing??false;
-              return IconButton(onPressed:()=>playing?player.pause():player.play(),icon:Icon(playing?Icons.pause:Icons.play_arrow,color:const Color(0xFFD4AF37)));
-            }),
-            IconButton(onPressed:()=>playback.next(),icon:const Icon(Icons.skip_next)),
-          ])),
+          ),
         ),
       );
     },
@@ -1685,8 +1717,41 @@ class _DiscoverTabState extends State<DiscoverTab> {
   void dispose() { controller.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => Column(children: [
-    const Brand(),
-    Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: TextField(controller: controller, onChanged: search, decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search tracks by title'))),
+    const Brand(tagline: 'FIND YOUR NEXT FREQUENCY'),
+    Padding(
+      padding: const EdgeInsets.fromLTRB(19, 2, 19, 13),
+      child: Row(children: [
+        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Discover sound.', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900, letterSpacing: -.7)),
+          SizedBox(height: 4),
+          Text('Search the official High-Tech catalogue.', style: TextStyle(color: Color(0xFF8D9AA6), fontSize: 11)),
+        ])),
+        Container(width: 39, height: 39,
+          decoration: BoxDecoration(color: const Color(0xFF17232C), borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: const Color(0xFF344B5A))),
+          child: const Icon(Icons.graphic_eq_rounded, color: Color(0xFFE3BD70), size: 20)),
+      ]),
+    ),
+    Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: TextField(
+        controller: controller,
+        onChanged: search,
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFFE3BD70)),
+          hintText: 'Search tracks by title',
+          filled: true,
+          fillColor: const Color(0xFF111923),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF34404D))),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF34404D))),
+        ),
+      ),
+    ),
+    const Padding(
+      padding: EdgeInsets.fromLTRB(20, 15, 20, 5),
+      child: Align(alignment: Alignment.centerLeft,
+        child: Text('AVAILABLE TO PLAY', style: TextStyle(color: Color(0xFFE3BD70), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.4))),
+    ),
     Expanded(child: loading ? const Busy() : error != null ? Notice(friendlyErrorMessage(error!)) : TrackList(items: results)),
   ]);
 }
@@ -1756,10 +1821,25 @@ class ReleasesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(children: [
     const Brand(tagline: 'OFFICIAL RELEASES'),
-    const Align(alignment: Alignment.centerLeft, child: Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Text('Latest releases', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
-    )),
+    Padding(
+      padding: const EdgeInsets.fromLTRB(19, 3, 19, 13),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(17),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFF33291B), Color(0xFF151C24)]),
+          borderRadius: BorderRadius.circular(19),
+          border: Border.all(color: const Color(0xFF6C5736)),
+        ),
+        child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('THE RELEASE VAULT', style: TextStyle(color: Color(0xFFE5C47C), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.7)),
+          SizedBox(height: 7),
+          Text('Every drop.\nOne destination.', style: TextStyle(fontSize: 22, height: 1.08, fontWeight: FontWeight.w900)),
+          SizedBox(height: 6),
+          Text('Official music and projects from the High-Tech family.', style: TextStyle(color: Color(0xFFB0BAC2), fontSize: 10)),
+        ]),
+      ),
+    ),
     const Expanded(child: ReleaseList()),
   ]);
 }
@@ -1770,12 +1850,33 @@ class LibraryTab extends StatelessWidget {
   Widget build(BuildContext context) => DefaultTabController(
     length: 3,
     child: Column(children: [
-      const Brand(tagline: 'YOUR MUSIC COLLECTION'),
-      const TabBar(tabs:[
-        Tab(text:'Favourites'),
-        Tab(text:'Playlists'),
-        Tab(text:'On device'),
-      ],labelColor:Color(0xFFD9B96E)),
+      const Brand(tagline: 'YOUR PERSONAL SOUNDSPACE'),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(19, 1, 19, 12),
+        child: Align(alignment: Alignment.centerLeft,
+          child: Text('Your collection', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -.6))),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Container(
+          decoration: BoxDecoration(color: const Color(0xFF111923), borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: const Color(0xFF34404D))),
+          child: const TabBar(
+            dividerColor: Colors.transparent,
+            indicatorSize: TabBarIndicatorSize.tab,
+            indicator: BoxDecoration(
+              gradient: LinearGradient(colors: [Color(0xFF5B4728), Color(0xFF30281C)]),
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+              border: Border.fromBorderSide(BorderSide(color: Color(0xFFB18B4C))),
+            ),
+            labelColor: Color(0xFFF0D18B),
+            unselectedLabelColor: Color(0xFF8C9AA6),
+            labelStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+            tabs:[Tab(text:'Saved'), Tab(text:'Playlists'), Tab(text:'On device')],
+          ),
+        ),
+      ),
+      const SizedBox(height: 8),
       const Expanded(child:TabBarView(children:[
         SavedTab(),
         PlaylistsTab(),
