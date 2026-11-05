@@ -188,6 +188,20 @@ class HtePlayback {
     } catch (error) {
       playbackError.value = _friendlyError(error);
       debugPrint('HTE playback start failed: $error');
+      // A failed sponsored clip must never leave the listener trapped on an
+      // endless advert screen. Recover the queue just as for a bad advert file.
+      if (adPlaying.value) {
+        adPlaying.value = false;
+        _currentSourceIsMusic = false;
+        _completionHandledForSource = true;
+        _adCounter.reset();
+        try {
+          await _playNextTrack();
+        } catch (recoveryError) {
+          playbackError.value = _friendlyError(recoveryError);
+          debugPrint('HTE queue recovery after advert failure failed: $recoveryError');
+        }
+      }
     }
   }
 
