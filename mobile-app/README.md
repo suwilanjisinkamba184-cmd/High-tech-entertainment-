@@ -34,7 +34,7 @@ Project: `wqrxacjbsldbnoekbkbf`
 - User playlists, favourites and listening history are scoped by the signed-in user's RLS policies.
 - In-app announcements use `app_notifications`; authenticated users can read broadcasts and their own notifications, while only HTE owners/admins can create announcements.
 
-The artwork bucket and admin listing migrations are recorded under `database/changes/` and have been applied to the connected project. The secure user directory and analytics functions are also applied and return records only to authenticated HTE owners/admins.
+The artwork, in-app notification and video-storage changes are recorded under `database/changes/` and have been applied to the connected project. The secure user directory and analytics functions are also applied and return records only to authenticated HTE owners/admins.
 
 ## Android build
 
@@ -45,11 +45,12 @@ Required repository Actions secrets:
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_STORE_PASSWORD`
 - `ANDROID_KEY_PASSWORD`
+- `GOOGLE_WEB_CLIENT_ID` (required for the native Google account chooser; the Android release workflow stops if it is missing)
 
 Build locally from this directory:
 ```bash
 flutter pub get
-flutter analyze lib
+flutter analyze
 flutter test
 flutter build apk --release
 ```
@@ -61,7 +62,7 @@ Windows source files are preserved, but Windows build execution and release pack
 
 HT Music uses one process-wide `HtePlayback.instance` service and one `just_audio` `AudioPlayer`. The service owns the active track, queue, completion handling, audio-ad insertion, and playback error state. The mini-player, full player, queue screen, and all catalogue screens must read and control that same service; do not create `AudioPlayer()` instances in widgets, tabs, routes, or screen state objects.
 
-- Background audio is initialized once at application startup with `JustAudioBackground.init` before the shared playback service is first accessed. Audio initialisation and the optional bundled startup advert are isolated from authentication startup: if either fails or the advert times out, the app continues to sign-in.
+- Background audio is initialized once at application startup with `JustAudioBackground.init` before the shared playback service is first accessed. The separate bundled startup sound and scheduled advert are isolated from authentication startup: if either fails, the app continues to sign-in. The scheduled advert is only eligible after eight completed music tracks, never on startup or pause/resume.
 - Track changes replace the source on the shared player; navigation must not dispose or recreate it.
 - The notification and lock-screen controls are backed by the same player and media metadata.
 - The service is exposed through `HtePlayback.instance`. The `HtePlayback()` factory remains as a compatibility entry point and returns the same singleton.
@@ -74,7 +75,7 @@ A singleton prevents duplicate app-owned player instances, but a successful buil
 The app converts low-level connectivity and service exceptions into plain-language messages instead of exposing raw exception text, backend response codes or stack traces.
 
 - When a network request fails because the device is offline or cannot reach the service, the user sees: **“No internet connection. Connect to the internet and try again.”**
-- For other unexpected failures, the user sees: **“Something went wrong. Please try again.”**
+- Authentication, media-not-found, permission, unsupported-format and local-storage failures receive specific plain-language guidance; unknown failures use: **“Something went wrong. Please try again.”**
 - During startup, the existing **Try again** button reruns service initialisation after the user reconnects.
 - Diagnostic exception details are retained only in developer logs where applicable; they are not included in these user-facing messages.
 
