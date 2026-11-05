@@ -128,18 +128,23 @@ class HteOtaUpdateService {
     });
   }
 
-  /// True only when Shorebird has staged code different from the running patch.
-  static Future<bool> hasPendingPatch() async {
-    if (!Platform.isAndroid || !_updater.isAvailable) return false;
+  /// Returns the staged patch number, or null when no process restart is needed.
+  /// Zero represents a staged rollback to the base release.
+  static Future<int?> pendingPatchNumber() async {
+    if (!Platform.isAndroid || !_updater.isAvailable) return null;
     try {
       final current = await _updater.readCurrentPatch();
       final next = await _updater.readNextPatch();
-      return current?.number != next?.number;
+      if (current?.number == next?.number) return null;
+      return next?.number ?? 0;
     } catch (error) {
       debugPrint('HTE pending OTA state could not be read: $error');
-      return false;
+      return null;
     }
   }
+
+  static Future<bool> hasPendingPatch() async =>
+      await pendingPatchNumber() != null;
 
   static Future<String> _checkAndInstall() async {
     if (!Platform.isAndroid) {
@@ -1132,8 +1137,76 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   int tab = 0;
+  bool _checkingOtaOnResume = false;
+  int? _lastPromptedPatchNumber;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_checkOtaOnResume());
+    }
+  }
+
+  Future<void> _checkOtaOnResume() async {
+    if (_checkingOtaOnResume || !Platform.isAndroid) return;
+    _checkingOtaOnResume = true;
+    try {
+      // Media playback may keep Android's process alive in the background.
+      // Check again on resume so long-running sessions can receive new patches.
+      await HteOtaUpdateService.checkAndInstall();
+      final patchNumber = await HteOtaUpdateService.pendingPatchNumber();
+      if (!mounted || patchNumber == null ||
+          _lastPromptedPatchNumber == patchNumber) return;
+      _lastPromptedPatchNumber = patchNumber;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('A High-Tech update is ready. Restart to apply it.'),
+          duration: const Duration(seconds: 12),
+          action: SnackBarAction(
+            label: 'Restart now',
+            onPressed: () => unawaited(_restartForOtaPatch()),
+          ),
+        ),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('HTE OTA resume check failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    } finally {
+      _checkingOtaOnResume = false;
+    }
+  }
+
+  Future<void> _restartForOtaPatch() async {
+    try {
+      final result = await Restart.restartApp(mode: RestartMode.process);
+      if (!result.success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Restart could not start. Close and reopen the app to apply the update.')),
+        );
+      }
+    } catch (error) {
+      debugPrint('HTE OTA process restart failed: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Restart failed. Close and reopen the app to apply the update.')),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
   final pages = const [HomeTab(), DiscoverTab(), ReleasesTab(), LibraryTab(), AccountTab(), MoreTab()];
   static const _items = [
     (Icons.space_dashboard_rounded, 'Home'),
