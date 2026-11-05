@@ -70,7 +70,7 @@ Future<bool> playStartupJingle() async {
       // must not be mistaken for a successfully finished startup jingle.
       await Future.wait<void>([
         _startupSoundPlayer.play(),
-        completed,
+        completed.then<void>((_) {}),
       ]).timeout(
         maxWait,
         onTimeout: () async {
