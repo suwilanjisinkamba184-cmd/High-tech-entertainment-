@@ -50,11 +50,11 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
       return;
     }
 
-    _resumeMusic = music.player.playing;
-    if (_resumeMusic) await music.player.pause();
-    if (!mounted) return;
-
     try {
+      _resumeMusic = music.player.playing;
+      if (_resumeMusic) await music.player.pause();
+      if (!mounted) return;
+
       final path = widget.filePath;
       late final VideoPlayerController video;
       if (path != null && path.trim().isNotEmpty) {
@@ -129,9 +129,14 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
       }
     }
     if (!mounted) return;
-    await _initialize();
-    if (shouldResumeMusic) _resumeMusic = true;
-    if (mounted) setState(() => _retrying = false);
+    try {
+      await _initialize();
+      if (shouldResumeMusic) _resumeMusic = true;
+    } catch (error) {
+      if (mounted) setState(() => _error = _friendlyVideoError(error));
+    } finally {
+      if (mounted) setState(() => _retrying = false);
+    }
   }
 
   Future<void> _togglePlayback() async {
