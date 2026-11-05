@@ -228,6 +228,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         'video_url': url,
         'is_published': false,
       });
+      if (!mounted) return;
       _videoTitle.clear(); _videoArtist.clear(); _videoDescription.clear();
       setState(() => _video = null);
       await _loadAll();
