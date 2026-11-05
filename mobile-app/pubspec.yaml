@@ -38,6 +38,7 @@ flutter:
     - assets/high-tech-logo.svg
     - assets/high-tech-startup.mp3
     - assets/AUD-20261103-WA0002.mp3
+    - shorebird.yaml
 
 flutter_launcher_icons:
   android: true
