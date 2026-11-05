@@ -14,6 +14,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'admin_studio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shorebird_code_push/shorebird_code_push.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
@@ -66,6 +67,56 @@ Future<void> playStartupJingle({bool force = false}) async {
     // A failed sound must never prevent sign-in or app startup.
     debugPrint('HTE startup sound playback failed: $error');
     debugPrintStack(stackTrace: stackTrace);
+  }
+}
+
+/// Centralised Shorebird OTA checker. All checks target the public Stable track.
+class HteOtaUpdateService {
+  static final ShorebirdUpdater _updater = ShorebirdUpdater();
+  static Future<String>? _activeCheck;
+
+  static Future<String> checkAndInstall() {
+    final active = _activeCheck;
+    if (active != null) return active;
+    final operation = _checkAndInstall();
+    _activeCheck = operation;
+    return operation.whenComplete(() {
+      if (identical(_activeCheck, operation)) _activeCheck = null;
+    });
+  }
+
+  static Future<String> _checkAndInstall() async {
+    if (!Platform.isAndroid) {
+      return 'OTA patch updates are currently enabled for Android only.';
+    }
+    if (!_updater.isAvailable) {
+      return 'Shorebird OTA is unavailable in this installation. This app must be installed from a Shorebird release build.';
+    }
+    try {
+      final status = await _updater.checkForUpdate(track: UpdateTrack.stable);
+      switch (status) {
+        case UpdateStatus.outdated:
+          await _updater.update(track: UpdateTrack.stable);
+          final nextPatch = await _updater.readNextPatch();
+          final patchLabel = nextPatch == null ? 'latest patch' : 'Patch #${nextPatch.number}';
+          return '$patchLabel downloaded successfully. Fully close and reopen the app to activate it.';
+        case UpdateStatus.restartRequired:
+          final nextPatch = await _updater.readNextPatch();
+          final patchLabel = nextPatch == null ? 'The downloaded patch' : 'Patch #${nextPatch.number}';
+          return '$patchLabel is ready. Fully close and reopen the app to activate it.';
+        case UpdateStatus.upToDate:
+          final currentPatch = await _updater.readCurrentPatch();
+          return currentPatch == null
+              ? 'No new OTA patch is available. This installation is running the base release.'
+              : 'No new OTA patch is available. Installed patch: #${currentPatch.number}.';
+        case UpdateStatus.unavailable:
+          return 'Shorebird OTA is unavailable in this app installation.';
+      }
+    } catch (error, stackTrace) {
+      debugPrint('HTE OTA update check failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      return 'OTA check failed. Check your internet connection and try again.';
+    }
   }
 }
 
@@ -428,6 +479,10 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
           _ready = true;
           _starting = false;
         });
+        // Explicitly check Stable OTA after the app is ready; never block startup.
+        unawaited(HteOtaUpdateService.checkAndInstall().then(
+          (message) => debugPrint('HTE startup OTA check: $message'),
+        ));
       }
     } catch (error) {
       if (mounted) {
@@ -3290,6 +3345,22 @@ class _SettingsPageState extends State<SettingsPage> {
     return 0;
   }
 
+  Future<void> _checkForOtaUpdates() async {
+    if (checking || downloading) return;
+    setState(() {
+      checking = true;
+      updateStatus = 'Checking Stable OTA channel…';
+    });
+    try {
+      final result = await HteOtaUpdateService.checkAndInstall();
+      if (!mounted) return;
+      setState(() => updateStatus = result);
+      _message(result);
+    } finally {
+      if (mounted) setState(() => checking = false);
+    }
+  }
+
   Future<void> _checkForUpdates() async {
     if (defaultTargetPlatform != TargetPlatform.android) {
       _message('In-app APK updates are available on Android devices.');
@@ -3680,6 +3751,18 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ])),
       Card(child: Column(children: [
+        ListTile(
+          leading: const Icon(Icons.cloud_sync_rounded, color: Color(0xFFD4AF37)),
+          title: const Text('OTA Update Checker'),
+          subtitle: Text(checking && updateStatus.startsWith('Checking Stable')
+              ? updateStatus
+              : 'Check and download Stable-channel app patches'),
+          trailing: checking && updateStatus.startsWith('Checking Stable')
+              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.chevron_right),
+          onTap: (checking || downloading) ? null : _checkForOtaUpdates,
+        ),
+        const Divider(height: 1),
         ListTile(
           leading: const Icon(Icons.system_update_alt, color: Color(0xFFD4AF37)),
           title: const Text('App updates'),
