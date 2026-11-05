@@ -105,8 +105,8 @@ Future<bool> playStartupJingle({bool force = false}) async {
     }
   }
 
-  // Sound failure must not lock the user out of the application. The splash
-  // remains visible for its minimum duration, then startup continues safely.
+  // Do not bypass the required brand ident. StartupGate remains on the splash
+  // and offers replay or a full in-app restart when playback cannot complete.
   return false;
 }
 
@@ -596,31 +596,55 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       _startupSoundFailed = false;
       _error = null;
     });
-    final played = await playStartupJingle(force: true);
-    if (!mounted) return;
-    if (!played) {
+    try {
+      final played = await playStartupJingle(force: true);
+      if (!mounted) return;
+      if (!played) {
+        setState(() {
+          _starting = false;
+          _startupSoundFailed = true;
+          _error = 'The High-Tech startup sound could not be confirmed. Please replay it or restart the app.';
+        });
+        return;
+      }
+      _startupSoundHandled = true;
+      final remaining = _minimumStartupScreenDuration - _startupClock.elapsed;
+      if (remaining > Duration.zero) {
+        await Future<void>.delayed(remaining);
+      }
+      if (!mounted) return;
+      setState(() {
+        _ready = true;
+        _starting = false;
+        _startupSoundFailed = false;
+        _error = null;
+      });
+      unawaited(HteOtaUpdateService.checkAndInstall().then(
+        (message) => debugPrint('HTE startup OTA check: $message'),
+      ));
+    } catch (error, stackTrace) {
+      debugPrint('HTE startup jingle replay failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (!mounted) return;
       setState(() {
         _starting = false;
         _startupSoundFailed = true;
-        _error = 'The High-Tech startup sound still could not play. Check your device audio and try again.';
+        _error = 'The High-Tech startup sound could not be played. Please try again or restart the app.';
       });
-      return;
     }
-    _startupSoundHandled = true;
-    final remaining = _minimumStartupScreenDuration - _startupClock.elapsed;
-    if (remaining > Duration.zero) {
-      await Future<void>.delayed(remaining);
+  }
+
+  /// Rebuild the native app from its root so all startup services and the
+  /// mandatory jingle are initialized again without leaving a broken screen.
+  Future<void> _restartApplication() async {
+    if (_starting) return;
+    setState(() => _starting = true);
+    try {
+      await _startupSoundPlayer.stop();
+    } catch (error) {
+      debugPrint('HTE startup player reset during app restart: $error');
     }
-    if (!mounted) return;
-    setState(() {
-      _ready = true;
-      _starting = false;
-      _startupSoundFailed = false;
-      _error = null;
-    });
-    unawaited(HteOtaUpdateService.checkAndInstall().then(
-      (message) => debugPrint('HTE startup OTA check: $message'),
-    ));
+    runApp(const HteApp());
   }
 
   Future<void> _initializeCoreServices() async {
@@ -790,10 +814,21 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                       ),
                     )
                   else
-                    FilledButton(
+                    FilledButton.icon(
                       onPressed: _starting ? null : _initialize,
-                      child: const Text('Try again'),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Retry initialization'),
                     ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: _starting ? null : _restartApplication,
+                    icon: const Icon(Icons.restart_alt_rounded),
+                    label: const Text('Refresh & restart app'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFE5C77F),
+                      side: const BorderSide(color: Color(0xFF80663B)),
+                    ),
+                  ),
                 ],
               ],
             ),
