@@ -1509,6 +1509,7 @@ class HomeTab extends StatelessWidget {
               MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Artists')), body: const ArtistsTab()))))),
         ]),
       ),
+      const ContinueListeningCard(),
       const Heading('Latest releases'),
       const ReleaseList(horizontal: true),
       const Heading('Featured artists'),
@@ -1542,13 +1543,162 @@ class HomeTab extends StatelessWidget {
           ]),
         ),
       ),
+      const Heading('Watch the latest videos'),
+      const VideoPreviewList(),
       const Heading('Released music'),
       const TrackList(compact: true),
       const Padding(
         padding: EdgeInsets.fromLTRB(20, 24, 20, 8),
         child: Text('HIGH-TECH ENTERTAINMENT  ·  QUALITY SOUND, GLOBAL VIBES',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Color(0xFF72808D), fontSize: 8,
+          style: Texclass ContinueListeningCard extends StatelessWidget {
+  const ContinueListeningCard({super.key});
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<Map<String, dynamic>?>(
+    valueListenable: playback.currentTrack,
+    builder: (context, track, _) {
+      if (track == null) return const SizedBox.shrink();
+      return ValueListenableBuilder<bool>(
+        valueListenable: playback.adPlaying,
+        builder: (context, isAd, _) {
+          if (isAd) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Heading('Continue listening'),
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const FullPlayerPage())),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Row(children: [
+                      SizedBox(width: 58, height: 58,
+                        child: MediaCover(url: track['cover_url']?.toString(), height: 58)),
+                      const SizedBox(width: 12),
+                      Expanded(child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('PICK UP WHERE YOU LEFT OFF',
+                            style: TextStyle(color: Color(0xFFD9B96E), fontSize: 9,
+                              letterSpacing: 1.1, fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 5),
+                          Text((track['title'] ?? 'Now playing').toString(),
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w700)),
+                          Text((track['artist'] ?? 'High-Tech Entertainment').toString(),
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                        ],
+                      )),
+                      const Icon(Icons.play_circle_fill_rounded,
+                        color: Color(0xFFD9B96E), size: 34),
+                    ]),
+                  ),
+                ),
+              ),
+            ]),
+          );
+        },
+      );
+    },
+  );
+}
+
+class VideoPreviewList extends StatelessWidget {
+  const VideoPreviewList({super.key});
+
+  Future<void> _openVideo(BuildContext context, Map<String, dynamic> item) async {
+    final raw = (item['video_url'] ?? '').toString().trim();
+    final uri = Uri.tryParse(raw);
+    if (uri == null || (uri.scheme != 'https' && uri.scheme != 'http') || uri.host.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This video is not available yet.')));
+      return;
+    }
+    final host = uri.host.toLowerCase();
+    if (host.contains('youtube.com') || host == 'youtu.be' || host.contains('vimeo.com')) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      return;
+    }
+    if (!context.mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => HteVideoPlayerPage(
+        url: raw,
+        title: (item['title'] ?? 'High-Tech video').toString(),
+      ),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) => RetryFutureBuilder<List<Map<String, dynamic>>>(
+    future: () => rows('videos', 'created_at'),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return Notice(friendlyErrorMessage(snapshot.error!));
+      }
+      if (!snapshot.hasData) return const Busy();
+      final videos = snapshot.data!;
+      if (videos.isEmpty) {
+        return const Notice('Official High-Tech visual releases will appear here.');
+      }
+      return SizedBox(
+        height: 184,
+        child: ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          scrollDirection: Axis.horizontal,
+          itemCount: videos.take(8).length,
+          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          itemBuilder: (context, index) {
+            final item = videos[index];
+            return SizedBox(
+              width: 228,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => _openVideo(context, item),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(child: Stack(fit: StackFit.expand, children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: MediaCover(
+                        url: item['thumbnail_url']?.toString(),
+                        height: 126),
+                    ),
+                    const Center(child: Icon(Icons.play_circle_fill_rounded,
+                      color: Colors.white, size: 48)),
+                    Positioned(
+                      left: 8, bottom: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: .72),
+                          borderRadius: BorderRadius.circular(6)),
+                        child: const Text('HT VIDEO',
+                          style: TextStyle(fontSize: 8, letterSpacing: 1.1,
+                            fontWeight: FontWeight.w800, color: Color(0xFFE8CB8B))),
+                      ),
+                    ),
+                  ])),
+                  const SizedBox(height: 7),
+                  Text((item['title'] ?? 'Music video').toString(),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                  Text((item['artist'] ?? 'High-Tech Entertainment').toString(),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white54, fontSize: 10)),
+                ]),
+              ),
+            );
+          },
+        ),
+      );
+    },
+  );
+}
+
+tStyle(color: Color(0xFF72808D), fontSize: 8,
             letterSpacing: 1.2, height: 1.8)),
       ),
     ],
@@ -2335,87 +2485,154 @@ class DiscoverTab extends StatefulWidget {
   @override
   State<DiscoverTab> createState() => _DiscoverTabState();
 }
+
 class _DiscoverTabState extends State<DiscoverTab> {
   final controller = TextEditingController();
   Timer? _searchDebounce;
-  int _searchRequest = 0;
-  List<Map<String,dynamic>> results = [];
+  List<Map<String, dynamic>> results = [];
+  List<String> availableGenres = [];
+  String selectedGenre = 'All';
   bool loading = true;
   String? error;
+  int _requestNumber = 0;
+
   @override
-  void initState() { super.initState(); search(''); }
-  Future<void> search(String term) async {
-    final requestId = ++_searchRequest;
-    if (mounted) setState(() { loading = true; error = null; });
+  void initState() {
+    super.initState();
+    search('');
+  }
+
+  Future<void> search(String term, {String? genre}) async {
+    if (!mounted) return;
+    final request = ++_requestNumber;
+    setState(() {
+      loading = true;
+      error = null;
+      if (genre != null) selectedGenre = genre;
+    });
     try {
-      final found = await publishedTracks(term);
-      // Ignore stale responses when a newer search has already started.
-      if (!mounted || requestId != _searchRequest) return;
-      results = found;
+      final tracks = await publishedTracks(term);
+      if (!mounted || request != _requestNumber) return;
+      final genres = tracks
+          .map((track) => (track['genre'] ?? '').toString().trim())
+          .where((value) => value.isNotEmpty && value.toLowerCase() != 'spotify')
+          .toSet()
+          .toList()
+        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      availableGenres = genres;
+      if (selectedGenre != 'All' && !availableGenres.contains(selectedGenre)) {
+        selectedGenre = 'All';
+      }
+      results = selectedGenre == 'All'
+          ? tracks
+          : tracks.where((track) =>
+              (track['genre'] ?? '').toString().trim() == selectedGenre).toList();
     } catch (e) {
-      if (!mounted || requestId != _searchRequest) return;
+      if (!mounted || request != _requestNumber) return;
       error = friendlyErrorMessage(e);
     }
-    if (mounted && requestId == _searchRequest) {
-      setState(() => loading = false);
-    }
+    if (mounted && request == _requestNumber) setState(() => loading = false);
   }
+
   @override
   void dispose() {
     _searchDebounce?.cancel();
-    _searchRequest++;
+    _requestNumber++;
     controller.dispose();
     super.dispose();
   }
+
   @override
-  Widget build(BuildContext context) => Column(children: [
-    const Brand(tagline: 'FIND YOUR NEXT FREQUENCY'),
-    Padding(
-      padding: const EdgeInsets.fromLTRB(19, 2, 19, 13),
-      child: Row(children: [
-        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Discover sound.', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900, letterSpacing: -.7)),
-          SizedBox(height: 4),
-          Text('Search the official High-Tech catalogue.', style: TextStyle(color: Color(0xFF8D9AA6), fontSize: 11)),
-        ])),
-        Container(width: 39, height: 39,
-          decoration: BoxDecoration(color: const Color(0xFF17232C), borderRadius: BorderRadius.circular(13),
-            border: Border.all(color: const Color(0xFF344B5A))),
-          child: const Icon(Icons.graphic_eq_rounded, color: Color(0xFFE3BD70), size: 20)),
-      ]),
-    ),
-    Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: TextField(
-        controller: controller,
-        onChanged: (value) {
-          _searchDebounce?.cancel();
-          _searchDebounce = Timer(
-            const Duration(milliseconds: 300),
-            () => search(value),
-          );
-        },
-        decoration: InputDecoration(
-          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFFE3BD70)),
-          hintText: 'Search tracks by title',
-          filled: true,
-          fillColor: const Color(0xFF111923),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF34404D))),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF34404D))),
+  Widget build(BuildContext context) {
+    final genres = ['All', ...availableGenres];
+    return Column(children: [
+      const Brand(),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('FIND YOUR NEXT SOUND',
+            style: TextStyle(color: Color(0xFFD9B96E), fontSize: 10,
+              letterSpacing: 2, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 5),
+          const Text('Discover music',
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 5),
+          const Text('Explore the sounds of High-Tech Entertainment.',
+            style: TextStyle(color: Colors.white60, fontSize: 12)),
+        ]),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: TextField(
+          controller: controller,
+          onChanged: (value) {
+            _searchDebounce?.cancel();
+            _searchDebounce = Timer(
+              const Duration(milliseconds: 300),
+              () => search(value),
+            );
+          },
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.search_rounded),
+            hintText: 'Search tracks by title',
+            filled: true,
+            fillColor: const Color(0xFF111923),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+          ),
         ),
       ),
-    ),
-    const Padding(
-      padding: EdgeInsets.fromLTRB(20, 15, 20, 5),
-      child: Align(alignment: Alignment.centerLeft,
-        child: Text('AVAILABLE TO PLAY', style: TextStyle(color: Color(0xFFE3BD70), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.4))),
-    ),
-    Expanded(child: loading
-      ? const Busy()
-      : error != null
-          ? Notice(friendlyErrorMessage(error!), onRetry: () => search(controller.text))
-          : TrackList(items: results)),
-  ]);
+      const SizedBox(height: 12),
+      SizedBox(
+        height: 42,
+        child: ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          scrollDirection: Axis.horizontal,
+          itemCount: genres.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (context, index) {
+            final genre = genres[index];
+            final selected = genre == selectedGenre;
+            return ChoiceChip(
+              label: Text(genre),
+              selected: selected,
+              onSelected: (_) => search(controller.text, genre: genre),
+              selectedColor: const Color(0xFFD9B96E),
+              backgroundColor: const Color(0xFF151619),
+              side: BorderSide(
+                color: selected ? const Color(0xFFD9B96E) : const Color(0xFF393A3B)),
+              labelStyle: TextStyle(
+                color: selected ? const Color(0xFF17130B) : Colors.white70,
+                fontWeight: FontWeight.w700,
+                fontSize: 11),
+            );
+          },
+        ),
+      ),
+      Expanded(
+        child: loading
+            ? const Busy()
+            : error != null
+                ? Notice(error!, onRetry: () => search(controller.text))
+                : results.isEmpty
+                    ? const Notice('No tracks match this search yet. Try another genre or search term.')
+                    : Column(children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                          child: Row(children: [
+                            const Expanded(child: Text('AVAILABLE TO PLAY',
+                              style: TextStyle(color: Color(0xFFD9B96E),
+                                fontSize: 9, letterSpacing: 1.4,
+                                fontWeight: FontWeight.w800))),
+                            Text('${results.length} tracks',
+                              style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                          ]),
+                        ),
+                        Expanded(child: TrackList(items: results)),
+                      ]),
+      ),
+    ]);
+  }
 }
 
 class SavedTab extends StatefulWidget {
