@@ -16,6 +16,7 @@ import 'diagnostics_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
+import 'package:restart_app/restart_app.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
@@ -110,7 +111,9 @@ Future<bool> playStartupJingle({bool force = false}) async {
   return false;
 }
 
-/// Centralised Shorebird OTA checker. All checks target the public Stable track.
+/// Single source of truth for Stable-channel Shorebird patch updates.
+/// Shorebird's native updater remains enabled (shorebird.yaml auto_update: true),
+/// so normal patches download silently on process launch and boot on next cold start.
 class HteOtaUpdateService {
   static final ShorebirdUpdater _updater = ShorebirdUpdater();
   static Future<String>? _activeCheck;
@@ -125,37 +128,51 @@ class HteOtaUpdateService {
     });
   }
 
+  /// True only when Shorebird has staged code different from the running patch.
+  static Future<bool> hasPendingPatch() async {
+    if (!Platform.isAndroid || !_updater.isAvailable) return false;
+    try {
+      final current = await _updater.readCurrentPatch();
+      final next = await _updater.readNextPatch();
+      return current?.number != next?.number;
+    } catch (error) {
+      debugPrint('HTE pending OTA state could not be read: $error');
+      return false;
+    }
+  }
+
   static Future<String> _checkAndInstall() async {
     if (!Platform.isAndroid) {
-      return 'OTA patch updates are currently enabled for Android only.';
+      return 'OTA patches are currently available on Android only.';
     }
     if (!_updater.isAvailable) {
-      return 'Shorebird OTA is unavailable in this installation. This app must be installed from a Shorebird release build.';
+      return 'Automatic OTA is unavailable in this installation. Install the Shorebird-enabled Android release first.';
     }
     try {
       final status = await _updater.checkForUpdate(track: UpdateTrack.stable);
       switch (status) {
         case UpdateStatus.outdated:
           await _updater.update(track: UpdateTrack.stable);
-          final nextPatch = await _updater.readNextPatch();
-          final patchLabel = nextPatch == null ? 'latest patch' : 'Patch #${nextPatch.number}';
-          return '$patchLabel downloaded successfully. Fully close and reopen the app to activate it.';
+          if (await hasPendingPatch()) {
+            final next = await _updater.readNextPatch();
+            return 'Update ready: Patch #${next?.number ?? 'latest'}. Restart the app to activate it; your account and offline files are preserved.';
+          }
+          return 'Update check started. Shorebird downloads patches in the background and activates them on the next app launch.';
         case UpdateStatus.restartRequired:
-          final nextPatch = await _updater.readNextPatch();
-          final patchLabel = nextPatch == null ? 'The downloaded patch' : 'Patch #${nextPatch.number}';
-          return '$patchLabel is ready. Fully close and reopen the app to activate it.';
+          final next = await _updater.readNextPatch();
+          return 'Update ready: Patch #${next?.number ?? 'latest'}. Restart the app to activate it; your account and offline files are preserved.';
         case UpdateStatus.upToDate:
-          final currentPatch = await _updater.readCurrentPatch();
-          return currentPatch == null
-              ? 'No new OTA patch is available. This installation is running the base release.'
-              : 'No new OTA patch is available. Installed patch: #${currentPatch.number}.';
+          final current = await _updater.readCurrentPatch();
+          return current == null
+              ? 'You are up to date on the Stable OTA channel (base release).'
+              : 'You are up to date on the Stable OTA channel (Patch #${current.number}).';
         case UpdateStatus.unavailable:
-          return 'Shorebird OTA is unavailable in this app installation.';
+          return 'Shorebird OTA is unavailable in this installation.';
       }
     } catch (error, stackTrace) {
-      debugPrint('HTE OTA update check failed: $error');
+      debugPrint('HTE OTA update failed: $error');
       debugPrintStack(stackTrace: stackTrace);
-      return 'OTA check failed. Check your internet connection and try again.';
+      return 'OTA update could not finish. Your current app is unchanged; check your connection and retry.';
     }
   }
 }
@@ -574,10 +591,8 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
           _ready = true;
           _starting = false;
         });
-        // Explicitly check Stable OTA after the app is ready; never block startup.
-        unawaited(HteOtaUpdateService.checkAndInstall().then(
-          (message) => debugPrint('HTE startup OTA check: $message'),
-        ));
+        // Shorebird's native auto-updater checks and stages Stable patches in the background.
+        // Do not issue a second manual check here; it can race the native download.
       }
     } catch (error) {
       if (mounted) {
@@ -619,9 +634,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         _startupSoundFailed = false;
         _error = null;
       });
-      unawaited(HteOtaUpdateService.checkAndInstall().then(
-        (message) => debugPrint('HTE startup OTA check: $message'),
-      ));
+      // Native Shorebird auto-update remains responsible for background patch checks.
     } catch (error, stackTrace) {
       debugPrint('HTE startup jingle replay failed: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -641,10 +654,23 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
     setState(() => _starting = true);
     try {
       await _startupSoundPlayer.stop();
-    } catch (error) {
-      debugPrint('HTE startup player reset during app restart: $error');
+      final result = await Restart.restartApp(mode: RestartMode.process);
+      if (!result.success && mounted) {
+        setState(() {
+          _starting = false;
+          _error = 'Android could not restart the app automatically. Please close and reopen High-Tech Entertainment.';
+        });
+      }
+    } catch (error, stackTrace) {
+      debugPrint('HTE full process restart failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (mounted) {
+        setState(() {
+          _starting = false;
+          _error = 'The app could not restart automatically. Please close and reopen it.';
+        });
+      }
     }
-    runApp(const HteApp());
   }
 
   Future<void> _initializeCoreServices() async {
@@ -3662,6 +3688,7 @@ class _SettingsPageState extends State<SettingsPage> {
   String version = 'Loading…';
   bool checking = false;
   bool downloading = false;
+  bool otaRestartRequired = false;
   double downloadProgress = 0;
   String updateStatus = '';
   bool autoplaySetting = true;
@@ -3738,6 +3765,18 @@ class _SettingsPageState extends State<SettingsPage> {
     return 0;
   }
 
+  Future<void> _restartToApplyOta() async {
+    try {
+      final result = await Restart.restartApp(mode: RestartMode.process);
+      if (!result.success && mounted) {
+        _message('Restart could not be started. Close and reopen the app to apply the downloaded patch.');
+      }
+    } catch (error) {
+      if (mounted) _message('Restart failed. Close and reopen the app to apply the downloaded patch.');
+      debugPrint('HTE OTA restart failed: $error');
+    }
+  }
+
   Future<void> _checkForOtaUpdates() async {
     if (checking || downloading) return;
     setState(() {
@@ -3746,9 +3785,38 @@ class _SettingsPageState extends State<SettingsPage> {
     });
     try {
       final result = await HteOtaUpdateService.checkAndInstall();
+      final pending = await HteOtaUpdateService.hasPendingPatch();
       if (!mounted) return;
-      setState(() => updateStatus = result);
-      _message(result);
+      setState(() {
+        updateStatus = result;
+        otaRestartRequired = pending;
+      });
+      if (pending) {
+        final restartNow = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Update ready'),
+            content: const Text('The new app code has downloaded safely. Restart High-Tech Entertainment now to activate it? Your account, settings and offline media will be kept.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Later'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Restart now'),
+              ),
+            ],
+          ),
+        );
+        if (restartNow == true) {
+          await _restartToApplyOta();
+        } else if (mounted) {
+          _message('Update saved. It will activate automatically the next time the app starts.');
+        }
+      } else {
+        _message(result);
+      }
     } finally {
       if (mounted) setState(() => checking = false);
     }
@@ -4146,19 +4214,31 @@ class _SettingsPageState extends State<SettingsPage> {
       Card(child: Column(children: [
         ListTile(
           leading: const Icon(Icons.system_update_alt_rounded, color: Color(0xFFD4AF37)),
-          title: const Text('OTA Update Checker'),
+          title: const Text('Automatic OTA patches'),
           subtitle: Text(checking && updateStatus.startsWith('Checking Stable')
               ? updateStatus
-              : 'Check and download Stable-channel app patches'),
+              : otaRestartRequired
+                  ? 'Update downloaded — restart to apply'
+                  : 'Downloads automatically in the background; applies on next app launch'),
           trailing: checking && updateStatus.startsWith('Checking Stable')
               ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.chevron_right),
           onTap: (checking || downloading) ? null : _checkForOtaUpdates,
         ),
+        if (otaRestartRequired)
+          ListTile(
+            leading: const Icon(Icons.check_circle_outline, color: Color(0xFF80C7A2)),
+            title: const Text('OTA update ready to apply'),
+            subtitle: const Text('Restart now, or it will activate the next time the app starts.'),
+            trailing: FilledButton(
+              onPressed: checking ? null : _restartToApplyOta,
+              child: const Text('Restart'),
+            ),
+          ),
         const Divider(height: 1),
         ListTile(
           leading: const Icon(Icons.system_update_alt, color: Color(0xFFD4AF37)),
-          title: const Text('App updates'),
+          title: const Text('Full APK update'),
           subtitle: Text(downloading ? updateStatus : 'Check, download and install the latest official Android version'),
           trailing: (checking || downloading) ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.chevron_right),
           onTap: (checking || downloading) ? null : _checkForUpdates,
