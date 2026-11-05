@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'playback_engine.dart';
 
@@ -76,6 +77,16 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
 
       _controller = video;
       await video.initialize().timeout(const Duration(seconds: 45));
+      if (!mounted) return;
+      // Apply the user's saved default speed before playback begins.
+      try {
+        final preferences = await SharedPreferences.getInstance();
+        final savedSpeed = preferences.getDouble('hte_video_speed') ?? 1.0;
+        await video.setPlaybackSpeed(savedSpeed);
+        _playbackSpeed = savedSpeed;
+      } catch (error) {
+        debugPrint('HTE saved video speed could not be applied: $error');
+      }
       if (!mounted) return;
       _lastPlaying = video.value.isPlaying;
       video.addListener(_onVideoChanged);
