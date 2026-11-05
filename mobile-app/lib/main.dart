@@ -7,6 +7,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -39,6 +40,13 @@ final AudioPlayer player = HtePlayback.instance.player;
 final AudioPlayer _startupSoundPlayer = AudioPlayer();
 final ValueNotifier<int> favouritesRevision = ValueNotifier<int>(0);
 
+/// Lightweight client-side validation; Supabase remains the authority.
+bool isValidEmailAddress(String value) =>
+    RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value.trim());
+
+bool isValidPasswordPair(String password, String confirmation) =>
+    password.length >= 8 && password == confirmation;
+
 /// Convert low-level exceptions into clear, user-safe messages.
 String friendlyErrorMessage(Object error) {
   final details = error.toString().toLowerCase();
@@ -55,6 +63,77 @@ String friendlyErrorMessage(Object error) {
       details.contains('internet connection');
   if (offline) {
     return 'No internet connection. Connect to the internet and try again.';
+  }
+  if (error is AuthException) {
+    if (details.contains('invalid login credentials')) {
+      return 'The email or password is incorrect. Check your details and try again.';
+    }
+    if (details.contains('email not confirmed')) {
+      return 'Please confirm your email address before signing in.';
+    }
+    if (details.contains('provider is not enabled') ||
+        details.contains('unsupported provider')) {
+      return 'This sign-in provider is not enabled yet. Please use another sign-in method.';
+    }
+    if (details.contains('too many requests') ||
+        details.contains('rate limit')) {
+      return 'Too many attempts. Please wait a little while and try again.';
+    }
+    if (details.contains('password')) {
+      return 'The password could not be accepted. Check the requirements and try again.';
+    }
+    return 'We could not complete sign-in. Check your account details and try again.';
+  }
+  if (error is HttpException) {
+    if (details.contains('404')) {
+      return 'This media file is no longer available. Please ask the publisher to upload it again.';
+    }
+    if (details.contains('401') || details.contains('403')) {
+      return 'You do not have permission to access this media file.';
+    }
+    return 'The media server could not complete the request. Please retry.';
+  }
+  if (error is FormatException) {
+    if (details.contains('smaller than 5 mb')) {
+      return 'Choose a profile image smaller than 5 MB.';
+    }
+    if (details.contains('does not match the requested media type')) {
+      return 'Choose a file that matches the selected audio or video type.';
+    }
+    return 'The returned data or media format is not supported. Please try another item.';
+  }
+  if (error is FileSystemException) {
+    return 'Your device could not access this file. Check available storage and permissions.';
+  }
+  if (details.contains('row level security') ||
+      details.contains('row-level security') ||
+      details.contains('permission denied') ||
+      details.contains('not authorized')) {
+    return 'This action is not permitted for the current account.';
+  }
+  if (details.contains('bucket not found')) {
+    return 'Media storage is not configured correctly. Please contact support.';
+  }
+  if (details.contains('payload too large') ||
+      details.contains('file size exceeds') ||
+      details.contains('maximum allowed size')) {
+    return 'This file is too large. Choose a smaller file and try again.';
+  }
+  if (details.contains('duplicate key') ||
+      details.contains('already exists')) {
+    return 'This item already exists. Refresh the list and try a different name.';
+  }
+  if (details.contains('pgrst116') ||
+      details.contains('no rows found') ||
+      details.contains('object not found')) {
+    return 'This item is no longer available. Refresh and try again.';
+  }
+  if (details.contains('storageexception') ||
+      details.contains('storage api')) {
+    return 'Media storage could not complete the request. Check your connection and access, then retry.';
+  }
+  if (details.contains('relation') && details.contains('does not exist')) {
+    return 'This feature is temporarily unavailable. Please try again later.';
   }
   return 'Something went wrong. Please try again.';
 }
@@ -130,32 +209,40 @@ class HteApp extends StatelessWidget {
       ),
     ),
     darkTheme: ThemeData(
+      useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF08090B),
+      scaffoldBackgroundColor: const Color(0xFF07090D),
       colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFFD9B96E),
+        seedColor: const Color(0xFFE3B85F),
         brightness: Brightness.dark,
       ).copyWith(
-        primary: const Color(0xFFD9B96E),
-        onPrimary: const Color(0xFF17130B),
-        secondary: const Color(0xFFC7CCD2),
-        surface: const Color(0xFF111316),
-        outline: const Color(0xFF393A3B),
+        primary: const Color(0xFFE3B85F),
+        onPrimary: const Color(0xFF17120A),
+        secondary: const Color(0xFFB8D3E6),
+        onSecondary: const Color(0xFF09121A),
+        surface: const Color(0xFF10151D),
+        surfaceContainer: const Color(0xFF131A23),
+        surfaceContainerHigh: const Color(0xFF19222D),
+        outline: const Color(0xFF34404D),
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF08090B),
-        foregroundColor: Color(0xFFF6F3EC),
+        backgroundColor: Color(0xFF07090D),
+        foregroundColor: Color(0xFFF5F2EA),
         elevation: 0,
         centerTitle: false,
         surfaceTintColor: Colors.transparent,
       ),
+      textTheme: ThemeData.dark().textTheme.apply(
+        bodyColor: const Color(0xFFF2F1ED),
+        displayColor: const Color(0xFFF8F5EC),
+      ),
       cardTheme: CardThemeData(
-        color: const Color(0xFF111214),
+        color: const Color(0xFF111720),
         elevation: 0,
-        margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
+        margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: const BorderSide(color: Color(0xFF2D2E30)),
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: Color(0xFF263442)),
         ),
       ),
       listTileTheme: const ListTileThemeData(
@@ -319,6 +406,9 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       // Never play an advert during startup: reopening the app or returning
       // from a paused session must take the listener directly to sign-in.
       // Scheduled audio adverts are handled only after completed music tracks.
+      // Restore the completed-track count so an app restart does not reset the
+      // promised eight-song advert interval.
+      await playback.restoreAdCounter();
 
       // Initialise authentication/data services without waiting for audio.
       if (!_supabaseInitialized) {
@@ -512,9 +602,14 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<AuthState>(
       stream: db.auth.onAuthStateChange,
       builder: (context, snapshot) {
+        final authState = snapshot.data;
         final session = snapshot.hasData
-            ? snapshot.data!.session
+            ? authState!.session
             : db.auth.currentSession;
+        if (session != null &&
+            authState?.event == AuthChangeEvent.passwordRecovery) {
+          return const PasswordRecoveryPage();
+        }
         return session == null ? const LoginPage() : const MainScreen();
       },
     );
@@ -527,48 +622,234 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF080808),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(26, 36, 26, 28),
-              shrinkWrap: true,
-              children: [
-                const SizedBox(height: 18),
-                Center(child: SvgPicture.asset(
-                  'assets/high-tech-logo.svg',
-                  width: 132,
-                  height: 132,
-                  semanticsLabel: 'High-Tech Entertainment',
-                )),
-                const SizedBox(height: 22),
-                const Text('HIGH-TECH ENTERTAINMENT',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900,
-                    letterSpacing: 2, color: Color(0xFFD4AF37))),
-                const SizedBox(height: 8),
-                const Text('Music. Beats. Production. Beyond.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70)),
-                const SizedBox(height: 30),
-                const Text('Welcome back',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                const Text('Sign in to continue to High-Tech Entertainment.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white60)),
-                const SizedBox(height: 22),
-                const AccountTab(embedded: true),
-              ],
+      body: Stack(children: [
+        const Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF17130D), Color(0xFF090E14), Color(0xFF06080C)],
+              ),
             ),
           ),
         ),
-      ),
+        Positioned(
+          top: -170, right: -125,
+          child: IgnorePointer(child: Container(
+            width: 390, height: 390,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0x2DE1BD72), width: 1.2),
+            ),
+          )),
+        ),
+        Positioned(
+          top: -125, right: -82,
+          child: IgnorePointer(child: Container(
+            width: 290, height: 290,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0x223F7894), width: 1.1),
+            ),
+          )),
+        ),
+        SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(24, 26, 24, 30),
+                children: [
+                  const SizedBox(height: 10),
+                  Center(child: Container(
+                    width: 142, height: 142,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const SweepGradient(colors: [
+                        Color(0xFF78572A), Color(0xFFE8C979),
+                        Color(0xFF5B8095), Color(0xFF78572A),
+                      ]),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0x447E622F), blurRadius: 35, spreadRadius: 3),
+                      ],
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF090D12)),
+                      child: SvgPicture.asset(
+                        'assets/high-tech-logo.svg',
+                        semanticsLabel: 'High-Tech Entertainment',
+                      ),
+                    ),
+                  )),
+                  const SizedBox(height: 22),
+                  const Text('HIGH-TECH ENTERTAINMENT',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900,
+                      letterSpacing: 2.2, color: Color(0xFFE4C477))),
+                  const SizedBox(height: 8),
+                  const Text('MUSIC. BEATS. PRODUCTION. BEYOND.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Color(0xFF9EADB8), fontSize: 9,
+                      fontWeight: FontWeight.w800, letterSpacing: 1.4)),
+                  const SizedBox(height: 28),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(18, 21, 18, 19),
+                    decoration: BoxDecoration(
+                      color: const Color(0xD9101720),
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(color: const Color(0xFF344453)),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0x66000000), blurRadius: 30, offset: Offset(0, 14)),
+                      ],
+                    ),
+                    child: const Column(children: [
+                      Text('YOUR SOUND. YOUR SPACE.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900,
+                          letterSpacing: -.5, color: Color(0xFFF6F2E9))),
+                      SizedBox(height: 7),
+                      Text('Sign in to enter the High-Tech experience.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Color(0xFFAAB6C0), fontSize: 11)),
+                      SizedBox(height: 20),
+                      AccountTab(embedded: true),
+                    ]),
+                  ),
+                  const SizedBox(height: 20),
+                  const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.shield_outlined, size: 13, color: Color(0xFF8796A2)),
+                    SizedBox(width: 7),
+                    Text('SECURE ACCOUNT ACCESS',
+                      style: TextStyle(color: Color(0xFF8796A2), fontSize: 8,
+                        fontWeight: FontWeight.w800, letterSpacing: 1.3)),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ]),
     );
   }
+}
+
+class PasswordRecoveryPage extends StatefulWidget {
+  const PasswordRecoveryPage({super.key});
+
+  @override
+  State<PasswordRecoveryPage> createState() => _PasswordRecoveryPageState();
+}
+
+class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
+  final _password = TextEditingController();
+  final _confirmPassword = TextEditingController();
+  bool _busy = false;
+  bool _showPassword = false;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    _confirmPassword.dispose();
+    super.dispose();
+  }
+
+  Future<void> _savePassword() async {
+    final password = _password.text;
+    if (password.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Choose a password with at least 8 characters.')),
+      );
+      return;
+    }
+    if (!isValidPasswordPair(password, _confirmPassword.text)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The passwords do not match. Please check and try again.')),
+      );
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await db.auth.updateUser(UserAttributes(password: password));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Your password has been updated successfully.')),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Stack(children: [
+      const Positioned.fill(child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF17130D), Color(0xFF090E14), Color(0xFF06080C)],
+          ),
+        ),
+      )),
+      SafeArea(child: Center(child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: const Color(0xFF111923),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFF465565)),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const Icon(Icons.lock_reset_rounded, color: Color(0xFFE4C477), size: 48),
+              const SizedBox(height: 14),
+              const Text('RESET YOUR PASSWORD',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900,
+                  letterSpacing: 1.1)),
+              const SizedBox(height: 8),
+              const Text('Choose a new password for your High-Tech account.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFFAAB6C0), fontSize: 12)),
+              const SizedBox(height: 22),
+              TextField(
+                controller: _password,
+                obscureText: !_showPassword,
+                autofillHints: const [AutofillHints.newPassword],
+                decoration: const InputDecoration(labelText: 'New password', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _confirmPassword,
+                obscureText: !_showPassword,
+                autofillHints: const [AutofillHints.newPassword],
+                decoration: const InputDecoration(labelText: 'Confirm new password', border: OutlineInputBorder()),
+              ),
+              Align(alignment: Alignment.centerRight, child: TextButton(
+                onPressed: () => setState(() => _showPassword = !_showPassword),
+                child: Text(_showPassword ? 'Hide passwords' : 'Show passwords'),
+              )),
+              const SizedBox(height: 8),
+              FilledButton(
+                onPressed: _busy ? null : _savePassword,
+                child: Text(_busy ? 'Updating…' : 'Update password'),
+              ),
+            ]),
+          ),
+        ),
+      ))),
+    ]),
+  );
 }
 
 class MainScreen extends StatefulWidget {
@@ -581,7 +862,7 @@ class _MainScreenState extends State<MainScreen> {
   int tab = 0;
   final pages = const [HomeTab(), DiscoverTab(), ReleasesTab(), LibraryTab(), AccountTab(), MoreTab()];
   static const _items = [
-    (Icons.home_rounded, 'Home'),
+    (Icons.space_dashboard_rounded, 'Home'),
     (Icons.explore_rounded, 'Discover'),
     (Icons.album_rounded, 'Releases'),
     (Icons.library_music_rounded, 'Library'),
@@ -591,18 +872,38 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    body: SafeArea(child: IndexedStack(index: tab, children: pages)),
+    body: Stack(children: [
+      const Positioned.fill(
+        child: IgnorePointer(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(-0.85, -0.95),
+                radius: 1.25,
+                colors: [Color(0x1A9C762E), Color(0x0007090D)],
+              ),
+            ),
+          ),
+        ),
+      ),
+      SafeArea(child: IndexedStack(index: tab, children: pages)),
+    ]),
     bottomNavigationBar: Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF090A0C),
-        border: Border(top: BorderSide(color: Color(0xFF29251D))),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xF2141B24), Color(0xFF080B10)],
+        ),
+        border: Border(top: BorderSide(color: Color(0xFF34404D), width: .7)),
+        boxShadow: [BoxShadow(color: Color(0x66000000), blurRadius: 24, offset: Offset(0, -8))],
       ),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         const PlayerBar(),
         SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 7, 8, 7),
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 7),
             child: Row(
               children: List.generate(_items.length, (index) {
                 final selected = tab == index;
@@ -616,24 +917,29 @@ class _MainScreenState extends State<MainScreen> {
                       borderRadius: BorderRadius.circular(15),
                       onTap: () => setState(() => tab = index),
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 220),
+                        duration: const Duration(milliseconds: 240),
                         curve: Curves.easeOutCubic,
                         margin: const EdgeInsets.symmetric(horizontal: 3),
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
-                          color: selected ? const Color(0xFF302615) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(15),
+                          gradient: selected ? const LinearGradient(
+                            begin: Alignment.topLeft, end: Alignment.bottomRight,
+                            colors: [Color(0xFF4A3920), Color(0xFF211D17)],
+                          ) : null,
+                          color: selected ? null : Colors.transparent,
+                          borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: selected ? const Color(0xFF8C713B) : Colors.transparent,
+                            color: selected ? const Color(0xFFB68B43) : Colors.transparent,
                           ),
                         ),
                         child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(item.$1, size: 21,
-                            color: selected ? const Color(0xFFE2C47D) : const Color(0xFF85827B)),
-                          const SizedBox(height: 3),
+                          Icon(item.$1, size: 20,
+                            color: selected ? const Color(0xFFF0CC7B) : const Color(0xFF82909E)),
+                          const SizedBox(height: 4),
                           Text(item.$2, maxLines: 1,
-                            style: TextStyle(fontSize: 10, fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                              color: selected ? const Color(0xFFE2C47D) : const Color(0xFF85827B))),
+                            style: TextStyle(fontSize: 9, letterSpacing: .2,
+                              fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                              color: selected ? const Color(0xFFF0CC7B) : const Color(0xFF9BA7B2))),
                         ]),
                       ),
                     ),
@@ -699,16 +1005,44 @@ class Brand extends StatelessWidget {
   final String tagline;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+    padding: const EdgeInsets.fromLTRB(18, 15, 18, 15),
     child: Row(children: [
-      SvgPicture.asset('assets/high-tech-logo.svg', width: 58, height: 58, semanticsLabel: 'High-Tech Entertainment'),
-      const SizedBox(width: 14),
-      const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('HIGH-TECH', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 2.4, height: 1.1)),
-        SizedBox(height: 4),
-        Text('ENTERTAINMENT', style: TextStyle(fontSize: 10, color: Color(0xFFD9B96E), letterSpacing: 3.2, fontWeight: FontWeight.w600)),
+      Container(
+        width: 58, height: 58,
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const SweepGradient(colors: [Color(0xFF7E5A26), Color(0xFFE8C878), Color(0xFF607D91), Color(0xFF7E5A26)]),
+          boxShadow: const [BoxShadow(color: Color(0x337E5A26), blurRadius: 18, spreadRadius: 1)],
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(4),
+          decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF090D12)),
+          child: SvgPicture.asset('assets/high-tech-logo.svg', semanticsLabel: 'High-Tech Entertainment'),
+        ),
+      ),
+      const SizedBox(width: 13),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('HIGH-TECH', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: 2.1, height: 1.05)),
+        const SizedBox(height: 4),
+        const Text('ENTERTAINMENT', style: TextStyle(fontSize: 9, color: Color(0xFFE2BC69), letterSpacing: 3.0, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 5),
+        Text(tagline, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 8, color: Color(0xFF8795A3), letterSpacing: 1.0, fontWeight: FontWeight.w600)),
       ])),
-      const Icon(Icons.graphic_eq_rounded, color: Color(0xFFD9B96E), size: 23),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+        decoration: BoxDecoration(
+          color: const Color(0xFF13202A),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF344B5A)),
+        ),
+        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.graphic_eq_rounded, color: Color(0xFFE2BC69), size: 13),
+          SizedBox(width: 5),
+          Text('HT MUSIC', style: TextStyle(color: Color(0xFFC7D5DF), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: .8)),
+        ]),
+      ),
     ]),
   );
 }
@@ -718,9 +1052,151 @@ class Heading extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
-    child: Text(text, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+    padding: const EdgeInsets.fromLTRB(19, 20, 19, 10),
+    child: Row(children: [
+      Container(width: 3, height: 17,
+        decoration: BoxDecoration(color: const Color(0xFFE3BD70), borderRadius: BorderRadius.circular(4))),
+      const SizedBox(width: 9),
+      Expanded(child: Text(text.toUpperCase(),
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900,
+          letterSpacing: 1.15, color: Color(0xFFE7E3D9)))),
+    ]),
   );
+}
+
+class AppUpdateBanner extends StatefulWidget {
+  const AppUpdateBanner({super.key});
+
+  @override
+  State<AppUpdateBanner> createState() => _AppUpdateBannerState();
+}
+
+class _AppUpdateBannerState extends State<AppUpdateBanner> {
+  String? _availableVersion;
+
+  int _compareVersions(String left, String right) {
+    final a = left.split('.').map((part) => int.tryParse(part) ?? 0).toList();
+    final b = right.split('.').map((part) => int.tryParse(part) ?? 0).toList();
+    for (var index = 0; index < (a.length > b.length ? a.length : b.length); index++) {
+      final first = index < a.length ? a[index] : 0;
+      final second = index < b.length ? b[index] : 0;
+      if (first != second) return first.compareTo(second);
+    }
+    return 0;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkForUpdate());
+  }
+
+  Future<void> _checkForUpdate() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final response = await http.get(
+        Uri.https('api.github.com', '/repos/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest'),
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'High-Tech-Entertainment-App',
+          'Cache-Control': 'no-cache',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      ).timeout(const Duration(seconds: 12));
+      if (!mounted || response.statusCode != 200) return;
+      final release = jsonDecode(response.body) as Map<String, dynamic>;
+      if (release['draft'] == true || release['prerelease'] == true) return;
+
+      final tag = (release['tag_name'] ?? '').toString();
+      final isSuRelease = tag.toUpperCase().endsWith('-SU');
+      final latest = tag
+          .replaceFirst(RegExp(r'^[vV]'), '')
+          .replaceFirst(RegExp(r'-SU$', caseSensitive: false), '');
+      final installedSu = info.version.toUpperCase().contains(' SU');
+      final installed = info.version
+          .replaceFirst(RegExp(r'\s+SU$', caseSensitive: false), '')
+          .trim();
+      final latestBuild = int.tryParse(
+        RegExp(r'Android build:\s*(\d+)', caseSensitive: false)
+            .firstMatch((release['body'] ?? '').toString())
+            ?.group(1) ?? '',
+      ) ?? 0;
+      final installedBuild = int.tryParse(info.buildNumber) ?? 0;
+      final comparison = _compareVersions(latest, installed);
+      final updateAvailable = latest.isNotEmpty &&
+          (comparison > 0 ||
+              (comparison == 0 && latestBuild > installedBuild) ||
+              (isSuRelease && !installedSu));
+      if (!updateAvailable) return;
+
+      final assets = release['assets'] as List<dynamic>? ?? [];
+      final hasApk = assets.any((raw) {
+        if (raw is! Map<String, dynamic>) return false;
+        final name = (raw['name'] ?? '').toString().toLowerCase();
+        final url = (raw['browser_download_url'] ?? '').toString();
+        final size = (raw['size'] as num?)?.toInt() ?? 0;
+        return name.endsWith('.apk') && url.startsWith('https://') && size > 0;
+      });
+      if (!hasApk || !mounted) return;
+      setState(() => _availableVersion = latest);
+    } catch (error) {
+      // Automatic update discovery is best-effort. Manual checking remains
+      // available in Settings, and an offline start must never block the app.
+      debugPrint('HTE automatic update check skipped: $error');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final version = _availableVersion;
+    if (version == null) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 15),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF3A2D1B), Color(0xFF192631)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE0B96E)),
+      ),
+      child: Row(children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: const Color(0xFF111820),
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: const Color(0xFF6B5838)),
+          ),
+          child: const Icon(Icons.system_update_alt_rounded, color: Color(0xFFE3BD70)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('UPDATE AVAILABLE · v$version',
+              style: const TextStyle(color: Color(0xFFF0D18B), fontSize: 9,
+                fontWeight: FontWeight.w900, letterSpacing: .8)),
+            const SizedBox(height: 4),
+            const Text('A new High-Tech experience is ready.',
+              style: TextStyle(color: Color(0xFFD3DDE4), fontSize: 10)),
+          ],
+        )),
+        const SizedBox(width: 8),
+        IconButton(
+          tooltip: 'Review app update',
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const SettingsPage(autoCheckForUpdates: true)),
+          ),
+          icon: const Icon(Icons.arrow_forward_rounded, color: Color(0xFFE3BD70)),
+        ),
+      ]),
+    );
+  }
 }
 
 class HomeTab extends StatelessWidget {
@@ -728,75 +1204,115 @@ class HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.only(bottom: 30),
+    padding: const EdgeInsets.only(bottom: 28),
     children: [
       const Brand(),
+      const AppUpdateBanner(),
       Container(
-        margin: const EdgeInsets.fromLTRB(16, 3, 16, 22),
+        margin: const EdgeInsets.fromLTRB(16, 2, 16, 18),
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0xFF70582F), width: 1),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: const Color(0xFF8B6B35).withValues(alpha: .8)),
           gradient: const LinearGradient(
             begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [Color(0xFF302516), Color(0xFF171719), Color(0xFF0D0E10)],
+            colors: [Color(0xFF292319), Color(0xFF111923), Color(0xFF090D13)],
+            stops: [0, .56, 1],
           ),
-          boxShadow: const [BoxShadow(color: Color(0x332D210D), blurRadius: 28, offset: Offset(0, 12))],
+          boxShadow: const [
+            BoxShadow(color: Color(0x553A2A10), blurRadius: 30, offset: Offset(0, 14)),
+            BoxShadow(color: Color(0x222D536A), blurRadius: 28, offset: Offset(10, -8)),
+          ],
         ),
         child: Stack(children: [
-          Positioned(right: -54, top: -54,
-            child: Container(width: 210, height: 210,
+          Positioned(right: -92, top: -76,
+            child: Container(width: 290, height: 290,
               decoration: BoxDecoration(shape: BoxShape.circle,
-                border: Border.all(color: const Color(0x337E6638), width: 1.2))),
-          ),
-          Positioned(right: 4, top: 38,
-            child: Opacity(opacity: .16,
+                border: Border.all(color: const Color(0x44D7B66B), width: 1.1)))),
+          Positioned(right: -60, top: -43,
+            child: Container(width: 225, height: 225,
+              decoration: BoxDecoration(shape: BoxShape.circle,
+                border: Border.all(color: const Color(0x223D7894), width: 1.1)))),
+          Positioned(right: 8, top: 54,
+            child: Opacity(opacity: .12,
               child: SvgPicture.asset('assets/high-tech-logo.svg', width: 150, height: 150))),
+          Positioned(right: 24, bottom: 34,
+            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              for (final h in [12.0, 22.0, 16.0, 34.0, 23.0, 43.0, 29.0, 18.0, 36.0, 24.0, 15.0])
+                Container(width: 3, height: h, margin: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: BoxDecoration(color: const Color(0xFFDDBB70).withValues(alpha: .58),
+                    borderRadius: BorderRadius.circular(4))),
+            ])),
           Padding(
-            padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
+            padding: const EdgeInsets.fromLTRB(22, 22, 22, 23),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Container(width: 7, height: 7,
-                  decoration: const BoxDecoration(color: Color(0xFFE2C47D), shape: BoxShape.circle)),
+                  decoration: const BoxDecoration(color: Color(0xFF8ED2B2), shape: BoxShape.circle,
+                    boxShadow: [BoxShadow(color: Color(0x668ED2B2), blurRadius: 8)])),
                 const SizedBox(width: 8),
-                const Text('THE SOUND OF WHAT’S NEXT',
-                  style: TextStyle(color: Color(0xFFE2C47D), fontSize: 9,
-                    fontWeight: FontWeight.w800, letterSpacing: 2.0)),
+                const Text('THE OFFICIAL HIGH-TECH EXPERIENCE',
+                  style: TextStyle(color: Color(0xFFC6D3DC), fontSize: 8,
+                    fontWeight: FontWeight.w800, letterSpacing: 1.35)),
+                const Spacer(),
+                const Icon(Icons.auto_awesome, color: Color(0xFFE3C47D), size: 17),
+              ]),
+              const SizedBox(height: 29),
+              const Text('SOUND WITHOUT\nLIMITS.',
+                style: TextStyle(fontSize: 39, height: 1.0, fontWeight: FontWeight.w900,
+                  letterSpacing: -1.7, color: Color(0xFFF8F4E9))),
+              const SizedBox(height: 13),
+              const SizedBox(width: 270,
+                child: Text('Discover the artists, original releases and sound shaping the next wave.',
+                  style: TextStyle(color: Color(0xFFB9C4CC), height: 1.55, fontSize: 12))),
+              const SizedBox(height: 23),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                FilledButton.icon(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MusicTab())),
+                  icon: const Icon(Icons.play_arrow_rounded, size: 19),
+                  label: const Text('Explore music'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 46),
+                    padding: const EdgeInsets.symmetric(horizontal: 17),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(
+                    appBar: AppBar(title: const Text('Videos')), body: const VideosTab()))),
+                  icon: const Icon(Icons.play_circle_outline_rounded, size: 18),
+                  label: const Text('Watch visuals'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 46),
+                    foregroundColor: const Color(0xFFD5E0E7),
+                    side: const BorderSide(color: Color(0xFF526575)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
               ]),
               const SizedBox(height: 24),
-              const Text('QUALITY SOUND.\nGLOBAL AMBITION.',
-                style: TextStyle(fontSize: 31, height: 1.08, fontWeight: FontWeight.w800,
-                  letterSpacing: -1.0, color: Color(0xFFF7F3E9))),
-              const SizedBox(height: 12),
-              const Text('Discover the artists, releases and original sound shaping High-Tech Entertainment.',
-                style: TextStyle(color: Color(0xFFC4BFB4), height: 1.55, fontSize: 13)),
-              const SizedBox(height: 22),
-              FilledButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MusicTab())),
-                icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                label: const Text('Explore the music'),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, 46),
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
-              const SizedBox(height: 18),
               Row(children: [
-                const Icon(Icons.graphic_eq_rounded, color: Color(0xFFE2C47D), size: 16),
+                const Icon(Icons.graphic_eq_rounded, color: Color(0xFFE3C47D), size: 15),
                 const SizedBox(width: 7),
-                Text('MUSIC  •  BEATS  •  PRODUCTION  •  BEYOND',
-                  style: const TextStyle(color: Color(0x94FFFFFF),
-                    fontSize: 8, fontWeight: FontWeight.w700, letterSpacing: 1.0)),
+                const Text('MUSIC  /  BEATS  /  PRODUCTION',
+                  style: TextStyle(color: Color(0xFF8799A7), fontSize: 8,
+                    fontWeight: FontWeight.w800, letterSpacing: 1.2)),
               ]),
             ]),
           ),
         ]),
       ),
-      const Heading('Made for your next discovery'),
       Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        padding: const EdgeInsets.fromLTRB(19, 4, 19, 10),
+        child: Row(children: [
+          const Expanded(child: Text('ENTER THE SOUND',
+            style: TextStyle(color: Color(0xFFE4C57E), fontSize: 9,
+              letterSpacing: 1.8, fontWeight: FontWeight.w900))),
+          Container(width: 38, height: 1, color: const Color(0xFF6F5A35)),
+        ]),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(children: [
           Expanded(child: _HomeQuickAction(icon: Icons.album_rounded, title: 'New releases',
             subtitle: 'Fresh from HTE', onTap: () => Navigator.of(context).push(
@@ -812,28 +1328,30 @@ class HomeTab extends StatelessWidget {
       const Heading('Featured artists'),
       const ArtistList(horizontal: true),
       Padding(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF121315),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFF34302A)),
+            gradient: const LinearGradient(colors: [Color(0xFF15212A), Color(0xFF10151C)]),
+            borderRadius: BorderRadius.circular(19),
+            border: Border.all(color: const Color(0xFF334B5B)),
           ),
           child: Row(children: [
-            const Icon(Icons.video_library_rounded, color: Color(0xFFD9B96E), size: 27),
+            Container(width: 42, height: 42,
+              decoration: BoxDecoration(color: const Color(0xFF23313A), borderRadius: BorderRadius.circular(13)),
+              child: const Icon(Icons.video_library_rounded, color: Color(0xFFE3C47D), size: 22)),
             const SizedBox(width: 13),
             const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Beyond the audio', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-              SizedBox(height: 3),
-              Text('Watch official music videos and visual releases.',
-                style: TextStyle(color: Color(0xFFAAA69E), fontSize: 11)),
+              Text('Beyond the audio', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+              SizedBox(height: 4),
+              Text('Official videos and visual releases.',
+                style: TextStyle(color: Color(0xFF9EADB8), fontSize: 10)),
             ])),
             IconButton(
               tooltip: 'Explore videos',
               onPressed: () => Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => Scaffold(appBar: AppBar(title: const Text('Videos')), body: const VideosTab()))),
-              icon: const Icon(Icons.arrow_forward_rounded, color: Color(0xFFE2C47D)),
+              icon: const Icon(Icons.arrow_forward_rounded, color: Color(0xFFE3C47D)),
             ),
           ]),
         ),
@@ -842,9 +1360,10 @@ class HomeTab extends StatelessWidget {
       const TrackList(compact: true),
       const Padding(
         padding: EdgeInsets.fromLTRB(20, 24, 20, 8),
-        child: Text('HIGH-TECH ENTERTAINMENT  ·  MUSIC. BEATS. PRODUCTION. BEYOND.',
+        child: Text('HIGH-TECH ENTERTAINMENT  ·  QUALITY SOUND, GLOBAL VIBES',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Color(0xFF77736B), fontSize: 9, letterSpacing: 1.1, height: 1.8)),
+          style: TextStyle(color: Color(0xFF72808D), fontSize: 8,
+            letterSpacing: 1.2, height: 1.8)),
       ),
     ],
   );
@@ -1182,36 +1701,61 @@ class PlayerBar extends StatelessWidget {
     builder: (context, track, _) {
       if (track == null) return const SizedBox.shrink();
       if (playback.adPlaying.value) {
-        return const Material(
-          color: Color(0xFF1B1B1B),
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(children: [
-              Icon(Icons.campaign, color: Color(0xFFD9B96E)),
-              SizedBox(width: 10),
-              Expanded(child: Text('High-Tech Entertainment • Advertisement')),
-              Icon(Icons.graphic_eq, color: Color(0xFFD9B96E)),
-            ]),
+        return Container(
+          margin: const EdgeInsets.fromLTRB(10, 8, 10, 2),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF2B2418), Color(0xFF171B20)]),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF6B5735)),
           ),
+          child: const Row(children: [
+            Icon(Icons.campaign_rounded, color: Color(0xFFE3BD70), size: 19),
+            SizedBox(width: 10),
+            Expanded(child: Text('HIGH-TECH PROMOTION  ·  SPONSORED AUDIO',
+              style: TextStyle(color: Color(0xFFE8D9B8), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: .7))),
+            Icon(Icons.graphic_eq_rounded, color: Color(0xFFE3BD70), size: 18),
+          ]),
         );
       }
-      return Material(
-        color: const Color(0xFF1B1B1B),
-        child: InkWell(
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FullPlayerPage())),
-          child: Padding(padding: const EdgeInsets.symmetric(horizontal:12,vertical:6),child:Row(children:[
-            SizedBox(width:42,height:42,child:MediaCover(url:track['cover_url']?.toString(),height:42)),
-            const SizedBox(width:10),
-            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
-              Text((track['title']??'High-Tech Player').toString(),maxLines:1,overflow:TextOverflow.ellipsis),
-              Text((track['artist']??'').toString(),style:const TextStyle(color:Colors.white54,fontSize:12),maxLines:1),
+      return Container(
+        margin: const EdgeInsets.fromLTRB(10, 7, 10, 2),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(begin: Alignment.centerLeft, end: Alignment.centerRight,
+            colors: [Color(0xFF1C2832), Color(0xFF121923)]),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: const Color(0xFF405464)),
+          boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 12, offset: Offset(0, 4))],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(15),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FullPlayerPage())),
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal:9,vertical:5),child:Row(children:[
+              ClipRRect(borderRadius: BorderRadius.circular(9),
+                child: SizedBox(width:40,height:40,child:MediaCover(url:track['cover_url']?.toString(),height:40))),
+              const SizedBox(width:10),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+                Text((track['title']??'High-Tech Player').toString(),maxLines:1,overflow:TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+                Text((track['artist']??'').toString(),style:const TextStyle(color:Color(0xFF9EADB8),fontSize:10),maxLines:1),
+              ])),
+              StreamBuilder<PlayerState>(stream:player.playerStateStream,builder:(context,s){
+                final playing=s.data?.playing??false;
+                return IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: playing ? 'Pause' : 'Play',
+                  onPressed:()=>playing?player.pause():player.play(),
+                  icon:Icon(playing?Icons.pause_rounded:Icons.play_arrow_rounded,color:const Color(0xFFE3BD70),size:24));
+              }),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: 'Next track',
+                onPressed:()=>playback.next(),
+                icon:const Icon(Icons.skip_next_rounded,color:Color(0xFFB9C7D1))),
             ])),
-            StreamBuilder<PlayerState>(stream:player.playerStateStream,builder:(context,s){
-              final playing=s.data?.playing??false;
-              return IconButton(onPressed:()=>playing?player.pause():player.play(),icon:Icon(playing?Icons.pause:Icons.play_arrow,color:const Color(0xFFD4AF37)));
-            }),
-            IconButton(onPressed:()=>playback.next(),icon:const Icon(Icons.skip_next)),
-          ])),
+          ),
         ),
       );
     },
@@ -1241,23 +1785,52 @@ class FullPlayerPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Now playing')),
-    body: ValueListenableBuilder<bool>(
+    appBar: AppBar(
+      title: const Text('NOW PLAYING', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+      actions: [
+        IconButton(
+          tooltip: 'Playback queue',
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QueuePage())),
+          icon: const Icon(Icons.queue_music_rounded, color: Color(0xFFE3BD70)),
+        ),
+      ],
+    ),
+    body: Stack(children: [
+      const Positioned.fill(child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF17130D), Color(0xFF0B1118), Color(0xFF07090D)],
+          ),
+        ),
+      )),
+      ValueListenableBuilder<bool>(
       valueListenable: playback.adPlaying,
       builder: (context, isAd, _) {
         if (isAd) {
-          return const Center(child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.campaign, size: 64, color: Color(0xFFD9B96E)),
-              SizedBox(height: 18),
-              Text('Advertisement', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
-              Text('Please listen until the advert finishes.',
-                style: TextStyle(color: Colors.white60)),
-              SizedBox(height: 18),
-              CircularProgressIndicator(color: Color(0xFFD9B96E)),
-            ],
+          return Center(child: Container(
+            margin: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(26),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFF302719), Color(0xFF111923)]),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(color: const Color(0xFF80653A)),
+            ),
+            child: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.campaign_rounded, size: 58, color: Color(0xFFE3BD70)),
+                SizedBox(height: 18),
+                Text('HIGH-TECH PROMOTION',
+                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
+                SizedBox(height: 8),
+                Text('Please listen until the sponsored audio finishes.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Color(0xFFB6C1CA), fontSize: 12)),
+                SizedBox(height: 20),
+                CircularProgressIndicator(color: Color(0xFFE3BD70)),
+              ],
+            ),
           ));
         }
         return ValueListenableBuilder<Map<String,dynamic>?>(
@@ -1274,27 +1847,38 @@ class FullPlayerPage extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        const Text('HIGH-TECH AUDIO EXPERIENCE',
+                          style: TextStyle(color: Color(0xFFE3BD70), fontSize: 8,
+                            fontWeight: FontWeight.w900, letterSpacing: 1.8)),
+                        const SizedBox(height: 13),
                         Container(
-                          width: artworkSize,
-                          height: artworkSize,
+                          width: artworkSize + 8,
+                          height: artworkSize + 8,
+                          padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(24),
+                            gradient: const SweepGradient(colors: [
+                              Color(0xFF77572C), Color(0xFFE5C477),
+                              Color(0xFF587D91), Color(0xFF77572C),
+                            ]),
+                            borderRadius: BorderRadius.circular(27),
                             boxShadow: const [
-                              BoxShadow(color: Color(0x553D2C08), blurRadius: 28, spreadRadius: 2),
+                              BoxShadow(color: Color(0x553D2C08), blurRadius: 30, spreadRadius: 2),
                             ],
                           ),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius: BorderRadius.circular(23),
                             child: MediaCover(url: track['cover_url']?.toString(), height: artworkSize),
                           ),
                         ),
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 23),
                         Text((track['title'] ?? 'Now playing').toString(),
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                          style: const TextStyle(fontSize: 24, height: 1.15,
+                            fontWeight: FontWeight.w900, letterSpacing: -.6),
                           textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 7),
                         Text((track['artist'] ?? 'High-Tech Entertainment').toString(),
-                          style: const TextStyle(color: Colors.white60), textAlign: TextAlign.center),
+                          style: const TextStyle(color: Color(0xFFAFBBC5), fontSize: 13),
+                          textAlign: TextAlign.center),
                         ValueListenableBuilder<String?>(
                           valueListenable: playback.playbackError,
                           builder: (context, error, _) => error == null
@@ -1427,7 +2011,8 @@ class FullPlayerPage extends StatelessWidget {
             ),
         );
       },
-    ),
+      ),
+    ]),
   );
 }
 
@@ -1582,8 +2167,41 @@ class _DiscoverTabState extends State<DiscoverTab> {
   void dispose() { controller.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => Column(children: [
-    const Brand(),
-    Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: TextField(controller: controller, onChanged: search, decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search tracks by title'))),
+    const Brand(tagline: 'FIND YOUR NEXT FREQUENCY'),
+    Padding(
+      padding: const EdgeInsets.fromLTRB(19, 2, 19, 13),
+      child: Row(children: [
+        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Discover sound.', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900, letterSpacing: -.7)),
+          SizedBox(height: 4),
+          Text('Search the official High-Tech catalogue.', style: TextStyle(color: Color(0xFF8D9AA6), fontSize: 11)),
+        ])),
+        Container(width: 39, height: 39,
+          decoration: BoxDecoration(color: const Color(0xFF17232C), borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: const Color(0xFF344B5A))),
+          child: const Icon(Icons.graphic_eq_rounded, color: Color(0xFFE3BD70), size: 20)),
+      ]),
+    ),
+    Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: TextField(
+        controller: controller,
+        onChanged: search,
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFFE3BD70)),
+          hintText: 'Search tracks by title',
+          filled: true,
+          fillColor: const Color(0xFF111923),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF34404D))),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF34404D))),
+        ),
+      ),
+    ),
+    const Padding(
+      padding: EdgeInsets.fromLTRB(20, 15, 20, 5),
+      child: Align(alignment: Alignment.centerLeft,
+        child: Text('AVAILABLE TO PLAY', style: TextStyle(color: Color(0xFFE3BD70), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.4))),
+    ),
     Expanded(child: loading ? const Busy() : error != null ? Notice(friendlyErrorMessage(error!)) : TrackList(items: results)),
   ]);
 }
@@ -1653,10 +2271,25 @@ class ReleasesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(children: [
     const Brand(tagline: 'OFFICIAL RELEASES'),
-    const Align(alignment: Alignment.centerLeft, child: Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Text('Latest releases', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
-    )),
+    Padding(
+      padding: const EdgeInsets.fromLTRB(19, 3, 19, 13),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(17),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFF33291B), Color(0xFF151C24)]),
+          borderRadius: BorderRadius.circular(19),
+          border: Border.all(color: const Color(0xFF6C5736)),
+        ),
+        child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('THE RELEASE VAULT', style: TextStyle(color: Color(0xFFE5C47C), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.7)),
+          SizedBox(height: 7),
+          Text('Every drop.\nOne destination.', style: TextStyle(fontSize: 22, height: 1.08, fontWeight: FontWeight.w900)),
+          SizedBox(height: 6),
+          Text('Official music and projects from the High-Tech family.', style: TextStyle(color: Color(0xFFB0BAC2), fontSize: 10)),
+        ]),
+      ),
+    ),
     const Expanded(child: ReleaseList()),
   ]);
 }
@@ -1667,12 +2300,33 @@ class LibraryTab extends StatelessWidget {
   Widget build(BuildContext context) => DefaultTabController(
     length: 3,
     child: Column(children: [
-      const Brand(tagline: 'YOUR MUSIC COLLECTION'),
-      const TabBar(tabs:[
-        Tab(text:'Favourites'),
-        Tab(text:'Playlists'),
-        Tab(text:'On device'),
-      ],labelColor:Color(0xFFD9B96E)),
+      const Brand(tagline: 'YOUR PERSONAL SOUNDSPACE'),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(19, 1, 19, 12),
+        child: Align(alignment: Alignment.centerLeft,
+          child: Text('Your collection', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -.6))),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Container(
+          decoration: BoxDecoration(color: const Color(0xFF111923), borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: const Color(0xFF34404D))),
+          child: const TabBar(
+            dividerColor: Colors.transparent,
+            indicatorSize: TabBarIndicatorSize.tab,
+            indicator: BoxDecoration(
+              gradient: LinearGradient(colors: [Color(0xFF5B4728), Color(0xFF30281C)]),
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+              border: Border.fromBorderSide(BorderSide(color: Color(0xFFB18B4C))),
+            ),
+            labelColor: Color(0xFFF0D18B),
+            unselectedLabelColor: Color(0xFF8C9AA6),
+            labelStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+            tabs:[Tab(text:'Saved'), Tab(text:'Playlists'), Tab(text:'On device')],
+          ),
+        ),
+      ),
+      const SizedBox(height: 8),
       const Expanded(child:TabBarView(children:[
         SavedTab(),
         PlaylistsTab(),
@@ -1867,48 +2521,300 @@ class _NotificationsPageState extends State<NotificationsPage> {
 class ProfileEditPage extends StatefulWidget {
   const ProfileEditPage({super.key});
   @override
-  State<ProfileEditPage> createState()=>_ProfileEditPageState();
+  State<ProfileEditPage> createState() => _ProfileEditPageState();
 }
-class _ProfileEditPageState extends State<ProfileEditPage>{
-  final _name=TextEditingController();
-  final _bio=TextEditingController();
-  final _phone=TextEditingController();
-  String _avatarUrl='';
-  bool _loading=true;
-  bool _saving=false;
+
+class _ProfileEditPageState extends State<ProfileEditPage> {
+  final _name = TextEditingController();
+  final _bio = TextEditingController();
+  final _phone = TextEditingController();
+  String _avatarUrl = '';
+  bool _loading = true;
+  bool _saving = false;
+  bool _uploadingAvatar = false;
+
   @override
-  void initState(){super.initState();_load();}
+  void initState() {
+    super.initState();
+    _load();
+  }
+
   @override
-  void dispose(){_name.dispose();_bio.dispose();_phone.dispose();super.dispose();}
+  void dispose() {
+    _name.dispose();
+    _bio.dispose();
+    _phone.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
-    final user=db.auth.currentUser;
-    if(user==null){setState(()=>_loading=false);return;}
-    try{
-      final row=await db.from('profiles').select('display_name,bio,phone,avatar_url').eq('id',user.id).maybeSingle();
-      if(row!=null){_name.text=(row['display_name']??'').toString();_bio.text=(row['bio']??'').toString();_phone.text=(row['phone']??'').toString();_avatarUrl=(row['avatar_url']??'').toString();}
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
-    if(mounted)setState(()=>_loading=false);
+    final user = db.auth.currentUser;
+    if (user == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+    try {
+      final row = await db.from('profiles')
+          .select('display_name,bio,phone,avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+      if (row != null) {
+        _name.text = (row['display_name'] ?? '').toString();
+        _bio.text = (row['bio'] ?? '').toString();
+        _phone.text = (row['phone'] ?? '').toString();
+        _avatarUrl = (row['avatar_url'] ?? '').toString();
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    }
+    if (mounted) setState(() => _loading = false);
   }
+
+  Future<void> _persistProfile() async {
+    final user = db.auth.currentUser;
+    if (user == null) throw const AuthException('Please sign in again to update your profile.');
+    await db.from('profiles').upsert({
+      'id': user.id,
+      'display_name': _name.text.trim(),
+      'bio': _bio.text.trim(),
+      'phone': _phone.text.trim(),
+      'avatar_url': _avatarUrl,
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  String? _storedAvatarPath(String value, String userId) {
+    final uri = Uri.tryParse(value);
+    if (uri == null) return null;
+    final segments = uri.pathSegments;
+    final bucketIndex = segments.indexOf('hte-artwork');
+    if (bucketIndex < 0 || bucketIndex + 2 >= segments.length) return null;
+    final path = segments.sublist(bucketIndex + 1).join('/');
+    if (!path.startsWith('avatars/$userId/')) return null;
+    return path;
+  }
+
+  Future<void> _uploadAvatar() async {
+    if (_saving || _uploadingAvatar) return;
+    final user = db.auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to upload a profile picture.')),
+      );
+      return;
+    }
+
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp', 'avif'],
+        withData: false,
+      );
+      if (!mounted || result == null || result.files.isEmpty) return;
+      final selected = result.files.single;
+      if (selected.size <= 0 || selected.size > 5 * 1024 * 1024) {
+        throw const FormatException('Choose a profile image smaller than 5 MB.');
+      }
+      final localPath = selected.path;
+      if (localPath == null || localPath.isEmpty) {
+        throw const FormatException('The selected image could not be opened. Please choose it again.');
+      }
+      final localFile = File(localPath);
+      if (!await localFile.exists()) {
+        throw const FormatException('The selected image is no longer available on this device.');
+      }
+
+      final extension = (selected.extension ?? '').toLowerCase();
+      const mimeTypes = <String, String>{
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'webp': 'image/webp',
+        'avif': 'image/avif',
+      };
+      final mimeType = mimeTypes[extension];
+      if (mimeType == null) {
+        throw const FormatException('This image format is not supported.');
+      }
+
+      setState(() => _uploadingAvatar = true);
+      final oldPath = _storedAvatarPath(_avatarUrl, user.id);
+      final storagePath = 'avatars/${user.id}/${DateTime.now().microsecondsSinceEpoch}.$extension';
+      await db.storage.from('hte-artwork').upload(
+        storagePath,
+        localFile,
+        fileOptions: FileOptions(
+          cacheControl: '3600',
+          contentType: mimeType,
+          upsert: false,
+        ),
+      );
+      if (!mounted) {
+        try {
+          await db.storage.from('hte-artwork').remove([storagePath]);
+        } catch (cleanupError) {
+          debugPrint('Unclaimed HTE profile image cleanup skipped: $cleanupError');
+        }
+        return;
+      }
+      final publicUrl = db.storage.from('hte-artwork').getPublicUrl(storagePath);
+      setState(() => _avatarUrl = publicUrl);
+      await _persistProfile();
+
+      if (oldPath != null && oldPath != storagePath) {
+        try {
+          await db.storage.from('hte-artwork').remove([oldPath]);
+        } catch (cleanupError) {
+          debugPrint('Previous HTE profile image cleanup skipped: $cleanupError');
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Your public profile picture has been updated.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
+  }
+
   Future<void> _save() async {
-    final user=db.auth.currentUser;
-    if(user==null)return;
-    setState(()=>_saving=true);
-    try{
-      await db.from('profiles').upsert({'id':user.id,'display_name':_name.text.trim(),'bio':_bio.text.trim(),'phone':_phone.text.trim(),'avatar_url':_avatarUrl,'updated_at':DateTime.now().toIso8601String()});
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profile updated.')));
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
-    if(mounted)setState(()=>_saving=false);
+    if (_saving || _uploadingAvatar) return;
+    setState(() => _saving = true);
+    try {
+      await _persistProfile();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
+
   @override
-  Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('My profile')),
-    body:_loading?const Busy():ListView(padding:const EdgeInsets.all(20),children:[
-      const Brand(tagline:'YOUR HIGH-TECH ACCOUNT'),
-      TextField(controller:_name,decoration:const InputDecoration(labelText:'Display name')),
-      const SizedBox(height:12),TextField(controller:_bio,maxLines:4,decoration:const InputDecoration(labelText:'About you')),
-      const SizedBox(height:12),TextField(controller:_phone,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'Phone number (optional)')),
-      const SizedBox(height:18),FilledButton(onPressed:_saving?null:_save,child:_saving?const CircularProgressIndicator():const Text('Save profile')),
-    ]),
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('My profile')),
+    body: _loading
+        ? const Busy()
+        : ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 30),
+            children: [
+              const Brand(tagline: 'YOUR HIGH-TECH ACCOUNT'),
+              Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF33291B), Color(0xFF18232D), Color(0xFF111720)],
+                  ),
+                  borderRadius: BorderRadius.circular(23),
+                  border: Border.all(color: const Color(0xFF80663B)),
+                ),
+                child: Column(children: [
+                  Container(
+                    width: 116,
+                    height: 116,
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: SweepGradient(colors: [
+                        Color(0xFF77572C), Color(0xFFE5C477),
+                        Color(0xFF587D91), Color(0xFF77572C),
+                      ]),
+                    ),
+                    child: ClipOval(
+                      child: _avatarUrl.isEmpty
+                          ? Container(
+                              color: const Color(0xFF101720),
+                              child: const Icon(Icons.person_rounded, size: 58, color: Color(0xFFE3BD70)),
+                            )
+                          : Image.network(
+                              _avatarUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                color: const Color(0xFF101720),
+                                child: const Icon(Icons.person_rounded, size: 58, color: Color(0xFFE3BD70)),
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 13),
+                  Text(
+                    _name.text.trim().isEmpty ? 'Your High-Tech profile' : _name.text.trim(),
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'PUBLIC PROFILE PHOTO · PRIVATE ACCOUNT DETAILS',
+                    style: TextStyle(color: Color(0xFFB4C0C9), fontSize: 8,
+                      fontWeight: FontWeight.w800, letterSpacing: 1.1),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 15),
+                  OutlinedButton.icon(
+                    onPressed: (_saving || _uploadingAvatar) ? null : _uploadAvatar,
+                    icon: _uploadingAvatar
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.add_a_photo_outlined),
+                    label: Text(_uploadingAvatar ? 'Uploading picture…' : 'Change profile picture'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFE8CB87),
+                      side: const BorderSide(color: Color(0xFF80663B)),
+                    ),
+                  ),
+                ]),
+              ),
+              const Heading('Profile information'),
+              TextField(
+                controller: _name,
+                textCapitalization: TextCapitalization.words,
+                maxLength: 80,
+                decoration: const InputDecoration(labelText: 'Display name'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _bio,
+                maxLines: 4,
+                maxLength: 500,
+                decoration: const InputDecoration(labelText: 'About you'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                maxLength: 30,
+                decoration: const InputDecoration(labelText: 'Phone number (optional)'),
+              ),
+              const SizedBox(height: 18),
+              FilledButton(
+                onPressed: (_saving || _uploadingAvatar) ? null : _save,
+                child: _saving
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Save profile'),
+              ),
+            ],
+          ),
   );
 }
 
@@ -1928,17 +2834,69 @@ class _AccountTabState extends State<AccountTab> {
   @override
   void dispose() { email.dispose(); password.dispose(); super.dispose(); } 
   Future<void> authenticate() async {
+    if (busy) return;
+    final address = email.text.trim();
+    if (address.isEmpty || !isValidEmailAddress(address)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid email address to continue.')),
+      );
+      return;
+    }
+    if (password.text.isEmpty || (signup && password.text.length < 8)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(signup
+          ? 'Choose a password with at least 8 characters.'
+          : 'Enter your password to sign in.')),
+      );
+      return;
+    }
     setState(() => busy = true);
     try {
       if (signup) {
-        await db.auth.signUp(email: email.text.trim(), password: password.text);
+        await db.auth.signUp(email: address, password: password.text);
       } else {
-        await db.auth.signInWithPassword(email: email.text.trim(), password: password.text);
+        await db.auth.signInWithPassword(email: address, password: password.text);
       }
-      if (mounted) setState(() {});
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication request completed. Check your email if confirmation is enabled.')));
-    } on AuthException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Authentication request completed. Check your email if confirmation is enabled.'),
+        ));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> requestPasswordReset() async {
+    final address = email.text.trim();
+    if (address.isEmpty || !isValidEmailAddress(address)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter your account email address first.')),
+      );
+      return;
+    }
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      await db.auth.resetPasswordForEmail(address, redirectTo: authRedirect);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('If this email belongs to an account, a password reset link has been sent. Open it on this device.'),
+          duration: Duration(seconds: 6),
+        ));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -1968,8 +2926,9 @@ class _AccountTabState extends State<AccountTab> {
           accessToken: authorization.accessToken,
         );
       } else {
-        // Retain the configured Supabase OAuth flow until the Web client ID
-        // is supplied as a GitHub Actions secret.
+        // Keep Google sign-in available when the native Web client ID has not
+        // yet been supplied. Supabase completes OAuth and returns to this app
+        // through the configured login-callback deep link.
         await db.auth.signInWithOAuth(
           OAuthProvider.google,
           redirectTo: authRedirect,
@@ -2103,10 +3062,31 @@ class _AccountTabState extends State<AccountTab> {
         ),
         TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
         const SizedBox(height: 12),
-        TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder())),
-        const SizedBox(height: 14),
-        FilledButton(onPressed: busy ? null : authenticate, child: Text(busy ? 'Please wait' : (signup ? 'Create account' : 'Sign in'))),
-        TextButton(onPressed: () => setState(() => signup = !signup), child: Text(signup ? 'Already registered? Sign in' : 'Create a new account')),
+        TextField(
+          controller: password,
+          obscureText: true,
+          autofillHints: [signup ? AutofillHints.newPassword : AutofillHints.password],
+          decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
+          onSubmitted: (_) => busy ? null : authenticate(),
+        ),
+        if (!signup) Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: busy ? null : requestPasswordReset,
+            child: const Text('Forgot password?'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        FilledButton(
+          onPressed: busy ? null : authenticate,
+          child: busy
+            ? const SizedBox(width: 19, height: 19, child: CircularProgressIndicator(strokeWidth: 2))
+            : Text(signup ? 'Create account' : 'Sign in'),
+        ),
+        TextButton(
+          onPressed: busy ? null : () => setState(() => signup = !signup),
+          child: Text(signup ? 'Already registered? Sign in' : 'Create a new account'),
+        ),
         TextButton.icon(
           onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication),
           icon: const Icon(Icons.privacy_tip_outlined),
@@ -2131,7 +3111,8 @@ class _AccountTabState extends State<AccountTab> {
 
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+  const SettingsPage({super.key, this.autoCheckForUpdates = false});
+  final bool autoCheckForUpdates;
   @override
   State<SettingsPage> createState() => _SettingsPageState();
 }
@@ -2146,7 +3127,16 @@ class _SettingsPageState extends State<SettingsPage> {
   bool shuffleSetting = false;
 
   @override
-  void initState() { super.initState(); _loadVersion(); _loadPlaybackSettings(); }
+  void initState() {
+    super.initState();
+    _loadVersion();
+    _loadPlaybackSettings();
+    if (widget.autoCheckForUpdates) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _checkForUpdates();
+      });
+    }
+  }
 
   Future<void> _loadPlaybackSettings() async {
     final prefs=await SharedPreferences.getInstance();
@@ -2431,6 +3421,37 @@ class _SettingsPageState extends State<SettingsPage> {
     appBar: AppBar(title: const Text('Settings')),
     body: ListView(padding: const EdgeInsets.all(18), children: [
       const Brand(tagline: 'APP PREFERENCES & INFORMATION'),
+      Container(
+        margin: const EdgeInsets.fromLTRB(2, 2, 2, 14),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF33291B), Color(0xFF18232D), Color(0xFF111720)],
+          ),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0xFF80663B)),
+        ),
+        child: Row(children: [
+          Container(width: 44, height: 44,
+            decoration: BoxDecoration(color: const Color(0xFF242A2D),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF56616A))),
+            child: const Icon(Icons.tune_rounded, color: Color(0xFFE3BD70), size: 23)),
+          const SizedBox(width: 13),
+          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('YOUR APP. YOUR SETTINGS.',
+              style: TextStyle(color: Color(0xFFE3BD70), fontSize: 8,
+                fontWeight: FontWeight.w900, letterSpacing: 1.4)),
+            SizedBox(height: 5),
+            Text('Control your experience',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+            SizedBox(height: 4),
+            Text('Personalise playback, appearance and updates.',
+              style: TextStyle(color: Color(0xFFB4C0C9), fontSize: 10)),
+          ])),
+        ]),
+      ),
       Card(child: Column(children: [
         ListTile(
           leading: const Icon(Icons.palette_outlined, color: Color(0xFFD4AF37)),

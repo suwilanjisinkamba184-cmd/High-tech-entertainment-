@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _founderId = 'b268df9e-eff5-43b9-a38f-869b33add38b';
-const _gold = Color(0xFFD9B96E);
+const _gold = Color(0xFFE3BD70);
 final _supabase = Supabase.instance.client;
 
 class AdminStudioPage extends StatefulWidget {
@@ -323,9 +323,9 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color(0xFF2C2416),
+          color: const Color(0xFF17232C),
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: const Color(0xFF66512E)),
+          border: Border.all(color: const Color(0xFF465B69)),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           const Icon(Icons.lock_rounded, size: 11, color: _gold),
@@ -334,17 +334,17 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         ]),
       ),
       const SizedBox(height:12),
-      Text(title,style:const TextStyle(fontSize:28,fontWeight:FontWeight.w800,letterSpacing:-.5)),
+      Text(title,style:const TextStyle(fontSize:27,fontWeight:FontWeight.w900,letterSpacing:-.7)),
       const SizedBox(height:7),
-      Text(subtitle,style:const TextStyle(color:Colors.white60,height:1.5,fontSize:12)),
+      Text(subtitle,style:const TextStyle(color:Color(0xFFAFBBC5),height:1.55,fontSize:12)),
     ]));
   Widget _metric(String label, int value, IconData icon) => Container(
     padding: const EdgeInsets.all(15),
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(18),
       gradient: const LinearGradient(begin: Alignment.topLeft,end: Alignment.bottomRight,
-        colors:[Color(0xFF1C1B18),Color(0xFF111214)]),
-      border: Border.all(color: const Color(0xFF403625)),
+        colors:[Color(0xFF1A2731),Color(0xFF111720)]),
+      border: Border.all(color: const Color(0xFF3C5261)),
     ),
     child: Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[
@@ -509,9 +509,17 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isFounder) return Scaffold(appBar:AppBar(title:const Text('HT Admin')),body:const _AdminEmpty('Founder authorization required.'));
+    if (!_isFounder) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('HT ADMIN')),
+        body: const Center(child: _AdminEmpty('Founder authorization required. This area is private.')),
+      );
+    }
     return Scaffold(
       appBar:AppBar(
+        backgroundColor: const Color(0xFF080D13),
+        foregroundColor: const Color(0xFFF5F2EA),
+        surfaceTintColor: Colors.transparent,
         title:Row(children:[
           Container(width:32,height:32,decoration:BoxDecoration(
             color:const Color(0xFF2C2416),borderRadius:BorderRadius.circular(10),
@@ -529,7 +537,12 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         _error!=null ? Center(child:Padding(padding:const EdgeInsets.all(20),child:Text(_error ?? 'Could not load Founder Studio data. Please retry.'))) :
         RefreshIndicator(onRefresh:_loadAll,child:SingleChildScrollView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.fromLTRB(16,16,16,30),child:_page())),
       bottomNavigationBar:SafeArea(top:false,child:Container(
-        decoration:const BoxDecoration(color:Color(0xFF0B0C0E),border:Border(top:BorderSide(color:Color(0xFF302A20)))),
+        decoration:const BoxDecoration(
+          gradient: LinearGradient(begin: Alignment.topCenter,end: Alignment.bottomCenter,
+            colors:[Color(0xFF17212A),Color(0xFF080B10)]),
+          border:Border(top:BorderSide(color:Color(0xFF3B4C59))),
+          boxShadow:[BoxShadow(color:Color(0x55000000),blurRadius:22,offset:Offset(0,-7))],
+        ),
         child:SingleChildScrollView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:10,vertical:10),
           child:Row(children:List.generate(_sections.length,(i){
             final selected=_section==i;
@@ -542,12 +555,16 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
                   duration:const Duration(milliseconds:180),
                   padding:const EdgeInsets.symmetric(horizontal:13,vertical:10),
                   decoration:BoxDecoration(
-                    color:selected?const Color(0xFF342A19):const Color(0xFF151619),
+                    gradient:selected?const LinearGradient(
+                      begin:Alignment.topLeft,end:Alignment.bottomRight,
+                      colors:[Color(0xFF514025),Color(0xFF25231F)],
+                    ):null,
+                    color:selected?null:const Color(0xFF121A22),
                     borderRadius:BorderRadius.circular(13),
-                    border:Border.all(color:selected?const Color(0xFF8A6D38):const Color(0xFF292A2C)),
+                    border:Border.all(color:selected?const Color(0xFFE0B96E):const Color(0xFF34414D)),
                   ),
                   child:Text(_sections[i],style:TextStyle(
-                    color:selected?const Color(0xFFE5C984):Colors.white60,
+                    color:selected?const Color(0xFFF1D18A):const Color(0xFF9BA9B4),
                     fontSize:11,fontWeight:selected?FontWeight.w800:FontWeight.w500)),
                 ),
               ),

@@ -1,17 +1,17 @@
 # High-Tech Entertainment — Native Android App
 
-The Flutter application in this folder is the native Android client for High-Tech Entertainment.\n\nOfficial website: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/ Current app version: **2.1.8**.
+The Flutter application in this folder is the native Android client for High-Tech Entertainment.\n\nOfficial website: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/ Current app version: **2.2.2**.
 
 ## Experiences
 
 ### HT Music — public listener experience
-- Branded animated startup, best-effort bundled startup advert, and required Supabase sign-in.
-- Google OAuth and email/password authentication.
+- Branded animated startup with a separate best-effort startup sound, followed by required Supabase sign-in.
+- Native Google account chooser when GOOGLE_WEB_CLIENT_ID is configured, with a Supabase Google OAuth deep-link fallback; email/password authentication includes deep-link password recovery.
 - Home, Discover, Releases, Library, Favourites, Playlists and Profile.
-- Artist catalogue, music videos, search, track sharing and notifications placeholder.
+- Artist catalogue, music videos, search, track sharing and RLS-protected in-app announcements.
 - Native audio playback, queue, background controls, shuffle, autoplay and sponsored audio.
 - Spotify release links and embeds.
-- App settings, privacy, account deletion and in-app GitHub release updates with download progress, APK integrity checks and Android's user-approved package installer.
+- App settings, privacy, account deletion and automatic GitHub release checks on Home, plus manual update checks, download progress, APK integrity checks and Android's user-approved package installer.
 
 ### HT Admin — private founder studio
 - Founder-only entry for the configured owner account.
@@ -29,11 +29,13 @@ Project: `wqrxacjbsldbnoekbkbf`
 - Auth uses the Supabase publishable key; no service-role key is bundled.
 - Music files use the public `hte-audio` bucket. Upload/delete policies require an HTE owner/admin role.
 - Release artwork uses `hte-artwork`; public reads are enabled while upload/update/delete are restricted to HTE owner/admin roles.
-- Videos use the existing `hte-video` bucket and public `videos` catalogue.
+- Legacy video files remain in `hte-video`; current Founder Studio uploads use the public `hte-videos` bucket (500 MB limit) with owner/admin-only write policies and the public `videos` catalogue.
 - Public catalogue reads are governed by existing RLS policies.
 - User playlists, favourites and listening history are scoped by the signed-in user's RLS policies.
+- In-app announcements use `app_notifications`; authenticated users can read broadcasts and their own notifications, while only HTE owners/admins can create announcements.
+- Public profile photos use the public `hte-artwork` bucket under `avatars/<user-id>/`; upload/delete policies restrict each signed-in user to their own folder, with a 5 MB app-side upload limit.
 
-The artwork bucket and admin listing migrations are recorded under `database/changes/` and have been applied to the connected project. The secure user directory and analytics functions are also applied and return records only to authenticated HTE owners/admins.
+The artwork, in-app notification and video-storage changes are recorded under `database/changes/` and have been applied to the connected project. The secure user directory and analytics functions are also applied and return records only to authenticated HTE owners/admins.
 
 ## Android build
 
@@ -44,11 +46,12 @@ Required repository Actions secrets:
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_STORE_PASSWORD`
 - `ANDROID_KEY_PASSWORD`
+- `GOOGLE_WEB_CLIENT_ID` (optional; enables the native Google account chooser instead of the Supabase OAuth deep-link fallback)
 
 Build locally from this directory:
 ```bash
 flutter pub get
-flutter analyze lib
+flutter analyze
 flutter test
 flutter build apk --release
 ```
@@ -60,7 +63,7 @@ Windows source files are preserved, but Windows build execution and release pack
 
 HT Music uses one process-wide `HtePlayback.instance` service and one `just_audio` `AudioPlayer`. The service owns the active track, queue, completion handling, audio-ad insertion, and playback error state. The mini-player, full player, queue screen, and all catalogue screens must read and control that same service; do not create `AudioPlayer()` instances in widgets, tabs, routes, or screen state objects.
 
-- Background audio is initialized once at application startup with `JustAudioBackground.init` before the shared playback service is first accessed. Audio initialisation and the optional bundled startup advert are isolated from authentication startup: if either fails or the advert times out, the app continues to sign-in.
+- Background audio is initialized once at application startup with `JustAudioBackground.init` before the shared playback service is first accessed. The separate bundled startup sound and scheduled advert are isolated from authentication startup: if either fails, the app continues to sign-in. The scheduled advert is only eligible after eight completed music tracks, never on startup or pause/resume. The completion count is saved locally so a normal app restart does not reset the interval.
 - Track changes replace the source on the shared player; navigation must not dispose or recreate it.
 - The notification and lock-screen controls are backed by the same player and media metadata.
 - The service is exposed through `HtePlayback.instance`. The `HtePlayback()` factory remains as a compatibility entry point and returns the same singleton.
@@ -73,7 +76,7 @@ A singleton prevents duplicate app-owned player instances, but a successful buil
 The app converts low-level connectivity and service exceptions into plain-language messages instead of exposing raw exception text, backend response codes or stack traces.
 
 - When a network request fails because the device is offline or cannot reach the service, the user sees: **“No internet connection. Connect to the internet and try again.”**
-- For other unexpected failures, the user sees: **“Something went wrong. Please try again.”**
+- Authentication, media-not-found, permission, unsupported-format and local-storage failures receive specific plain-language guidance; unknown failures use: **“Something went wrong. Please try again.”**
 - During startup, the existing **Try again** button reruns service initialisation after the user reconnects.
 - Diagnostic exception details are retained only in developer logs where applicable; they are not included in these user-facing messages.
 
