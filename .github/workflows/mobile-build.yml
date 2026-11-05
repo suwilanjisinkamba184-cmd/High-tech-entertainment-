@@ -12,6 +12,13 @@ on:
       - 'mobile-app/**'
       - '.github/workflows/mobile-build.yml'
   workflow_dispatch:
+    inputs:
+      operation:
+        description: "Choose automatic detection, an OTA patch, or a full APK release"
+        required: true
+        type: choice
+        options: [auto, patch, release]
+        default: auto
 
 concurrency:
   group: hte-mobile-build-${{ github.ref }}
@@ -25,10 +32,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
+      - name: Setup Shorebird
+        if: github.event_name != 'pull_request'
+        uses: shorebirdtech/setup-shorebird@v1
+        with:
+          cache: true
+      - name: Select OTA operation
+        id: ota_mode
+        shell: bash
+        env:
+          REQUESTED_OPERATION: ${{ inputs.operation || 'auto' }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          EVENT_SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import os, subprocess
+          from pathlib import Path
+          event = os.environ["EVENT_NAME"]
+          mode = "validate" if event == "pull_request" else os.environ["REQUESTED_OPERATION"]
+          if mode == "auto":
+              if not Path("mobile-app/shorebird.yaml").exists():
+                  mode = "release"
+              elif event == "push":
+                  before = os.environ.get("EVENT_BEFORE", "")
+                  if not before or set(before) == {"0"}:
+                      mode = "release"
+                  else:
+                      changed = subprocess.check_output(["git", "diff", "--name-only", before, os.environ["EVENT_SHA"]], text=True).splitlines()
+                      mode = "patch" if changed and all(p.startswith("mobile-app/lib/") and p.endswith(".dart") for p in changed) else "release"
+              else:
+                  mode = "release"
+          if mode == "patch" and not Path("mobile-app/shorebird.yaml").exists():
+              raise SystemExit("Cannot publish an OTA patch before the first Shorebird release.")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("mode=" + mode + chr(10))
+          print("Selected OTA operation:", mode)
+          PY
       - name: Install Android 36 platform, build tools and native toolchain
         shell: bash
         run: |
@@ -162,6 +208,41 @@ jobs:
               raise SystemExit("Android app Gradle build file not found")
           PY
           grep -R -E "minSdk|compileSdk|targetSdk" android/app/build.gradle*
+      - name: Configure Shorebird app identity
+        if: steps.ota_mode.outputs.mode != 'validate'
+        working-directory: ${{ runner.temp }}/hte_app
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+        shell: bash
+        run: |
+          if [ -z "$SHOREBIRD_TOKEN" ]; then
+            echo "::error::SHOREBIRD_TOKEN is missing from repository Actions secrets."
+            exit 1
+          fi
+          if [ -f "$GITHUB_WORKSPACE/mobile-app/shorebird.yaml" ]; then
+            cp "$GITHUB_WORKSPACE/mobile-app/shorebird.yaml" shorebird.yaml
+            python3 - <<'PY'
+          from pathlib import Path
+          path = Path("pubspec.yaml")
+          text = path.read_text()
+          if "    - shorebird.yaml" not in text:
+              marker = "  assets:" + chr(10)
+              if marker not in text:
+                  raise SystemExit("Could not find Flutter assets section in pubspec.yaml")
+              path.write_text(text.replace(marker, marker + "    - shorebird.yaml" + chr(10), 1))
+          PY
+          else
+            shorebird init --display-name "High-Tech Entertainment"
+            cp shorebird.yaml "$GITHUB_WORKSPACE/mobile-app/shorebird.yaml"
+            cp pubspec.yaml "$GITHUB_WORKSPACE/mobile-app/pubspec.yaml"
+            cd "$GITHUB_WORKSPACE"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add mobile-app/shorebird.yaml mobile-app/pubspec.yaml
+            git commit -m "Initialize Shorebird OTA updates"
+            git push origin "HEAD:${{ github.ref_name }}"
+            cd "$RUNNER_TEMP/hte_app"
+          fi
       - name: Configure Android upload-key signing
         id: android_signing
         working-directory: ${{ runner.temp }}/hte_app
@@ -288,13 +369,28 @@ jobs:
           else
             echo "PASS: Native Google sign-in client configuration is present."
           fi
-      - name: Build signed Android APK
+      - name: Build Shorebird release APK
+        if: steps.ota_mode.outputs.mode == 'release'
+        working-directory: ${{ runner.temp }}/hte_app
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+        run: shorebird release android --flavor su --artifact apk --target-platform android-arm,android-arm64 -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+      - name: Publish OTA patch for Dart-only changes
+        if: steps.ota_mode.outputs.mode == 'patch'
+        working-directory: ${{ runner.temp }}/hte_app
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+        run: shorebird patch android --flavor su --release-version "${{ steps.app_version.outputs.version }}+${{ steps.app_version.outputs.build }}" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+      - name: Build validation APK (pull requests only)
+        if: steps.ota_mode.outputs.mode == 'validate'
         working-directory: ${{ runner.temp }}/hte_app
         env:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
         run: flutter build apk --flavor su --release --target-platform android-arm,android-arm64 --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Verify release APK signature
-        if: always()
+        if: steps.ota_mode.outputs.mode == 'release' || steps.ota_mode.outputs.mode == 'validate'
         working-directory: ${{ runner.temp }}/hte_app
         env:
           EXPECTED_CERT_SHA256: ${{ steps.android_signing.outputs.release_cert_sha256 }}
@@ -326,36 +422,24 @@ jobs:
             exit 1
           fi
           echo "PASS: APK signature is valid and matches the configured upload certificate."
-      - name: Build Google Play App Bundle
-        working-directory: ${{ runner.temp }}/hte_app
-        env:
-          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
-        run: flutter build appbundle --flavor su --release --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
-      - name: Apply official High-Tech Entertainment download filenames
+      - name: Apply official High-Tech Entertainment download filename
+        if: steps.ota_mode.outputs.mode == 'release' || steps.ota_mode.outputs.mode == 'validate'
         working-directory: ${{ runner.temp }}/hte_app
         run: |
           APK="build/app/outputs/flutter-apk/app-su-release.apk"
-          AAB="build/app/outputs/bundle/suRelease/app-su-release.aab"
-          test -s "$APK" || { echo "::error::Expected SU APK was not found: $APK"; exit 1; }
-          test -s "$AAB" || { echo "::error::Expected SU App Bundle was not found: $AAB"; find build/app/outputs/bundle -maxdepth 3 -type f -print; exit 1; }
+          test -s "$APK" || { echo "::error::Expected SU APK was not found: $APK"; find build/app/outputs -maxdepth 5 -type f -print; exit 1; }
           mv "$APK" "build/app/outputs/flutter-apk/High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU.apk"
-          mv "$AAB" "build/app/outputs/bundle/suRelease/High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU.aab"
       - name: Upload standalone Android APK
+        if: steps.ota_mode.outputs.mode == 'release' || steps.ota_mode.outputs.mode == 'validate'
         uses: actions/upload-artifact@v4
         with:
           name: High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU-APK
           path: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU.apk
           if-no-files-found: error
           compression-level: 0
-      - name: Upload Android App Bundle separately
-        uses: actions/upload-artifact@v4
-        with:
-          name: High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU-AAB
-          path: ${{ runner.temp }}/hte_app/build/app/outputs/bundle/suRelease/High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU.aab
-          if-no-files-found: error
 
       - name: Publish public Android APK release
-        if: github.event_name != 'pull_request' && steps.android_signing.outputs.release_signing_ready == 'true'
+        if: github.event_name != 'pull_request' && steps.ota_mode.outputs.mode == 'release' && steps.android_signing.outputs.release_signing_ready == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.app_version.outputs.version }}-SU
