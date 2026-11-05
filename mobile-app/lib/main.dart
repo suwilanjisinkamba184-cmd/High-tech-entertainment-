@@ -39,6 +39,13 @@ final AudioPlayer player = HtePlayback.instance.player;
 final AudioPlayer _startupSoundPlayer = AudioPlayer();
 final ValueNotifier<int> favouritesRevision = ValueNotifier<int>(0);
 
+/// Lightweight client-side validation; Supabase remains the authority.
+bool isValidEmailAddress(String value) =>
+    RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value.trim());
+
+bool isValidPasswordPair(String password, String confirmation) =>
+    password.length >= 8 && password == confirmation;
+
 /// Convert low-level exceptions into clear, user-safe messages.
 String friendlyErrorMessage(Object error) {
   final details = error.toString().toLowerCase();
@@ -682,7 +689,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
       );
       return;
     }
-    if (password != _confirmPassword.text) {
+    if (!isValidPasswordPair(password, _confirmPassword.text)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('The passwords do not match. Please check and try again.')),
       );
