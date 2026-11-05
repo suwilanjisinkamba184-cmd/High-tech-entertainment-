@@ -39,77 +39,6 @@ bool _audioBackgroundInitialized = false;
 // audio background handler has been initialized in StartupGate.
 final HtePlayback playback = HtePlayback.instance;
 final AudioPlayer player = HtePlayback.instance.player;
-// Separate from the music/ad player and retained across StartupGate -> AuthGate.
-final AudioPlayer _startupSoundPlayer = AudioPlayer();
-
-/// Plays the bundled launch ident once and waits for its completion so the
-/// animated loading screen and sound finish together. This is never an advert.
-Future<bool> playStartupJingle({bool force = false}) async {
-  // The High-Tech launch jingle is mandatory on every cold app launch.
-  // "force" remains for compatibility with the Settings preview action.
-  
-  // Retry once after a clean player reset. The startup ident has its own player
-  // and must never compete with music, adverts, or the background player.
-  for (var attempt = 1; attempt <= 2; attempt++) {
-    StreamSubscription<PlayerState>? stateSubscription;
-    try {
-      await _startupSoundPlayer.stop();
-      await _startupSoundPlayer.setVolume(1.0);
-      await _startupSoundPlayer.setLoopMode(LoopMode.off);
-      await _startupSoundPlayer.setAudioSource(
-        AudioSource.asset('assets/high-tech-startup.mp3'),
-        preload: true,
-      );
-
-      final duration = _startupSoundPlayer.duration;
-      if (duration == null || duration <= Duration.zero) {
-        throw StateError('The bundled High-Tech startup sound has no valid duration.');
-      }
-
-      // Do not treat a returned play() future as proof that audio actually
-      // started: wait for just_audio to report the playing state first.
-      final started = Completer<void>();
-      stateSubscription = _startupSoundPlayer.playerStateStream.listen((state) {
-        if (state.playing && !started.isCompleted) {
-          started.complete();
-        }
-      });
-
-      final playback = _startupSoundPlayer.play();
-      await started.future.timeout(const Duration(seconds: 5));
-      final timeout = duration > const Duration(seconds: 45)
-          ? const Duration(seconds: 55)
-          : duration + const Duration(seconds: 12);
-      await playback.timeout(
-        timeout,
-        onTimeout: () async {
-          await _startupSoundPlayer.stop();
-          throw TimeoutException('High-Tech startup sound exceeded its playback duration.');
-        },
-      );
-      await stateSubscription.cancel();
-      debugPrint('HTE startup sound completed successfully on attempt $attempt.');
-      return true;
-    } catch (error, stackTrace) {
-      await stateSubscription?.cancel();
-      debugPrint('HTE startup sound attempt $attempt failed: $error');
-      debugPrintStack(stackTrace: stackTrace);
-      try {
-        await _startupSoundPlayer.stop();
-      } catch (_) {
-        // Preserve the original playback failure and allow the retry.
-      }
-      if (attempt < 2) {
-        await Future<void>.delayed(const Duration(milliseconds: 350));
-      }
-    }
-  }
-
-  // Do not bypass the required brand ident. StartupGate remains on the splash
-  // and offers replay or a full in-app restart when playback cannot complete.
-  return false;
-}
-
 /// Centralised Shorebird OTA checker. All checks target the public Stable track.
 class HteOtaUpdateService {
   static final ShorebirdUpdater _updater = ShorebirdUpdater();
@@ -456,8 +385,6 @@ class StartupGate extends StatefulWidget {
 class _StartupGateState extends State<StartupGate> with SingleTickerProviderStateMixin {
   bool _ready = false;
   bool _starting = true;
-  bool _startupSoundHandled = false;
-  bool _startupSoundFailed = false;
   String? _error;
   Future<void>? _initialization;
   final Stopwatch _startupClock = Stopwatch();
@@ -478,14 +405,6 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       duration: const Duration(seconds: 7),
     )..repeat();
     _initialize();
-  }
-
-  Future<void> _playStartupSound() async {
-    if (_startupSoundHandled) return;
-    final played = await playStartupJingle(force: true);
-    // Mark it handled only after confirmed playback completion. A failed
-    // attempt remains eligible for retry on the next startup initialization.
-    _startupSoundHandled = played;
   }
 
   /// Coalesce overlapping startup/retry requests into one initialization.
@@ -513,7 +432,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
     try {
       // Initialise Android's background audio session before preparing the
       // startup player. Both players are independent, but the session setup
-      // must not run after the startup jingle has begun.
+      // Initialise background audio before accessing the shared playback engine.
       if (defaultTargetPlatform == TargetPlatform.android &&
           !_audioBackgroundInitialized) {
         try {
@@ -540,30 +459,11 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         debugPrintStack(stackTrace: stackTrace);
       }
 
-      // Keep the animated loading screen visible until BOTH the supplied
-      // startup jingle and essential app services have finished initialising.
-      // The audio runs offline while Supabase connects in parallel.
-      await Future.wait<void>([
-        _playStartupSound(),
-        _initializeCoreServices(),
-      ]);
+      // Initialise essential app services without any startup audio dependency.
+      await _initializeCoreServices();
 
-      // The launch jingle is a required part of the branded startup sequence.
-      // If playback fails after the built-in retries, remain on the splash and
-      // let the listener replay it instead of silently entering the app.
-      if (!_startupSoundHandled) {
-        if (mounted) {
-          setState(() {
-            _startupSoundFailed = true;
-            _starting = false;
-            _error = 'The High-Tech startup sound could not be played. Please retry.';
-          });
-        }
-        return;
-      }
-
-      // Keep the branded splash visible for at least eight seconds, and never
-      // leave it before the startup ident and core initialization have ended.
+      // Keep the branded splash visible for at least eight seconds while the
+      // application finishes its normal startup sequence.
       final remaining = _minimumStartupScreenDuration - _startupClock.elapsed;
       if (remaining > Duration.zero) {
         await Future<void>.delayed(remaining);
@@ -589,67 +489,15 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
     }
   }
 
-  Future<void> _retryStartupSound() async {
-    if (_starting || _startupSoundHandled) return;
-    setState(() {
-      _starting = true;
-      _startupSoundFailed = false;
-      _error = null;
-    });
-    try {
-      final played = await playStartupJingle(force: true);
-      if (!mounted) return;
-      if (!played) {
-        setState(() {
-          _starting = false;
-          _startupSoundFailed = true;
-          _error = 'The High-Tech startup sound could not be confirmed. Please replay it or restart the app.';
-        });
-        return;
-      }
-      _startupSoundHandled = true;
-      final remaining = _minimumStartupScreenDuration - _startupClock.elapsed;
-      if (remaining > Duration.zero) {
-        await Future<void>.delayed(remaining);
-      }
-      if (!mounted) return;
-      setState(() {
-        _ready = true;
-        _starting = false;
-        _startupSoundFailed = false;
-        _error = null;
-      });
-      unawaited(HteOtaUpdateService.checkAndInstall().then(
-        (message) => debugPrint('HTE startup OTA check: $message'),
-      ));
-    } catch (error, stackTrace) {
-      debugPrint('HTE startup jingle replay failed: $error');
-      debugPrintStack(stackTrace: stackTrace);
-      if (!mounted) return;
-      setState(() {
-        _starting = false;
-        _startupSoundFailed = true;
-        _error = 'The High-Tech startup sound could not be played. Please try again or restart the app.';
-      });
-    }
-  }
-
-  /// Rebuild the native app from its root so all startup services and the
-  /// mandatory jingle are initialized again without leaving a broken screen.
+  /// Restart the native application from its root after a startup failure.
   Future<void> _restartApplication() async {
     if (_starting) return;
     setState(() => _starting = true);
-    try {
-      await _startupSoundPlayer.stop();
-    } catch (error) {
-      debugPrint('HTE startup player reset during app restart: $error');
-    }
     runApp(const HteApp());
   }
 
   Future<void> _initializeCoreServices() async {
-    // Never play an advert during startup. Restore the eight-completed-song
-    // counter independently from the launch jingle.
+    // Restore the sponsored-audio counter; adverts never play during startup.
     await playback.restoreAdCounter();
     if (!_supabaseInitialized) {
       await Supabase.initialize(
@@ -803,27 +651,11 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                     style: const TextStyle(color: Colors.white70),
                   ),
                   const SizedBox(height: 18),
-                  if (_startupSoundFailed)
-                    FilledButton.icon(
-                      onPressed: _starting ? null : _retryStartupSound,
-                      icon: const Icon(Icons.replay_rounded),
-                      label: const Text('Replay startup sound'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFD4AF37),
-                        foregroundColor: Colors.black,
-                      ),
-                    )
-                  else
-                    FilledButton.icon(
-                      onPressed: _starting ? null : _initialize,
-                      icon: const Icon(Icons.refresh_rounded),
-                      label: const Text('Retry initialization'),
-                    ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 18),
                   OutlinedButton.icon(
                     onPressed: _starting ? null : _restartApplication,
                     icon: const Icon(Icons.restart_alt_rounded),
-                    label: const Text('Refresh & restart app'),
+                    label: const Text('Restart application'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFE5C77F),
                       side: const BorderSide(color: Color(0xFF80663B)),
@@ -3711,11 +3543,6 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _previewStartupSound() async {
-    _message('Playing your High-Tech startup sound…');
-    await playStartupJingle(force: true);
-  }
-
   Future<void> _loadVersion() async {
     try {
       final info = await PackageInfo.fromPlatform();
@@ -4198,19 +4025,6 @@ class _SettingsPageState extends State<SettingsPage> {
             unawaited(player.setShuffleModeEnabled(value));
             unawaited(_savePlaybackSetting('hte_shuffle', value));
           },
-        ),
-        ListTile(
-          leading: const Icon(Icons.volume_up_outlined, color: Color(0xFFD4AF37)),
-          title: const Text('Mandatory startup sound'),
-          subtitle: const Text('The High-Tech jingle plays automatically on every app launch'),
-          trailing: const Icon(Icons.lock_outline, color: Color(0xFFD4AF37)),
-        ),
-        ListTile(
-          leading: const Icon(Icons.volume_up_outlined, color: Color(0xFFD4AF37)),
-          title: const Text('Preview startup sound'),
-          subtitle: const Text('Test the bundled launch jingle now'),
-          trailing: const Icon(Icons.play_circle_outline),
-          onTap: _previewStartupSound,
         ),
         ListTile(
           leading: const Icon(Icons.slow_motion_video_outlined, color: Color(0xFFD4AF37)),
