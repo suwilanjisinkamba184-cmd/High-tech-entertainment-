@@ -63,6 +63,48 @@ String friendlyErrorMessage(Object error) {
   if (offline) {
     return 'No internet connection. Connect to the internet and try again.';
   }
+  if (error is AuthException) {
+    if (details.contains('invalid login credentials')) {
+      return 'The email or password is incorrect. Check your details and try again.';
+    }
+    if (details.contains('email not confirmed')) {
+      return 'Please confirm your email address before signing in.';
+    }
+    if (details.contains('provider is not enabled') ||
+        details.contains('unsupported provider')) {
+      return 'This sign-in provider is not enabled yet. Please use another sign-in method.';
+    }
+    if (details.contains('too many requests') ||
+        details.contains('rate limit')) {
+      return 'Too many attempts. Please wait a little while and try again.';
+    }
+    if (details.contains('password')) {
+      return 'The password could not be accepted. Check the requirements and try again.';
+    }
+    return 'We could not complete sign-in. Check your account details and try again.';
+  }
+  if (error is HttpException) {
+    if (details.contains('404')) {
+      return 'This media file is no longer available. Please ask the publisher to upload it again.';
+    }
+    if (details.contains('401') || details.contains('403')) {
+      return 'You do not have permission to access this media file.';
+    }
+    return 'The media server could not complete the request. Please retry.';
+  }
+  if (error is FormatException) {
+    return 'The returned data or media format is not supported. Please try another item.';
+  }
+  if (error is FileSystemException) {
+    return 'Your device could not access this file. Check available storage and permissions.';
+  }
+  if (details.contains('row level security') ||
+      details.contains('permission denied')) {
+    return 'This action is not permitted for the current account.';
+  }
+  if (details.contains('bucket not found')) {
+    return 'Media storage is not configured correctly. Please contact support.';
+  }
   return 'Something went wrong. Please try again.';
 }
 
