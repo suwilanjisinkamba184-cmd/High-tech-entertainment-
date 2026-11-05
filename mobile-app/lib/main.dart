@@ -406,6 +406,9 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       // Never play an advert during startup: reopening the app or returning
       // from a paused session must take the listener directly to sign-in.
       // Scheduled audio adverts are handled only after completed music tracks.
+      // Restore the completed-track count so an app restart does not reset the
+      // promised eight-song advert interval.
+      await playback.restoreAdCounter();
 
       // Initialise authentication/data services without waiting for audio.
       if (!_supabaseInitialized) {
