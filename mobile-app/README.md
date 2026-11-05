@@ -83,5 +83,12 @@ The app converts low-level connectivity and service exceptions into plain-langua
 - When a network request fails because the device is offline or cannot reach the service, the user sees: **“No internet connection. Connect to the internet and try again.”**
 - Authentication, media-not-found, permission, unsupported-format and local-storage failures receive specific plain-language guidance; unknown failures use: **“Something went wrong. Please try again.”**
 - During startup, the existing **Try again** button reruns service initialisation after the user reconnects.
-- Diagnostic exception details are retained only in developer logs where applicable; they are not included in these user-facing messages.
+- Diagnostic exception details are retained in the private on-device Founder Studio diagnostics journal (up to 100 events). The founder can review and explicitly export a redacted report; reports are not uploaded automatically.
 
+
+
+## Founder Studio diagnostics and legal documents
+
+The private Founder Studio includes a Developer diagnostics section for locally recorded Flutter framework and uncaught platform errors. It shows timestamps and stack traces, supports explicit report export through the share sheet, and lets the founder clear local history. Common credential patterns are redacted before storage. Diagnostic reports are not sent to a server automatically.
+
+The Settings page links to the current privacy policy and terms of use. The developer contact shown in the app and legal pages is Simon Swilanji Sinkamba. OTA patches apply only to compatible Shorebird installations; native Android changes and bundled asset changes can require a full APK update.
