@@ -1574,23 +1574,52 @@ class FullPlayerPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Now playing')),
-    body: ValueListenableBuilder<bool>(
+    appBar: AppBar(
+      title: const Text('NOW PLAYING', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+      actions: [
+        IconButton(
+          tooltip: 'Playback queue',
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QueuePage())),
+          icon: const Icon(Icons.queue_music_rounded, color: Color(0xFFE3BD70)),
+        ),
+      ],
+    ),
+    body: Stack(children: [
+      const Positioned.fill(child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF17130D), Color(0xFF0B1118), Color(0xFF07090D)],
+          ),
+        ),
+      )),
+      ValueListenableBuilder<bool>(
       valueListenable: playback.adPlaying,
       builder: (context, isAd, _) {
         if (isAd) {
-          return const Center(child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.campaign, size: 64, color: Color(0xFFD9B96E)),
-              SizedBox(height: 18),
-              Text('Advertisement', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
-              Text('Please listen until the advert finishes.',
-                style: TextStyle(color: Colors.white60)),
-              SizedBox(height: 18),
-              CircularProgressIndicator(color: Color(0xFFD9B96E)),
-            ],
+          return Center(child: Container(
+            margin: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(26),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFF302719), Color(0xFF111923)]),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(color: const Color(0xFF80653A)),
+            ),
+            child: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.campaign_rounded, size: 58, color: Color(0xFFE3BD70)),
+                SizedBox(height: 18),
+                Text('HIGH-TECH PROMOTION',
+                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
+                SizedBox(height: 8),
+                Text('Please listen until the sponsored audio finishes.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Color(0xFFB6C1CA), fontSize: 12)),
+                SizedBox(height: 20),
+                CircularProgressIndicator(color: Color(0xFFE3BD70)),
+              ],
+            ),
           ));
         }
         return ValueListenableBuilder<Map<String,dynamic>?>(
@@ -1607,27 +1636,38 @@ class FullPlayerPage extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        const Text('HIGH-TECH AUDIO EXPERIENCE',
+                          style: TextStyle(color: Color(0xFFE3BD70), fontSize: 8,
+                            fontWeight: FontWeight.w900, letterSpacing: 1.8)),
+                        const SizedBox(height: 13),
                         Container(
-                          width: artworkSize,
-                          height: artworkSize,
+                          width: artworkSize + 8,
+                          height: artworkSize + 8,
+                          padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(24),
+                            gradient: const SweepGradient(colors: [
+                              Color(0xFF77572C), Color(0xFFE5C477),
+                              Color(0xFF587D91), Color(0xFF77572C),
+                            ]),
+                            borderRadius: BorderRadius.circular(27),
                             boxShadow: const [
-                              BoxShadow(color: Color(0x553D2C08), blurRadius: 28, spreadRadius: 2),
+                              BoxShadow(color: Color(0x553D2C08), blurRadius: 30, spreadRadius: 2),
                             ],
                           ),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius: BorderRadius.circular(23),
                             child: MediaCover(url: track['cover_url']?.toString(), height: artworkSize),
                           ),
                         ),
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 23),
                         Text((track['title'] ?? 'Now playing').toString(),
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                          style: const TextStyle(fontSize: 24, height: 1.15,
+                            fontWeight: FontWeight.w900, letterSpacing: -.6),
                           textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 7),
                         Text((track['artist'] ?? 'High-Tech Entertainment').toString(),
-                          style: const TextStyle(color: Colors.white60), textAlign: TextAlign.center),
+                          style: const TextStyle(color: Color(0xFFAFBBC5), fontSize: 13),
+                          textAlign: TextAlign.center),
                         ValueListenableBuilder<String?>(
                           valueListenable: playback.playbackError,
                           builder: (context, error, _) => error == null
@@ -1760,7 +1800,8 @@ class FullPlayerPage extends StatelessWidget {
             ),
         );
       },
-    ),
+      ),
+    ]),
   );
 }
 
@@ -2902,6 +2943,37 @@ class _SettingsPageState extends State<SettingsPage> {
     appBar: AppBar(title: const Text('Settings')),
     body: ListView(padding: const EdgeInsets.all(18), children: [
       const Brand(tagline: 'APP PREFERENCES & INFORMATION'),
+      Container(
+        margin: const EdgeInsets.fromLTRB(2, 2, 2, 14),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF33291B), Color(0xFF18232D), Color(0xFF111720)],
+          ),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0xFF80663B)),
+        ),
+        child: Row(children: [
+          Container(width: 44, height: 44,
+            decoration: BoxDecoration(color: const Color(0xFF242A2D),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF56616A))),
+            child: const Icon(Icons.tune_rounded, color: Color(0xFFE3BD70), size: 23)),
+          const SizedBox(width: 13),
+          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('YOUR APP. YOUR SETTINGS.',
+              style: TextStyle(color: Color(0xFFE3BD70), fontSize: 8,
+                fontWeight: FontWeight.w900, letterSpacing: 1.4)),
+            SizedBox(height: 5),
+            Text('Control your experience',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+            SizedBox(height: 4),
+            Text('Personalise playback, appearance and updates.',
+              style: TextStyle(color: Color(0xFFB4C0C9), fontSize: 10)),
+          ])),
+        ]),
+      ),
       Card(child: Column(children: [
         ListTile(
           leading: const Icon(Icons.palette_outlined, color: Color(0xFFD4AF37)),
