@@ -3784,6 +3784,7 @@ class _SettingsPageState extends State<SettingsPage> {
         final directory = await getTemporaryDirectory();
         apkFile = File('${directory.path}/hte-update-$latest.apk');
         if (await apkFile.exists()) await apkFile.delete();
+        if (!mounted) return;
         final sink = apkFile.openWrite();
         var received = 0;
         setState(() => updateStatus = 'Downloading update…');
