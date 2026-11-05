@@ -115,6 +115,11 @@ jobs:
           fi
           mkdir -p "$RUNNER_TEMP/hte_app/assets"
           cp -R mobile-app/assets/. "$RUNNER_TEMP/hte_app/assets/"
+          # shorebird.yaml is declared as a Flutter asset in pubspec.yaml.
+          # Copy it for PR validation too; OTA setup itself remains skipped on PRs.
+          if [ -f mobile-app/shorebird.yaml ]; then
+            cp mobile-app/shorebird.yaml "$RUNNER_TEMP/hte_app/shorebird.yaml"
+          fi
           python3 -m pip install --quiet cairosvg
           python3 -c "import cairosvg; cairosvg.svg2png(url='$RUNNER_TEMP/hte_app/assets/high-tech-logo.svg', write_to='$RUNNER_TEMP/hte_app/assets/high-tech-logo.png', output_width=1024, output_height=1024)"
       - name: Set Play Store Android identity, SDK levels and target API

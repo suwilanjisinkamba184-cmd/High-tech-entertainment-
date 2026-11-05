@@ -340,20 +340,26 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
 
   Future<void> _playStartupSound() async {
     if (_startupSoundStarted) return;
-    _startupSoundStarted = true;
     try {
-      // Keep this player alive for the process lifetime. StartupGate is replaced
-      // by AuthGate as soon as services are ready, so a widget-owned player can
-      // otherwise be torn down while the sound is still starting.
+      // This is the dedicated startup jingle, not the separate advert asset.
+      // Prepare it only after JustAudioBackground has configured Android audio;
+      // configuring the background session afterwards can interrupt this player.
       await _startupSoundPlayer.setAudioSource(
         AudioSource.asset('assets/high-tech-startup.mp3'),
+        preload: true,
       );
       await _startupSoundPlayer.setVolume(1.0);
       await _startupSoundPlayer.setLoopMode(LoopMode.off);
-      await _startupSoundPlayer.play();
+      _startupSoundStarted = true;
+      // Do not hold authentication behind the full jingle duration. The player
+      // is process-wide and continues while StartupGate transitions to AuthGate.
+      unawaited(_startupSoundPlayer.play().catchError((Object error) {
+        debugPrint('HTE startup sound playback failed: $error');
+      }));
     } catch (error, stackTrace) {
+      _startupSoundStarted = false;
       // Startup audio is optional and must never block sign-in or show raw errors.
-      debugPrint('HTE startup sound could not be played: $error');
+      debugPrint('HTE startup sound could not be prepared: $error');
       debugPrintStack(stackTrace: stackTrace);
     }
   }
@@ -381,13 +387,9 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       });
     }
     try {
-      // Start the bundled startup sound before awaiting any background
-      // audio setup or network/authentication work. main() has already called
-      // WidgetsFlutterBinding.ensureInitialized().
-      unawaited(_playStartupSound());
-
-      // Audio is an optional service: an audio-plugin initialisation
-      // failure must never prevent the user from reaching sign-in.
+      // Initialise Android's background audio session before preparing the
+      // startup player. Both players are independent, but the session setup
+      // must not run after the startup jingle has begun.
       if (defaultTargetPlatform == TargetPlatform.android &&
           !_audioBackgroundInitialized) {
         try {
@@ -402,6 +404,10 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
           debugPrintStack(stackTrace: stackTrace);
         }
       }
+
+      // Play the dedicated, bundled startup jingle after audio-session setup.
+      // It works offline and is independent from the scheduled advertisement.
+      await _playStartupSound();
 
       // Never play an advert during startup: reopening the app or returning
       // from a paused session must take the listener directly to sign-in.
@@ -976,6 +982,27 @@ class MoreTab extends StatelessWidget {
         child: Text('Explore more', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
       ),
       Card(child: ListTile(
+        leading: const Icon(Icons.tune_rounded, color: Color(0xFFD4AF37)),
+        title: const Text('App settings'),
+        subtitle: const Text('Appearance, playback, downloads, updates and privacy'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => _open(context, 'Settings', const SettingsPage()),
+      )),
+      Card(child: ListTile(
+        leading: const Icon(Icons.download_for_offline_outlined, color: Color(0xFFD4AF37)),
+        title: const Text('Offline media library'),
+        subtitle: const Text('Manage music and videos saved on this device'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => _open(context, 'Offline media', const LocalFilesTab()),
+      )),
+      Card(child: ListTile(
+        leading: const Icon(Icons.notifications_none, color: Color(0xFFD4AF37)),
+        title: const Text('Notifications'),
+        subtitle: const Text('Release news and account announcements'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsPage())),
+      )),
+      Card(child: ListTile(
         leading: const Icon(Icons.people_outline, color: Color(0xFFD4AF37)),
         title: const Text('Artists'),
         subtitle: const Text('Discover High-Tech artists and their profiles'),
@@ -992,7 +1019,7 @@ class MoreTab extends StatelessWidget {
       Card(child: ListTile(
         leading: const Icon(Icons.person_outline, color: Color(0xFFD4AF37)),
         title: const Text('Account'),
-        subtitle: const Text('Profile, sign out, privacy and settings'),
+        subtitle: const Text('Profile, sign out and account details'),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => _open(context, 'Account', const AccountTab()),
       )),
@@ -3125,6 +3152,7 @@ class _SettingsPageState extends State<SettingsPage> {
   String updateStatus = '';
   bool autoplaySetting = true;
   bool shuffleSetting = false;
+  double videoSpeedSetting = 1.0;
 
   @override
   void initState() {
@@ -3142,6 +3170,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs=await SharedPreferences.getInstance();
     autoplaySetting=prefs.getBool('hte_autoplay')??true;
     shuffleSetting=prefs.getBool('hte_shuffle')??false;
+    videoSpeedSetting=prefs.getDouble('hte_video_speed')??1.0;
     playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting; playback.audioAdsEnabled=true; playback.adEvery=HtePlayback.advertInterval;
     if(mounted)setState((){});
   }
@@ -3353,6 +3382,103 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _openOfflineLibrary() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => Scaffold(
+        appBar: AppBar(title: const Text('Offline media library')),
+        body: const SafeArea(child: LocalFilesTab()),
+      ),
+    ));
+  }
+
+  Future<void> _openNotifications() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => const NotificationsPage(),
+    ));
+  }
+
+  Future<void> _chooseVideoSpeed() async {
+    const speeds = <double>[0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+    final selected = await showModalBottomSheet<double>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Default video playback speed',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              ),
+            ),
+            ...speeds.map((speed) => ListTile(
+              leading: Icon(
+                videoSpeedSetting == speed ? Icons.radio_button_checked : Icons.radio_button_off,
+                color: videoSpeedSetting == speed ? const Color(0xFFD4AF37) : null,
+              ),
+              title: Text(speed == 1.0 ? 'Normal (1×)' : '$speed×'),
+              onTap: () => Navigator.pop(sheetContext, speed),
+            )),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (selected == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('hte_video_speed', selected);
+    if (mounted) setState(() => videoSpeedSetting = selected);
+  }
+
+  Future<void> _clearTemporaryCache() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Clear temporary cache?'),
+        content: const Text(
+          'This removes temporary app files only. Your downloaded offline music, videos, account and settings will be kept.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Clear cache'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      final directory = await getTemporaryDirectory();
+      if (await directory.exists()) {
+        await for (final entity in directory.list()) {
+          try {
+            await entity.delete(recursive: true);
+          } catch (error) {
+            debugPrint('Could not clear temporary item: $error');
+          }
+        }
+      }
+      if (mounted) _message('Temporary cache cleared. Offline downloads were preserved.');
+    } catch (error) {
+      if (mounted) _message('Could not clear temporary cache. Please try again.');
+      debugPrint('HTE cache clear failed: $error');
+    }
+  }
+
+  void _openWebsite(String path) {
+    launchUrl(
+      Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/$path'),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
   void _message(String value) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
 
   Widget _themeChoiceTile(
@@ -3490,6 +3616,14 @@ class _SettingsPageState extends State<SettingsPage> {
       Card(child: Column(children: [
         SwitchListTile(title:const Text('Smart Autoplay'),subtitle:const Text('Continue with recommended music when the queue ends'),value:autoplaySetting,onChanged:(v){setState(()=>autoplaySetting=v);playback.autoplay=v;_savePlaybackSetting('hte_autoplay',v);}),
         SwitchListTile(title:const Text('Shuffle'),subtitle:const Text('Play queued tracks in random order'),value:shuffleSetting,onChanged:(v){setState(()=>shuffleSetting=v);playback.shuffle=v;player.setShuffleModeEnabled(v);_savePlaybackSetting('hte_shuffle',v);}),
+        ListTile(
+          leading: const Icon(Icons.slow_motion_video_outlined, color: Color(0xFFD4AF37)),
+          title: const Text('Default video playback speed'),
+          subtitle: Text(videoSpeedSetting == 1.0 ? 'Normal speed (1×)' : '$videoSpeedSetting× speed'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _chooseVideoSpeed,
+        ),
+        const Divider(height: 1),
         const ListTile(
           leading: Icon(Icons.campaign_outlined, color: Color(0xFFD4AF37)),
           title: Text('HT Audio Advertisements'),
@@ -3497,13 +3631,55 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ])),
       const SizedBox(height: 12),
+      const Heading('Downloads & offline listening'),
+      Card(child: Column(children: [
+        ListTile(
+          leading: const Icon(Icons.download_for_offline_outlined, color: Color(0xFFD4AF37)),
+          title: const Text('Offline media library'),
+          subtitle: const Text('Import, play and remove music or videos stored on this device'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _openOfflineLibrary,
+        ),
+        const Divider(height: 1),
+        ListTile(
+          leading: const Icon(Icons.folder_open_outlined),
+          title: const Text('Manage saved media'),
+          subtitle: const Text('Your offline downloads are stored separately from temporary cache'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _openOfflineLibrary,
+        ),
+      ])),
+      const SizedBox(height: 12),
+      const Heading('Notifications & communication'),
+      Card(child: ListTile(
+        leading: const Icon(Icons.notifications_active_outlined, color: Color(0xFFD4AF37)),
+        title: const Text('Notification inbox'),
+        subtitle: const Text('View release announcements and account updates'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: _openNotifications,
+      )),
+      const SizedBox(height: 12),
+      const Heading('Storage & data'),
+      Card(child: ListTile(
+        leading: const Icon(Icons.cleaning_services_outlined, color: Color(0xFFD4AF37)),
+        title: const Text('Clear temporary cache'),
+        subtitle: const Text('Free temporary storage without deleting offline downloads'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: _clearTemporaryCache,
+      )),
+      const SizedBox(height: 12),
+      const Heading('Website, privacy & support'),
       Card(child: Column(children: [
         ListTile(leading: const Icon(Icons.language), title: const Text('High-Tech Entertainment website'), trailing: const Icon(Icons.open_in_new),
-          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/'), mode: LaunchMode.externalApplication)),
+          onTap: () => _openWebsite('')),
         ListTile(leading: const Icon(Icons.privacy_tip_outlined), title: const Text('Privacy policy'), trailing: const Icon(Icons.open_in_new),
-          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication)),
+          onTap: () => _openWebsite('privacy-policy.html')),
+        ListTile(leading: const Icon(Icons.description_outlined), title: const Text('Terms of service'), trailing: const Icon(Icons.open_in_new),
+          onTap: () => _openWebsite('terms-of-service.html')),
         ListTile(leading: const Icon(Icons.delete_outline), title: const Text('Request account deletion'), trailing: const Icon(Icons.open_in_new),
-          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html'), mode: LaunchMode.externalApplication)),
+          onTap: () => _openWebsite('account-deletion.html')),
+        ListTile(leading: const Icon(Icons.support_agent_outlined), title: const Text('Support & contact'), subtitle: const Text('Visit the official High-Tech Entertainment website'), trailing: const Icon(Icons.open_in_new),
+          onTap: () => _openWebsite('')),
       ])),
       const Heading('About the developer'),
       Card(
