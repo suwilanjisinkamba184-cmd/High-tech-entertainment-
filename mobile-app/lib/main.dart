@@ -7,15 +7,18 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'admin_studio.dart';
 import 'diagnostics_service.dart';
+import 'self_healing_engine.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
+import 'package:restart_app/restart_app.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
@@ -110,7 +113,9 @@ Future<bool> playStartupJingle({bool force = false}) async {
   return false;
 }
 
-/// Centralised Shorebird OTA checker. All checks target the public Stable track.
+/// Single source of truth for Stable-channel Shorebird patch updates.
+/// Shorebird's native updater remains enabled (shorebird.yaml auto_update: true),
+/// so normal patches download silently on process launch and boot on next cold start.
 class HteOtaUpdateService {
   static final ShorebirdUpdater _updater = ShorebirdUpdater();
   static Future<String>? _activeCheck;
@@ -125,37 +130,56 @@ class HteOtaUpdateService {
     });
   }
 
+  /// Returns the staged patch number, or null when no process restart is needed.
+  /// Zero represents a staged rollback to the base release.
+  static Future<int?> pendingPatchNumber() async {
+    if (!Platform.isAndroid || !_updater.isAvailable) return null;
+    try {
+      final current = await _updater.readCurrentPatch();
+      final next = await _updater.readNextPatch();
+      if (current?.number == next?.number) return null;
+      return next?.number ?? 0;
+    } catch (error) {
+      debugPrint('HTE pending OTA state could not be read: $error');
+      return null;
+    }
+  }
+
+  static Future<bool> hasPendingPatch() async =>
+      await pendingPatchNumber() != null;
+
   static Future<String> _checkAndInstall() async {
     if (!Platform.isAndroid) {
-      return 'OTA patch updates are currently enabled for Android only.';
+      return 'OTA patches are currently available on Android only.';
     }
     if (!_updater.isAvailable) {
-      return 'Shorebird OTA is unavailable in this installation. This app must be installed from a Shorebird release build.';
+      return 'Automatic OTA is unavailable in this installation. Install the Shorebird-enabled Android release first.';
     }
     try {
       final status = await _updater.checkForUpdate(track: UpdateTrack.stable);
       switch (status) {
         case UpdateStatus.outdated:
           await _updater.update(track: UpdateTrack.stable);
-          final nextPatch = await _updater.readNextPatch();
-          final patchLabel = nextPatch == null ? 'latest patch' : 'Patch #${nextPatch.number}';
-          return '$patchLabel downloaded successfully. Fully close and reopen the app to activate it.';
+          if (await hasPendingPatch()) {
+            final next = await _updater.readNextPatch();
+            return 'Update ready: Patch #${next?.number ?? 'latest'}. Restart the app to activate it; your account and offline files are preserved.';
+          }
+          return 'Update check started. Shorebird downloads patches in the background and activates them on the next app launch.';
         case UpdateStatus.restartRequired:
-          final nextPatch = await _updater.readNextPatch();
-          final patchLabel = nextPatch == null ? 'The downloaded patch' : 'Patch #${nextPatch.number}';
-          return '$patchLabel is ready. Fully close and reopen the app to activate it.';
+          final next = await _updater.readNextPatch();
+          return 'Update ready: Patch #${next?.number ?? 'latest'}. Restart the app to activate it; your account and offline files are preserved.';
         case UpdateStatus.upToDate:
-          final currentPatch = await _updater.readCurrentPatch();
-          return currentPatch == null
-              ? 'No new OTA patch is available. This installation is running the base release.'
-              : 'No new OTA patch is available. Installed patch: #${currentPatch.number}.';
+          final current = await _updater.readCurrentPatch();
+          return current == null
+              ? 'You are up to date on the Stable OTA channel (base release).'
+              : 'You are up to date on the Stable OTA channel (Patch #${current.number}).';
         case UpdateStatus.unavailable:
-          return 'Shorebird OTA is unavailable in this app installation.';
+          return 'Shorebird OTA is unavailable in this installation.';
       }
     } catch (error, stackTrace) {
-      debugPrint('HTE OTA update check failed: $error');
+      debugPrint('HTE OTA update failed: $error');
       debugPrintStack(stackTrace: stackTrace);
-      return 'OTA check failed. Check your internet connection and try again.';
+      return 'OTA update could not finish. Your current app is unchanged; check your connection and retry.';
     }
   }
 }
@@ -295,14 +319,14 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    unawaited(HteDiagnostics.record(
+    unawaited(HteSelfHealingEngine.recordAndRecover(
       details.exception,
       stackTrace: details.stack,
       source: 'flutter-framework',
     ));
   };
   PlatformDispatcher.instance.onError = (error, stackTrace) {
-    unawaited(HteDiagnostics.record(
+    unawaited(HteSelfHealingEngine.recordAndRecover(
       error,
       stackTrace: stackTrace,
       source: 'platform-dispatcher',
@@ -310,6 +334,8 @@ Future<void> main() async {
     return false;
   };
   runApp(const HteApp());
+  // Health checks and local repair are non-blocking; never delay the splash screen.
+  unawaited(HteSelfHealingEngine.initialize());
   // Load the saved appearance without delaying the startup animation or sound.
   unawaited(AppThemeController.load());
 }
@@ -504,6 +530,8 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   }
 
   Future<void> _initializeServices() async {
+    // Repair known corrupted local preferences before settings and services read them.
+    await HteSelfHealingEngine.initialize();
     if (mounted) {
       setState(() {
         _starting = true;
@@ -574,12 +602,15 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
           _ready = true;
           _starting = false;
         });
-        // Explicitly check Stable OTA after the app is ready; never block startup.
-        unawaited(HteOtaUpdateService.checkAndInstall().then(
-          (message) => debugPrint('HTE startup OTA check: $message'),
-        ));
+        // Shorebird's native auto-updater checks and stages Stable patches in the background.
+        // Do not issue a second manual check here; it can race the native download.
       }
-    } catch (error) {
+    } catch (error, stackTrace) {
+      await HteSelfHealingEngine.recordAndRecover(
+        error,
+        stackTrace: stackTrace,
+        source: 'startup-initialization',
+      );
       if (mounted) {
         setState(() {
           _error = friendlyErrorMessage(error);
@@ -619,9 +650,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         _startupSoundFailed = false;
         _error = null;
       });
-      unawaited(HteOtaUpdateService.checkAndInstall().then(
-        (message) => debugPrint('HTE startup OTA check: $message'),
-      ));
+      // Native Shorebird auto-update remains responsible for background patch checks.
     } catch (error, stackTrace) {
       debugPrint('HTE startup jingle replay failed: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -641,10 +670,23 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
     setState(() => _starting = true);
     try {
       await _startupSoundPlayer.stop();
-    } catch (error) {
-      debugPrint('HTE startup player reset during app restart: $error');
+      final result = await Restart.restartApp(mode: RestartMode.process);
+      if (!result.success && mounted) {
+        setState(() {
+          _starting = false;
+          _error = 'Android could not restart the app automatically. Please close and reopen High-Tech Entertainment.';
+        });
+      }
+    } catch (error, stackTrace) {
+      debugPrint('HTE full process restart failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (mounted) {
+        setState(() {
+          _starting = false;
+          _error = 'The app could not restart automatically. Please close and reopen it.';
+        });
+      }
     }
-    runApp(const HteApp());
   }
 
   Future<void> _initializeCoreServices() async {
@@ -1106,8 +1148,76 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   int tab = 0;
+  bool _checkingOtaOnResume = false;
+  int? _lastPromptedPatchNumber;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_checkOtaOnResume());
+    }
+  }
+
+  Future<void> _checkOtaOnResume() async {
+    if (_checkingOtaOnResume || !Platform.isAndroid) return;
+    _checkingOtaOnResume = true;
+    try {
+      // Media playback may keep Android's process alive in the background.
+      // Check again on resume so long-running sessions can receive new patches.
+      await HteOtaUpdateService.checkAndInstall();
+      final patchNumber = await HteOtaUpdateService.pendingPatchNumber();
+      if (!mounted || patchNumber == null ||
+          _lastPromptedPatchNumber == patchNumber) return;
+      _lastPromptedPatchNumber = patchNumber;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('A High-Tech update is ready. Restart to apply it.'),
+          duration: const Duration(seconds: 12),
+          action: SnackBarAction(
+            label: 'Restart now',
+            onPressed: () => unawaited(_restartForOtaPatch()),
+          ),
+        ),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('HTE OTA resume check failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    } finally {
+      _checkingOtaOnResume = false;
+    }
+  }
+
+  Future<void> _restartForOtaPatch() async {
+    try {
+      final result = await Restart.restartApp(mode: RestartMode.process);
+      if (!result.success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Restart could not start. Close and reopen the app to apply the update.')),
+        );
+      }
+    } catch (error) {
+      debugPrint('HTE OTA process restart failed: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Restart failed. Close and reopen the app to apply the update.')),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
   final pages = const [HomeTab(), DiscoverTab(), ReleasesTab(), LibraryTab(), AccountTab(), MoreTab()];
   static const _items = [
     (Icons.space_dashboard_rounded, 'Home'),
@@ -2044,6 +2154,27 @@ class TrackList extends StatelessWidget {
             title: Text((item['title'] ?? 'Track').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
             subtitle: Text((item['artist'] ?? 'High-Tech Entertainment').toString()),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              PopupMenuButton<String>(
+                tooltip: 'Queue options',
+                onSelected: (value) {
+                  if (value == 'play_next') {
+                    playback.playNext(item);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Track added to play next.')),
+                    );
+                  } else if (value == 'add_queue') {
+                    playback.addToQueue(item);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Track added to your queue.')),
+                    );
+                  }
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'play_next', child: Text('Play next')),
+                  PopupMenuItem(value: 'add_queue', child: Text('Add to queue')),
+                ],
+                icon: const Icon(Icons.more_vert, size: 20),
+              ),
               IconButton(tooltip: 'Share track', onPressed: () => Share.share('${item['title']} — ${item['artist']}\nHigh-Tech Entertainment'), icon: const Icon(Icons.share_outlined, size: 20)),
               IconButton(
                 tooltip: 'Download for offline listening',
@@ -2081,7 +2212,7 @@ class TrackList extends StatelessWidget {
                 if (isSpotifyUrl(rawUrl)) {
                   await player.stop();
                   playback.currentTrack.value = null;
-                  playback.queueView.value = [];
+                  playback.clearQueue();
                   if (embedUrl != null && defaultTargetPlatform == TargetPlatform.android) {
                     if (context.mounted) {
                       await Navigator.of(context).push(MaterialPageRoute(
@@ -3662,11 +3793,13 @@ class _SettingsPageState extends State<SettingsPage> {
   String version = 'Loading…';
   bool checking = false;
   bool downloading = false;
+  bool otaRestartRequired = false;
   double downloadProgress = 0;
   String updateStatus = '';
   bool autoplaySetting = true;
   bool shuffleSetting = false;
   double videoSpeedSetting = 1.0;
+  int _versionTapCount = 0;
 
   @override
   void initState() {
@@ -3725,6 +3858,15 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  void _handleVersionTap() {
+    _versionTapCount++;
+    if (_versionTapCount < 7) return;
+    _versionTapCount = 0;
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const HteEngineerConsole()),
+    );
+  }
+
   List<int> _versionParts(String value) => value.replaceFirst(RegExp(r'^[vV]'), '')
       .split('+').first.split('.')
       .map((part) => int.tryParse(part.replaceAll(RegExp(r'[^0-9].*'), '')) ?? 0).toList();
@@ -3738,6 +3880,18 @@ class _SettingsPageState extends State<SettingsPage> {
     return 0;
   }
 
+  Future<void> _restartToApplyOta() async {
+    try {
+      final result = await Restart.restartApp(mode: RestartMode.process);
+      if (!result.success && mounted) {
+        _message('Restart could not be started. Close and reopen the app to apply the downloaded patch.');
+      }
+    } catch (error) {
+      if (mounted) _message('Restart failed. Close and reopen the app to apply the downloaded patch.');
+      debugPrint('HTE OTA restart failed: $error');
+    }
+  }
+
   Future<void> _checkForOtaUpdates() async {
     if (checking || downloading) return;
     setState(() {
@@ -3746,9 +3900,38 @@ class _SettingsPageState extends State<SettingsPage> {
     });
     try {
       final result = await HteOtaUpdateService.checkAndInstall();
+      final pending = await HteOtaUpdateService.hasPendingPatch();
       if (!mounted) return;
-      setState(() => updateStatus = result);
-      _message(result);
+      setState(() {
+        updateStatus = result;
+        otaRestartRequired = pending;
+      });
+      if (pending) {
+        final restartNow = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Update ready'),
+            content: const Text('The new app code has downloaded safely. Restart High-Tech Entertainment now to activate it? Your account, settings and offline media will be kept.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Later'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Restart now'),
+              ),
+            ],
+          ),
+        );
+        if (restartNow == true) {
+          await _restartToApplyOta();
+        } else if (mounted) {
+          _message('Update saved. It will activate automatically the next time the app starts.');
+        }
+      } else {
+        _message(result);
+      }
     } finally {
       if (mounted) setState(() => checking = false);
     }
@@ -4146,25 +4329,42 @@ class _SettingsPageState extends State<SettingsPage> {
       Card(child: Column(children: [
         ListTile(
           leading: const Icon(Icons.system_update_alt_rounded, color: Color(0xFFD4AF37)),
-          title: const Text('OTA Update Checker'),
+          title: const Text('Automatic OTA patches'),
           subtitle: Text(checking && updateStatus.startsWith('Checking Stable')
               ? updateStatus
-              : 'Check and download Stable-channel app patches'),
+              : otaRestartRequired
+                  ? 'Update downloaded — restart to apply'
+                  : 'Downloads automatically in the background; applies on next app launch'),
           trailing: checking && updateStatus.startsWith('Checking Stable')
               ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.chevron_right),
           onTap: (checking || downloading) ? null : _checkForOtaUpdates,
         ),
+        if (otaRestartRequired)
+          ListTile(
+            leading: const Icon(Icons.check_circle_outline, color: Color(0xFF80C7A2)),
+            title: const Text('OTA update ready to apply'),
+            subtitle: const Text('Restart now, or it will activate the next time the app starts.'),
+            trailing: FilledButton(
+              onPressed: checking ? null : _restartToApplyOta,
+              child: const Text('Restart'),
+            ),
+          ),
         const Divider(height: 1),
         ListTile(
           leading: const Icon(Icons.system_update_alt, color: Color(0xFFD4AF37)),
-          title: const Text('App updates'),
+          title: const Text('Full APK update'),
           subtitle: Text(downloading ? updateStatus : 'Check, download and install the latest official Android version'),
           trailing: (checking || downloading) ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.chevron_right),
           onTap: (checking || downloading) ? null : _checkForUpdates,
         ),
         const Divider(height: 1),
-        ListTile(leading: const Icon(Icons.info_outline), title: const Text('App version'), subtitle: Text(version)),
+        ListTile(
+          leading: const Icon(Icons.info_outline),
+          title: const Text('App version'),
+          subtitle: Text(version),
+          onTap: _handleVersionTap,
+        ),
       ])),
       if (downloading) ...[
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -4379,6 +4579,134 @@ Future<List<Map<String, dynamic>>> publishedTracks([String term = '']) async {
 }
 
 Future<List<Map<String, dynamic>>> playableTracks() => publishedTracks();
+
+
+/// Hidden maintenance console. Open by tapping App version seven times.
+class HteEngineerConsole extends StatefulWidget {
+  const HteEngineerConsole({super.key});
+
+  @override
+  State<HteEngineerConsole> createState() => _HteEngineerConsoleState();
+}
+
+class _HteEngineerConsoleState extends State<HteEngineerConsole> {
+  bool _repairing = false;
+  List<String> _results = const <String>[];
+  int _diagnosticCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshDiagnostics();
+  }
+
+  Future<void> _refreshDiagnostics() async {
+    final events = await HteDiagnostics.read();
+    if (mounted) setState(() => _diagnosticCount = events.length);
+  }
+
+  Future<void> _runRepair() async {
+    if (_repairing) return;
+    setState(() => _repairing = true);
+    final results = await HteSelfHealingEngine.repairNow();
+    await _refreshDiagnostics();
+    if (mounted) {
+      setState(() {
+        _results = results;
+        _repairing = false;
+      });
+    }
+  }
+
+  Future<void> _showDiagnosticReport() async {
+    final report = await HteSelfHealingEngine.diagnosticReport();
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Diagnostic report'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: SelectableText(report, style: const TextStyle(fontSize: 12)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: report));
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Diagnostic report copied.')),
+              );
+            },
+            child: const Text('Copy report'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('HTE Engineer Mode')),
+    body: ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        const Icon(Icons.health_and_safety_outlined,
+          size: 54, color: Color(0xFFD4AF37)),
+        const SizedBox(height: 12),
+        const Text('Self-healing & diagnostics',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        const Text(
+          'Checks known local app settings, records runtime faults and repairs safe, recoverable state. It never deletes your account, downloads or personal files.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white70),
+        ),
+        const SizedBox(height: 20),
+        Card(child: ListTile(
+          leading: const Icon(Icons.bug_report_outlined),
+          title: const Text('Stored diagnostic events'),
+          subtitle: Text('$_diagnosticCount recent events; credentials are redacted'),
+          trailing: IconButton(
+            icon: const Icon(Icons.description_outlined),
+            onPressed: _showDiagnosticReport,
+            tooltip: 'View report',
+          ),
+        )),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: _repairing ? null : _runRepair,
+          icon: _repairing
+              ? const SizedBox(width: 18, height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.build_circle_outlined),
+          label: Text(_repairing ? 'Checking and repairing…' : 'Run automatic repair'),
+        ),
+        if (_results.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          const Text('Repair result', style: TextStyle(fontWeight: FontWeight.w700)),
+          ..._results.map((item) => ListTile(
+            dense: true,
+            leading: const Icon(Icons.check_circle_outline, color: Color(0xFFD4AF37)),
+            title: Text(item),
+          )),
+        ],
+        const SizedBox(height: 18),
+        const Text(
+          'For unknown code defects, native Android faults or server-side problems, this console records evidence but cannot safely rewrite the application. Those fixes must be delivered through a verified app release or OTA patch.',
+          style: TextStyle(color: Colors.white54, fontSize: 12),
+        ),
+      ],
+    ),
+  );
+}
 
 class SpotifyEmbedPage extends StatefulWidget {
   const SpotifyEmbedPage({super.key, required this.title, required this.artist, required this.embedUrl});
