@@ -73,6 +73,14 @@ Future<String> downloadRemoteMedia({
     if (!supportedExtensions.contains(extension)) {
       throw const FormatException('The server did not provide a supported audio or video file.');
     }
+    const audioExtensions = {'mp3','m4a','aac','wav','flac','ogg','opus','aiff'};
+    const videoExtensions = {'mp4','m4v','mov','mkv','webm','3gp'};
+    final expectedKind = kind.toLowerCase();
+    if ((expectedKind == 'audio' && !audioExtensions.contains(extension)) ||
+        (expectedKind == 'video' && !videoExtensions.contains(extension)) ||
+        (expectedKind != 'audio' && expectedKind != 'video')) {
+      throw const FormatException('The downloaded file does not match the requested media type.');
+    }
     if (mime == 'text/html' || mime == 'application/json') {
       throw const FormatException('The media server returned a web page instead of a media file.');
     }
