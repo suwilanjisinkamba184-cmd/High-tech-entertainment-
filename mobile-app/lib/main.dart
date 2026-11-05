@@ -7,6 +7,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -2352,48 +2353,292 @@ class _NotificationsPageState extends State<NotificationsPage> {
 class ProfileEditPage extends StatefulWidget {
   const ProfileEditPage({super.key});
   @override
-  State<ProfileEditPage> createState()=>_ProfileEditPageState();
+  State<ProfileEditPage> createState() => _ProfileEditPageState();
 }
-class _ProfileEditPageState extends State<ProfileEditPage>{
-  final _name=TextEditingController();
-  final _bio=TextEditingController();
-  final _phone=TextEditingController();
-  String _avatarUrl='';
-  bool _loading=true;
-  bool _saving=false;
+
+class _ProfileEditPageState extends State<ProfileEditPage> {
+  final _name = TextEditingController();
+  final _bio = TextEditingController();
+  final _phone = TextEditingController();
+  String _avatarUrl = '';
+  bool _loading = true;
+  bool _saving = false;
+  bool _uploadingAvatar = false;
+
   @override
-  void initState(){super.initState();_load();}
+  void initState() {
+    super.initState();
+    _load();
+  }
+
   @override
-  void dispose(){_name.dispose();_bio.dispose();_phone.dispose();super.dispose();}
+  void dispose() {
+    _name.dispose();
+    _bio.dispose();
+    _phone.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
-    final user=db.auth.currentUser;
-    if(user==null){setState(()=>_loading=false);return;}
-    try{
-      final row=await db.from('profiles').select('display_name,bio,phone,avatar_url').eq('id',user.id).maybeSingle();
-      if(row!=null){_name.text=(row['display_name']??'').toString();_bio.text=(row['bio']??'').toString();_phone.text=(row['phone']??'').toString();_avatarUrl=(row['avatar_url']??'').toString();}
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
-    if(mounted)setState(()=>_loading=false);
+    final user = db.auth.currentUser;
+    if (user == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+    try {
+      final row = await db.from('profiles')
+          .select('display_name,bio,phone,avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+      if (row != null) {
+        _name.text = (row['display_name'] ?? '').toString();
+        _bio.text = (row['bio'] ?? '').toString();
+        _phone.text = (row['phone'] ?? '').toString();
+        _avatarUrl = (row['avatar_url'] ?? '').toString();
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    }
+    if (mounted) setState(() => _loading = false);
   }
+
+  Future<void> _persistProfile() async {
+    final user = db.auth.currentUser;
+    if (user == null) throw const AuthException('Please sign in again to update your profile.');
+    await db.from('profiles').upsert({
+      'id': user.id,
+      'display_name': _name.text.trim(),
+      'bio': _bio.text.trim(),
+      'phone': _phone.text.trim(),
+      'avatar_url': _avatarUrl,
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  String? _storedAvatarPath(String value, String userId) {
+    final uri = Uri.tryParse(value);
+    if (uri == null) return null;
+    final segments = uri.pathSegments;
+    final bucketIndex = segments.indexOf('hte-artwork');
+    if (bucketIndex < 0 || bucketIndex + 2 >= segments.length) return null;
+    final path = segments.sublist(bucketIndex + 1).join('/');
+    if (!path.startsWith('avatars/$userId/')) return null;
+    return path;
+  }
+
+  Future<void> _uploadAvatar() async {
+    if (_saving || _uploadingAvatar) return;
+    final user = db.auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to upload a profile picture.')),
+      );
+      return;
+    }
+
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp', 'avif'],
+        withData: false,
+      );
+      if (result == null || result.files.isEmpty) return;
+      final selected = result.files.single;
+      if (selected.size <= 0 || selected.size > 5 * 1024 * 1024) {
+        throw const FormatException('Choose a profile image smaller than 5 MB.');
+      }
+      final localPath = selected.path;
+      if (localPath == null || localPath.isEmpty) {
+        throw const FormatException('The selected image could not be opened. Please choose it again.');
+      }
+      final localFile = File(localPath);
+      if (!await localFile.exists()) {
+        throw const FormatException('The selected image is no longer available on this device.');
+      }
+
+      final extension = (selected.extension ?? '').toLowerCase();
+      const mimeTypes = <String, String>{
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'webp': 'image/webp',
+        'avif': 'image/avif',
+      };
+      final mimeType = mimeTypes[extension];
+      if (mimeType == null) {
+        throw const FormatException('This image format is not supported.');
+      }
+
+      setState(() => _uploadingAvatar = true);
+      final oldPath = _storedAvatarPath(_avatarUrl, user.id);
+      final storagePath = 'avatars/${user.id}/${DateTime.now().microsecondsSinceEpoch}.$extension';
+      await db.storage.from('hte-artwork').upload(
+        storagePath,
+        localFile,
+        fileOptions: FileOptions(
+          cacheControl: '3600',
+          contentType: mimeType,
+          upsert: false,
+        ),
+      );
+      final publicUrl = db.storage.from('hte-artwork').getPublicUrl(storagePath);
+      setState(() => _avatarUrl = publicUrl);
+      await _persistProfile();
+
+      if (oldPath != null && oldPath != storagePath) {
+        try {
+          await db.storage.from('hte-artwork').remove([oldPath]);
+        } catch (cleanupError) {
+          debugPrint('Previous HTE profile image cleanup skipped: $cleanupError');
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Your public profile picture has been updated.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
+  }
+
   Future<void> _save() async {
-    final user=db.auth.currentUser;
-    if(user==null)return;
-    setState(()=>_saving=true);
-    try{
-      await db.from('profiles').upsert({'id':user.id,'display_name':_name.text.trim(),'bio':_bio.text.trim(),'phone':_phone.text.trim(),'avatar_url':_avatarUrl,'updated_at':DateTime.now().toIso8601String()});
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profile updated.')));
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
-    if(mounted)setState(()=>_saving=false);
+    if (_saving || _uploadingAvatar) return;
+    setState(() => _saving = true);
+    try {
+      await _persistProfile();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
+
   @override
-  Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('My profile')),
-    body:_loading?const Busy():ListView(padding:const EdgeInsets.all(20),children:[
-      const Brand(tagline:'YOUR HIGH-TECH ACCOUNT'),
-      TextField(controller:_name,decoration:const InputDecoration(labelText:'Display name')),
-      const SizedBox(height:12),TextField(controller:_bio,maxLines:4,decoration:const InputDecoration(labelText:'About you')),
-      const SizedBox(height:12),TextField(controller:_phone,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'Phone number (optional)')),
-      const SizedBox(height:18),FilledButton(onPressed:_saving?null:_save,child:_saving?const CircularProgressIndicator():const Text('Save profile')),
-    ]),
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('My profile')),
+    body: _loading
+        ? const Busy()
+        : ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 30),
+            children: [
+              const Brand(tagline: 'YOUR HIGH-TECH ACCOUNT'),
+              Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF33291B), Color(0xFF18232D), Color(0xFF111720)],
+                  ),
+                  borderRadius: BorderRadius.circular(23),
+                  border: Border.all(color: const Color(0xFF80663B)),
+                ),
+                child: Column(children: [
+                  Container(
+                    width: 116,
+                    height: 116,
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: SweepGradient(colors: [
+                        Color(0xFF77572C), Color(0xFFE5C477),
+                        Color(0xFF587D91), Color(0xFF77572C),
+                      ]),
+                    ),
+                    child: ClipOval(
+                      child: _avatarUrl.isEmpty
+                          ? Container(
+                              color: const Color(0xFF101720),
+                              child: const Icon(Icons.person_rounded, size: 58, color: Color(0xFFE3BD70)),
+                            )
+                          : Image.network(
+                              _avatarUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                color: const Color(0xFF101720),
+                                child: const Icon(Icons.person_rounded, size: 58, color: Color(0xFFE3BD70)),
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 13),
+                  Text(
+                    _name.text.trim().isEmpty ? 'Your High-Tech profile' : _name.text.trim(),
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'PUBLIC PROFILE PHOTO · PRIVATE ACCOUNT DETAILS',
+                    style: TextStyle(color: Color(0xFFB4C0C9), fontSize: 8,
+                      fontWeight: FontWeight.w800, letterSpacing: 1.1),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 15),
+                  OutlinedButton.icon(
+                    onPressed: (_saving || _uploadingAvatar) ? null : _uploadAvatar,
+                    icon: _uploadingAvatar
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.add_a_photo_outlined),
+                    label: Text(_uploadingAvatar ? 'Uploading picture…' : 'Change profile picture'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFE8CB87),
+                      side: const BorderSide(color: Color(0xFF80663B)),
+                    ),
+                  ),
+                ]),
+              ),
+              const Heading('Profile information'),
+              TextField(
+                controller: _name,
+                textCapitalization: TextCapitalization.words,
+                maxLength: 80,
+                decoration: const InputDecoration(labelText: 'Display name'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _bio,
+                maxLines: 4,
+                maxLength: 500,
+                decoration: const InputDecoration(labelText: 'About you'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                maxLength: 30,
+                decoration: const InputDecoration(labelText: 'Phone number (optional)'),
+              ),
+              const SizedBox(height: 18),
+              FilledButton(
+                onPressed: (_saving || _uploadingAvatar) ? null : _save,
+                child: _saving
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Save profile'),
+              ),
+            ],
+          ),
   );
 }
 
