@@ -30,6 +30,7 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
   bool _resumeMusic = false;
   bool _lastPlaying = false;
   bool _isFullscreen = false;
+  bool _retrying = false;
   double _playbackSpeed = 1.0;
   String? _error;
 
@@ -74,7 +75,7 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
       }
 
       _controller = video;
-      await video.initialize();
+      await video.initialize().timeout(const Duration(seconds: 45));
       if (!mounted) return;
       _lastPlaying = video.value.isPlaying;
       video.addListener(_onVideoChanged);
@@ -107,6 +108,30 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
         }
       });
     }
+  }
+
+  Future<void> _retryVideo() async {
+    if (_retrying || !mounted) return;
+    final shouldResumeMusic = _resumeMusic;
+    setState(() {
+      _retrying = true;
+      _ready = false;
+      _error = null;
+    });
+    final previous = _controller;
+    _controller = null;
+    if (previous != null) {
+      previous.removeListener(_onVideoChanged);
+      try {
+        await previous.dispose();
+      } catch (error) {
+        debugPrint('Could not dispose failed video before retry: $error');
+      }
+    }
+    if (!mounted) return;
+    await _initialize();
+    if (shouldResumeMusic) _resumeMusic = true;
+    if (mounted) setState(() => _retrying = false);
   }
 
   Future<void> _togglePlayback() async {
@@ -313,6 +338,16 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
                       const SizedBox(height: 14),
                       Text(_error!, textAlign: TextAlign.center),
                       const SizedBox(height: 18),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: _retrying ? null : _retryVideo,
+                          icon: _retrying
+                            ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.refresh_rounded),
+                          label: Text(_retrying ? 'Retrying…' : 'Retry video'),
+                        ),
+                      ),
                       TextButton(onPressed: () => Navigator.of(context).maybePop(), child: const Text('Go back')),
                     ],
                   ),
