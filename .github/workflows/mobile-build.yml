@@ -388,7 +388,9 @@ jobs:
         env:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
-        run: shorebird patch android --flavor su --release-version "${{ steps.app_version.outputs.version }} SU+${{ steps.app_version.outputs.build }}" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+        # Flutter regenerates MaterialIcons-Regular.otf during CI even when no app asset changed.
+        # Keep the released font asset intact and publish only the compatible Dart patch.
+        run: shorebird patch android --allow-asset-diffs --flavor su --release-version "${{ steps.app_version.outputs.version }} SU+${{ steps.app_version.outputs.build }}" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Build validation APK (pull requests only)
         if: steps.ota_mode.outputs.mode == 'validate'
         working-directory: ${{ runner.temp }}/hte_app
