@@ -13,6 +13,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'admin_studio.dart';
 import 'diagnostics_service.dart';
+import 'self_healing_engine.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
@@ -317,14 +318,14 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    unawaited(HteDiagnostics.record(
+    unawaited(HteSelfHealingEngine.recordAndRecover(
       details.exception,
       stackTrace: details.stack,
       source: 'flutter-framework',
     ));
   };
   PlatformDispatcher.instance.onError = (error, stackTrace) {
-    unawaited(HteDiagnostics.record(
+    unawaited(HteSelfHealingEngine.recordAndRecover(
       error,
       stackTrace: stackTrace,
       source: 'platform-dispatcher',
@@ -332,6 +333,8 @@ Future<void> main() async {
     return false;
   };
   runApp(const HteApp());
+  // Health checks and local repair are non-blocking; never delay the splash screen.
+  unawaited(HteSelfHealingEngine.initialize());
   // Load the saved appearance without delaying the startup animation or sound.
   unawaited(AppThemeController.load());
 }
@@ -599,7 +602,12 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         // Shorebird's native auto-updater checks and stages Stable patches in the background.
         // Do not issue a second manual check here; it can race the native download.
       }
-    } catch (error) {
+    } catch (error, stackTrace) {
+      await HteSelfHealingEngine.recordAndRecover(
+        error,
+        stackTrace: stackTrace,
+        source: 'startup-initialization',
+      );
       if (mounted) {
         setState(() {
           _error = friendlyErrorMessage(error);
@@ -3788,6 +3796,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool autoplaySetting = true;
   bool shuffleSetting = false;
   double videoSpeedSetting = 1.0;
+  int _versionTapCount = 0;
 
   @override
   void initState() {
@@ -3844,6 +3853,15 @@ class _SettingsPageState extends State<SettingsPage> {
     } catch (_) {
       if (mounted) setState(() => version = 'Version unavailable');
     }
+  }
+
+  void _handleVersionTap() {
+    _versionTapCount++;
+    if (_versionTapCount < 7) return;
+    _versionTapCount = 0;
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const HteEngineerConsole()),
+    );
   }
 
   List<int> _versionParts(String value) => value.replaceFirst(RegExp(r'^[vV]'), '')
@@ -4338,7 +4356,12 @@ class _SettingsPageState extends State<SettingsPage> {
           onTap: (checking || downloading) ? null : _checkForUpdates,
         ),
         const Divider(height: 1),
-        ListTile(leading: const Icon(Icons.info_outline), title: const Text('App version'), subtitle: Text(version)),
+        ListTile(
+          leading: const Icon(Icons.info_outline),
+          title: const Text('App version'),
+          subtitle: Text(version),
+          onTap: _handleVersionTap,
+        ),
       ])),
       if (downloading) ...[
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -4553,6 +4576,134 @@ Future<List<Map<String, dynamic>>> publishedTracks([String term = '']) async {
 }
 
 Future<List<Map<String, dynamic>>> playableTracks() => publishedTracks();
+
+
+/// Hidden maintenance console. Open by tapping App version seven times.
+class HteEngineerConsole extends StatefulWidget {
+  const HteEngineerConsole({super.key});
+
+  @override
+  State<HteEngineerConsole> createState() => _HteEngineerConsoleState();
+}
+
+class _HteEngineerConsoleState extends State<HteEngineerConsole> {
+  bool _repairing = false;
+  List<String> _results = const <String>[];
+  int _diagnosticCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshDiagnostics();
+  }
+
+  Future<void> _refreshDiagnostics() async {
+    final events = await HteDiagnostics.read();
+    if (mounted) setState(() => _diagnosticCount = events.length);
+  }
+
+  Future<void> _runRepair() async {
+    if (_repairing) return;
+    setState(() => _repairing = true);
+    final results = await HteSelfHealingEngine.repairNow();
+    await _refreshDiagnostics();
+    if (mounted) {
+      setState(() {
+        _results = results;
+        _repairing = false;
+      });
+    }
+  }
+
+  Future<void> _showDiagnosticReport() async {
+    final report = await HteSelfHealingEngine.diagnosticReport();
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Diagnostic report'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: SelectableText(report, style: const TextStyle(fontSize: 12)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: report));
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Diagnostic report copied.')),
+              );
+            },
+            child: const Text('Copy report'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('HTE Engineer Mode')),
+    body: ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        const Icon(Icons.health_and_safety_outlined,
+          size: 54, color: Color(0xFFD4AF37)),
+        const SizedBox(height: 12),
+        const Text('Self-healing & diagnostics',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        const Text(
+          'Checks known local app settings, records runtime faults and repairs safe, recoverable state. It never deletes your account, downloads or personal files.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white70),
+        ),
+        const SizedBox(height: 20),
+        Card(child: ListTile(
+          leading: const Icon(Icons.bug_report_outlined),
+          title: const Text('Stored diagnostic events'),
+          subtitle: Text('$_diagnosticCount recent events; credentials are redacted'),
+          trailing: IconButton(
+            icon: const Icon(Icons.description_outlined),
+            onPressed: _showDiagnosticReport,
+            tooltip: 'View report',
+          ),
+        )),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: _repairing ? null : _runRepair,
+          icon: _repairing
+              ? const SizedBox(width: 18, height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.build_circle_outlined),
+          label: Text(_repairing ? 'Checking and repairing…' : 'Run automatic repair'),
+        ),
+        if (_results.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          const Text('Repair result', style: TextStyle(fontWeight: FontWeight.w700)),
+          ..._results.map((item) => ListTile(
+            dense: true,
+            leading: const Icon(Icons.check_circle_outline, color: Color(0xFFD4AF37)),
+            title: Text(item),
+          )),
+        ],
+        const SizedBox(height: 18),
+        const Text(
+          'For unknown code defects, native Android faults or server-side problems, this console records evidence but cannot safely rewrite the application. Those fixes must be delivered through a verified app release or OTA patch.',
+          style: TextStyle(color: Colors.white54, fontSize: 12),
+        ),
+      ],
+    ),
+  );
+}
 
 class SpotifyEmbedPage extends StatefulWidget {
   const SpotifyEmbedPage({super.key, required this.title, required this.artist, required this.embedUrl});
