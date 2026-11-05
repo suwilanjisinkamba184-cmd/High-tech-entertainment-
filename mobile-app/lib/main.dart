@@ -44,9 +44,8 @@ final AudioPlayer _startupSoundPlayer = AudioPlayer();
 Future<void> playStartupJingle({bool force = false}) async {
   try {
     final preferences = await SharedPreferences.getInstance();
-    if (!force && !(preferences.getBool('hte_startup_sound_enabled') ?? true)) {
-      return;
-    }
+    // The branded launch ident is mandatory and is not user-disableable.
+    // Keep the legacy preference key ignored so older installs also play it.
     await _startupSoundPlayer.stop();
     await _startupSoundPlayer.setAudioSource(
       AudioSource.asset('assets/high-tech-startup.mp3'),
@@ -1000,7 +999,11 @@ class MoreTab extends StatelessWidget {
         title: const Text('App settings'),
         subtitle: const Text('Appearance, playback, downloads, updates and privacy'),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () => _open(context, 'Settings', const SettingsPage()),
+        // SettingsPage owns its Scaffold and AppBar. Do not wrap it in a
+        // second Scaffold, which produced duplicate Settings/back bars.
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SettingsPage()),
+        ),
       )),
       Card(child: ListTile(
         leading: const Icon(Icons.download_for_offline_outlined, color: Color(0xFFD4AF37)),
@@ -3166,7 +3169,6 @@ class _SettingsPageState extends State<SettingsPage> {
   String updateStatus = '';
   bool autoplaySetting = true;
   bool shuffleSetting = false;
-  bool startupSoundSetting = true;
   bool audioAdsSetting = true;
   double videoSpeedSetting = 1.0;
 
@@ -3187,7 +3189,6 @@ class _SettingsPageState extends State<SettingsPage> {
       final prefs = await SharedPreferences.getInstance();
       autoplaySetting = prefs.getBool('hte_autoplay') ?? true;
       shuffleSetting = prefs.getBool('hte_shuffle') ?? false;
-      startupSoundSetting = prefs.getBool('hte_startup_sound_enabled') ?? true;
       audioAdsSetting = prefs.getBool('hte_audio_ads_enabled') ?? true;
       videoSpeedSetting = prefs.getDouble('hte_video_speed') ?? 1.0;
       playback.autoplay = autoplaySetting;
@@ -3673,14 +3674,11 @@ class _SettingsPageState extends State<SettingsPage> {
             unawaited(_savePlaybackSetting('hte_shuffle', value));
           },
         ),
-        SwitchListTile(
+        ListTile(
+          leading: const Icon(Icons.volume_up_outlined, color: Color(0xFFD4AF37)),
           title: const Text('Startup sound'),
-          subtitle: const Text('Play your supplied High-Tech jingle with the animated loading screen'),
-          value: startupSoundSetting,
-          onChanged: (value) {
-            setState(() => startupSoundSetting = value);
-            unawaited(_savePlaybackSetting('hte_startup_sound_enabled', value));
-          },
+          subtitle: const Text('Enabled at every launch and synchronised with the animated loading screen'),
+          trailing: const Icon(Icons.lock_outline, color: Color(0xFFD4AF37)),
         ),
         ListTile(
           leading: const Icon(Icons.volume_up_outlined, color: Color(0xFFD4AF37)),
