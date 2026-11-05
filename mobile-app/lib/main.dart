@@ -2226,7 +2226,23 @@ class _SettingsPageState extends State<SettingsPage> {
       // This catches same-version hotfixes and SU flavour upgrades reliably.
       final installedSu = info.version.toUpperCase().contains(' SU');
       final installedSemanticVersion = info.version.replaceFirst(
-        RegExp(r'\s+SU      final assets = release['assets'] as List<dynamic>? ?? [];
+        RegExp(r'\s+SU$', caseSensitive: false), '').trim();
+      final installedBuild = int.tryParse(info.buildNumber) ?? 0;
+      final releaseBody = (release['body'] ?? '').toString();
+      final releaseBuildMatch = RegExp(
+        r'Android build:\s*(\d+)', caseSensitive: false).firstMatch(releaseBody);
+      final latestBuild = int.tryParse(releaseBuildMatch?.group(1) ?? '') ?? 0;
+      final versionComparison = _compareVersions(latest, installedSemanticVersion);
+      final buildUpgradeAvailable = latestBuild > 0 && latestBuild > installedBuild;
+      final flavourUpgradeAvailable = isSuRelease && !installedSu;
+      final updateAvailable = versionComparison > 0 ||
+          (versionComparison == 0 && buildUpgradeAvailable) ||
+          flavourUpgradeAvailable;
+      if (latest.isEmpty || !updateAvailable) {
+        _message('You are using the latest published version ($version).');
+        return;
+      }
+      final assets = release['assets'] as List<dynamic>? ?? [];
       Map<String, dynamic>? apk;
       for (final raw in assets) {
         final item = raw as Map<String, dynamic>;
