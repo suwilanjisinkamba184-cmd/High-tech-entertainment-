@@ -3419,7 +3419,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 videoSpeedSetting == speed ? Icons.radio_button_checked : Icons.radio_button_off,
                 color: videoSpeedSetting == speed ? const Color(0xFFD4AF37) : null,
               ),
-              title: Text(speed == 1.0 ? 'Normal (1×)' : '${speed}×'),
+              title: Text(speed == 1.0 ? 'Normal (1×)' : '$speed×'),
               onTap: () => Navigator.pop(sheetContext, speed),
             )),
             const SizedBox(height: 8),
@@ -3619,7 +3619,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(
           leading: const Icon(Icons.slow_motion_video_outlined, color: Color(0xFFD4AF37)),
           title: const Text('Default video playback speed'),
-          subtitle: Text(videoSpeedSetting == 1.0 ? 'Normal speed (1×)' : '${videoSpeedSetting}× speed'),
+          subtitle: Text(videoSpeedSetting == 1.0 ? 'Normal speed (1×)' : '$videoSpeedSetting× speed'),
           trailing: const Icon(Icons.chevron_right),
           onTap: _chooseVideoSpeed,
         ),
