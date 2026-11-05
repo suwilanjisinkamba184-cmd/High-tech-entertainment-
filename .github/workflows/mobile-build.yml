@@ -382,15 +382,48 @@ jobs:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
         run: shorebird release android --flavor su --artifact apk --target-platform android-arm,android-arm64 -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+      - name: Verify OTA patch asset and icon compatibility
+        if: steps.ota_mode.outputs.mode == 'patch'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import re, subprocess
+          from pathlib import Path
+          base = "236c368cc8c2b45bf90cc37a4c025b83cfb88dcc"
+          baseline_files = subprocess.check_output(
+              ["git", "ls-tree", "-r", "--name-only", base, "mobile-app/lib"],
+              text=True,
+          ).splitlines()
+          def read_source(path, revision=None):
+              if revision:
+                  return subprocess.check_output(["git", "show", f"{revision}:{path}"], text=True)
+              return Path(path).read_text()
+          def icons(files, revision=None):
+              found = set()
+              for path in files:
+                  found.update(re.findall(r"Icons\\.([A-Za-z0-9_]+)", read_source(path, revision)))
+              return found
+          current_files = sorted(str(path) for path in Path("mobile-app/lib").rglob("*.dart"))
+          new_icons = sorted(icons(current_files) - icons(baseline_files, base))
+          if new_icons:
+              raise SystemExit("OTA uses Material icons absent from the 2.2.5 base font: " + ", ".join(new_icons))
+          changed_assets = subprocess.check_output(
+              ["git", "diff", "--name-only", base, "HEAD", "--", "mobile-app/assets"],
+              text=True,
+          ).splitlines()
+          if changed_assets:
+              raise SystemExit("OTA cannot deliver changed bundled assets: " + ", ".join(changed_assets))
+          print("PASS: no new Material icon glyphs or source asset changes since release 2.2.5 SU+22.")
+          PY
       - name: Publish OTA patch for Dart-only changes
         if: steps.ota_mode.outputs.mode == 'patch'
         working-directory: ${{ runner.temp }}/hte_app
         env:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
-        # Flutter regenerates MaterialIcons-Regular.otf during CI even when no app asset changed.
-        # Keep the released font asset intact and publish only the compatible Dart patch.
-        run: shorebird patch android --allow-asset-diffs --flavor su --release-version "${{ steps.app_version.outputs.version }} SU+${{ steps.app_version.outputs.build }}" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+        # Do not bypass Shorebird asset checks: changed fonts/images are not shipped in Dart patches.
+        # The app code is kept to Material icons already bundled in release 2.2.5 SU+22.
+        run: shorebird patch android --flavor su --release-version "${{ steps.app_version.outputs.version }} SU+${{ steps.app_version.outputs.build }}" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Build validation APK (pull requests only)
         if: steps.ota_mode.outputs.mode == 'validate'
         working-directory: ${{ runner.temp }}/hte_app

@@ -3752,7 +3752,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ])),
       Card(child: Column(children: [
         ListTile(
-          leading: const Icon(Icons.cloud_sync_rounded, color: Color(0xFFD4AF37)),
+          leading: const Icon(Icons.system_update_alt_rounded, color: Color(0xFFD4AF37)),
           title: const Text('OTA Update Checker'),
           subtitle: Text(checking && updateStatus.startsWith('Checking Stable')
               ? updateStatus
@@ -3810,7 +3810,7 @@ class _SettingsPageState extends State<SettingsPage> {
           leading: const Icon(Icons.volume_up_outlined, color: Color(0xFFD4AF37)),
           title: const Text('Startup sound'),
           subtitle: const Text('Enabled at every launch and synchronised with the animated loading screen'),
-          trailing: const Icon(Icons.lock_outline, color: Color(0xFFD4AF37)),
+          trailing: const Icon(Icons.shield_outlined, color: Color(0xFFD4AF37)),
         ),
         ListTile(
           leading: const Icon(Icons.volume_up_outlined, color: Color(0xFFD4AF37)),
@@ -3828,10 +3828,10 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         const Divider(height: 1),
         ListTile(
-          leading: const Icon(Icons.campaign_outlined, color: Color(0xFFD4AF37)),
+          leading: const Icon(Icons.campaign_rounded, color: Color(0xFFD4AF37)),
           title: const Text('Sponsored audio adverts'),
           subtitle: const Text('Managed by High-Tech Entertainment. A promotion may play after 8 completed songs, never on app launch, pause or resume.'),
-          trailing: const Icon(Icons.lock_outline, color: Color(0xFFD4AF37)),
+          trailing: const Icon(Icons.shield_outlined, color: Color(0xFFD4AF37)),
         ),
       ])),
       const SizedBox(height: 12),
