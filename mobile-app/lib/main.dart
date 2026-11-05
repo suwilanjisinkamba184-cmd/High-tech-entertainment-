@@ -2505,8 +2505,13 @@ class _AccountTabState extends State<AccountTab> {
           accessToken: authorization.accessToken,
         );
       } else {
-        throw const AuthException(
-          'Native Google sign-in is not configured in this app build. Please contact High-Tech Entertainment support.',
+        // Keep Google sign-in available when the native Web client ID has not
+        // yet been supplied. Supabase completes OAuth and returns to this app
+        // through the configured login-callback deep link.
+        await db.auth.signInWithOAuth(
+          OAuthProvider.google,
+          redirectTo: authRedirect,
+          authScreenLaunchMode: LaunchMode.externalApplication,
         );
       }
     } on AuthException catch (error) {
