@@ -221,7 +221,7 @@ class HtePlayback {
         _currentSourceIsMusic = false;
         _completionHandledForSource = true;
         _adCounter.reset();
-        unawaited(_persistAdCounter());
+        await _persistAdCounter();
         try {
           await _playNextTrack();
         } catch (recoveryError) {
@@ -240,19 +240,19 @@ class HtePlayback {
     if (adPlaying.value) {
       // The interval is consumed only after the advert has actually completed.
       _adCounter.reset();
-      unawaited(_persistAdCounter());
+      await _persistAdCounter();
       adPlaying.value = false;
       await _playNextTrack();
       return;
     }
     final advertDue = _adCounter.recordCompletion(interval: adEvery, enabled: audioAdsEnabled);
-    unawaited(_persistAdCounter());
+    await _persistAdCounter();
     if (advertDue) {
       final advertStarted = await _playAd();
       if (advertStarted) return;
       // Do not strand the queue when the bundled advert is missing or corrupt.
       _adCounter.reset();
-      unawaited(_persistAdCounter());
+      await _persistAdCounter();
       adPlaying.value = false;
       await _playNextTrack();
       return;
