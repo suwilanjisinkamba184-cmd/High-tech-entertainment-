@@ -430,9 +430,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       });
     }
     try {
-      // Initialise Android's background audio session before preparing the
-      // startup player. Both players are independent, but the session setup
-      // Initialise background audio before accessing the shared playback engine.
+      // Initialise Android background audio for normal music playback.
       if (defaultTargetPlatform == TargetPlatform.android &&
           !_audioBackgroundInitialized) {
         try {
@@ -448,9 +446,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         }
       }
 
-      // Explicitly configure Android's shared media audio focus after the
-      // background-audio plugin has initialised. This keeps the launch ident
-      // and the music player on the same media audio policy.
+      // Configure Android media audio focus for normal music playback.
       try {
         final audioSession = await AudioSession.instance;
         await audioSession.configure(AudioSessionConfiguration.music());
@@ -459,7 +455,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         debugPrintStack(stackTrace: stackTrace);
       }
 
-      // Initialise essential app services without any startup audio dependency.
+      // Initialise essential app services.
       await _initializeCoreServices();
 
       // Keep the branded splash visible for at least eight seconds while the
