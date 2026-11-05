@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'admin_studio.dart';
+import 'diagnostics_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
@@ -288,6 +289,22 @@ class AppThemeController {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    unawaited(HteDiagnostics.record(
+      details.exception,
+      stackTrace: details.stack,
+      source: 'flutter-framework',
+    ));
+  };
+  PlatformDispatcher.instance.onError = (error, stackTrace) {
+    unawaited(HteDiagnostics.record(
+      error,
+      stackTrace: stackTrace,
+      source: 'platform-dispatcher',
+    ));
+    return false;
+  };
   runApp(const HteApp());
   // Load the saved appearance without delaying the startup animation or sound.
   unawaited(AppThemeController.load());
