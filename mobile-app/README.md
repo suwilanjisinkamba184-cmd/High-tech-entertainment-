@@ -5,8 +5,8 @@ The Flutter application in this folder is the native Android client for High-Tec
 ## Experiences
 
 ### HT Music — public listener experience
-- Branded animated startup, best-effort bundled startup advert, and required Supabase sign-in.
-- Native Google account chooser and email/password authentication with deep-link password recovery.
+- Branded animated startup with a separate best-effort startup sound, followed by required Supabase sign-in.
+- Native Google account chooser when GOOGLE_WEB_CLIENT_ID is configured, with a Supabase Google OAuth deep-link fallback; email/password authentication includes deep-link password recovery.
 - Home, Discover, Releases, Library, Favourites, Playlists and Profile.
 - Artist catalogue, music videos, search, track sharing and RLS-protected in-app announcements.
 - Native audio playback, queue, background controls, shuffle, autoplay and sponsored audio.
@@ -46,7 +46,7 @@ Required repository Actions secrets:
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_STORE_PASSWORD`
 - `ANDROID_KEY_PASSWORD`
-- `GOOGLE_WEB_CLIENT_ID` (required for the native Google account chooser; the Android release workflow stops if it is missing)
+- `GOOGLE_WEB_CLIENT_ID` (optional; enables the native Google account chooser instead of the Supabase OAuth deep-link fallback)
 
 Build locally from this directory:
 ```bash
@@ -63,7 +63,7 @@ Windows source files are preserved, but Windows build execution and release pack
 
 HT Music uses one process-wide `HtePlayback.instance` service and one `just_audio` `AudioPlayer`. The service owns the active track, queue, completion handling, audio-ad insertion, and playback error state. The mini-player, full player, queue screen, and all catalogue screens must read and control that same service; do not create `AudioPlayer()` instances in widgets, tabs, routes, or screen state objects.
 
-- Background audio is initialized once at application startup with `JustAudioBackground.init` before the shared playback service is first accessed. The separate bundled startup sound and scheduled advert are isolated from authentication startup: if either fails, the app continues to sign-in. The scheduled advert is only eligible after eight completed music tracks, never on startup or pause/resume.
+- Background audio is initialized once at application startup with `JustAudioBackground.init` before the shared playback service is first accessed. The separate bundled startup sound and scheduled advert are isolated from authentication startup: if either fails, the app continues to sign-in. The scheduled advert is only eligible after eight completed music tracks, never on startup or pause/resume. The completion count is saved locally so a normal app restart does not reset the interval.
 - Track changes replace the source on the shared player; navigation must not dispose or recreate it.
 - The notification and lock-screen controls are backed by the same player and media metadata.
 - The service is exposed through `HtePlayback.instance`. The `HtePlayback()` factory remains as a compatibility entry point and returns the same singleton.
