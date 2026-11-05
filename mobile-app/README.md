@@ -33,6 +33,7 @@ Project: `wqrxacjbsldbnoekbkbf`
 - Public catalogue reads are governed by existing RLS policies.
 - User playlists, favourites and listening history are scoped by the signed-in user's RLS policies.
 - In-app announcements use `app_notifications`; authenticated users can read broadcasts and their own notifications, while only HTE owners/admins can create announcements.
+- Public profile photos use the public `hte-artwork` bucket under `avatars/<user-id>/`; upload/delete policies restrict each signed-in user to their own folder, with a 5 MB app-side upload limit.
 
 The artwork, in-app notification and video-storage changes are recorded under `database/changes/` and have been applied to the connected project. The secure user directory and analytics functions are also applied and return records only to authenticated HTE owners/admins.
 
