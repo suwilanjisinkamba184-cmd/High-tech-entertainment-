@@ -277,9 +277,20 @@ jobs:
           print(f"Updated plugin Android compile SDK declarations: {len(changed)}")
           print("\n".join(changed))
           PY
+      - name: Verify native Google sign-in configuration
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          if [ -z "$GOOGLE_WEB_CLIENT_ID" ]; then
+            echo "::error::GOOGLE_WEB_CLIENT_ID is required for native Google sign-in. Add it to repository Actions secrets before releasing."
+            exit 1
+          fi
+          echo "PASS: Native Google sign-in client configuration is present."
       - name: Build signed Android APK
         working-directory: ${{ runner.temp }}/hte_app
-        run: flutter build apk --flavor su --release --target-platform android-arm,android-arm64 --dart-define=HTE_GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: flutter build apk --flavor su --release --target-platform android-arm,android-arm64 --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Verify release APK signature
         if: always()
         working-directory: ${{ runner.temp }}/hte_app
@@ -315,7 +326,9 @@ jobs:
           echo "PASS: APK signature is valid and matches the configured upload certificate."
       - name: Build Google Play App Bundle
         working-directory: ${{ runner.temp }}/hte_app
-        run: flutter build appbundle --flavor su --release --dart-define=HTE_GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: flutter build appbundle --flavor su --release --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Apply official High-Tech Entertainment download filenames
         working-directory: ${{ runner.temp }}/hte_app
         run: |
