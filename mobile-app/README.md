@@ -91,4 +91,4 @@ The app converts low-level connectivity and service exceptions into plain-langua
 
 The private Founder Studio includes a Developer diagnostics section for locally recorded Flutter framework and uncaught platform errors. It shows timestamps and stack traces, supports explicit report export through the share sheet, and lets the founder clear local history. Common credential patterns are redacted before storage. Diagnostic reports are not sent to a server automatically.
 
-The Settings page links to the current privacy policy and terms of use. The developer contact shown in the app and legal pages is Simon Swilanji Sinkamba. OTA patches apply only to compatible Shorebird installations; native Android changes and bundled asset changes can require a full APK update.
+The Settings page links to the current privacy policy and terms of use. The developer contact shown in the app and legal pages is Simon Suwilanji Sinkamba. OTA patches apply only to compatible Shorebird installations; native Android changes and bundled asset changes can require a full APK update.
