@@ -94,6 +94,12 @@ String friendlyErrorMessage(Object error) {
     return 'The media server could not complete the request. Please retry.';
   }
   if (error is FormatException) {
+    if (details.contains('smaller than 5 mb')) {
+      return 'Choose a profile image smaller than 5 MB.';
+    }
+    if (details.contains('does not match the requested media type')) {
+      return 'Choose a file that matches the selected audio or video type.';
+    }
     return 'The returned data or media format is not supported. Please try another item.';
   }
   if (error is FileSystemException) {
