@@ -1,14 +1,14 @@
 # High-Tech Entertainment — Native Android App
 
-The Flutter application in this folder is the native Android client for High-Tech Entertainment.\n\nOfficial website: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/ Current app version: **2.1.8**.
+The Flutter application in this folder is the native Android client for High-Tech Entertainment.\n\nOfficial website: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/ Current app version: **2.2.1**.
 
 ## Experiences
 
 ### HT Music — public listener experience
 - Branded animated startup, best-effort bundled startup advert, and required Supabase sign-in.
-- Google OAuth and email/password authentication.
+- Native Google account chooser and email/password authentication with deep-link password recovery.
 - Home, Discover, Releases, Library, Favourites, Playlists and Profile.
-- Artist catalogue, music videos, search, track sharing and notifications placeholder.
+- Artist catalogue, music videos, search, track sharing and RLS-protected in-app announcements.
 - Native audio playback, queue, background controls, shuffle, autoplay and sponsored audio.
 - Spotify release links and embeds.
 - App settings, privacy, account deletion and in-app GitHub release updates with download progress, APK integrity checks and Android's user-approved package installer.
@@ -29,9 +29,10 @@ Project: `wqrxacjbsldbnoekbkbf`
 - Auth uses the Supabase publishable key; no service-role key is bundled.
 - Music files use the public `hte-audio` bucket. Upload/delete policies require an HTE owner/admin role.
 - Release artwork uses `hte-artwork`; public reads are enabled while upload/update/delete are restricted to HTE owner/admin roles.
-- Videos use the existing `hte-video` bucket and public `videos` catalogue.
+- Legacy video files remain in `hte-video`; current Founder Studio uploads use the public `hte-videos` bucket (500 MB limit) with owner/admin-only write policies and the public `videos` catalogue.
 - Public catalogue reads are governed by existing RLS policies.
 - User playlists, favourites and listening history are scoped by the signed-in user's RLS policies.
+- In-app announcements use `app_notifications`; authenticated users can read broadcasts and their own notifications, while only HTE owners/admins can create announcements.
 
 The artwork bucket and admin listing migrations are recorded under `database/changes/` and have been applied to the connected project. The secure user directory and analytics functions are also applied and return records only to authenticated HTE owners/admins.
 
