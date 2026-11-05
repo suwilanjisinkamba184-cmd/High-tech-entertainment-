@@ -66,7 +66,8 @@ jobs:
                       mode = "release"
                   else:
                       changed = subprocess.check_output(["git", "diff", "--name-only", before, os.environ["EVENT_SHA"]], text=True).splitlines()
-                      mode = "patch" if changed and all(p.startswith("mobile-app/lib/") and p.endswith(".dart") for p in changed) else "release"
+                      patch_safe = (".github/workflows/mobile-build.yml", "mobile-app/shorebird.yaml")
+                      mode = "patch" if changed and all((p.startswith("mobile-app/lib/") and p.endswith(".dart")) or p in patch_safe for p in changed) else "release"
               else:
                   mode = "release"
           if mode == "patch" and not Path("mobile-app/shorebird.yaml").exists():
@@ -387,7 +388,7 @@ jobs:
         env:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
-        run: shorebird patch android --flavor su --release-version "2.2.3 SU+20" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+        run: shorebird patch android --flavor su --release-version "${{ steps.app_version.outputs.version }} SU+${{ steps.app_version.outputs.build }}" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Build validation APK (pull requests only)
         if: steps.ota_mode.outputs.mode == 'validate'
         working-directory: ${{ runner.temp }}/hte_app
