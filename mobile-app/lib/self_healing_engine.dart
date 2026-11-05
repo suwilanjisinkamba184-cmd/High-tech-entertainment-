@@ -11,14 +11,15 @@ import 'diagnostics_service.dart';
 class HteSelfHealingEngine {
   HteSelfHealingEngine._();
 
-  static bool _initialized = false;
   static bool _repairInProgress = false;
+  static Future<void>? _initialization;
   static DateTime? _lastAutomaticRepair;
   static const Duration _automaticRepairCooldown = Duration(seconds: 30);
 
-  static Future<void> initialize() async {
-    if (_initialized) return;
-    _initialized = true;
+  static Future<void> initialize() =>
+      _initialization ??= _initialize();
+
+  static Future<void> _initialize() async {
     try {
       final repairs = await repairKnownLocalState();
       if (repairs.isNotEmpty) {
