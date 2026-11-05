@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Counts completed music tracks independently of track selection.
 ///
@@ -19,6 +20,12 @@ class CompletedTrackAdCounter {
     if (!enabled || interval <= 0) return false;
     _completedTracks++;
     return _completedTracks >= interval;
+  }
+
+  void restore(int value) {
+    // A stored count of eight means an advert was due when the app last
+    // stopped. Clamp to seven so the next completed track triggers it.
+    _completedTracks = value.clamp(0, 7).toInt();
   }
 
   void reset() => _completedTracks = 0;
@@ -77,6 +84,25 @@ class HtePlayback {
   static const int advertInterval = 8;
   static const String startupAdvertAsset = 'assets/AUD-20261103-WA0002.mp3';
   int adEvery = advertInterval;
+  static const String _adCounterPreferenceKey = 'hte_completed_tracks_since_ad';
+
+  Future<void> restoreAdCounter() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      _adCounter.restore(preferences.getInt(_adCounterPreferenceKey) ?? 0);
+    } catch (error) {
+      debugPrint('HTE advert counter could not be restored: $error');
+    }
+  }
+
+  Future<void> _persistAdCounter() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setInt(_adCounterPreferenceKey, _adCounter.completedTracks);
+    } catch (error) {
+      debugPrint('HTE advert counter could not be saved: $error');
+    }
+  }
 
   String _friendlyError(Object error) {
     final message = error.toString();
@@ -195,6 +221,7 @@ class HtePlayback {
         _currentSourceIsMusic = false;
         _completionHandledForSource = true;
         _adCounter.reset();
+        unawaited(_persistAdCounter());
         try {
           await _playNextTrack();
         } catch (recoveryError) {
@@ -213,15 +240,19 @@ class HtePlayback {
     if (adPlaying.value) {
       // The interval is consumed only after the advert has actually completed.
       _adCounter.reset();
+      unawaited(_persistAdCounter());
       adPlaying.value = false;
       await _playNextTrack();
       return;
     }
-    if (_adCounter.recordCompletion(interval: adEvery, enabled: audioAdsEnabled)) {
+    final advertDue = _adCounter.recordCompletion(interval: adEvery, enabled: audioAdsEnabled);
+    unawaited(_persistAdCounter());
+    if (advertDue) {
       final advertStarted = await _playAd();
       if (advertStarted) return;
       // Do not strand the queue when the bundled advert is missing or corrupt.
       _adCounter.reset();
+      unawaited(_persistAdCounter());
       adPlaying.value = false;
       await _playNextTrack();
       return;
