@@ -3960,7 +3960,7 @@ class _SettingsPageState extends State<SettingsPage> {
               Text('HIGH TECHNOLOGIES', style: TextStyle(color: Color(0xFFD9B96E), fontWeight: FontWeight.w800, letterSpacing: 1.5, fontSize: 16)),
               SizedBox(height: 12),
               _DeveloperDetail(label: 'Product', value: 'High-Tech Entertainment'),
-              _DeveloperDetail(label: 'Founder / Developer', value: 'Simon Swilanji Sinkamba'),
+              _DeveloperDetail(label: 'Founder / Developer', value: 'Simon Suwilanji Sinkamba'),
               _DeveloperDetail(label: 'Developer email', value: 'suwilanjisinkamba184@gmail.com'),
               _DeveloperDetail(label: 'Location', value: 'Kitwe, Zambia'),
               SizedBox(height: 10),
