@@ -76,9 +76,11 @@ Future<String> downloadRemoteMedia({
     const audioExtensions = {'mp3','m4a','aac','wav','flac','ogg','opus','aiff'};
     const videoExtensions = {'mp4','m4v','mov','mkv','webm','3gp'};
     final expectedKind = kind.toLowerCase();
-    if ((expectedKind == 'audio' && !audioExtensions.contains(extension)) ||
-        (expectedKind == 'video' && !videoExtensions.contains(extension)) ||
-        (expectedKind != 'audio' && expectedKind != 'video')) {
+    final expectsAudio = expectedKind == 'audio' || audioExtensions.contains(expectedKind);
+    final expectsVideo = expectedKind == 'video' || videoExtensions.contains(expectedKind);
+    if ((!expectsAudio && !expectsVideo) ||
+        (expectsAudio && !audioExtensions.contains(extension)) ||
+        (expectsVideo && !videoExtensions.contains(extension))) {
       throw const FormatException('The downloaded file does not match the requested media type.');
     }
     if (mime == 'text/html' || mime == 'application/json') {
