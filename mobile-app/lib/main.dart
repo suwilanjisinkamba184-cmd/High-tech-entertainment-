@@ -2415,7 +2415,7 @@ class _AccountTabState extends State<AccountTab> {
   Future<void> authenticate() async {
     if (busy) return;
     final address = email.text.trim();
-    if (address.isEmpty || !RegExp(r'^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$').hasMatch(address)) {
+    if (address.isEmpty || !isValidEmailAddress(address)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Enter a valid email address to continue.')),
       );
@@ -2454,7 +2454,7 @@ class _AccountTabState extends State<AccountTab> {
 
   Future<void> requestPasswordReset() async {
     final address = email.text.trim();
-    if (address.isEmpty || !RegExp(r'^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$').hasMatch(address)) {
+    if (address.isEmpty || !isValidEmailAddress(address)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Enter your account email address first.')),
       );
