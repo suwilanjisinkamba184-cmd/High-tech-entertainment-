@@ -173,3 +173,14 @@ Before calling a release production-ready, verify each item in the actual enviro
 ## Support and maintenance
 
 Keep this README aligned with the actual routes, Supabase schema, bucket IDs, workflow behavior and Cloudflare configuration. Update it whenever deployment architecture or application build requirements change.
+
+
+## Legal documents and developer contact
+
+- Privacy policy: [privacy-policy.html](privacy-policy.html)
+- Terms of use: [terms-of-use.html](terms-of-use.html)
+- Account deletion: [account-deletion.html](account-deletion.html)
+- Developer / founder: **Simon Swilanji Sinkamba**
+- Developer email: **suwilanjisinkamba184@gmail.com**
+
+The Android app's private Founder Studio includes an on-device developer diagnostics view. Flutter framework and uncaught platform errors are retained locally (up to 100 entries); the founder can review and explicitly export a redacted report. Diagnostic reports are not uploaded automatically.
