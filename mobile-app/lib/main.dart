@@ -1064,6 +1064,5184 @@ class Heading extends StatelessWidget {
   );
 }
 
+class AppUpdateBanner extends StatefulWidget {
+  const AppUpdateBanner({super.key});
+
+  @override
+  State<AppUpdateBanner> createState() => _AppUpdateBannerState();
+}
+
+class _AppUpdateBannerState extends State<AppUpdateBanner> {
+  String? _availableVersion;
+
+  int _compareVersions(String left, String right) {
+    final a = left.split('.').map((part) => int.tryParse(part) ?? 0).toList();
+    final b = right.split('.').map((part) => int.tryParse(part) ?? 0).toList();
+    for (var index = 0; index < (a.length > b.length ? a.length : b.length); index++) {
+      final first = index < a.length ? a[index] : 0;
+      final second = index < b.length ? b[index] : 0;
+      if (first != second) return first.compareTo(second);
+    }
+    return 0;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkForUpdate());
+  }
+
+  Future<void> _checkForUpdate() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final response = await http.get(
+        Uri.https('api.github.com', '/repos/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest'),
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'High-Tech-Entertainment-App',
+          'Cache-Control': 'no-cache',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      ).timeout(const Duration(seconds: 12));
+      if (!mounted || response.statusCode != 200) return;
+      final release = jsonDecode(response.body) as Map<String, dynamic>;
+      if (release['draft'] == true || release['prerelease'] == true) return;
+
+      final tag = (release['tag_name'] ?? '').toString();
+      final isSuRelease = tag.toUpperCase().endsWith('-SU');
+      final latest = tag
+          .replaceFirst(RegExp(r'^[vV]'), '')
+          .replaceFirst(RegExp(r'-SU
+  const HomeTab({super.key});
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.only(bottom: 28),
+    children: [
+      const Brand(),
+      const AppUpdateBanner(),
+      Container(
+        margin: const EdgeInsets.fromLTRB(16, 2, 16, 18),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: const Color(0xFF8B6B35).withValues(alpha: .8)),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF292319), Color(0xFF111923), Color(0xFF090D13)],
+            stops: [0, .56, 1],
+          ),
+          boxShadow: const [
+            BoxShadow(color: Color(0x553A2A10), blurRadius: 30, offset: Offset(0, 14)),
+            BoxShadow(color: Color(0x222D536A), blurRadius: 28, offset: Offset(10, -8)),
+          ],
+        ),
+        child: Stack(children: [
+          Positioned(right: -92, top: -76,
+            child: Container(width: 290, height: 290,
+              decoration: BoxDecoration(shape: BoxShape.circle,
+                border: Border.all(color: const Color(0x44D7B66B), width: 1.1)))),
+          Positioned(right: -60, top: -43,
+            child: Container(width: 225, height: 225,
+              decoration: BoxDecoration(shape: BoxShape.circle,
+                border: Border.all(color: const Color(0x223D7894), width: 1.1)))),
+          Positioned(right: 8, top: 54,
+            child: Opacity(opacity: .12,
+              child: SvgPicture.asset('assets/high-tech-logo.svg', width: 150, height: 150))),
+          Positioned(right: 24, bottom: 34,
+            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              for (final h in [12.0, 22.0, 16.0, 34.0, 23.0, 43.0, 29.0, 18.0, 36.0, 24.0, 15.0])
+                Container(width: 3, height: h, margin: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: BoxDecoration(color: const Color(0xFFDDBB70).withValues(alpha: .58),
+                    borderRadius: BorderRadius.circular(4))),
+            ])),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(22, 22, 22, 23),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(width: 7, height: 7,
+                  decoration: const BoxDecoration(color: Color(0xFF8ED2B2), shape: BoxShape.circle,
+                    boxShadow: [BoxShadow(color: Color(0x668ED2B2), blurRadius: 8)])),
+                const SizedBox(width: 8),
+                const Text('THE OFFICIAL HIGH-TECH EXPERIENCE',
+                  style: TextStyle(color: Color(0xFFC6D3DC), fontSize: 8,
+                    fontWeight: FontWeight.w800, letterSpacing: 1.35)),
+                const Spacer(),
+                const Icon(Icons.auto_awesome, color: Color(0xFFE3C47D), size: 17),
+              ]),
+              const SizedBox(height: 29),
+              const Text('SOUND WITHOUT\nLIMITS.',
+                style: TextStyle(fontSize: 39, height: 1.0, fontWeight: FontWeight.w900,
+                  letterSpacing: -1.7, color: Color(0xFFF8F4E9))),
+              const SizedBox(height: 13),
+              const SizedBox(width: 270,
+                child: Text('Discover the artists, original releases and sound shaping the next wave.',
+                  style: TextStyle(color: Color(0xFFB9C4CC), height: 1.55, fontSize: 12))),
+              const SizedBox(height: 23),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                FilledButton.icon(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MusicTab())),
+                  icon: const Icon(Icons.play_arrow_rounded, size: 19),
+                  label: const Text('Explore music'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 46),
+                    padding: const EdgeInsets.symmetric(horizontal: 17),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(
+                    appBar: AppBar(title: const Text('Videos')), body: const VideosTab()))),
+                  icon: const Icon(Icons.play_circle_outline_rounded, size: 18),
+                  label: const Text('Watch visuals'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 46),
+                    foregroundColor: const Color(0xFFD5E0E7),
+                    side: const BorderSide(color: Color(0xFF526575)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 24),
+              Row(children: [
+                const Icon(Icons.graphic_eq_rounded, color: Color(0xFFE3C47D), size: 15),
+                const SizedBox(width: 7),
+                const Text('MUSIC  /  BEATS  /  PRODUCTION',
+                  style: TextStyle(color: Color(0xFF8799A7), fontSize: 8,
+                    fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+              ]),
+            ]),
+          ),
+        ]),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(19, 4, 19, 10),
+        child: Row(children: [
+          const Expanded(child: Text('ENTER THE SOUND',
+            style: TextStyle(color: Color(0xFFE4C57E), fontSize: 9,
+              letterSpacing: 1.8, fontWeight: FontWeight.w900))),
+          Container(width: 38, height: 1, color: const Color(0xFF6F5A35)),
+        ]),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(children: [
+          Expanded(child: _HomeQuickAction(icon: Icons.album_rounded, title: 'New releases',
+            subtitle: 'Fresh from HTE', onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Releases')), body: const ReleasesTab()))))),
+          const SizedBox(width: 10),
+          Expanded(child: _HomeQuickAction(icon: Icons.people_alt_rounded, title: 'Artists',
+            subtitle: 'Meet the creators', onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Artists')), body: const ArtistsTab()))))),
+        ]),
+      ),
+      const Heading('Latest releases'),
+      const ReleaseList(horizontal: true),
+      const Heading('Featured artists'),
+      const ArtistList(horizontal: true),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF15212A), Color(0xFF10151C)]),
+            borderRadius: BorderRadius.circular(19),
+            border: Border.all(color: const Color(0xFF334B5B)),
+          ),
+          child: Row(children: [
+            Container(width: 42, height: 42,
+              decoration: BoxDecoration(color: const Color(0xFF23313A), borderRadius: BorderRadius.circular(13)),
+              child: const Icon(Icons.video_library_rounded, color: Color(0xFFE3C47D), size: 22)),
+            const SizedBox(width: 13),
+            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Beyond the audio', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+              SizedBox(height: 4),
+              Text('Official videos and visual releases.',
+                style: TextStyle(color: Color(0xFF9EADB8), fontSize: 10)),
+            ])),
+            IconButton(
+              tooltip: 'Explore videos',
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => Scaffold(appBar: AppBar(title: const Text('Videos')), body: const VideosTab()))),
+              icon: const Icon(Icons.arrow_forward_rounded, color: Color(0xFFE3C47D)),
+            ),
+          ]),
+        ),
+      ),
+      const Heading('Released music'),
+      const TrackList(compact: true),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(20, 24, 20, 8),
+        child: Text('HIGH-TECH ENTERTAINMENT  ·  QUALITY SOUND, GLOBAL VIBES',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Color(0xFF72808D), fontSize: 8,
+            letterSpacing: 1.2, height: 1.8)),
+      ),
+    ],
+  );
+}
+
+class _HomeQuickAction extends StatelessWidget {
+  const _HomeQuickAction({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(16),
+    child: Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141517),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF34302A)),
+      ),
+      child: Row(children: [
+        Icon(icon, color: const Color(0xFFD9B96E), size: 22),
+        const SizedBox(width: 9),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 3),
+          Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 9, color: Color(0xFF9B978F))),
+        ])),
+      ]),
+    ),
+  );
+}
+
+class ArtistsTab extends StatelessWidget {
+  const ArtistsTab({super.key});
+  @override
+  Widget build(BuildContext context) => const Column(children: [
+    Brand(),
+    Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Artists', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)))),
+    Expanded(child: ArtistList()),
+  ]);
+}
+
+class ArtistList extends StatelessWidget {
+  const ArtistList({super.key, this.horizontal = false});
+  final bool horizontal;
+  @override
+  Widget build(BuildContext context) => RetryFutureBuilder<List<Map<String, dynamic>>>(
+    future: () => rows('artists', 'name'),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
+      if (!snapshot.hasData) return const Busy();
+      final items = snapshot.data!;
+      if (items.isEmpty) return const Notice('Published artist profiles will appear here.');
+      if (horizontal) {
+        return SizedBox(height: 145, child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: items.map((item) => InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ArtistDetailPage(artist:item))),
+            child: SizedBox(width: 112, child: Column(children: [
+              Avatar(item: item),
+              const SizedBox(height: 8),
+              Text((item['name'] ?? 'Artist').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
+            ])),
+          )).toList(),
+        ));
+      }
+      return ListView.builder(
+        padding: const EdgeInsets.all(16), itemCount: items.length,
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return Card(child: ListTile(
+            leading: Avatar(item: item),
+            title: Text((item['name'] ?? 'Artist').toString()),
+            subtitle: Text((item['bio'] ?? 'High-Tech Entertainment artist').toString(), maxLines: 2, overflow: TextOverflow.ellipsis),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ArtistDetailPage(artist:item))),
+          ));
+        },
+      );
+    },
+  );
+}
+
+class Avatar extends StatelessWidget {
+  const Avatar({super.key, required this.item});
+  final Map<String, dynamic> item;
+  @override
+  Widget build(BuildContext context) {
+    final url = (item['image_url'] ?? '').toString();
+    return CircleAvatar(
+      radius: 40,
+      backgroundColor: const Color(0xFF30260E),
+      backgroundImage: url.startsWith('http') ? NetworkImage(url) : null,
+      child: url.startsWith('http') ? null : const Icon(Icons.person, color: Color(0xFFD4AF37), size: 34),
+    );
+  }
+}
+
+class ArtistDetailPage extends StatelessWidget {
+  const ArtistDetailPage({super.key,required this.artist});
+  final Map<String,dynamic> artist;
+  @override
+  Widget build(BuildContext context) {
+    final name=(artist['name']??'Artist').toString();
+    return Scaffold(
+      appBar:AppBar(title:Text(name)),
+      body:ListView(padding:const EdgeInsets.only(bottom:24),children:[
+        const SizedBox(height:18),
+        Center(child:Avatar(item:artist)),
+        const SizedBox(height:12),
+        Center(child:Text(name,style:const TextStyle(fontSize:24,fontWeight:FontWeight.bold))),
+        Padding(padding:const EdgeInsets.all(20),child:Text((artist['bio']??'High-Tech Entertainment artist').toString(),textAlign:TextAlign.center,style:const TextStyle(color:Colors.white60))),
+        const Heading('Artist releases'),
+        RetryFutureBuilder<List<Map<String,dynamic>>>(
+          future: () => db.from('tracks').select().eq('is_published',true).eq('artist',name).order('created_at',ascending:false).then((data)=>List<Map<String,dynamic>>.from(data).where(_isPlayableTrack).toList()),
+          builder:(context,snapshot)=>snapshot.hasError?Notice(friendlyErrorMessage(snapshot.error!)):!snapshot.hasData?const Busy():snapshot.data!.isEmpty?const Notice('Published tracks by this artist will appear here.'):TrackList(items:snapshot.data!),
+        ),
+      ]),
+    );
+  }
+}
+
+class ReleaseList extends StatelessWidget {
+  const ReleaseList({super.key, this.horizontal = false});
+  final bool horizontal;
+  @override
+  Widget build(BuildContext context) => RetryFutureBuilder<List<Map<String, dynamic>>>(
+    future: () => rows('releases', 'created_at'),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
+      if (!snapshot.hasData) return const Busy();
+      final items = snapshot.data!;
+      if (items.isEmpty) return const Notice('Published releases will appear here.');
+      return SizedBox(
+        height: horizontal ? 260 : null,
+        child: ListView.builder(
+          scrollDirection: horizontal ? Axis.horizontal : Axis.vertical,
+          shrinkWrap: !horizontal,
+          physics: horizontal ? null : const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            final spotifyUrl = (item['spotify_url'] ?? '').toString().trim();
+            return SizedBox(
+              width: horizontal ? 170 : null,
+              child: Card(
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    MediaCover(url: item['cover_url']?.toString(), height: horizontal ? 112 : 190),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 11, 12, 4),
+                      child: Text(
+                        (item['title'] ?? 'Release').toString(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    if ((item['release_date'] ?? '').toString().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          item['release_date'].toString(),
+                          style: const TextStyle(color: Colors.white54, fontSize: 11),
+                        ),
+                      ),
+                    if (spotifyUrl.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                            label: const Text('Listen on Spotify'),
+                            onPressed: () async {
+                              final embed = spotifyEmbedUrl(spotifyUrl);
+                              try {
+                                if (embed != null && defaultTargetPlatform == TargetPlatform.android) {
+                                  if (!context.mounted) return;
+                                  await Navigator.of(context).push(MaterialPageRoute(
+                                    builder: (_) => SpotifyEmbedPage(
+                                      title: (item['title'] ?? 'Spotify release').toString(),
+                                      artist: 'High-Tech Entertainment',
+                                      embedUrl: embed,
+                                    ),
+                                  ));
+                                } else {
+                                  final uri = Uri.tryParse(spotifyUrl);
+                                  if (uri != null && await canLaunchUrl(uri)) {
+                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  }
+                                }
+                              } catch (error) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(friendlyErrorMessage(error))),
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    },
+  );
+}
+
+class MusicTab extends StatelessWidget {
+  const MusicTab({super.key});
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    const Brand(),
+    const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Music library', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)))),
+    const Expanded(child: TrackList()),
+  ]);
+}
+
+class TrackList extends StatelessWidget {
+  const TrackList({super.key, this.compact = false, this.items});
+  final bool compact;
+  final List<Map<String, dynamic>>? items;
+  @override
+  Widget build(BuildContext context) => RetryFutureBuilder<List<Map<String, dynamic>>>(
+    future: () => items == null ? playableTracks() : Future.value(items!.where(_isPlayableTrack).toList()),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
+      if (!snapshot.hasData) return const Busy();
+      final items = snapshot.data!;
+      if (items.isEmpty) return const Notice('Published tracks will appear here.');
+      return ListView.builder(
+        shrinkWrap: compact,
+        physics: compact ? const NeverScrollableScrollPhysics() : null,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return Card(child: ListTile(
+            leading: SizedBox(width: 48, height: 48, child: MediaCover(url: item['cover_url']?.toString(), height: 48)),
+            title: Text((item['title'] ?? 'Track').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
+            subtitle: Text((item['artist'] ?? 'High-Tech Entertainment').toString()),
+            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              IconButton(tooltip: 'Share track', onPressed: () => Share.share('${item['title']} — ${item['artist']}\nHigh-Tech Entertainment'), icon: const Icon(Icons.share_outlined, size: 20)),
+              IconButton(
+                tooltip: 'Download for offline listening',
+                icon: const Icon(Icons.download_for_offline_outlined, size: 21),
+                onPressed: () async {
+                  try {
+                    final url = (item['audio_url'] ?? '').toString().trim();
+                    if (isSpotifyUrl(url)) {
+                      throw StateError('Spotify streams cannot be downloaded here.');
+                    }
+                    await downloadRemoteMedia(
+                      url: url,
+                      title: (item['title'] ?? 'High-Tech track').toString(),
+                      kind: 'mp3',
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Track saved to your Offline media library.')),
+                      );
+                    }
+                  } catch (error) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(friendlyErrorMessage(error))),
+                      );
+                    }
+                  }
+                },
+              ),
+              IconButton(
+              icon: const Icon(Icons.play_circle_fill, color: Color(0xFFD4AF37), size: 34),
+              onPressed: () async {
+                final rawUrl = (item['audio_url'] ?? '').toString().trim();
+                final embedUrl = spotifyEmbedUrl(rawUrl);
+                if (isSpotifyUrl(rawUrl)) {
+                  await player.stop();
+                  playback.currentTrack.value = null;
+                  playback.queueView.value = [];
+                  if (embedUrl != null && defaultTargetPlatform == TargetPlatform.android) {
+                    if (context.mounted) {
+                      await Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => SpotifyEmbedPage(
+                          title: (item['title'] ?? 'Spotify').toString(),
+                          artist: (item['artist'] ?? 'High-Tech Entertainment').toString(),
+                          embedUrl: embedUrl,
+                        ),
+                      ));
+                    }
+                  } else {
+                    final uri = Uri.tryParse(rawUrl);
+                    if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                  return;
+                }
+                try {
+                  final audioQueue = items.where((track) => !isSpotifyUrl((track['audio_url'] ?? '').toString())).toList();
+                  await playback.playTrack(item, audioQueue);
+                } catch (error) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(friendlyErrorMessage(error))),
+                    );
+                  }
+                }
+              },
+            )]),
+          ));
+        },
+      );
+    },
+  );
+}
+
+class PlayerBar extends StatelessWidget {
+  const PlayerBar({super.key});
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<Map<String,dynamic>?>(
+    valueListenable: playback.currentTrack,
+    builder: (context, track, _) {
+      if (track == null) return const SizedBox.shrink();
+      if (playback.adPlaying.value) {
+        return Container(
+          margin: const EdgeInsets.fromLTRB(10, 8, 10, 2),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF2B2418), Color(0xFF171B20)]),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF6B5735)),
+          ),
+          child: const Row(children: [
+            Icon(Icons.campaign_rounded, color: Color(0xFFE3BD70), size: 19),
+            SizedBox(width: 10),
+            Expanded(child: Text('HIGH-TECH PROMOTION  ·  SPONSORED AUDIO',
+              style: TextStyle(color: Color(0xFFE8D9B8), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: .7))),
+            Icon(Icons.graphic_eq_rounded, color: Color(0xFFE3BD70), size: 18),
+          ]),
+        );
+      }
+      return Container(
+        margin: const EdgeInsets.fromLTRB(10, 7, 10, 2),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(begin: Alignment.centerLeft, end: Alignment.centerRight,
+            colors: [Color(0xFF1C2832), Color(0xFF121923)]),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: const Color(0xFF405464)),
+          boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 12, offset: Offset(0, 4))],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(15),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FullPlayerPage())),
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal:9,vertical:5),child:Row(children:[
+              ClipRRect(borderRadius: BorderRadius.circular(9),
+                child: SizedBox(width:40,height:40,child:MediaCover(url:track['cover_url']?.toString(),height:40))),
+              const SizedBox(width:10),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+                Text((track['title']??'High-Tech Player').toString(),maxLines:1,overflow:TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+                Text((track['artist']??'').toString(),style:const TextStyle(color:Color(0xFF9EADB8),fontSize:10),maxLines:1),
+              ])),
+              StreamBuilder<PlayerState>(stream:player.playerStateStream,builder:(context,s){
+                final playing=s.data?.playing??false;
+                return IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: playing ? 'Pause' : 'Play',
+                  onPressed:()=>playing?player.pause():player.play(),
+                  icon:Icon(playing?Icons.pause_rounded:Icons.play_arrow_rounded,color:const Color(0xFFE3BD70),size:24));
+              }),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: 'Next track',
+                onPressed:()=>playback.next(),
+                icon:const Icon(Icons.skip_next_rounded,color:Color(0xFFB9C7D1))),
+            ])),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class FullPlayerPage extends StatelessWidget {
+  const FullPlayerPage({super.key});
+
+  String _time(Duration value) {
+    final hours = value.inHours;
+    final minutes = value.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = value.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
+  }
+
+  Future<void> _seekBy(Duration delta) async {
+    final duration = player.duration ?? Duration.zero;
+    final target = player.position + delta;
+    final clamped = target < Duration.zero
+        ? Duration.zero
+        : target > duration
+            ? duration
+            : target;
+    await player.seek(clamped);
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('NOW PLAYING', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+      actions: [
+        IconButton(
+          tooltip: 'Playback queue',
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QueuePage())),
+          icon: const Icon(Icons.queue_music_rounded, color: Color(0xFFE3BD70)),
+        ),
+      ],
+    ),
+    body: Stack(children: [
+      const Positioned.fill(child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF17130D), Color(0xFF0B1118), Color(0xFF07090D)],
+          ),
+        ),
+      )),
+      ValueListenableBuilder<bool>(
+      valueListenable: playback.adPlaying,
+      builder: (context, isAd, _) {
+        if (isAd) {
+          return Center(child: Container(
+            margin: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(26),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFF302719), Color(0xFF111923)]),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(color: const Color(0xFF80653A)),
+            ),
+            child: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.campaign_rounded, size: 58, color: Color(0xFFE3BD70)),
+                SizedBox(height: 18),
+                Text('HIGH-TECH PROMOTION',
+                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
+                SizedBox(height: 8),
+                Text('Please listen until the sponsored audio finishes.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Color(0xFFB6C1CA), fontSize: 12)),
+                SizedBox(height: 20),
+                CircularProgressIndicator(color: Color(0xFFE3BD70)),
+              ],
+            ),
+          ));
+        }
+        return ValueListenableBuilder<Map<String,dynamic>?>(
+          valueListenable: playback.currentTrack,
+          builder: (context, track, _) => track == null
+            ? const Notice('Choose a track to start listening.')
+            : LayoutBuilder(
+              builder: (context, constraints) {
+                final artworkSize = (constraints.maxWidth - 56).clamp(150.0, 280.0).toDouble();
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight - 46),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('HIGH-TECH AUDIO EXPERIENCE',
+                          style: TextStyle(color: Color(0xFFE3BD70), fontSize: 8,
+                            fontWeight: FontWeight.w900, letterSpacing: 1.8)),
+                        const SizedBox(height: 13),
+                        Container(
+                          width: artworkSize + 8,
+                          height: artworkSize + 8,
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            gradient: const SweepGradient(colors: [
+                              Color(0xFF77572C), Color(0xFFE5C477),
+                              Color(0xFF587D91), Color(0xFF77572C),
+                            ]),
+                            borderRadius: BorderRadius.circular(27),
+                            boxShadow: const [
+                              BoxShadow(color: Color(0x553D2C08), blurRadius: 30, spreadRadius: 2),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(23),
+                            child: MediaCover(url: track['cover_url']?.toString(), height: artworkSize),
+                          ),
+                        ),
+                        const SizedBox(height: 23),
+                        Text((track['title'] ?? 'Now playing').toString(),
+                          style: const TextStyle(fontSize: 24, height: 1.15,
+                            fontWeight: FontWeight.w900, letterSpacing: -.6),
+                          textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 7),
+                        Text((track['artist'] ?? 'High-Tech Entertainment').toString(),
+                          style: const TextStyle(color: Color(0xFFAFBBC5), fontSize: 13),
+                          textAlign: TextAlign.center),
+                        ValueListenableBuilder<String?>(
+                          valueListenable: playback.playbackError,
+                          builder: (context, error, _) => error == null
+                            ? const SizedBox(height: 10)
+                            : Padding(padding: const EdgeInsets.only(top: 10),
+                              child: Text(error, textAlign: TextAlign.center,
+                                style: const TextStyle(color: Color(0xFFFFAAA4), fontSize: 12))),
+                        ),
+                        StreamBuilder<Duration>(
+                          stream: player.positionStream,
+                          initialData: Duration.zero,
+                          builder: (context, positionSnapshot) {
+                            final duration = player.duration ?? Duration.zero;
+                            final position = positionSnapshot.data ?? Duration.zero;
+                            final maxMs = duration.inMilliseconds;
+                            final currentMs = maxMs <= 0
+                                ? 0.0
+                                : position.inMilliseconds.clamp(0, maxMs).toDouble();
+                            return Column(children: [
+                              Slider(
+                                value: currentMs,
+                                max: maxMs <= 0 ? 1.0 : maxMs.toDouble(),
+                                onChanged: maxMs <= 0
+                                    ? null
+                                    : (value) => player.seek(Duration(milliseconds: value.round())),
+                              ),
+                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(_time(position), style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                                  Text(_time(duration), style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                                ]),
+                            ]);
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            IconButton(
+                              tooltip: 'Shuffle',
+                              onPressed: () => playback.toggleShuffle(),
+                              icon: Icon(playback.shuffle ? Icons.shuffle_on : Icons.shuffle,
+                                color: playback.shuffle ? const Color(0xFFD4AF37) : null),
+                            ),
+                            IconButton(
+                              tooltip: 'Back 10 seconds',
+                              onPressed: () => _seekBy(const Duration(seconds: -10)),
+                              icon: const Icon(Icons.replay_10),
+                            ),
+                            IconButton(
+                              tooltip: 'Previous track',
+                              iconSize: 38,
+                              onPressed: () => playback.previous(),
+                              icon: const Icon(Icons.skip_previous),
+                            ),
+                            StreamBuilder<PlayerState>(
+                              stream: player.playerStateStream,
+                              builder: (context, snapshot) {
+                                final playing = snapshot.data?.playing ?? false;
+                                return IconButton(
+                                  tooltip: playing ? 'Pause' : 'Play',
+                                  iconSize: 66,
+                                  color: const Color(0xFFD4AF37),
+                                  onPressed: () => playing ? player.pause() : player.play(),
+                                  icon: Icon(playing ? Icons.pause_circle_filled : Icons.play_circle_fill),
+                                );
+                              },
+                            ),
+                            IconButton(
+                              tooltip: 'Next track',
+                              iconSize: 38,
+                              onPressed: () => playback.next(),
+                              icon: const Icon(Icons.skip_next),
+                            ),
+                            IconButton(
+                              tooltip: 'Forward 10 seconds',
+                              onPressed: () => _seekBy(const Duration(seconds: 10)),
+                              icon: const Icon(Icons.forward_10),
+                            ),
+                            StreamBuilder<LoopMode>(
+                              stream: player.loopModeStream,
+                              initialData: LoopMode.off,
+                              builder: (context, snapshot) {
+                                final repeating = snapshot.data == LoopMode.one;
+                                return IconButton(
+                                  tooltip: repeating ? 'Turn repeat off' : 'Repeat this track',
+                                  onPressed: () => playback.setRepeat(!repeating),
+                                  icon: Icon(Icons.repeat_one,
+                                    color: repeating ? const Color(0xFFD4AF37) : null),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.speed, size: 18, color: Color(0xFFD9B96E)),
+                            const SizedBox(width: 8),
+                            const Text('Playback speed'),
+                            const SizedBox(width: 10),
+                            PopupMenuButton<double>(
+                              tooltip: 'Choose audio playback speed',
+                              onSelected: (speed) => player.setSpeed(speed),
+                              itemBuilder: (_) => [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+                                  .map((speed) => PopupMenuItem<double>(
+                                    value: speed,
+                                    child: Text(speed == 1.0 ? 'Normal (1×)' : '$speed×'),
+                                  )).toList(),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: const Color(0xFFD9B96E)),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text('Change', style: TextStyle(color: Color(0xFFD9B96E))),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        const Text('Quality Sound, Global Vibes',
+                          style: TextStyle(color: Colors.white54, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+        );
+      },
+      ),
+    ]),
+  );
+}
+
+class QueuePage extends StatelessWidget {
+  const QueuePage({super.key});
+  @override
+  Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:const Text('Up next')),
+    body:ValueListenableBuilder<List<Map<String,dynamic>>>(valueListenable:playback.queueView,builder:(context,items,_)=>items.isEmpty?const Notice('Your queue is empty.'):ListView.builder(itemCount:items.length,itemBuilder:(context,i){
+      final item=items[i];
+      return ListTile(leading:SizedBox(width:48,height:48,child:MediaCover(url:item['cover_url']?.toString(),height:48)),title:Text((item['title']??'Track').toString()),subtitle:Text((item['artist']??'').toString()),onTap:()=>playback.playTrack(item,items));
+    })),
+  );
+}
+
+class VideosTab extends StatelessWidget {
+  const VideosTab({super.key});
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    const Brand(),
+    const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Videos', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)))),
+    Expanded(child: RetryFutureBuilder<List<Map<String, dynamic>>>(
+      future: () => rows('videos', 'created_at'),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
+        if (!snapshot.hasData) return const Busy();
+        final items = snapshot.data!;
+        if (items.isEmpty) return const Notice('Published videos will appear here.');
+        return ListView.builder(
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            return Card(child: ListTile(
+              leading: SizedBox(width: 62, height: 55, child: MediaCover(url: item['thumbnail_url']?.toString(), height: 55)),
+              title: Text((item['title'] ?? 'Video').toString()),
+              subtitle: Text((item['artist'] ?? 'High-Tech Entertainment').toString()),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: 'Download video for offline viewing',
+                    icon: const Icon(Icons.download_for_offline_outlined, color: Color(0xFFD4AF37)),
+                    onPressed: () async {
+                      try {
+                        final raw = (item['video_url'] ?? '').toString().trim();
+                        final uri = Uri.tryParse(raw);
+                        final isDirect = uri != null &&
+                            (uri.scheme == 'https' || uri.scheme == 'http') &&
+                            uri.host.isNotEmpty &&
+                            !raw.contains('youtube.com') &&
+                            !raw.contains('youtu.be') &&
+                            !raw.contains('vimeo.com');
+                        if (!isDirect) {
+                          throw StateError('Only direct video-file links can be downloaded. YouTube and Vimeo must be watched online.');
+                        }
+                        await downloadRemoteMedia(
+                          url: raw,
+                          title: (item['title'] ?? 'High-Tech video').toString(),
+                          kind: 'mp4',
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Video saved to your Offline media library.')),
+                          );
+                        }
+                      } catch (error) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(friendlyErrorMessage(error))),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                  const Icon(Icons.open_in_new, color: Color(0xFFD4AF37)),
+                ],
+              ),
+              onTap: () async {
+                final raw=(item['video_url']??'').toString();
+                final link=Uri.tryParse(raw);
+                if(link==null||!link.hasScheme)return;
+                final isWebVideo=raw.contains('youtube.com')||raw.contains('youtu.be')||raw.contains('vimeo.com');
+                if(isWebVideo){await launchUrl(link,mode:LaunchMode.externalApplication);return;}
+                if(context.mounted) Navigator.push(context,MaterialPageRoute(builder:(_)=>HteVideoPlayerPage(url:raw,title:(item['title']??'Video').toString())));
+              },
+            ));
+          },
+        );
+      },
+    )),
+  ]);
+}
+
+class MediaCover extends StatelessWidget {
+  const MediaCover({super.key, this.url, this.height = 100});
+  final String? url;
+  final double height;
+  @override
+  Widget build(BuildContext context) {
+    if (url == null || !url!.startsWith('http')) {
+      return Container(height: height, color: const Color(0xFF2B230F), child: const Center(child: Icon(Icons.album, color: Color(0xFFD4AF37), size: 35)));
+    }
+    return Image.network(url!, height: height, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, __, ___) =>
+      const Center(child: Icon(Icons.album, color: Color(0xFFD4AF37))));
+  }
+}
+
+
+Future<void> toggleFavourite(String id) async {
+  final user = db.auth.currentUser;
+  if (user == null) throw StateError('Sign in to save favourites.');
+  if (id.isEmpty) throw ArgumentError('This track has no valid ID.');
+  final existing = await db.from('user_favorites')
+    .select('track_id')
+    .eq('user_id', user.id)
+    .eq('track_id', id)
+    .maybeSingle();
+  if (existing == null) {
+    await db.from('user_favorites').insert({
+      'user_id': user.id,
+      'track_id': id,
+    });
+  } else {
+    await db.from('user_favorites')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('track_id', id);
+  }
+  favouritesRevision.value++;
+}
+
+class DiscoverTab extends StatefulWidget {
+  const DiscoverTab({super.key});
+  @override
+  State<DiscoverTab> createState() => _DiscoverTabState();
+}
+class _DiscoverTabState extends State<DiscoverTab> {
+  final controller = TextEditingController();
+  List<Map<String,dynamic>> results = [];
+  bool loading = true;
+  String? error;
+  @override
+  void initState() { super.initState(); search(''); }
+  Future<void> search(String term) async {
+    setState(() { loading = true; error = null; });
+    try {
+      results = await publishedTracks(term);
+    } catch (e) { error = friendlyErrorMessage(e); }
+    if (mounted) setState(() => loading = false);
+  }
+  @override
+  void dispose() { controller.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    const Brand(tagline: 'FIND YOUR NEXT FREQUENCY'),
+    Padding(
+      padding: const EdgeInsets.fromLTRB(19, 2, 19, 13),
+      child: Row(children: [
+        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Discover sound.', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900, letterSpacing: -.7)),
+          SizedBox(height: 4),
+          Text('Search the official High-Tech catalogue.', style: TextStyle(color: Color(0xFF8D9AA6), fontSize: 11)),
+        ])),
+        Container(width: 39, height: 39,
+          decoration: BoxDecoration(color: const Color(0xFF17232C), borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: const Color(0xFF344B5A))),
+          child: const Icon(Icons.graphic_eq_rounded, color: Color(0xFFE3BD70), size: 20)),
+      ]),
+    ),
+    Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: TextField(
+        controller: controller,
+        onChanged: search,
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFFE3BD70)),
+          hintText: 'Search tracks by title',
+          filled: true,
+          fillColor: const Color(0xFF111923),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF34404D))),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF34404D))),
+        ),
+      ),
+    ),
+    const Padding(
+      padding: EdgeInsets.fromLTRB(20, 15, 20, 5),
+      child: Align(alignment: Alignment.centerLeft,
+        child: Text('AVAILABLE TO PLAY', style: TextStyle(color: Color(0xFFE3BD70), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.4))),
+    ),
+    Expanded(child: loading ? const Busy() : error != null ? Notice(friendlyErrorMessage(error!)) : TrackList(items: results)),
+  ]);
+}
+
+class SavedTab extends StatefulWidget {
+  const SavedTab({super.key});
+  @override
+  State<SavedTab> createState() => _SavedTabState();
+}
+class _SavedTabState extends State<SavedTab> {
+  List<Map<String,dynamic>> saved = [];
+  bool loading = true;
+  @override
+  void initState() {
+    super.initState();
+    favouritesRevision.addListener(load);
+    load();
+  }
+  @override
+  void dispose() {
+    favouritesRevision.removeListener(load);
+    super.dispose();
+  }
+  Future<void> load() async {
+    if (mounted) setState(() => loading = true);
+    try {
+      final user = db.auth.currentUser;
+      if (user == null) {
+        saved = [];
+      } else {
+        final favouriteRows = await db.from('user_favorites')
+          .select('track_id')
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+        final ids = favouriteRows
+          .map((row) => row['track_id'].toString())
+          .toList();
+        if (ids.isEmpty) {
+          saved = [];
+        } else {
+          final tracks = await db.from('tracks')
+            .select()
+            .eq('is_published', true)
+            .inFilter('id', ids);
+          final byId = {
+            for (final track in tracks) track['id'].toString(): Map<String, dynamic>.from(track),
+          };
+          saved = ids.where(byId.containsKey).map((id) => byId[id]!).toList();
+        }
+      }
+    } catch (error) {
+      saved = [];
+      debugPrint('Could not load synced favourites: $error');
+    }
+    if (mounted) setState(() => loading = false);
+  }
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    const Brand(),
+    const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Your favourites', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)))),
+    Expanded(child: loading ? const Busy() : saved.isEmpty ? const Notice('No saved tracks yet. Tap the heart beside a track to add it here.') : TrackList(items: saved)),
+  ]);
+}
+
+class ReleasesTab extends StatelessWidget {
+  const ReleasesTab({super.key});
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    const Brand(tagline: 'OFFICIAL RELEASES'),
+    Padding(
+      padding: const EdgeInsets.fromLTRB(19, 3, 19, 13),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(17),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFF33291B), Color(0xFF151C24)]),
+          borderRadius: BorderRadius.circular(19),
+          border: Border.all(color: const Color(0xFF6C5736)),
+        ),
+        child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('THE RELEASE VAULT', style: TextStyle(color: Color(0xFFE5C47C), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.7)),
+          SizedBox(height: 7),
+          Text('Every drop.\nOne destination.', style: TextStyle(fontSize: 22, height: 1.08, fontWeight: FontWeight.w900)),
+          SizedBox(height: 6),
+          Text('Official music and projects from the High-Tech family.', style: TextStyle(color: Color(0xFFB0BAC2), fontSize: 10)),
+        ]),
+      ),
+    ),
+    const Expanded(child: ReleaseList()),
+  ]);
+}
+
+class LibraryTab extends StatelessWidget {
+  const LibraryTab({super.key});
+  @override
+  Widget build(BuildContext context) => DefaultTabController(
+    length: 3,
+    child: Column(children: [
+      const Brand(tagline: 'YOUR PERSONAL SOUNDSPACE'),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(19, 1, 19, 12),
+        child: Align(alignment: Alignment.centerLeft,
+          child: Text('Your collection', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -.6))),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Container(
+          decoration: BoxDecoration(color: const Color(0xFF111923), borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: const Color(0xFF34404D))),
+          child: const TabBar(
+            dividerColor: Colors.transparent,
+            indicatorSize: TabBarIndicatorSize.tab,
+            indicator: BoxDecoration(
+              gradient: LinearGradient(colors: [Color(0xFF5B4728), Color(0xFF30281C)]),
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+              border: Border.fromBorderSide(BorderSide(color: Color(0xFFB18B4C))),
+            ),
+            labelColor: Color(0xFFF0D18B),
+            unselectedLabelColor: Color(0xFF8C9AA6),
+            labelStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+            tabs:[Tab(text:'Saved'), Tab(text:'Playlists'), Tab(text:'On device')],
+          ),
+        ),
+      ),
+      const SizedBox(height: 8),
+      const Expanded(child:TabBarView(children:[
+        SavedTab(),
+        PlaylistsTab(),
+        LocalFilesTab(),
+      ])),
+    ]),
+  );
+}
+
+class PlaylistsTab extends StatefulWidget {
+  const PlaylistsTab({super.key});
+  @override
+  State<PlaylistsTab> createState() => _PlaylistsTabState();
+}
+class _PlaylistsTabState extends State<PlaylistsTab> {
+  List<Map<String,dynamic>> items=[];
+  bool loading=true;
+  @override
+  void initState(){super.initState();load();}
+  Future<void> load() async {
+    setState(()=>loading=true);
+    try {
+      final user=db.auth.currentUser;
+      if(user==null){items=[];} else {
+        final data=await db.from('playlists').select().eq('user_id',user.id).order('created_at',ascending:false);
+        items=List<Map<String,dynamic>>.from(data);
+      }
+    } catch(e){debugPrint('Playlist load failed: $e');}
+    if(mounted)setState(()=>loading=false);
+  }
+  Future<void> create() async {
+    final controller=TextEditingController();
+    final name=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('New playlist'),
+      content:TextField(controller:controller,autofocus:true,maxLength:100,decoration:const InputDecoration(labelText:'Playlist name')),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
+        FilledButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),child:const Text('Create'))],
+    ));
+    if(!mounted){controller.dispose();return;}
+    controller.dispose();
+    if(name==null||name.isEmpty)return;
+    final user=db.auth.currentUser;
+    if(user==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sign in to create playlists.')));return;}
+    try {await db.from('playlists').insert({'user_id':user.id,'name':name});await load();}
+    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
+  }
+  @override
+  Widget build(BuildContext context)=>loading?const Busy():Column(children:[
+    Padding(padding:const EdgeInsets.fromLTRB(16,12,16,6),child:Row(children:[
+      const Expanded(child:Text('Your playlists',style:TextStyle(fontWeight:FontWeight.w700))),
+      FilledButton.tonalIcon(onPressed:create,icon:const Icon(Icons.add),label:const Text('Create')),
+    ])),
+    Expanded(child:items.isEmpty?const Notice('Create a playlist to organise your favourite High-Tech tracks.'):
+      ListView.builder(itemCount:items.length,itemBuilder:(ctx,i){
+        final item=items[i];
+        return Card(child:ListTile(
+          leading:const CircleAvatar(backgroundColor:Color(0xFF30260E),child:Icon(Icons.queue_music,color:Color(0xFFD9B96E))),
+          title:Text((item['name']??'Playlist').toString()),
+          subtitle:Text((item['description']??'Your personal collection').toString()),
+          trailing:const Icon(Icons.chevron_right),
+          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>PlaylistDetailPage(playlist:item))),
+        ));
+      })),
+  ]);
+}
+
+class PlaylistDetailPage extends StatefulWidget {
+  const PlaylistDetailPage({super.key,required this.playlist});
+  final Map<String,dynamic> playlist;
+  @override
+  State<PlaylistDetailPage> createState()=>_PlaylistDetailPageState();
+}
+class _PlaylistDetailPageState extends State<PlaylistDetailPage>{
+  List<Map<String,dynamic>> tracks=[];
+  bool loading=true;
+  @override
+  void initState(){super.initState();load();}
+  Future<void> load() async {
+    setState(()=>loading=true);
+    try {
+      final links=await db.from('playlist_tracks').select('track_id').eq('playlist_id',widget.playlist['id']).order('position');
+      final ids=links.map((e)=>e['track_id'].toString()).toList();
+      if(ids.isEmpty){tracks=[];} else {
+        final data=await db.from('tracks').select().eq('is_published',true).inFilter('id',ids);
+        final byId={for(final row in data) row['id'].toString():Map<String,dynamic>.from(row)};
+        tracks=ids.where(byId.containsKey).map((id)=>byId[id]!).toList();
+      }
+    }catch(e){debugPrint('Playlist tracks load failed: $e');}
+    if(mounted)setState(()=>loading=false);
+  }
+  Future<void> addTracks() async {
+    try {
+      final data=await publishedTracks();
+      if(!mounted)return;
+      final selected=await showDialog<List<Map<String,dynamic>>>(context:context,builder:(ctx){
+        final chosen=<String>{};
+        return StatefulBuilder(builder:(ctx,setDialog)=>AlertDialog(
+          title:const Text('Add tracks'),
+          content:SizedBox(width:360,height:360,child:ListView(children:data.map((track){
+            final id=track['id'].toString();
+            return CheckboxListTile(value:chosen.contains(id),title:Text((track['title']??'Track').toString()),subtitle:Text((track['artist']??'').toString()),
+              onChanged:(v)=>setDialog(()=>v==true?chosen.add(id):chosen.remove(id)));
+          }).toList())),
+          actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
+            FilledButton(onPressed:()=>Navigator.pop(ctx,data.where((e)=>chosen.contains(e['id'].toString())).toList()),child:const Text('Add selected'))],
+        ));
+      });
+      if(selected==null||selected.isEmpty)return;
+      final current=await db.from('playlist_tracks').select('track_id').eq('playlist_id',widget.playlist['id']);
+      final existing=current.map((e)=>e['track_id'].toString()).toSet();
+      final fresh=selected.where((e)=>!existing.contains(e['id'].toString())).toList();
+      for(var i=0;i<fresh.length;i++){
+        await db.from('playlist_tracks').insert({'playlist_id':widget.playlist['id'],'track_id':fresh[i]['id'],'position':tracks.length+i});
+      }
+      await load();
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
+  }
+  @override
+  Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:Text((widget.playlist['name']??'Playlist').toString())),
+    body:loading?const Busy():Column(children:[
+      Padding(padding:const EdgeInsets.all(16),child:Row(children:[
+        Expanded(child:Text('${tracks.length} tracks',style:const TextStyle(color:Colors.white60))),
+        FilledButton.tonalIcon(onPressed:addTracks,icon:const Icon(Icons.add),label:const Text('Add tracks')),
+      ])),
+      Expanded(child:tracks.isEmpty?const Notice('This playlist is empty. Add tracks from the High-Tech catalogue.'):TrackList(items:tracks)),
+    ]),
+  );
+}
+
+class NotificationsPage extends StatefulWidget {
+  const NotificationsPage({super.key});
+  @override
+  State<NotificationsPage> createState() => _NotificationsPageState();
+}
+class _NotificationsPageState extends State<NotificationsPage> {
+  late Future<List<Map<String,dynamic>>> _notifications;
+  @override
+  void initState() { super.initState(); _notifications = _load(); }
+  Future<List<Map<String,dynamic>>> _load() async {
+    final user = db.auth.currentUser;
+    if (user == null) return [];
+    final rows = await db.from('app_notifications')
+      .select('id,title,body,category,created_at')
+      .or('user_id.eq.${user.id},user_id.is.null')
+      .order('created_at', ascending: false)
+      .limit(100);
+    return List<Map<String,dynamic>>.from(rows);
+  }
+  void _retry() => setState(() => _notifications = _load());
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Notifications'), actions: [
+      IconButton(tooltip: 'Refresh', onPressed: _retry, icon: const Icon(Icons.refresh)),
+    ]),
+    body: FutureBuilder<List<Map<String,dynamic>>>(
+      future: _notifications,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!), onRetry: _retry);
+        if (!snapshot.hasData) return const Busy();
+        final items = snapshot.data!;
+        if (items.isEmpty) return const Notice('You are all caught up. New release and account announcements will appear here.');
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            final category = (item['category'] ?? 'announcement').toString();
+            final date = DateTime.tryParse((item['created_at'] ?? '').toString());
+            return Card(child: ListTile(
+              leading: Icon(category == 'release' ? Icons.album_outlined : Icons.notifications_active_outlined, color: const Color(0xFFD9B96E)),
+              title: Text((item['title'] ?? 'High-Tech Entertainment').toString()),
+              subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text((item['body'] ?? '').toString()),
+                  if (date != null) ...[
+                    const SizedBox(height: 6),
+                    Text(date.toLocal().toString().split('.').first, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                  ],
+                ],
+              )),
+              isThreeLine: true,
+            ));
+          },
+        );
+      },
+    ),
+  );
+}
+
+class ProfileEditPage extends StatefulWidget {
+  const ProfileEditPage({super.key});
+  @override
+  State<ProfileEditPage> createState() => _ProfileEditPageState();
+}
+
+class _ProfileEditPageState extends State<ProfileEditPage> {
+  final _name = TextEditingController();
+  final _bio = TextEditingController();
+  final _phone = TextEditingController();
+  String _avatarUrl = '';
+  bool _loading = true;
+  bool _saving = false;
+  bool _uploadingAvatar = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _bio.dispose();
+    _phone.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    final user = db.auth.currentUser;
+    if (user == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+    try {
+      final row = await db.from('profiles')
+          .select('display_name,bio,phone,avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+      if (row != null) {
+        _name.text = (row['display_name'] ?? '').toString();
+        _bio.text = (row['bio'] ?? '').toString();
+        _phone.text = (row['phone'] ?? '').toString();
+        _avatarUrl = (row['avatar_url'] ?? '').toString();
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _persistProfile() async {
+    final user = db.auth.currentUser;
+    if (user == null) throw const AuthException('Please sign in again to update your profile.');
+    await db.from('profiles').upsert({
+      'id': user.id,
+      'display_name': _name.text.trim(),
+      'bio': _bio.text.trim(),
+      'phone': _phone.text.trim(),
+      'avatar_url': _avatarUrl,
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  String? _storedAvatarPath(String value, String userId) {
+    final uri = Uri.tryParse(value);
+    if (uri == null) return null;
+    final segments = uri.pathSegments;
+    final bucketIndex = segments.indexOf('hte-artwork');
+    if (bucketIndex < 0 || bucketIndex + 2 >= segments.length) return null;
+    final path = segments.sublist(bucketIndex + 1).join('/');
+    if (!path.startsWith('avatars/$userId/')) return null;
+    return path;
+  }
+
+  Future<void> _uploadAvatar() async {
+    if (_saving || _uploadingAvatar) return;
+    final user = db.auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to upload a profile picture.')),
+      );
+      return;
+    }
+
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp', 'avif'],
+        withData: false,
+      );
+      if (!mounted || result == null || result.files.isEmpty) return;
+      final selected = result.files.single;
+      if (selected.size <= 0 || selected.size > 5 * 1024 * 1024) {
+        throw const FormatException('Choose a profile image smaller than 5 MB.');
+      }
+      final localPath = selected.path;
+      if (localPath == null || localPath.isEmpty) {
+        throw const FormatException('The selected image could not be opened. Please choose it again.');
+      }
+      final localFile = File(localPath);
+      if (!await localFile.exists()) {
+        throw const FormatException('The selected image is no longer available on this device.');
+      }
+
+      final extension = (selected.extension ?? '').toLowerCase();
+      const mimeTypes = <String, String>{
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'webp': 'image/webp',
+        'avif': 'image/avif',
+      };
+      final mimeType = mimeTypes[extension];
+      if (mimeType == null) {
+        throw const FormatException('This image format is not supported.');
+      }
+
+      setState(() => _uploadingAvatar = true);
+      final oldPath = _storedAvatarPath(_avatarUrl, user.id);
+      final storagePath = 'avatars/${user.id}/${DateTime.now().microsecondsSinceEpoch}.$extension';
+      await db.storage.from('hte-artwork').upload(
+        storagePath,
+        localFile,
+        fileOptions: FileOptions(
+          cacheControl: '3600',
+          contentType: mimeType,
+          upsert: false,
+        ),
+      );
+      if (!mounted) {
+        try {
+          await db.storage.from('hte-artwork').remove([storagePath]);
+        } catch (cleanupError) {
+          debugPrint('Unclaimed HTE profile image cleanup skipped: $cleanupError');
+        }
+        return;
+      }
+      final publicUrl = db.storage.from('hte-artwork').getPublicUrl(storagePath);
+      setState(() => _avatarUrl = publicUrl);
+      await _persistProfile();
+
+      if (oldPath != null && oldPath != storagePath) {
+        try {
+          await db.storage.from('hte-artwork').remove([oldPath]);
+        } catch (cleanupError) {
+          debugPrint('Previous HTE profile image cleanup skipped: $cleanupError');
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Your public profile picture has been updated.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
+  }
+
+  Future<void> _save() async {
+    if (_saving || _uploadingAvatar) return;
+    setState(() => _saving = true);
+    try {
+      await _persistProfile();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('My profile')),
+    body: _loading
+        ? const Busy()
+        : ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 30),
+            children: [
+              const Brand(tagline: 'YOUR HIGH-TECH ACCOUNT'),
+              Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF33291B), Color(0xFF18232D), Color(0xFF111720)],
+                  ),
+                  borderRadius: BorderRadius.circular(23),
+                  border: Border.all(color: const Color(0xFF80663B)),
+                ),
+                child: Column(children: [
+                  Container(
+                    width: 116,
+                    height: 116,
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: SweepGradient(colors: [
+                        Color(0xFF77572C), Color(0xFFE5C477),
+                        Color(0xFF587D91), Color(0xFF77572C),
+                      ]),
+                    ),
+                    child: ClipOval(
+                      child: _avatarUrl.isEmpty
+                          ? Container(
+                              color: const Color(0xFF101720),
+                              child: const Icon(Icons.person_rounded, size: 58, color: Color(0xFFE3BD70)),
+                            )
+                          : Image.network(
+                              _avatarUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                color: const Color(0xFF101720),
+                                child: const Icon(Icons.person_rounded, size: 58, color: Color(0xFFE3BD70)),
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 13),
+                  Text(
+                    _name.text.trim().isEmpty ? 'Your High-Tech profile' : _name.text.trim(),
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'PUBLIC PROFILE PHOTO · PRIVATE ACCOUNT DETAILS',
+                    style: TextStyle(color: Color(0xFFB4C0C9), fontSize: 8,
+                      fontWeight: FontWeight.w800, letterSpacing: 1.1),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 15),
+                  OutlinedButton.icon(
+                    onPressed: (_saving || _uploadingAvatar) ? null : _uploadAvatar,
+                    icon: _uploadingAvatar
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.add_a_photo_outlined),
+                    label: Text(_uploadingAvatar ? 'Uploading picture…' : 'Change profile picture'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFE8CB87),
+                      side: const BorderSide(color: Color(0xFF80663B)),
+                    ),
+                  ),
+                ]),
+              ),
+              const Heading('Profile information'),
+              TextField(
+                controller: _name,
+                textCapitalization: TextCapitalization.words,
+                maxLength: 80,
+                decoration: const InputDecoration(labelText: 'Display name'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _bio,
+                maxLines: 4,
+                maxLength: 500,
+                decoration: const InputDecoration(labelText: 'About you'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                maxLength: 30,
+                decoration: const InputDecoration(labelText: 'Phone number (optional)'),
+              ),
+              const SizedBox(height: 18),
+              FilledButton(
+                onPressed: (_saving || _uploadingAvatar) ? null : _save,
+                child: _saving
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Save profile'),
+              ),
+            ],
+          ),
+  );
+}
+
+class AccountTab extends StatefulWidget {
+  const AccountTab({super.key, this.embedded = false});
+  final bool embedded;
+  @override
+  State<AccountTab> createState() => _AccountTabState();
+}
+
+class _AccountTabState extends State<AccountTab> {
+  final email = TextEditingController();
+  final password = TextEditingController();
+  bool signup = false;
+  bool busy = false;
+
+  @override
+  void dispose() { email.dispose(); password.dispose(); super.dispose(); } 
+  Future<void> authenticate() async {
+    if (busy) return;
+    final address = email.text.trim();
+    if (address.isEmpty || !isValidEmailAddress(address)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid email address to continue.')),
+      );
+      return;
+    }
+    if (password.text.isEmpty || (signup && password.text.length < 8)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(signup
+          ? 'Choose a password with at least 8 characters.'
+          : 'Enter your password to sign in.')),
+      );
+      return;
+    }
+    setState(() => busy = true);
+    try {
+      if (signup) {
+        await db.auth.signUp(email: address, password: password.text);
+      } else {
+        await db.auth.signInWithPassword(email: address, password: password.text);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Authentication request completed. Check your email if confirmation is enabled.'),
+        ));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> requestPasswordReset() async {
+    final address = email.text.trim();
+    if (address.isEmpty || !isValidEmailAddress(address)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter your account email address first.')),
+      );
+      return;
+    }
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      await db.auth.resetPasswordForEmail(address, redirectTo: authRedirect);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('If this email belongs to an account, a password reset link has been sent. Open it on this device.'),
+          duration: Duration(seconds: 6),
+        ));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> signInWithGoogle() async {
+    setState(() => busy = true);
+    try {
+      if (googleWebClientId.trim().isNotEmpty) {
+        final google = GoogleSignIn.instance;
+        if (!_googleSignInInitialized) {
+          await google.initialize(serverClientId: googleWebClientId.trim());
+          _googleSignInInitialized = true;
+        }
+        final account = await google.authenticate();
+        final authorization = await account.authorizationClient
+                .authorizationForScopes(const ['email', 'profile']) ??
+            await account.authorizationClient
+                .authorizeScopes(const ['email', 'profile']);
+        final idToken = account.authentication.idToken;
+        if (idToken == null) {
+          throw const AuthException('Google did not return an identity token. Check the Web OAuth client ID.');
+        }
+        await db.auth.signInWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: idToken,
+          accessToken: authorization.accessToken,
+        );
+      } else {
+        // Keep Google sign-in available when the native Web client ID has not
+        // yet been supplied. Supabase completes OAuth and returns to this app
+        // through the configured login-callback deep link.
+        await db.auth.signInWithOAuth(
+          OAuthProvider.google,
+          redirectTo: authRedirect,
+          authScreenLaunchMode: LaunchMode.externalApplication,
+        );
+      }
+    } on AuthException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> signInWithProvider(OAuthProvider provider, String label) async {
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      await db.auth.signInWithOAuth(
+        provider,
+        redirectTo: authRedirect,
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
+    } on AuthException catch (error) {
+      final message = error.message.toLowerCase();
+      final friendly = message.contains('provider is not enabled') || message.contains('unsupported provider')
+          ? '$label sign-in is not enabled yet. The provider must first be configured in Supabase Auth.'
+          : friendlyErrorMessage(error);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendly)));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = db.auth.currentUser;
+    final content = <Widget>[
+      if (user != null) ...[
+        const Brand(),
+        Card(child: ListTile(
+          leading: const Icon(Icons.account_circle_outlined, color: Color(0xFFD4AF37)),
+          title: const Text('My profile'),
+          subtitle: const Text('Edit your display name and account details'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileEditPage())),
+        )),
+        Card(child: ListTile(
+          leading: const Icon(Icons.settings_outlined, color: Color(0xFFD4AF37)),
+          title: const Text('App settings'),
+          subtitle: const Text('Updates, app information and support'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsPage())),
+        )),
+        Card(child: ListTile(
+          leading: const Icon(Icons.notifications_none, color: Color(0xFFD4AF37)),
+          title: const Text('Notifications'),
+          subtitle: const Text('Release and account updates'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsPage())),
+        )),
+      ] else ...[
+        const SizedBox(height: 8),
+      ],
+      if (user != null && user.id == 'b268df9e-eff5-43b9-a38f-869b33add38b') ...[
+        Card(child: ListTile(
+          leading: const Icon(Icons.admin_panel_settings_outlined, color: Color(0xFFD9B96E), size: 28),
+          title: const Text('HT Admin — Founder Studio', style: TextStyle(fontWeight: FontWeight.w700)),
+          subtitle: const Text('Private catalogue, uploads, artists and releases'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminStudioPage())),
+        )),
+      ],
+      if (user != null) ...[
+        const Icon(Icons.account_circle, color: Color(0xFFD4AF37), size: 80),
+        Center(child: Text(user.email ?? 'Signed in')),
+        const SizedBox(height: 18),
+        FilledButton(onPressed: () async { await db.auth.signOut(); if (mounted) setState(() {}); }, child: const Text('Sign out')),
+        TextButton.icon(
+          onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html'), mode: LaunchMode.externalApplication),
+          icon: const Icon(Icons.privacy_tip_outlined),
+          label: const Text('Privacy policy & account deletion'),
+        ),
+      ] else ...[
+        const Text('Your account', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: busy ? null : signInWithGoogle,
+          icon: const Icon(Icons.g_mobiledata, size: 28),
+          label: const Text('Continue with Google'),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(50),
+            side: const BorderSide(color: Color(0xFFD4AF37)),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(child: OutlinedButton.icon(
+            onPressed: busy ? null : () => signInWithProvider(OAuthProvider.facebook, 'Facebook'),
+            icon: const Icon(Icons.facebook),
+            label: const Text('Facebook'),
+          )),
+          const SizedBox(width: 10),
+          Expanded(child: OutlinedButton.icon(
+            onPressed: busy ? null : () => signInWithProvider(OAuthProvider.twitter, 'X'),
+            icon: const Icon(Icons.alternate_email),
+            label: const Text('Continue with X'),
+          )),
+        ]),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: Row(children: [
+            Expanded(child: Divider()),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: Text('OR USE EMAIL', style: TextStyle(color: Colors.white54, fontSize: 11, letterSpacing: 1.2)),
+            ),
+            Expanded(child: Divider()),
+          ]),
+        ),
+        TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
+        const SizedBox(height: 12),
+        TextField(
+          controller: password,
+          obscureText: true,
+          autofillHints: [signup ? AutofillHints.newPassword : AutofillHints.password],
+          decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
+          onSubmitted: (_) => busy ? null : authenticate(),
+        ),
+        if (!signup) Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: busy ? null : requestPasswordReset,
+            child: const Text('Forgot password?'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        FilledButton(
+          onPressed: busy ? null : authenticate,
+          child: busy
+            ? const SizedBox(width: 19, height: 19, child: CircularProgressIndicator(strokeWidth: 2))
+            : Text(signup ? 'Create account' : 'Sign in'),
+        ),
+        TextButton(
+          onPressed: busy ? null : () => setState(() => signup = !signup),
+          child: Text(signup ? 'Already registered? Sign in' : 'Create a new account'),
+        ),
+        TextButton.icon(
+          onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication),
+          icon: const Icon(Icons.privacy_tip_outlined),
+          label: const Text('Privacy policy'),
+        ),
+        TextButton(
+          onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html'), mode: LaunchMode.externalApplication),
+          child: const Text('Request account deletion'),
+        ),
+      ],
+    ];
+    if (widget.embedded) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: content,
+      );
+    }
+    return ListView(padding: const EdgeInsets.all(20), children: content);
+  }
+}
+
+
+class SettingsPage extends StatefulWidget {
+  const SettingsPage({super.key, this.autoCheckForUpdates = false});
+  final bool autoCheckForUpdates;
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  String version = 'Loading…';
+  bool checking = false;
+  bool downloading = false;
+  double downloadProgress = 0;
+  String updateStatus = '';
+  bool autoplaySetting = true;
+  bool shuffleSetting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+    _loadPlaybackSettings();
+    if (widget.autoCheckForUpdates) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _checkForUpdates();
+      });
+    }
+  }
+
+  Future<void> _loadPlaybackSettings() async {
+    final prefs=await SharedPreferences.getInstance();
+    autoplaySetting=prefs.getBool('hte_autoplay')??true;
+    shuffleSetting=prefs.getBool('hte_shuffle')??false;
+    playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting; playback.audioAdsEnabled=true; playback.adEvery=HtePlayback.advertInterval;
+    if(mounted)setState((){});
+  }
+  Future<void> _savePlaybackSetting(String key,Object value) async {
+    final prefs=await SharedPreferences.getInstance();
+    if(value is bool) await prefs.setBool(key,value);
+    if(value is int) await prefs.setInt(key,value);
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (mounted) setState(() => version = info.version);
+    } catch (_) {
+      if (mounted) setState(() => version = 'Version unavailable');
+    }
+  }
+
+  List<int> _versionParts(String value) => value.replaceFirst(RegExp(r'^[vV]'), '')
+      .split('+').first.split('.')
+      .map((part) => int.tryParse(part.replaceAll(RegExp(r'[^0-9].*'), '')) ?? 0).toList();
+
+  int _compareVersions(String a, String b) {
+    final left = _versionParts(a), right = _versionParts(b);
+    for (var i = 0; i < (left.length > right.length ? left.length : right.length); i++) {
+      final x = i < left.length ? left[i] : 0, y = i < right.length ? right[i] : 0;
+      if (x != y) return x.compareTo(y);
+    }
+    return 0;
+  }
+
+  Future<void> _checkForUpdates() async {
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      _message('In-app APK updates are available on Android devices.');
+      return;
+    }
+    setState(() { checking = true; updateStatus = 'Checking for updates…'; });
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final response = await http.get(
+        Uri.https('api.github.com', '/repos/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest'),
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'High-Tech-Entertainment-App',
+          'Cache-Control': 'no-cache',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      ).timeout(const Duration(seconds: 20));
+      if (!mounted) return;
+      if (response.statusCode == 404) {
+        _message('No official app update has been published yet.');
+        return;
+      }
+      if (response.statusCode != 200) {
+        final detail = response.statusCode == 403 || response.statusCode == 429
+            ? 'GitHub is temporarily limiting update checks. Please try again in a few minutes.'
+            : 'Update service returned HTTP ${response.statusCode}. Please retry.';
+        _message(detail);
+        return;
+      }
+      final release = jsonDecode(response.body) as Map<String, dynamic>;
+      if (release['draft'] == true || release['prerelease'] == true) {
+        _message('No stable update is available yet.');
+        return;
+      }
+      final releaseTag = (release['tag_name'] ?? '').toString();
+      final isSuRelease = releaseTag.toUpperCase().endsWith('-SU');
+      final latest = releaseTag
+          .replaceFirst(RegExp(r'^[vV]'), '')
+          .replaceFirst(RegExp(r'-SU$', caseSensitive: false), '');
+      // Compare semantic version, Android build number and SU flavour separately.
+      // This catches same-version hotfixes and SU flavour upgrades reliably.
+      final installedSu = info.version.toUpperCase().contains(' SU');
+      final installedSemanticVersion = info.version.replaceFirst(
+        RegExp(r'\s+SU$', caseSensitive: false), '').trim();
+      final installedBuild = int.tryParse(info.buildNumber) ?? 0;
+      final releaseBody = (release['body'] ?? '').toString();
+      final releaseBuildMatch = RegExp(
+        r'Android build:\s*(\d+)', caseSensitive: false).firstMatch(releaseBody);
+      final latestBuild = int.tryParse(releaseBuildMatch?.group(1) ?? '') ?? 0;
+      final versionComparison = _compareVersions(latest, installedSemanticVersion);
+      final buildUpgradeAvailable = latestBuild > 0 && latestBuild > installedBuild;
+      final flavourUpgradeAvailable = isSuRelease && !installedSu;
+      final updateAvailable = versionComparison > 0 ||
+          (versionComparison == 0 && buildUpgradeAvailable) ||
+          flavourUpgradeAvailable;
+      if (latest.isEmpty || !updateAvailable) {
+        _message('You are using the latest published version ($version).');
+        return;
+      }
+      final assets = release['assets'] as List<dynamic>? ?? [];
+      Map<String, dynamic>? apk;
+      for (final raw in assets) {
+        final item = raw as Map<String, dynamic>;
+        final name = (item['name'] ?? '').toString().toLowerCase();
+        if (name.endsWith('.apk') && (name.contains('high-tech') || apk == null)) {
+          apk = item;
+          if (name == 'high-tech-entertainment.apk') break;
+        }
+      }
+      if (apk == null) {
+        _message('Version $latest is published, but its Android APK is not attached yet.');
+        return;
+      }
+      final apkUrl = (apk['browser_download_url'] ?? '').toString();
+      final expectedSize = (apk['size'] as num?)?.toInt() ?? 0;
+      final digest = (apk['digest'] ?? '').toString();
+      if (!apkUrl.startsWith('https://') || expectedSize <= 0) {
+        _message('The published APK details are incomplete. Please try again later.');
+        return;
+      }
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Update available'),
+          content: Text('High-Tech Entertainment $latest is available. You have $version installed. Download the APK now? Your account and app data will be kept.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Later')),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _downloadAndInstall(apk!, latest, expectedSize, digest);
+              },
+              child: const Text('Download update'),
+            ),
+          ],
+        ),
+      );
+    } catch (_) {
+      if (mounted) _message('Could not check for updates. Check your internet connection and try again.');
+    } finally {
+      if (mounted) setState(() { checking = false; updateStatus = ''; });
+    }
+  }
+
+  Future<void> _downloadAndInstall(
+    Map<String, dynamic> asset,
+    String latest,
+    int expectedSize,
+    String expectedDigest,
+  ) async {
+    if (downloading) return;
+    setState(() { downloading = true; downloadProgress = 0; updateStatus = 'Preparing update…'; });
+    File? apkFile;
+    try {
+      final url = (asset['browser_download_url'] ?? '').toString();
+      final client = http.Client();
+      try {
+        final request = http.Request('GET', Uri.parse(url));
+        request.headers['User-Agent'] = 'High-Tech-Entertainment-App';
+        final streamed = await client.send(request).timeout(const Duration(seconds: 45));
+        if (streamed.statusCode != 200) {
+          throw HttpException('APK download failed (HTTP ${streamed.statusCode}).');
+        }
+        final directory = await getTemporaryDirectory();
+        apkFile = File('${directory.path}/hte-update-$latest.apk');
+        if (await apkFile.exists()) await apkFile.delete();
+        final sink = apkFile.openWrite();
+        var received = 0;
+        setState(() => updateStatus = 'Downloading update…');
+        try {
+          await for (final chunk in streamed.stream) {
+            sink.add(chunk);
+            received += chunk.length;
+            if (mounted) setState(() => downloadProgress = (received / expectedSize).clamp(0.0, 1.0).toDouble());
+          }
+          await sink.flush();
+        } finally {
+          await sink.close();
+        }
+        if (received != expectedSize) {
+          throw const FormatException('The downloaded APK is incomplete. Please retry.');
+        }
+      } finally {
+        client.close();
+      }
+
+      final downloadedApk = apkFile;
+      final firstBytes = await downloadedApk.openRead(0, 4).first;
+      if (firstBytes.length < 4 || firstBytes[0] != 0x50 || firstBytes[1] != 0x4b) {
+        throw const FormatException('The downloaded file is not a valid APK archive.');
+      }
+      if (expectedDigest.startsWith('sha256:')) {
+        final actualDigest = await sha256.bind(downloadedApk.openRead()).first;
+        if (actualDigest.toString().toLowerCase() != expectedDigest.substring(7).toLowerCase()) {
+          throw const FormatException('APK integrity verification failed. The update was not opened.');
+        }
+      }
+      if (!mounted) return;
+      setState(() => updateStatus = 'Download complete. Opening Android installer…');
+      final result = await OpenFilex.open(
+        downloadedApk.path,
+        type: 'application/vnd.android.package-archive',
+      );
+      if (!mounted) return;
+      if (result.type != ResultType.done) {
+        _message('APK downloaded, but Android could not open the installer (${result.message}). Allow High-Tech Entertainment to install unknown apps in Android Settings, then try again.');
+      } else {
+        _message('Update downloaded. Follow the Android installation prompt to finish updating.');
+      }
+    } catch (error) {
+      if (mounted) _message(friendlyErrorMessage(error));
+      if (apkFile != null && await apkFile.exists()) {
+        try { await apkFile.delete(); } catch (_) {}
+      }
+    } finally {
+      if (mounted) setState(() { downloading = false; downloadProgress = 0; updateStatus = ''; });
+    }
+  }
+
+  void _message(String value) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
+
+  Widget _themeChoiceTile(
+    BuildContext sheetContext,
+    ThemeMode value,
+    String title,
+    String subtitle,
+  ) {
+    final selected = AppThemeController.mode.value == value;
+    return ListTile(
+      leading: Icon(
+        selected ? Icons.radio_button_checked : Icons.radio_button_off,
+        color: selected ? const Color(0xFFD4AF37) : null,
+      ),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      onTap: () => Navigator.pop(sheetContext, value),
+    );
+  }
+
+  Future<void> _chooseTheme() async {
+    final selected = await showModalBottomSheet<ThemeMode>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Choose your appearance',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 12),
+              _themeChoiceTile(
+                sheetContext,
+                ThemeMode.dark,
+                'High-Tech dark',
+                'Signature black with gold accents',
+              ),
+              _themeChoiceTile(
+                sheetContext,
+                ThemeMode.light,
+                'Light',
+                'Bright, clean interface',
+              ),
+              _themeChoiceTile(
+                sheetContext,
+                ThemeMode.system,
+                'System default',
+                'Follow Android appearance settings',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selected != null) {
+      await AppThemeController.setMode(selected);
+      if (mounted) setState(() {});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Settings')),
+    body: ListView(padding: const EdgeInsets.all(18), children: [
+      const Brand(tagline: 'APP PREFERENCES & INFORMATION'),
+      Container(
+        margin: const EdgeInsets.fromLTRB(2, 2, 2, 14),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF33291B), Color(0xFF18232D), Color(0xFF111720)],
+          ),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0xFF80663B)),
+        ),
+        child: Row(children: [
+          Container(width: 44, height: 44,
+            decoration: BoxDecoration(color: const Color(0xFF242A2D),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF56616A))),
+            child: const Icon(Icons.tune_rounded, color: Color(0xFFE3BD70), size: 23)),
+          const SizedBox(width: 13),
+          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('YOUR APP. YOUR SETTINGS.',
+              style: TextStyle(color: Color(0xFFE3BD70), fontSize: 8,
+                fontWeight: FontWeight.w900, letterSpacing: 1.4)),
+            SizedBox(height: 5),
+            Text('Control your experience',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+            SizedBox(height: 4),
+            Text('Personalise playback, appearance and updates.',
+              style: TextStyle(color: Color(0xFFB4C0C9), fontSize: 10)),
+          ])),
+        ]),
+      ),
+      Card(child: Column(children: [
+        ListTile(
+          leading: const Icon(Icons.palette_outlined, color: Color(0xFFD4AF37)),
+          title: const Text('Appearance & themes'),
+          subtitle: Text(switch (AppThemeController.mode.value) {
+            ThemeMode.light => 'Light theme',
+            ThemeMode.system => 'Follow device theme',
+            ThemeMode.dark => 'High-Tech dark theme',
+          }),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _chooseTheme,
+        ),
+      ])),
+      Card(child: Column(children: [
+        ListTile(
+          leading: const Icon(Icons.system_update_alt, color: Color(0xFFD4AF37)),
+          title: const Text('App updates'),
+          subtitle: Text(downloading ? updateStatus : 'Check, download and install the latest official Android version'),
+          trailing: (checking || downloading) ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.chevron_right),
+          onTap: (checking || downloading) ? null : _checkForUpdates,
+        ),
+        const Divider(height: 1),
+        ListTile(leading: const Icon(Icons.info_outline), title: const Text('App version'), subtitle: Text(version)),
+      ])),
+      if (downloading) ...[
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(updateStatus, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
+          LinearProgressIndicator(value: downloadProgress),
+          const SizedBox(height: 6),
+          Text('${(downloadProgress * 100).toStringAsFixed(0)}% downloaded', style: const TextStyle(color: Colors.white60)),
+        ]))),
+      ],
+      const SizedBox(height: 12),
+      const Heading('Playback preferences'),
+      Card(child: Column(children: [
+        SwitchListTile(title:const Text('Smart Autoplay'),subtitle:const Text('Continue with recommended music when the queue ends'),value:autoplaySetting,onChanged:(v){setState(()=>autoplaySetting=v);playback.autoplay=v;_savePlaybackSetting('hte_autoplay',v);}),
+        SwitchListTile(title:const Text('Shuffle'),subtitle:const Text('Play queued tracks in random order'),value:shuffleSetting,onChanged:(v){setState(()=>shuffleSetting=v);playback.shuffle=v;player.setShuffleModeEnabled(v);_savePlaybackSetting('hte_shuffle',v);}),
+        const ListTile(
+          leading: Icon(Icons.campaign_outlined, color: Color(0xFFD4AF37)),
+          title: Text('HT Audio Advertisements'),
+          subtitle: Text('No advert plays when the app opens or when you pause and resume. A sponsored audio advert may play only after 8 completed songs.'),
+        ),
+      ])),
+      const SizedBox(height: 12),
+      Card(child: Column(children: [
+        ListTile(leading: const Icon(Icons.language), title: const Text('High-Tech Entertainment website'), trailing: const Icon(Icons.open_in_new),
+          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/'), mode: LaunchMode.externalApplication)),
+        ListTile(leading: const Icon(Icons.privacy_tip_outlined), title: const Text('Privacy policy'), trailing: const Icon(Icons.open_in_new),
+          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication)),
+        ListTile(leading: const Icon(Icons.delete_outline), title: const Text('Request account deletion'), trailing: const Icon(Icons.open_in_new),
+          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html'), mode: LaunchMode.externalApplication)),
+      ])),
+      const Heading('About the developer'),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text('HIGH TECHNOLOGIES', style: TextStyle(color: Color(0xFFD9B96E), fontWeight: FontWeight.w800, letterSpacing: 1.5, fontSize: 16)),
+              SizedBox(height: 12),
+              _DeveloperDetail(label: 'Product', value: 'High-Tech Entertainment'),
+              _DeveloperDetail(label: 'Founder', value: 'Suwilanji Sinkamba'),
+              _DeveloperDetail(label: 'Location', value: 'Kitwe, Zambia'),
+              SizedBox(height: 10),
+              Text('Combining innovative technology, music, entertainment and digital experiences in one platform.', style: TextStyle(color: Colors.white70, height: 1.5)),
+              SizedBox(height: 12),
+              Text('Copyright 2026 High Technologies.', style: TextStyle(color: Colors.white54, fontSize: 12)),
+            ],
+          ),
+        ),
+      ),
+      const Padding(padding: EdgeInsets.all(20), child: Text('Quality Sound, Global Vibes.\\nMusic. Beats. Production. Beyond.',
+        textAlign: TextAlign.center, style: TextStyle(color: Colors.white54))),
+    ]),
+  );
+}
+
+class _DeveloperDetail extends StatelessWidget {
+  const _DeveloperDetail({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: 82, child: Text(label, style: const TextStyle(color: Colors.white54))),
+        Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600))),
+      ],
+    ),
+  );
+}
+
+bool isSpotifyUrl(String raw) {
+  final value = raw.trim();
+  if (value.startsWith('spotify:')) return true;
+  final uri = Uri.tryParse(value);
+  final host = (uri?.host ?? '').toLowerCase();
+  return host == 'spotify.com' || host.endsWith('.spotify.com') || host == 'spotify.link';
+}
+
+String? spotifyEmbedUrl(String raw) {
+  final value = raw.trim();
+  final uri = Uri.tryParse(value);
+  String? type;
+  String? id;
+  if (value.startsWith('spotify:')) {
+    final parts = value.split(':');
+    if (parts.length == 3) {
+      type = parts[1];
+      id = parts[2];
+    }
+  } else if (uri != null && (uri.host == 'open.spotify.com' || uri.host.endsWith('.spotify.com'))) {
+    final parts = uri.pathSegments;
+    final offset = parts.isNotEmpty && parts.first == 'embed' ? 1 : 0;
+    if (parts.length > offset + 1) {
+      type = parts[offset];
+      id = parts[offset + 1];
+    }
+  }
+  const supported = {'track', 'album', 'playlist', 'episode', 'show'};
+  final validId = id != null && id.isNotEmpty && id.codeUnits.every((unit) =>
+      (unit >= 48 && unit <= 57) ||
+      (unit >= 65 && unit <= 90) ||
+      (unit >= 97 && unit <= 122));
+  if (type == null || !supported.contains(type) || !validId) return null;
+  return 'https://open.spotify.com/embed/$type/$id?utm_source=generator&theme=0';
+}
+
+bool _isPlayableTrack(Map<String, dynamic> track) {
+  final title = (track['title'] ?? '').toString().trim();
+  final audioUrl = (track['audio_url'] ?? '').toString().trim();
+  final uri = Uri.tryParse(audioUrl);
+  return title.isNotEmpty &&
+      (isSpotifyUrl(audioUrl) || (uri != null && uri.scheme == 'https' && uri.host.isNotEmpty));
+}
+
+Future<List<Map<String, dynamic>>> publishedTracks([String term = '']) async {
+  var query = db.from('tracks')
+      .select()
+      .eq('is_published', true);
+  if (term.trim().isNotEmpty) {
+    query = query.ilike('title', '%${term.trim()}%');
+  }
+  final data = await query.order('created_at', ascending: false).limit(100);
+  return List<Map<String, dynamic>>.from(data).where(_isPlayableTrack).toList();
+}
+
+Future<List<Map<String, dynamic>>> playableTracks() => publishedTracks();
+
+class SpotifyEmbedPage extends StatefulWidget {
+  const SpotifyEmbedPage({super.key, required this.title, required this.artist, required this.embedUrl});
+  final String title;
+  final String artist;
+  final String embedUrl;
+  @override
+  State<SpotifyEmbedPage> createState() => _SpotifyEmbedPageState();
+}
+
+class _SpotifyEmbedPageState extends State<SpotifyEmbedPage> {
+  late final WebViewController controller;
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF08090B))
+      ..setNavigationDelegate(NavigationDelegate(
+        onPageFinished: (_) {
+          if (mounted) setState(() => loading = false);
+        },
+      ))
+      ..loadRequest(Uri.parse(widget.embedUrl));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis)),
+    body: Column(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(widget.artist, style: const TextStyle(
+            color: Color(0xFFD9B96E), letterSpacing: 1.2, fontSize: 11, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 5),
+          const Text('Now playing on Spotify', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          const Text('Playback is provided by Spotify. Sign in to Spotify if prompted.',
+            style: TextStyle(color: Colors.white60, fontSize: 12)),
+        ]),
+      ),
+      Expanded(child: Stack(children: [
+        WebViewWidget(controller: controller),
+        if (loading) const Center(child: CircularProgressIndicator(color: Color(0xFFD9B96E))),
+      ])),
+    ]),
+  );
+}
+
+Future<List<Map<String, dynamic>>> rows(String table, String orderBy) async {
+  final result = await db.from(table).select().eq('is_published', true).order(orderBy, ascending: false);
+  return List<Map<String, dynamic>>.from(result);
+}
+
+/// A FutureBuilder with a real reload action for failed network requests.
+/// The loader is called again only when the user taps Retry.
+class RetryFutureBuilder<T> extends StatefulWidget {
+  const RetryFutureBuilder({super.key, required this.future, required this.builder});
+  final Future<T> Function() future;
+  final Widget Function(BuildContext, AsyncSnapshot<T>) builder;
+
+  @override
+  State<RetryFutureBuilder<T>> createState() => _RetryFutureBuilderState<T>();
+}
+
+class _RetryFutureBuilderState<T> extends State<RetryFutureBuilder<T>> {
+  late Future<T> _pending;
+
+  @override
+  void initState() {
+    super.initState();
+    _pending = widget.future();
+  }
+
+  void _retry() {
+    setState(() => _pending = widget.future());
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<T>(
+    future: _pending,
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return Notice(friendlyErrorMessage(snapshot.error!), onRetry: _retry);
+      }
+      return widget.builder(context, snapshot);
+    },
+  );
+}
+
+class Busy extends StatelessWidget {
+  const Busy({super.key});
+  @override
+  Widget build(BuildContext context) => const Center(
+    child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
+  );
+}
+
+class Notice extends StatelessWidget {
+  const Notice(this.message, {super.key, this.onRetry});
+  final String message;
+  final VoidCallback? onRetry;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(22),
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)),
+      if (onRetry != null) ...[
+        const SizedBox(height: 14),
+        OutlinedButton.icon(
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('Retry'),
+        ),
+      ],
+    ]),
+  );
+
+}, caseSensitive: false), '');
+      final installedSu = info.version.toUpperCase().contains(' SU');
+      final installed = info.version
+          .replaceFirst(RegExp(r'\s+SU
+  const HomeTab({super.key});
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.only(bottom: 28),
+    children: [
+      const Brand(),
+      Container(
+        margin: const EdgeInsets.fromLTRB(16, 2, 16, 18),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: const Color(0xFF8B6B35).withValues(alpha: .8)),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF292319), Color(0xFF111923), Color(0xFF090D13)],
+            stops: [0, .56, 1],
+          ),
+          boxShadow: const [
+            BoxShadow(color: Color(0x553A2A10), blurRadius: 30, offset: Offset(0, 14)),
+            BoxShadow(color: Color(0x222D536A), blurRadius: 28, offset: Offset(10, -8)),
+          ],
+        ),
+        child: Stack(children: [
+          Positioned(right: -92, top: -76,
+            child: Container(width: 290, height: 290,
+              decoration: BoxDecoration(shape: BoxShape.circle,
+                border: Border.all(color: const Color(0x44D7B66B), width: 1.1)))),
+          Positioned(right: -60, top: -43,
+            child: Container(width: 225, height: 225,
+              decoration: BoxDecoration(shape: BoxShape.circle,
+                border: Border.all(color: const Color(0x223D7894), width: 1.1)))),
+          Positioned(right: 8, top: 54,
+            child: Opacity(opacity: .12,
+              child: SvgPicture.asset('assets/high-tech-logo.svg', width: 150, height: 150))),
+          Positioned(right: 24, bottom: 34,
+            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              for (final h in [12.0, 22.0, 16.0, 34.0, 23.0, 43.0, 29.0, 18.0, 36.0, 24.0, 15.0])
+                Container(width: 3, height: h, margin: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: BoxDecoration(color: const Color(0xFFDDBB70).withValues(alpha: .58),
+                    borderRadius: BorderRadius.circular(4))),
+            ])),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(22, 22, 22, 23),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(width: 7, height: 7,
+                  decoration: const BoxDecoration(color: Color(0xFF8ED2B2), shape: BoxShape.circle,
+                    boxShadow: [BoxShadow(color: Color(0x668ED2B2), blurRadius: 8)])),
+                const SizedBox(width: 8),
+                const Text('THE OFFICIAL HIGH-TECH EXPERIENCE',
+                  style: TextStyle(color: Color(0xFFC6D3DC), fontSize: 8,
+                    fontWeight: FontWeight.w800, letterSpacing: 1.35)),
+                const Spacer(),
+                const Icon(Icons.auto_awesome, color: Color(0xFFE3C47D), size: 17),
+              ]),
+              const SizedBox(height: 29),
+              const Text('SOUND WITHOUT\nLIMITS.',
+                style: TextStyle(fontSize: 39, height: 1.0, fontWeight: FontWeight.w900,
+                  letterSpacing: -1.7, color: Color(0xFFF8F4E9))),
+              const SizedBox(height: 13),
+              const SizedBox(width: 270,
+                child: Text('Discover the artists, original releases and sound shaping the next wave.',
+                  style: TextStyle(color: Color(0xFFB9C4CC), height: 1.55, fontSize: 12))),
+              const SizedBox(height: 23),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                FilledButton.icon(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MusicTab())),
+                  icon: const Icon(Icons.play_arrow_rounded, size: 19),
+                  label: const Text('Explore music'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 46),
+                    padding: const EdgeInsets.symmetric(horizontal: 17),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(
+                    appBar: AppBar(title: const Text('Videos')), body: const VideosTab()))),
+                  icon: const Icon(Icons.play_circle_outline_rounded, size: 18),
+                  label: const Text('Watch visuals'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 46),
+                    foregroundColor: const Color(0xFFD5E0E7),
+                    side: const BorderSide(color: Color(0xFF526575)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 24),
+              Row(children: [
+                const Icon(Icons.graphic_eq_rounded, color: Color(0xFFE3C47D), size: 15),
+                const SizedBox(width: 7),
+                const Text('MUSIC  /  BEATS  /  PRODUCTION',
+                  style: TextStyle(color: Color(0xFF8799A7), fontSize: 8,
+                    fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+              ]),
+            ]),
+          ),
+        ]),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(19, 4, 19, 10),
+        child: Row(children: [
+          const Expanded(child: Text('ENTER THE SOUND',
+            style: TextStyle(color: Color(0xFFE4C57E), fontSize: 9,
+              letterSpacing: 1.8, fontWeight: FontWeight.w900))),
+          Container(width: 38, height: 1, color: const Color(0xFF6F5A35)),
+        ]),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(children: [
+          Expanded(child: _HomeQuickAction(icon: Icons.album_rounded, title: 'New releases',
+            subtitle: 'Fresh from HTE', onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Releases')), body: const ReleasesTab()))))),
+          const SizedBox(width: 10),
+          Expanded(child: _HomeQuickAction(icon: Icons.people_alt_rounded, title: 'Artists',
+            subtitle: 'Meet the creators', onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Artists')), body: const ArtistsTab()))))),
+        ]),
+      ),
+      const Heading('Latest releases'),
+      const ReleaseList(horizontal: true),
+      const Heading('Featured artists'),
+      const ArtistList(horizontal: true),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF15212A), Color(0xFF10151C)]),
+            borderRadius: BorderRadius.circular(19),
+            border: Border.all(color: const Color(0xFF334B5B)),
+          ),
+          child: Row(children: [
+            Container(width: 42, height: 42,
+              decoration: BoxDecoration(color: const Color(0xFF23313A), borderRadius: BorderRadius.circular(13)),
+              child: const Icon(Icons.video_library_rounded, color: Color(0xFFE3C47D), size: 22)),
+            const SizedBox(width: 13),
+            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Beyond the audio', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+              SizedBox(height: 4),
+              Text('Official videos and visual releases.',
+                style: TextStyle(color: Color(0xFF9EADB8), fontSize: 10)),
+            ])),
+            IconButton(
+              tooltip: 'Explore videos',
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => Scaffold(appBar: AppBar(title: const Text('Videos')), body: const VideosTab()))),
+              icon: const Icon(Icons.arrow_forward_rounded, color: Color(0xFFE3C47D)),
+            ),
+          ]),
+        ),
+      ),
+      const Heading('Released music'),
+      const TrackList(compact: true),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(20, 24, 20, 8),
+        child: Text('HIGH-TECH ENTERTAINMENT  ·  QUALITY SOUND, GLOBAL VIBES',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Color(0xFF72808D), fontSize: 8,
+            letterSpacing: 1.2, height: 1.8)),
+      ),
+    ],
+  );
+}
+
+class _HomeQuickAction extends StatelessWidget {
+  const _HomeQuickAction({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(16),
+    child: Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141517),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF34302A)),
+      ),
+      child: Row(children: [
+        Icon(icon, color: const Color(0xFFD9B96E), size: 22),
+        const SizedBox(width: 9),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 3),
+          Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 9, color: Color(0xFF9B978F))),
+        ])),
+      ]),
+    ),
+  );
+}
+
+class ArtistsTab extends StatelessWidget {
+  const ArtistsTab({super.key});
+  @override
+  Widget build(BuildContext context) => const Column(children: [
+    Brand(),
+    Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Artists', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)))),
+    Expanded(child: ArtistList()),
+  ]);
+}
+
+class ArtistList extends StatelessWidget {
+  const ArtistList({super.key, this.horizontal = false});
+  final bool horizontal;
+  @override
+  Widget build(BuildContext context) => RetryFutureBuilder<List<Map<String, dynamic>>>(
+    future: () => rows('artists', 'name'),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
+      if (!snapshot.hasData) return const Busy();
+      final items = snapshot.data!;
+      if (items.isEmpty) return const Notice('Published artist profiles will appear here.');
+      if (horizontal) {
+        return SizedBox(height: 145, child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: items.map((item) => InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ArtistDetailPage(artist:item))),
+            child: SizedBox(width: 112, child: Column(children: [
+              Avatar(item: item),
+              const SizedBox(height: 8),
+              Text((item['name'] ?? 'Artist').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
+            ])),
+          )).toList(),
+        ));
+      }
+      return ListView.builder(
+        padding: const EdgeInsets.all(16), itemCount: items.length,
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return Card(child: ListTile(
+            leading: Avatar(item: item),
+            title: Text((item['name'] ?? 'Artist').toString()),
+            subtitle: Text((item['bio'] ?? 'High-Tech Entertainment artist').toString(), maxLines: 2, overflow: TextOverflow.ellipsis),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ArtistDetailPage(artist:item))),
+          ));
+        },
+      );
+    },
+  );
+}
+
+class Avatar extends StatelessWidget {
+  const Avatar({super.key, required this.item});
+  final Map<String, dynamic> item;
+  @override
+  Widget build(BuildContext context) {
+    final url = (item['image_url'] ?? '').toString();
+    return CircleAvatar(
+      radius: 40,
+      backgroundColor: const Color(0xFF30260E),
+      backgroundImage: url.startsWith('http') ? NetworkImage(url) : null,
+      child: url.startsWith('http') ? null : const Icon(Icons.person, color: Color(0xFFD4AF37), size: 34),
+    );
+  }
+}
+
+class ArtistDetailPage extends StatelessWidget {
+  const ArtistDetailPage({super.key,required this.artist});
+  final Map<String,dynamic> artist;
+  @override
+  Widget build(BuildContext context) {
+    final name=(artist['name']??'Artist').toString();
+    return Scaffold(
+      appBar:AppBar(title:Text(name)),
+      body:ListView(padding:const EdgeInsets.only(bottom:24),children:[
+        const SizedBox(height:18),
+        Center(child:Avatar(item:artist)),
+        const SizedBox(height:12),
+        Center(child:Text(name,style:const TextStyle(fontSize:24,fontWeight:FontWeight.bold))),
+        Padding(padding:const EdgeInsets.all(20),child:Text((artist['bio']??'High-Tech Entertainment artist').toString(),textAlign:TextAlign.center,style:const TextStyle(color:Colors.white60))),
+        const Heading('Artist releases'),
+        RetryFutureBuilder<List<Map<String,dynamic>>>(
+          future: () => db.from('tracks').select().eq('is_published',true).eq('artist',name).order('created_at',ascending:false).then((data)=>List<Map<String,dynamic>>.from(data).where(_isPlayableTrack).toList()),
+          builder:(context,snapshot)=>snapshot.hasError?Notice(friendlyErrorMessage(snapshot.error!)):!snapshot.hasData?const Busy():snapshot.data!.isEmpty?const Notice('Published tracks by this artist will appear here.'):TrackList(items:snapshot.data!),
+        ),
+      ]),
+    );
+  }
+}
+
+class ReleaseList extends StatelessWidget {
+  const ReleaseList({super.key, this.horizontal = false});
+  final bool horizontal;
+  @override
+  Widget build(BuildContext context) => RetryFutureBuilder<List<Map<String, dynamic>>>(
+    future: () => rows('releases', 'created_at'),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
+      if (!snapshot.hasData) return const Busy();
+      final items = snapshot.data!;
+      if (items.isEmpty) return const Notice('Published releases will appear here.');
+      return SizedBox(
+        height: horizontal ? 260 : null,
+        child: ListView.builder(
+          scrollDirection: horizontal ? Axis.horizontal : Axis.vertical,
+          shrinkWrap: !horizontal,
+          physics: horizontal ? null : const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            final spotifyUrl = (item['spotify_url'] ?? '').toString().trim();
+            return SizedBox(
+              width: horizontal ? 170 : null,
+              child: Card(
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    MediaCover(url: item['cover_url']?.toString(), height: horizontal ? 112 : 190),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 11, 12, 4),
+                      child: Text(
+                        (item['title'] ?? 'Release').toString(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    if ((item['release_date'] ?? '').toString().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          item['release_date'].toString(),
+                          style: const TextStyle(color: Colors.white54, fontSize: 11),
+                        ),
+                      ),
+                    if (spotifyUrl.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                            label: const Text('Listen on Spotify'),
+                            onPressed: () async {
+                              final embed = spotifyEmbedUrl(spotifyUrl);
+                              try {
+                                if (embed != null && defaultTargetPlatform == TargetPlatform.android) {
+                                  if (!context.mounted) return;
+                                  await Navigator.of(context).push(MaterialPageRoute(
+                                    builder: (_) => SpotifyEmbedPage(
+                                      title: (item['title'] ?? 'Spotify release').toString(),
+                                      artist: 'High-Tech Entertainment',
+                                      embedUrl: embed,
+                                    ),
+                                  ));
+                                } else {
+                                  final uri = Uri.tryParse(spotifyUrl);
+                                  if (uri != null && await canLaunchUrl(uri)) {
+                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  }
+                                }
+                              } catch (error) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(friendlyErrorMessage(error))),
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    },
+  );
+}
+
+class MusicTab extends StatelessWidget {
+  const MusicTab({super.key});
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    const Brand(),
+    const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Music library', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)))),
+    const Expanded(child: TrackList()),
+  ]);
+}
+
+class TrackList extends StatelessWidget {
+  const TrackList({super.key, this.compact = false, this.items});
+  final bool compact;
+  final List<Map<String, dynamic>>? items;
+  @override
+  Widget build(BuildContext context) => RetryFutureBuilder<List<Map<String, dynamic>>>(
+    future: () => items == null ? playableTracks() : Future.value(items!.where(_isPlayableTrack).toList()),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
+      if (!snapshot.hasData) return const Busy();
+      final items = snapshot.data!;
+      if (items.isEmpty) return const Notice('Published tracks will appear here.');
+      return ListView.builder(
+        shrinkWrap: compact,
+        physics: compact ? const NeverScrollableScrollPhysics() : null,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return Card(child: ListTile(
+            leading: SizedBox(width: 48, height: 48, child: MediaCover(url: item['cover_url']?.toString(), height: 48)),
+            title: Text((item['title'] ?? 'Track').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
+            subtitle: Text((item['artist'] ?? 'High-Tech Entertainment').toString()),
+            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              IconButton(tooltip: 'Share track', onPressed: () => Share.share('${item['title']} — ${item['artist']}\nHigh-Tech Entertainment'), icon: const Icon(Icons.share_outlined, size: 20)),
+              IconButton(
+                tooltip: 'Download for offline listening',
+                icon: const Icon(Icons.download_for_offline_outlined, size: 21),
+                onPressed: () async {
+                  try {
+                    final url = (item['audio_url'] ?? '').toString().trim();
+                    if (isSpotifyUrl(url)) {
+                      throw StateError('Spotify streams cannot be downloaded here.');
+                    }
+                    await downloadRemoteMedia(
+                      url: url,
+                      title: (item['title'] ?? 'High-Tech track').toString(),
+                      kind: 'mp3',
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Track saved to your Offline media library.')),
+                      );
+                    }
+                  } catch (error) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(friendlyErrorMessage(error))),
+                      );
+                    }
+                  }
+                },
+              ),
+              IconButton(
+              icon: const Icon(Icons.play_circle_fill, color: Color(0xFFD4AF37), size: 34),
+              onPressed: () async {
+                final rawUrl = (item['audio_url'] ?? '').toString().trim();
+                final embedUrl = spotifyEmbedUrl(rawUrl);
+                if (isSpotifyUrl(rawUrl)) {
+                  await player.stop();
+                  playback.currentTrack.value = null;
+                  playback.queueView.value = [];
+                  if (embedUrl != null && defaultTargetPlatform == TargetPlatform.android) {
+                    if (context.mounted) {
+                      await Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => SpotifyEmbedPage(
+                          title: (item['title'] ?? 'Spotify').toString(),
+                          artist: (item['artist'] ?? 'High-Tech Entertainment').toString(),
+                          embedUrl: embedUrl,
+                        ),
+                      ));
+                    }
+                  } else {
+                    final uri = Uri.tryParse(rawUrl);
+                    if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                  return;
+                }
+                try {
+                  final audioQueue = items.where((track) => !isSpotifyUrl((track['audio_url'] ?? '').toString())).toList();
+                  await playback.playTrack(item, audioQueue);
+                } catch (error) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(friendlyErrorMessage(error))),
+                    );
+                  }
+                }
+              },
+            )]),
+          ));
+        },
+      );
+    },
+  );
+}
+
+class PlayerBar extends StatelessWidget {
+  const PlayerBar({super.key});
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<Map<String,dynamic>?>(
+    valueListenable: playback.currentTrack,
+    builder: (context, track, _) {
+      if (track == null) return const SizedBox.shrink();
+      if (playback.adPlaying.value) {
+        return Container(
+          margin: const EdgeInsets.fromLTRB(10, 8, 10, 2),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF2B2418), Color(0xFF171B20)]),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF6B5735)),
+          ),
+          child: const Row(children: [
+            Icon(Icons.campaign_rounded, color: Color(0xFFE3BD70), size: 19),
+            SizedBox(width: 10),
+            Expanded(child: Text('HIGH-TECH PROMOTION  ·  SPONSORED AUDIO',
+              style: TextStyle(color: Color(0xFFE8D9B8), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: .7))),
+            Icon(Icons.graphic_eq_rounded, color: Color(0xFFE3BD70), size: 18),
+          ]),
+        );
+      }
+      return Container(
+        margin: const EdgeInsets.fromLTRB(10, 7, 10, 2),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(begin: Alignment.centerLeft, end: Alignment.centerRight,
+            colors: [Color(0xFF1C2832), Color(0xFF121923)]),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: const Color(0xFF405464)),
+          boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 12, offset: Offset(0, 4))],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(15),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FullPlayerPage())),
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal:9,vertical:5),child:Row(children:[
+              ClipRRect(borderRadius: BorderRadius.circular(9),
+                child: SizedBox(width:40,height:40,child:MediaCover(url:track['cover_url']?.toString(),height:40))),
+              const SizedBox(width:10),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+                Text((track['title']??'High-Tech Player').toString(),maxLines:1,overflow:TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+                Text((track['artist']??'').toString(),style:const TextStyle(color:Color(0xFF9EADB8),fontSize:10),maxLines:1),
+              ])),
+              StreamBuilder<PlayerState>(stream:player.playerStateStream,builder:(context,s){
+                final playing=s.data?.playing??false;
+                return IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: playing ? 'Pause' : 'Play',
+                  onPressed:()=>playing?player.pause():player.play(),
+                  icon:Icon(playing?Icons.pause_rounded:Icons.play_arrow_rounded,color:const Color(0xFFE3BD70),size:24));
+              }),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: 'Next track',
+                onPressed:()=>playback.next(),
+                icon:const Icon(Icons.skip_next_rounded,color:Color(0xFFB9C7D1))),
+            ])),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class FullPlayerPage extends StatelessWidget {
+  const FullPlayerPage({super.key});
+
+  String _time(Duration value) {
+    final hours = value.inHours;
+    final minutes = value.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = value.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
+  }
+
+  Future<void> _seekBy(Duration delta) async {
+    final duration = player.duration ?? Duration.zero;
+    final target = player.position + delta;
+    final clamped = target < Duration.zero
+        ? Duration.zero
+        : target > duration
+            ? duration
+            : target;
+    await player.seek(clamped);
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('NOW PLAYING', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+      actions: [
+        IconButton(
+          tooltip: 'Playback queue',
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QueuePage())),
+          icon: const Icon(Icons.queue_music_rounded, color: Color(0xFFE3BD70)),
+        ),
+      ],
+    ),
+    body: Stack(children: [
+      const Positioned.fill(child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF17130D), Color(0xFF0B1118), Color(0xFF07090D)],
+          ),
+        ),
+      )),
+      ValueListenableBuilder<bool>(
+      valueListenable: playback.adPlaying,
+      builder: (context, isAd, _) {
+        if (isAd) {
+          return Center(child: Container(
+            margin: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(26),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFF302719), Color(0xFF111923)]),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(color: const Color(0xFF80653A)),
+            ),
+            child: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.campaign_rounded, size: 58, color: Color(0xFFE3BD70)),
+                SizedBox(height: 18),
+                Text('HIGH-TECH PROMOTION',
+                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
+                SizedBox(height: 8),
+                Text('Please listen until the sponsored audio finishes.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Color(0xFFB6C1CA), fontSize: 12)),
+                SizedBox(height: 20),
+                CircularProgressIndicator(color: Color(0xFFE3BD70)),
+              ],
+            ),
+          ));
+        }
+        return ValueListenableBuilder<Map<String,dynamic>?>(
+          valueListenable: playback.currentTrack,
+          builder: (context, track, _) => track == null
+            ? const Notice('Choose a track to start listening.')
+            : LayoutBuilder(
+              builder: (context, constraints) {
+                final artworkSize = (constraints.maxWidth - 56).clamp(150.0, 280.0).toDouble();
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight - 46),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('HIGH-TECH AUDIO EXPERIENCE',
+                          style: TextStyle(color: Color(0xFFE3BD70), fontSize: 8,
+                            fontWeight: FontWeight.w900, letterSpacing: 1.8)),
+                        const SizedBox(height: 13),
+                        Container(
+                          width: artworkSize + 8,
+                          height: artworkSize + 8,
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            gradient: const SweepGradient(colors: [
+                              Color(0xFF77572C), Color(0xFFE5C477),
+                              Color(0xFF587D91), Color(0xFF77572C),
+                            ]),
+                            borderRadius: BorderRadius.circular(27),
+                            boxShadow: const [
+                              BoxShadow(color: Color(0x553D2C08), blurRadius: 30, spreadRadius: 2),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(23),
+                            child: MediaCover(url: track['cover_url']?.toString(), height: artworkSize),
+                          ),
+                        ),
+                        const SizedBox(height: 23),
+                        Text((track['title'] ?? 'Now playing').toString(),
+                          style: const TextStyle(fontSize: 24, height: 1.15,
+                            fontWeight: FontWeight.w900, letterSpacing: -.6),
+                          textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 7),
+                        Text((track['artist'] ?? 'High-Tech Entertainment').toString(),
+                          style: const TextStyle(color: Color(0xFFAFBBC5), fontSize: 13),
+                          textAlign: TextAlign.center),
+                        ValueListenableBuilder<String?>(
+                          valueListenable: playback.playbackError,
+                          builder: (context, error, _) => error == null
+                            ? const SizedBox(height: 10)
+                            : Padding(padding: const EdgeInsets.only(top: 10),
+                              child: Text(error, textAlign: TextAlign.center,
+                                style: const TextStyle(color: Color(0xFFFFAAA4), fontSize: 12))),
+                        ),
+                        StreamBuilder<Duration>(
+                          stream: player.positionStream,
+                          initialData: Duration.zero,
+                          builder: (context, positionSnapshot) {
+                            final duration = player.duration ?? Duration.zero;
+                            final position = positionSnapshot.data ?? Duration.zero;
+                            final maxMs = duration.inMilliseconds;
+                            final currentMs = maxMs <= 0
+                                ? 0.0
+                                : position.inMilliseconds.clamp(0, maxMs).toDouble();
+                            return Column(children: [
+                              Slider(
+                                value: currentMs,
+                                max: maxMs <= 0 ? 1.0 : maxMs.toDouble(),
+                                onChanged: maxMs <= 0
+                                    ? null
+                                    : (value) => player.seek(Duration(milliseconds: value.round())),
+                              ),
+                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(_time(position), style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                                  Text(_time(duration), style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                                ]),
+                            ]);
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            IconButton(
+                              tooltip: 'Shuffle',
+                              onPressed: () => playback.toggleShuffle(),
+                              icon: Icon(playback.shuffle ? Icons.shuffle_on : Icons.shuffle,
+                                color: playback.shuffle ? const Color(0xFFD4AF37) : null),
+                            ),
+                            IconButton(
+                              tooltip: 'Back 10 seconds',
+                              onPressed: () => _seekBy(const Duration(seconds: -10)),
+                              icon: const Icon(Icons.replay_10),
+                            ),
+                            IconButton(
+                              tooltip: 'Previous track',
+                              iconSize: 38,
+                              onPressed: () => playback.previous(),
+                              icon: const Icon(Icons.skip_previous),
+                            ),
+                            StreamBuilder<PlayerState>(
+                              stream: player.playerStateStream,
+                              builder: (context, snapshot) {
+                                final playing = snapshot.data?.playing ?? false;
+                                return IconButton(
+                                  tooltip: playing ? 'Pause' : 'Play',
+                                  iconSize: 66,
+                                  color: const Color(0xFFD4AF37),
+                                  onPressed: () => playing ? player.pause() : player.play(),
+                                  icon: Icon(playing ? Icons.pause_circle_filled : Icons.play_circle_fill),
+                                );
+                              },
+                            ),
+                            IconButton(
+                              tooltip: 'Next track',
+                              iconSize: 38,
+                              onPressed: () => playback.next(),
+                              icon: const Icon(Icons.skip_next),
+                            ),
+                            IconButton(
+                              tooltip: 'Forward 10 seconds',
+                              onPressed: () => _seekBy(const Duration(seconds: 10)),
+                              icon: const Icon(Icons.forward_10),
+                            ),
+                            StreamBuilder<LoopMode>(
+                              stream: player.loopModeStream,
+                              initialData: LoopMode.off,
+                              builder: (context, snapshot) {
+                                final repeating = snapshot.data == LoopMode.one;
+                                return IconButton(
+                                  tooltip: repeating ? 'Turn repeat off' : 'Repeat this track',
+                                  onPressed: () => playback.setRepeat(!repeating),
+                                  icon: Icon(Icons.repeat_one,
+                                    color: repeating ? const Color(0xFFD4AF37) : null),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.speed, size: 18, color: Color(0xFFD9B96E)),
+                            const SizedBox(width: 8),
+                            const Text('Playback speed'),
+                            const SizedBox(width: 10),
+                            PopupMenuButton<double>(
+                              tooltip: 'Choose audio playback speed',
+                              onSelected: (speed) => player.setSpeed(speed),
+                              itemBuilder: (_) => [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+                                  .map((speed) => PopupMenuItem<double>(
+                                    value: speed,
+                                    child: Text(speed == 1.0 ? 'Normal (1×)' : '$speed×'),
+                                  )).toList(),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: const Color(0xFFD9B96E)),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text('Change', style: TextStyle(color: Color(0xFFD9B96E))),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        const Text('Quality Sound, Global Vibes',
+                          style: TextStyle(color: Colors.white54, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+        );
+      },
+      ),
+    ]),
+  );
+}
+
+class QueuePage extends StatelessWidget {
+  const QueuePage({super.key});
+  @override
+  Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:const Text('Up next')),
+    body:ValueListenableBuilder<List<Map<String,dynamic>>>(valueListenable:playback.queueView,builder:(context,items,_)=>items.isEmpty?const Notice('Your queue is empty.'):ListView.builder(itemCount:items.length,itemBuilder:(context,i){
+      final item=items[i];
+      return ListTile(leading:SizedBox(width:48,height:48,child:MediaCover(url:item['cover_url']?.toString(),height:48)),title:Text((item['title']??'Track').toString()),subtitle:Text((item['artist']??'').toString()),onTap:()=>playback.playTrack(item,items));
+    })),
+  );
+}
+
+class VideosTab extends StatelessWidget {
+  const VideosTab({super.key});
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    const Brand(),
+    const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Videos', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)))),
+    Expanded(child: RetryFutureBuilder<List<Map<String, dynamic>>>(
+      future: () => rows('videos', 'created_at'),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
+        if (!snapshot.hasData) return const Busy();
+        final items = snapshot.data!;
+        if (items.isEmpty) return const Notice('Published videos will appear here.');
+        return ListView.builder(
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            return Card(child: ListTile(
+              leading: SizedBox(width: 62, height: 55, child: MediaCover(url: item['thumbnail_url']?.toString(), height: 55)),
+              title: Text((item['title'] ?? 'Video').toString()),
+              subtitle: Text((item['artist'] ?? 'High-Tech Entertainment').toString()),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: 'Download video for offline viewing',
+                    icon: const Icon(Icons.download_for_offline_outlined, color: Color(0xFFD4AF37)),
+                    onPressed: () async {
+                      try {
+                        final raw = (item['video_url'] ?? '').toString().trim();
+                        final uri = Uri.tryParse(raw);
+                        final isDirect = uri != null &&
+                            (uri.scheme == 'https' || uri.scheme == 'http') &&
+                            uri.host.isNotEmpty &&
+                            !raw.contains('youtube.com') &&
+                            !raw.contains('youtu.be') &&
+                            !raw.contains('vimeo.com');
+                        if (!isDirect) {
+                          throw StateError('Only direct video-file links can be downloaded. YouTube and Vimeo must be watched online.');
+                        }
+                        await downloadRemoteMedia(
+                          url: raw,
+                          title: (item['title'] ?? 'High-Tech video').toString(),
+                          kind: 'mp4',
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Video saved to your Offline media library.')),
+                          );
+                        }
+                      } catch (error) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(friendlyErrorMessage(error))),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                  const Icon(Icons.open_in_new, color: Color(0xFFD4AF37)),
+                ],
+              ),
+              onTap: () async {
+                final raw=(item['video_url']??'').toString();
+                final link=Uri.tryParse(raw);
+                if(link==null||!link.hasScheme)return;
+                final isWebVideo=raw.contains('youtube.com')||raw.contains('youtu.be')||raw.contains('vimeo.com');
+                if(isWebVideo){await launchUrl(link,mode:LaunchMode.externalApplication);return;}
+                if(context.mounted) Navigator.push(context,MaterialPageRoute(builder:(_)=>HteVideoPlayerPage(url:raw,title:(item['title']??'Video').toString())));
+              },
+            ));
+          },
+        );
+      },
+    )),
+  ]);
+}
+
+class MediaCover extends StatelessWidget {
+  const MediaCover({super.key, this.url, this.height = 100});
+  final String? url;
+  final double height;
+  @override
+  Widget build(BuildContext context) {
+    if (url == null || !url!.startsWith('http')) {
+      return Container(height: height, color: const Color(0xFF2B230F), child: const Center(child: Icon(Icons.album, color: Color(0xFFD4AF37), size: 35)));
+    }
+    return Image.network(url!, height: height, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, __, ___) =>
+      const Center(child: Icon(Icons.album, color: Color(0xFFD4AF37))));
+  }
+}
+
+
+Future<void> toggleFavourite(String id) async {
+  final user = db.auth.currentUser;
+  if (user == null) throw StateError('Sign in to save favourites.');
+  if (id.isEmpty) throw ArgumentError('This track has no valid ID.');
+  final existing = await db.from('user_favorites')
+    .select('track_id')
+    .eq('user_id', user.id)
+    .eq('track_id', id)
+    .maybeSingle();
+  if (existing == null) {
+    await db.from('user_favorites').insert({
+      'user_id': user.id,
+      'track_id': id,
+    });
+  } else {
+    await db.from('user_favorites')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('track_id', id);
+  }
+  favouritesRevision.value++;
+}
+
+class DiscoverTab extends StatefulWidget {
+  const DiscoverTab({super.key});
+  @override
+  State<DiscoverTab> createState() => _DiscoverTabState();
+}
+class _DiscoverTabState extends State<DiscoverTab> {
+  final controller = TextEditingController();
+  List<Map<String,dynamic>> results = [];
+  bool loading = true;
+  String? error;
+  @override
+  void initState() { super.initState(); search(''); }
+  Future<void> search(String term) async {
+    setState(() { loading = true; error = null; });
+    try {
+      results = await publishedTracks(term);
+    } catch (e) { error = friendlyErrorMessage(e); }
+    if (mounted) setState(() => loading = false);
+  }
+  @override
+  void dispose() { controller.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    const Brand(tagline: 'FIND YOUR NEXT FREQUENCY'),
+    Padding(
+      padding: const EdgeInsets.fromLTRB(19, 2, 19, 13),
+      child: Row(children: [
+        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Discover sound.', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900, letterSpacing: -.7)),
+          SizedBox(height: 4),
+          Text('Search the official High-Tech catalogue.', style: TextStyle(color: Color(0xFF8D9AA6), fontSize: 11)),
+        ])),
+        Container(width: 39, height: 39,
+          decoration: BoxDecoration(color: const Color(0xFF17232C), borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: const Color(0xFF344B5A))),
+          child: const Icon(Icons.graphic_eq_rounded, color: Color(0xFFE3BD70), size: 20)),
+      ]),
+    ),
+    Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: TextField(
+        controller: controller,
+        onChanged: search,
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFFE3BD70)),
+          hintText: 'Search tracks by title',
+          filled: true,
+          fillColor: const Color(0xFF111923),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF34404D))),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF34404D))),
+        ),
+      ),
+    ),
+    const Padding(
+      padding: EdgeInsets.fromLTRB(20, 15, 20, 5),
+      child: Align(alignment: Alignment.centerLeft,
+        child: Text('AVAILABLE TO PLAY', style: TextStyle(color: Color(0xFFE3BD70), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.4))),
+    ),
+    Expanded(child: loading ? const Busy() : error != null ? Notice(friendlyErrorMessage(error!)) : TrackList(items: results)),
+  ]);
+}
+
+class SavedTab extends StatefulWidget {
+  const SavedTab({super.key});
+  @override
+  State<SavedTab> createState() => _SavedTabState();
+}
+class _SavedTabState extends State<SavedTab> {
+  List<Map<String,dynamic>> saved = [];
+  bool loading = true;
+  @override
+  void initState() {
+    super.initState();
+    favouritesRevision.addListener(load);
+    load();
+  }
+  @override
+  void dispose() {
+    favouritesRevision.removeListener(load);
+    super.dispose();
+  }
+  Future<void> load() async {
+    if (mounted) setState(() => loading = true);
+    try {
+      final user = db.auth.currentUser;
+      if (user == null) {
+        saved = [];
+      } else {
+        final favouriteRows = await db.from('user_favorites')
+          .select('track_id')
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+        final ids = favouriteRows
+          .map((row) => row['track_id'].toString())
+          .toList();
+        if (ids.isEmpty) {
+          saved = [];
+        } else {
+          final tracks = await db.from('tracks')
+            .select()
+            .eq('is_published', true)
+            .inFilter('id', ids);
+          final byId = {
+            for (final track in tracks) track['id'].toString(): Map<String, dynamic>.from(track),
+          };
+          saved = ids.where(byId.containsKey).map((id) => byId[id]!).toList();
+        }
+      }
+    } catch (error) {
+      saved = [];
+      debugPrint('Could not load synced favourites: $error');
+    }
+    if (mounted) setState(() => loading = false);
+  }
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    const Brand(),
+    const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Your favourites', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)))),
+    Expanded(child: loading ? const Busy() : saved.isEmpty ? const Notice('No saved tracks yet. Tap the heart beside a track to add it here.') : TrackList(items: saved)),
+  ]);
+}
+
+class ReleasesTab extends StatelessWidget {
+  const ReleasesTab({super.key});
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    const Brand(tagline: 'OFFICIAL RELEASES'),
+    Padding(
+      padding: const EdgeInsets.fromLTRB(19, 3, 19, 13),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(17),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFF33291B), Color(0xFF151C24)]),
+          borderRadius: BorderRadius.circular(19),
+          border: Border.all(color: const Color(0xFF6C5736)),
+        ),
+        child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('THE RELEASE VAULT', style: TextStyle(color: Color(0xFFE5C47C), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.7)),
+          SizedBox(height: 7),
+          Text('Every drop.\nOne destination.', style: TextStyle(fontSize: 22, height: 1.08, fontWeight: FontWeight.w900)),
+          SizedBox(height: 6),
+          Text('Official music and projects from the High-Tech family.', style: TextStyle(color: Color(0xFFB0BAC2), fontSize: 10)),
+        ]),
+      ),
+    ),
+    const Expanded(child: ReleaseList()),
+  ]);
+}
+
+class LibraryTab extends StatelessWidget {
+  const LibraryTab({super.key});
+  @override
+  Widget build(BuildContext context) => DefaultTabController(
+    length: 3,
+    child: Column(children: [
+      const Brand(tagline: 'YOUR PERSONAL SOUNDSPACE'),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(19, 1, 19, 12),
+        child: Align(alignment: Alignment.centerLeft,
+          child: Text('Your collection', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -.6))),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Container(
+          decoration: BoxDecoration(color: const Color(0xFF111923), borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: const Color(0xFF34404D))),
+          child: const TabBar(
+            dividerColor: Colors.transparent,
+            indicatorSize: TabBarIndicatorSize.tab,
+            indicator: BoxDecoration(
+              gradient: LinearGradient(colors: [Color(0xFF5B4728), Color(0xFF30281C)]),
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+              border: Border.fromBorderSide(BorderSide(color: Color(0xFFB18B4C))),
+            ),
+            labelColor: Color(0xFFF0D18B),
+            unselectedLabelColor: Color(0xFF8C9AA6),
+            labelStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+            tabs:[Tab(text:'Saved'), Tab(text:'Playlists'), Tab(text:'On device')],
+          ),
+        ),
+      ),
+      const SizedBox(height: 8),
+      const Expanded(child:TabBarView(children:[
+        SavedTab(),
+        PlaylistsTab(),
+        LocalFilesTab(),
+      ])),
+    ]),
+  );
+}
+
+class PlaylistsTab extends StatefulWidget {
+  const PlaylistsTab({super.key});
+  @override
+  State<PlaylistsTab> createState() => _PlaylistsTabState();
+}
+class _PlaylistsTabState extends State<PlaylistsTab> {
+  List<Map<String,dynamic>> items=[];
+  bool loading=true;
+  @override
+  void initState(){super.initState();load();}
+  Future<void> load() async {
+    setState(()=>loading=true);
+    try {
+      final user=db.auth.currentUser;
+      if(user==null){items=[];} else {
+        final data=await db.from('playlists').select().eq('user_id',user.id).order('created_at',ascending:false);
+        items=List<Map<String,dynamic>>.from(data);
+      }
+    } catch(e){debugPrint('Playlist load failed: $e');}
+    if(mounted)setState(()=>loading=false);
+  }
+  Future<void> create() async {
+    final controller=TextEditingController();
+    final name=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('New playlist'),
+      content:TextField(controller:controller,autofocus:true,maxLength:100,decoration:const InputDecoration(labelText:'Playlist name')),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
+        FilledButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),child:const Text('Create'))],
+    ));
+    if(!mounted){controller.dispose();return;}
+    controller.dispose();
+    if(name==null||name.isEmpty)return;
+    final user=db.auth.currentUser;
+    if(user==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sign in to create playlists.')));return;}
+    try {await db.from('playlists').insert({'user_id':user.id,'name':name});await load();}
+    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
+  }
+  @override
+  Widget build(BuildContext context)=>loading?const Busy():Column(children:[
+    Padding(padding:const EdgeInsets.fromLTRB(16,12,16,6),child:Row(children:[
+      const Expanded(child:Text('Your playlists',style:TextStyle(fontWeight:FontWeight.w700))),
+      FilledButton.tonalIcon(onPressed:create,icon:const Icon(Icons.add),label:const Text('Create')),
+    ])),
+    Expanded(child:items.isEmpty?const Notice('Create a playlist to organise your favourite High-Tech tracks.'):
+      ListView.builder(itemCount:items.length,itemBuilder:(ctx,i){
+        final item=items[i];
+        return Card(child:ListTile(
+          leading:const CircleAvatar(backgroundColor:Color(0xFF30260E),child:Icon(Icons.queue_music,color:Color(0xFFD9B96E))),
+          title:Text((item['name']??'Playlist').toString()),
+          subtitle:Text((item['description']??'Your personal collection').toString()),
+          trailing:const Icon(Icons.chevron_right),
+          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>PlaylistDetailPage(playlist:item))),
+        ));
+      })),
+  ]);
+}
+
+class PlaylistDetailPage extends StatefulWidget {
+  const PlaylistDetailPage({super.key,required this.playlist});
+  final Map<String,dynamic> playlist;
+  @override
+  State<PlaylistDetailPage> createState()=>_PlaylistDetailPageState();
+}
+class _PlaylistDetailPageState extends State<PlaylistDetailPage>{
+  List<Map<String,dynamic>> tracks=[];
+  bool loading=true;
+  @override
+  void initState(){super.initState();load();}
+  Future<void> load() async {
+    setState(()=>loading=true);
+    try {
+      final links=await db.from('playlist_tracks').select('track_id').eq('playlist_id',widget.playlist['id']).order('position');
+      final ids=links.map((e)=>e['track_id'].toString()).toList();
+      if(ids.isEmpty){tracks=[];} else {
+        final data=await db.from('tracks').select().eq('is_published',true).inFilter('id',ids);
+        final byId={for(final row in data) row['id'].toString():Map<String,dynamic>.from(row)};
+        tracks=ids.where(byId.containsKey).map((id)=>byId[id]!).toList();
+      }
+    }catch(e){debugPrint('Playlist tracks load failed: $e');}
+    if(mounted)setState(()=>loading=false);
+  }
+  Future<void> addTracks() async {
+    try {
+      final data=await publishedTracks();
+      if(!mounted)return;
+      final selected=await showDialog<List<Map<String,dynamic>>>(context:context,builder:(ctx){
+        final chosen=<String>{};
+        return StatefulBuilder(builder:(ctx,setDialog)=>AlertDialog(
+          title:const Text('Add tracks'),
+          content:SizedBox(width:360,height:360,child:ListView(children:data.map((track){
+            final id=track['id'].toString();
+            return CheckboxListTile(value:chosen.contains(id),title:Text((track['title']??'Track').toString()),subtitle:Text((track['artist']??'').toString()),
+              onChanged:(v)=>setDialog(()=>v==true?chosen.add(id):chosen.remove(id)));
+          }).toList())),
+          actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
+            FilledButton(onPressed:()=>Navigator.pop(ctx,data.where((e)=>chosen.contains(e['id'].toString())).toList()),child:const Text('Add selected'))],
+        ));
+      });
+      if(selected==null||selected.isEmpty)return;
+      final current=await db.from('playlist_tracks').select('track_id').eq('playlist_id',widget.playlist['id']);
+      final existing=current.map((e)=>e['track_id'].toString()).toSet();
+      final fresh=selected.where((e)=>!existing.contains(e['id'].toString())).toList();
+      for(var i=0;i<fresh.length;i++){
+        await db.from('playlist_tracks').insert({'playlist_id':widget.playlist['id'],'track_id':fresh[i]['id'],'position':tracks.length+i});
+      }
+      await load();
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(friendlyErrorMessage(e))));}
+  }
+  @override
+  Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:Text((widget.playlist['name']??'Playlist').toString())),
+    body:loading?const Busy():Column(children:[
+      Padding(padding:const EdgeInsets.all(16),child:Row(children:[
+        Expanded(child:Text('${tracks.length} tracks',style:const TextStyle(color:Colors.white60))),
+        FilledButton.tonalIcon(onPressed:addTracks,icon:const Icon(Icons.add),label:const Text('Add tracks')),
+      ])),
+      Expanded(child:tracks.isEmpty?const Notice('This playlist is empty. Add tracks from the High-Tech catalogue.'):TrackList(items:tracks)),
+    ]),
+  );
+}
+
+class NotificationsPage extends StatefulWidget {
+  const NotificationsPage({super.key});
+  @override
+  State<NotificationsPage> createState() => _NotificationsPageState();
+}
+class _NotificationsPageState extends State<NotificationsPage> {
+  late Future<List<Map<String,dynamic>>> _notifications;
+  @override
+  void initState() { super.initState(); _notifications = _load(); }
+  Future<List<Map<String,dynamic>>> _load() async {
+    final user = db.auth.currentUser;
+    if (user == null) return [];
+    final rows = await db.from('app_notifications')
+      .select('id,title,body,category,created_at')
+      .or('user_id.eq.${user.id},user_id.is.null')
+      .order('created_at', ascending: false)
+      .limit(100);
+    return List<Map<String,dynamic>>.from(rows);
+  }
+  void _retry() => setState(() => _notifications = _load());
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Notifications'), actions: [
+      IconButton(tooltip: 'Refresh', onPressed: _retry, icon: const Icon(Icons.refresh)),
+    ]),
+    body: FutureBuilder<List<Map<String,dynamic>>>(
+      future: _notifications,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!), onRetry: _retry);
+        if (!snapshot.hasData) return const Busy();
+        final items = snapshot.data!;
+        if (items.isEmpty) return const Notice('You are all caught up. New release and account announcements will appear here.');
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            final category = (item['category'] ?? 'announcement').toString();
+            final date = DateTime.tryParse((item['created_at'] ?? '').toString());
+            return Card(child: ListTile(
+              leading: Icon(category == 'release' ? Icons.album_outlined : Icons.notifications_active_outlined, color: const Color(0xFFD9B96E)),
+              title: Text((item['title'] ?? 'High-Tech Entertainment').toString()),
+              subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text((item['body'] ?? '').toString()),
+                  if (date != null) ...[
+                    const SizedBox(height: 6),
+                    Text(date.toLocal().toString().split('.').first, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                  ],
+                ],
+              )),
+              isThreeLine: true,
+            ));
+          },
+        );
+      },
+    ),
+  );
+}
+
+class ProfileEditPage extends StatefulWidget {
+  const ProfileEditPage({super.key});
+  @override
+  State<ProfileEditPage> createState() => _ProfileEditPageState();
+}
+
+class _ProfileEditPageState extends State<ProfileEditPage> {
+  final _name = TextEditingController();
+  final _bio = TextEditingController();
+  final _phone = TextEditingController();
+  String _avatarUrl = '';
+  bool _loading = true;
+  bool _saving = false;
+  bool _uploadingAvatar = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _bio.dispose();
+    _phone.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    final user = db.auth.currentUser;
+    if (user == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+    try {
+      final row = await db.from('profiles')
+          .select('display_name,bio,phone,avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+      if (row != null) {
+        _name.text = (row['display_name'] ?? '').toString();
+        _bio.text = (row['bio'] ?? '').toString();
+        _phone.text = (row['phone'] ?? '').toString();
+        _avatarUrl = (row['avatar_url'] ?? '').toString();
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _persistProfile() async {
+    final user = db.auth.currentUser;
+    if (user == null) throw const AuthException('Please sign in again to update your profile.');
+    await db.from('profiles').upsert({
+      'id': user.id,
+      'display_name': _name.text.trim(),
+      'bio': _bio.text.trim(),
+      'phone': _phone.text.trim(),
+      'avatar_url': _avatarUrl,
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  String? _storedAvatarPath(String value, String userId) {
+    final uri = Uri.tryParse(value);
+    if (uri == null) return null;
+    final segments = uri.pathSegments;
+    final bucketIndex = segments.indexOf('hte-artwork');
+    if (bucketIndex < 0 || bucketIndex + 2 >= segments.length) return null;
+    final path = segments.sublist(bucketIndex + 1).join('/');
+    if (!path.startsWith('avatars/$userId/')) return null;
+    return path;
+  }
+
+  Future<void> _uploadAvatar() async {
+    if (_saving || _uploadingAvatar) return;
+    final user = db.auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to upload a profile picture.')),
+      );
+      return;
+    }
+
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp', 'avif'],
+        withData: false,
+      );
+      if (!mounted || result == null || result.files.isEmpty) return;
+      final selected = result.files.single;
+      if (selected.size <= 0 || selected.size > 5 * 1024 * 1024) {
+        throw const FormatException('Choose a profile image smaller than 5 MB.');
+      }
+      final localPath = selected.path;
+      if (localPath == null || localPath.isEmpty) {
+        throw const FormatException('The selected image could not be opened. Please choose it again.');
+      }
+      final localFile = File(localPath);
+      if (!await localFile.exists()) {
+        throw const FormatException('The selected image is no longer available on this device.');
+      }
+
+      final extension = (selected.extension ?? '').toLowerCase();
+      const mimeTypes = <String, String>{
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'webp': 'image/webp',
+        'avif': 'image/avif',
+      };
+      final mimeType = mimeTypes[extension];
+      if (mimeType == null) {
+        throw const FormatException('This image format is not supported.');
+      }
+
+      setState(() => _uploadingAvatar = true);
+      final oldPath = _storedAvatarPath(_avatarUrl, user.id);
+      final storagePath = 'avatars/${user.id}/${DateTime.now().microsecondsSinceEpoch}.$extension';
+      await db.storage.from('hte-artwork').upload(
+        storagePath,
+        localFile,
+        fileOptions: FileOptions(
+          cacheControl: '3600',
+          contentType: mimeType,
+          upsert: false,
+        ),
+      );
+      if (!mounted) {
+        try {
+          await db.storage.from('hte-artwork').remove([storagePath]);
+        } catch (cleanupError) {
+          debugPrint('Unclaimed HTE profile image cleanup skipped: $cleanupError');
+        }
+        return;
+      }
+      final publicUrl = db.storage.from('hte-artwork').getPublicUrl(storagePath);
+      setState(() => _avatarUrl = publicUrl);
+      await _persistProfile();
+
+      if (oldPath != null && oldPath != storagePath) {
+        try {
+          await db.storage.from('hte-artwork').remove([oldPath]);
+        } catch (cleanupError) {
+          debugPrint('Previous HTE profile image cleanup skipped: $cleanupError');
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Your public profile picture has been updated.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
+  }
+
+  Future<void> _save() async {
+    if (_saving || _uploadingAvatar) return;
+    setState(() => _saving = true);
+    try {
+      await _persistProfile();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('My profile')),
+    body: _loading
+        ? const Busy()
+        : ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 30),
+            children: [
+              const Brand(tagline: 'YOUR HIGH-TECH ACCOUNT'),
+              Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF33291B), Color(0xFF18232D), Color(0xFF111720)],
+                  ),
+                  borderRadius: BorderRadius.circular(23),
+                  border: Border.all(color: const Color(0xFF80663B)),
+                ),
+                child: Column(children: [
+                  Container(
+                    width: 116,
+                    height: 116,
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: SweepGradient(colors: [
+                        Color(0xFF77572C), Color(0xFFE5C477),
+                        Color(0xFF587D91), Color(0xFF77572C),
+                      ]),
+                    ),
+                    child: ClipOval(
+                      child: _avatarUrl.isEmpty
+                          ? Container(
+                              color: const Color(0xFF101720),
+                              child: const Icon(Icons.person_rounded, size: 58, color: Color(0xFFE3BD70)),
+                            )
+                          : Image.network(
+                              _avatarUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                color: const Color(0xFF101720),
+                                child: const Icon(Icons.person_rounded, size: 58, color: Color(0xFFE3BD70)),
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 13),
+                  Text(
+                    _name.text.trim().isEmpty ? 'Your High-Tech profile' : _name.text.trim(),
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'PUBLIC PROFILE PHOTO · PRIVATE ACCOUNT DETAILS',
+                    style: TextStyle(color: Color(0xFFB4C0C9), fontSize: 8,
+                      fontWeight: FontWeight.w800, letterSpacing: 1.1),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 15),
+                  OutlinedButton.icon(
+                    onPressed: (_saving || _uploadingAvatar) ? null : _uploadAvatar,
+                    icon: _uploadingAvatar
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.add_a_photo_outlined),
+                    label: Text(_uploadingAvatar ? 'Uploading picture…' : 'Change profile picture'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFE8CB87),
+                      side: const BorderSide(color: Color(0xFF80663B)),
+                    ),
+                  ),
+                ]),
+              ),
+              const Heading('Profile information'),
+              TextField(
+                controller: _name,
+                textCapitalization: TextCapitalization.words,
+                maxLength: 80,
+                decoration: const InputDecoration(labelText: 'Display name'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _bio,
+                maxLines: 4,
+                maxLength: 500,
+                decoration: const InputDecoration(labelText: 'About you'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                maxLength: 30,
+                decoration: const InputDecoration(labelText: 'Phone number (optional)'),
+              ),
+              const SizedBox(height: 18),
+              FilledButton(
+                onPressed: (_saving || _uploadingAvatar) ? null : _save,
+                child: _saving
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Save profile'),
+              ),
+            ],
+          ),
+  );
+}
+
+class AccountTab extends StatefulWidget {
+  const AccountTab({super.key, this.embedded = false});
+  final bool embedded;
+  @override
+  State<AccountTab> createState() => _AccountTabState();
+}
+
+class _AccountTabState extends State<AccountTab> {
+  final email = TextEditingController();
+  final password = TextEditingController();
+  bool signup = false;
+  bool busy = false;
+
+  @override
+  void dispose() { email.dispose(); password.dispose(); super.dispose(); } 
+  Future<void> authenticate() async {
+    if (busy) return;
+    final address = email.text.trim();
+    if (address.isEmpty || !isValidEmailAddress(address)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid email address to continue.')),
+      );
+      return;
+    }
+    if (password.text.isEmpty || (signup && password.text.length < 8)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(signup
+          ? 'Choose a password with at least 8 characters.'
+          : 'Enter your password to sign in.')),
+      );
+      return;
+    }
+    setState(() => busy = true);
+    try {
+      if (signup) {
+        await db.auth.signUp(email: address, password: password.text);
+      } else {
+        await db.auth.signInWithPassword(email: address, password: password.text);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Authentication request completed. Check your email if confirmation is enabled.'),
+        ));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> requestPasswordReset() async {
+    final address = email.text.trim();
+    if (address.isEmpty || !isValidEmailAddress(address)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter your account email address first.')),
+      );
+      return;
+    }
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      await db.auth.resetPasswordForEmail(address, redirectTo: authRedirect);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('If this email belongs to an account, a password reset link has been sent. Open it on this device.'),
+          duration: Duration(seconds: 6),
+        ));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> signInWithGoogle() async {
+    setState(() => busy = true);
+    try {
+      if (googleWebClientId.trim().isNotEmpty) {
+        final google = GoogleSignIn.instance;
+        if (!_googleSignInInitialized) {
+          await google.initialize(serverClientId: googleWebClientId.trim());
+          _googleSignInInitialized = true;
+        }
+        final account = await google.authenticate();
+        final authorization = await account.authorizationClient
+                .authorizationForScopes(const ['email', 'profile']) ??
+            await account.authorizationClient
+                .authorizeScopes(const ['email', 'profile']);
+        final idToken = account.authentication.idToken;
+        if (idToken == null) {
+          throw const AuthException('Google did not return an identity token. Check the Web OAuth client ID.');
+        }
+        await db.auth.signInWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: idToken,
+          accessToken: authorization.accessToken,
+        );
+      } else {
+        // Keep Google sign-in available when the native Web client ID has not
+        // yet been supplied. Supabase completes OAuth and returns to this app
+        // through the configured login-callback deep link.
+        await db.auth.signInWithOAuth(
+          OAuthProvider.google,
+          redirectTo: authRedirect,
+          authScreenLaunchMode: LaunchMode.externalApplication,
+        );
+      }
+    } on AuthException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> signInWithProvider(OAuthProvider provider, String label) async {
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      await db.auth.signInWithOAuth(
+        provider,
+        redirectTo: authRedirect,
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
+    } on AuthException catch (error) {
+      final message = error.message.toLowerCase();
+      final friendly = message.contains('provider is not enabled') || message.contains('unsupported provider')
+          ? '$label sign-in is not enabled yet. The provider must first be configured in Supabase Auth.'
+          : friendlyErrorMessage(error);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendly)));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = db.auth.currentUser;
+    final content = <Widget>[
+      if (user != null) ...[
+        const Brand(),
+        Card(child: ListTile(
+          leading: const Icon(Icons.account_circle_outlined, color: Color(0xFFD4AF37)),
+          title: const Text('My profile'),
+          subtitle: const Text('Edit your display name and account details'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileEditPage())),
+        )),
+        Card(child: ListTile(
+          leading: const Icon(Icons.settings_outlined, color: Color(0xFFD4AF37)),
+          title: const Text('App settings'),
+          subtitle: const Text('Updates, app information and support'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsPage())),
+        )),
+        Card(child: ListTile(
+          leading: const Icon(Icons.notifications_none, color: Color(0xFFD4AF37)),
+          title: const Text('Notifications'),
+          subtitle: const Text('Release and account updates'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsPage())),
+        )),
+      ] else ...[
+        const SizedBox(height: 8),
+      ],
+      if (user != null && user.id == 'b268df9e-eff5-43b9-a38f-869b33add38b') ...[
+        Card(child: ListTile(
+          leading: const Icon(Icons.admin_panel_settings_outlined, color: Color(0xFFD9B96E), size: 28),
+          title: const Text('HT Admin — Founder Studio', style: TextStyle(fontWeight: FontWeight.w700)),
+          subtitle: const Text('Private catalogue, uploads, artists and releases'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminStudioPage())),
+        )),
+      ],
+      if (user != null) ...[
+        const Icon(Icons.account_circle, color: Color(0xFFD4AF37), size: 80),
+        Center(child: Text(user.email ?? 'Signed in')),
+        const SizedBox(height: 18),
+        FilledButton(onPressed: () async { await db.auth.signOut(); if (mounted) setState(() {}); }, child: const Text('Sign out')),
+        TextButton.icon(
+          onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html'), mode: LaunchMode.externalApplication),
+          icon: const Icon(Icons.privacy_tip_outlined),
+          label: const Text('Privacy policy & account deletion'),
+        ),
+      ] else ...[
+        const Text('Your account', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: busy ? null : signInWithGoogle,
+          icon: const Icon(Icons.g_mobiledata, size: 28),
+          label: const Text('Continue with Google'),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(50),
+            side: const BorderSide(color: Color(0xFFD4AF37)),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(child: OutlinedButton.icon(
+            onPressed: busy ? null : () => signInWithProvider(OAuthProvider.facebook, 'Facebook'),
+            icon: const Icon(Icons.facebook),
+            label: const Text('Facebook'),
+          )),
+          const SizedBox(width: 10),
+          Expanded(child: OutlinedButton.icon(
+            onPressed: busy ? null : () => signInWithProvider(OAuthProvider.twitter, 'X'),
+            icon: const Icon(Icons.alternate_email),
+            label: const Text('Continue with X'),
+          )),
+        ]),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: Row(children: [
+            Expanded(child: Divider()),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: Text('OR USE EMAIL', style: TextStyle(color: Colors.white54, fontSize: 11, letterSpacing: 1.2)),
+            ),
+            Expanded(child: Divider()),
+          ]),
+        ),
+        TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
+        const SizedBox(height: 12),
+        TextField(
+          controller: password,
+          obscureText: true,
+          autofillHints: [signup ? AutofillHints.newPassword : AutofillHints.password],
+          decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
+          onSubmitted: (_) => busy ? null : authenticate(),
+        ),
+        if (!signup) Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: busy ? null : requestPasswordReset,
+            child: const Text('Forgot password?'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        FilledButton(
+          onPressed: busy ? null : authenticate,
+          child: busy
+            ? const SizedBox(width: 19, height: 19, child: CircularProgressIndicator(strokeWidth: 2))
+            : Text(signup ? 'Create account' : 'Sign in'),
+        ),
+        TextButton(
+          onPressed: busy ? null : () => setState(() => signup = !signup),
+          child: Text(signup ? 'Already registered? Sign in' : 'Create a new account'),
+        ),
+        TextButton.icon(
+          onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication),
+          icon: const Icon(Icons.privacy_tip_outlined),
+          label: const Text('Privacy policy'),
+        ),
+        TextButton(
+          onPressed: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html'), mode: LaunchMode.externalApplication),
+          child: const Text('Request account deletion'),
+        ),
+      ],
+    ];
+    if (widget.embedded) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: content,
+      );
+    }
+    return ListView(padding: const EdgeInsets.all(20), children: content);
+  }
+}
+
+
+class SettingsPage extends StatefulWidget {
+  const SettingsPage({super.key});
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  String version = 'Loading…';
+  bool checking = false;
+  bool downloading = false;
+  double downloadProgress = 0;
+  String updateStatus = '';
+  bool autoplaySetting = true;
+  bool shuffleSetting = false;
+
+  @override
+  void initState() { super.initState(); _loadVersion(); _loadPlaybackSettings(); }
+
+  Future<void> _loadPlaybackSettings() async {
+    final prefs=await SharedPreferences.getInstance();
+    autoplaySetting=prefs.getBool('hte_autoplay')??true;
+    shuffleSetting=prefs.getBool('hte_shuffle')??false;
+    playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting; playback.audioAdsEnabled=true; playback.adEvery=HtePlayback.advertInterval;
+    if(mounted)setState((){});
+  }
+  Future<void> _savePlaybackSetting(String key,Object value) async {
+    final prefs=await SharedPreferences.getInstance();
+    if(value is bool) await prefs.setBool(key,value);
+    if(value is int) await prefs.setInt(key,value);
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (mounted) setState(() => version = info.version);
+    } catch (_) {
+      if (mounted) setState(() => version = 'Version unavailable');
+    }
+  }
+
+  List<int> _versionParts(String value) => value.replaceFirst(RegExp(r'^[vV]'), '')
+      .split('+').first.split('.')
+      .map((part) => int.tryParse(part.replaceAll(RegExp(r'[^0-9].*'), '')) ?? 0).toList();
+
+  int _compareVersions(String a, String b) {
+    final left = _versionParts(a), right = _versionParts(b);
+    for (var i = 0; i < (left.length > right.length ? left.length : right.length); i++) {
+      final x = i < left.length ? left[i] : 0, y = i < right.length ? right[i] : 0;
+      if (x != y) return x.compareTo(y);
+    }
+    return 0;
+  }
+
+  Future<void> _checkForUpdates() async {
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      _message('In-app APK updates are available on Android devices.');
+      return;
+    }
+    setState(() { checking = true; updateStatus = 'Checking for updates…'; });
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final response = await http.get(
+        Uri.https('api.github.com', '/repos/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest'),
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'High-Tech-Entertainment-App',
+          'Cache-Control': 'no-cache',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      ).timeout(const Duration(seconds: 20));
+      if (!mounted) return;
+      if (response.statusCode == 404) {
+        _message('No official app update has been published yet.');
+        return;
+      }
+      if (response.statusCode != 200) {
+        final detail = response.statusCode == 403 || response.statusCode == 429
+            ? 'GitHub is temporarily limiting update checks. Please try again in a few minutes.'
+            : 'Update service returned HTTP ${response.statusCode}. Please retry.';
+        _message(detail);
+        return;
+      }
+      final release = jsonDecode(response.body) as Map<String, dynamic>;
+      if (release['draft'] == true || release['prerelease'] == true) {
+        _message('No stable update is available yet.');
+        return;
+      }
+      final releaseTag = (release['tag_name'] ?? '').toString();
+      final isSuRelease = releaseTag.toUpperCase().endsWith('-SU');
+      final latest = releaseTag
+          .replaceFirst(RegExp(r'^[vV]'), '')
+          .replaceFirst(RegExp(r'-SU$', caseSensitive: false), '');
+      // Compare semantic version, Android build number and SU flavour separately.
+      // This catches same-version hotfixes and SU flavour upgrades reliably.
+      final installedSu = info.version.toUpperCase().contains(' SU');
+      final installedSemanticVersion = info.version.replaceFirst(
+        RegExp(r'\s+SU$', caseSensitive: false), '').trim();
+      final installedBuild = int.tryParse(info.buildNumber) ?? 0;
+      final releaseBody = (release['body'] ?? '').toString();
+      final releaseBuildMatch = RegExp(
+        r'Android build:\s*(\d+)', caseSensitive: false).firstMatch(releaseBody);
+      final latestBuild = int.tryParse(releaseBuildMatch?.group(1) ?? '') ?? 0;
+      final versionComparison = _compareVersions(latest, installedSemanticVersion);
+      final buildUpgradeAvailable = latestBuild > 0 && latestBuild > installedBuild;
+      final flavourUpgradeAvailable = isSuRelease && !installedSu;
+      final updateAvailable = versionComparison > 0 ||
+          (versionComparison == 0 && buildUpgradeAvailable) ||
+          flavourUpgradeAvailable;
+      if (latest.isEmpty || !updateAvailable) {
+        _message('You are using the latest published version ($version).');
+        return;
+      }
+      final assets = release['assets'] as List<dynamic>? ?? [];
+      Map<String, dynamic>? apk;
+      for (final raw in assets) {
+        final item = raw as Map<String, dynamic>;
+        final name = (item['name'] ?? '').toString().toLowerCase();
+        if (name.endsWith('.apk') && (name.contains('high-tech') || apk == null)) {
+          apk = item;
+          if (name == 'high-tech-entertainment.apk') break;
+        }
+      }
+      if (apk == null) {
+        _message('Version $latest is published, but its Android APK is not attached yet.');
+        return;
+      }
+      final apkUrl = (apk['browser_download_url'] ?? '').toString();
+      final expectedSize = (apk['size'] as num?)?.toInt() ?? 0;
+      final digest = (apk['digest'] ?? '').toString();
+      if (!apkUrl.startsWith('https://') || expectedSize <= 0) {
+        _message('The published APK details are incomplete. Please try again later.');
+        return;
+      }
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Update available'),
+          content: Text('High-Tech Entertainment $latest is available. You have $version installed. Download the APK now? Your account and app data will be kept.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Later')),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _downloadAndInstall(apk!, latest, expectedSize, digest);
+              },
+              child: const Text('Download update'),
+            ),
+          ],
+        ),
+      );
+    } catch (_) {
+      if (mounted) _message('Could not check for updates. Check your internet connection and try again.');
+    } finally {
+      if (mounted) setState(() { checking = false; updateStatus = ''; });
+    }
+  }
+
+  Future<void> _downloadAndInstall(
+    Map<String, dynamic> asset,
+    String latest,
+    int expectedSize,
+    String expectedDigest,
+  ) async {
+    if (downloading) return;
+    setState(() { downloading = true; downloadProgress = 0; updateStatus = 'Preparing update…'; });
+    File? apkFile;
+    try {
+      final url = (asset['browser_download_url'] ?? '').toString();
+      final client = http.Client();
+      try {
+        final request = http.Request('GET', Uri.parse(url));
+        request.headers['User-Agent'] = 'High-Tech-Entertainment-App';
+        final streamed = await client.send(request).timeout(const Duration(seconds: 45));
+        if (streamed.statusCode != 200) {
+          throw HttpException('APK download failed (HTTP ${streamed.statusCode}).');
+        }
+        final directory = await getTemporaryDirectory();
+        apkFile = File('${directory.path}/hte-update-$latest.apk');
+        if (await apkFile.exists()) await apkFile.delete();
+        final sink = apkFile.openWrite();
+        var received = 0;
+        setState(() => updateStatus = 'Downloading update…');
+        try {
+          await for (final chunk in streamed.stream) {
+            sink.add(chunk);
+            received += chunk.length;
+            if (mounted) setState(() => downloadProgress = (received / expectedSize).clamp(0.0, 1.0).toDouble());
+          }
+          await sink.flush();
+        } finally {
+          await sink.close();
+        }
+        if (received != expectedSize) {
+          throw const FormatException('The downloaded APK is incomplete. Please retry.');
+        }
+      } finally {
+        client.close();
+      }
+
+      final downloadedApk = apkFile;
+      final firstBytes = await downloadedApk.openRead(0, 4).first;
+      if (firstBytes.length < 4 || firstBytes[0] != 0x50 || firstBytes[1] != 0x4b) {
+        throw const FormatException('The downloaded file is not a valid APK archive.');
+      }
+      if (expectedDigest.startsWith('sha256:')) {
+        final actualDigest = await sha256.bind(downloadedApk.openRead()).first;
+        if (actualDigest.toString().toLowerCase() != expectedDigest.substring(7).toLowerCase()) {
+          throw const FormatException('APK integrity verification failed. The update was not opened.');
+        }
+      }
+      if (!mounted) return;
+      setState(() => updateStatus = 'Download complete. Opening Android installer…');
+      final result = await OpenFilex.open(
+        downloadedApk.path,
+        type: 'application/vnd.android.package-archive',
+      );
+      if (!mounted) return;
+      if (result.type != ResultType.done) {
+        _message('APK downloaded, but Android could not open the installer (${result.message}). Allow High-Tech Entertainment to install unknown apps in Android Settings, then try again.');
+      } else {
+        _message('Update downloaded. Follow the Android installation prompt to finish updating.');
+      }
+    } catch (error) {
+      if (mounted) _message(friendlyErrorMessage(error));
+      if (apkFile != null && await apkFile.exists()) {
+        try { await apkFile.delete(); } catch (_) {}
+      }
+    } finally {
+      if (mounted) setState(() { downloading = false; downloadProgress = 0; updateStatus = ''; });
+    }
+  }
+
+  void _message(String value) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
+
+  Widget _themeChoiceTile(
+    BuildContext sheetContext,
+    ThemeMode value,
+    String title,
+    String subtitle,
+  ) {
+    final selected = AppThemeController.mode.value == value;
+    return ListTile(
+      leading: Icon(
+        selected ? Icons.radio_button_checked : Icons.radio_button_off,
+        color: selected ? const Color(0xFFD4AF37) : null,
+      ),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      onTap: () => Navigator.pop(sheetContext, value),
+    );
+  }
+
+  Future<void> _chooseTheme() async {
+    final selected = await showModalBottomSheet<ThemeMode>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Choose your appearance',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 12),
+              _themeChoiceTile(
+                sheetContext,
+                ThemeMode.dark,
+                'High-Tech dark',
+                'Signature black with gold accents',
+              ),
+              _themeChoiceTile(
+                sheetContext,
+                ThemeMode.light,
+                'Light',
+                'Bright, clean interface',
+              ),
+              _themeChoiceTile(
+                sheetContext,
+                ThemeMode.system,
+                'System default',
+                'Follow Android appearance settings',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selected != null) {
+      await AppThemeController.setMode(selected);
+      if (mounted) setState(() {});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Settings')),
+    body: ListView(padding: const EdgeInsets.all(18), children: [
+      const Brand(tagline: 'APP PREFERENCES & INFORMATION'),
+      Container(
+        margin: const EdgeInsets.fromLTRB(2, 2, 2, 14),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF33291B), Color(0xFF18232D), Color(0xFF111720)],
+          ),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0xFF80663B)),
+        ),
+        child: Row(children: [
+          Container(width: 44, height: 44,
+            decoration: BoxDecoration(color: const Color(0xFF242A2D),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF56616A))),
+            child: const Icon(Icons.tune_rounded, color: Color(0xFFE3BD70), size: 23)),
+          const SizedBox(width: 13),
+          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('YOUR APP. YOUR SETTINGS.',
+              style: TextStyle(color: Color(0xFFE3BD70), fontSize: 8,
+                fontWeight: FontWeight.w900, letterSpacing: 1.4)),
+            SizedBox(height: 5),
+            Text('Control your experience',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+            SizedBox(height: 4),
+            Text('Personalise playback, appearance and updates.',
+              style: TextStyle(color: Color(0xFFB4C0C9), fontSize: 10)),
+          ])),
+        ]),
+      ),
+      Card(child: Column(children: [
+        ListTile(
+          leading: const Icon(Icons.palette_outlined, color: Color(0xFFD4AF37)),
+          title: const Text('Appearance & themes'),
+          subtitle: Text(switch (AppThemeController.mode.value) {
+            ThemeMode.light => 'Light theme',
+            ThemeMode.system => 'Follow device theme',
+            ThemeMode.dark => 'High-Tech dark theme',
+          }),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _chooseTheme,
+        ),
+      ])),
+      Card(child: Column(children: [
+        ListTile(
+          leading: const Icon(Icons.system_update_alt, color: Color(0xFFD4AF37)),
+          title: const Text('App updates'),
+          subtitle: Text(downloading ? updateStatus : 'Check, download and install the latest official Android version'),
+          trailing: (checking || downloading) ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.chevron_right),
+          onTap: (checking || downloading) ? null : _checkForUpdates,
+        ),
+        const Divider(height: 1),
+        ListTile(leading: const Icon(Icons.info_outline), title: const Text('App version'), subtitle: Text(version)),
+      ])),
+      if (downloading) ...[
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(updateStatus, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
+          LinearProgressIndicator(value: downloadProgress),
+          const SizedBox(height: 6),
+          Text('${(downloadProgress * 100).toStringAsFixed(0)}% downloaded', style: const TextStyle(color: Colors.white60)),
+        ]))),
+      ],
+      const SizedBox(height: 12),
+      const Heading('Playback preferences'),
+      Card(child: Column(children: [
+        SwitchListTile(title:const Text('Smart Autoplay'),subtitle:const Text('Continue with recommended music when the queue ends'),value:autoplaySetting,onChanged:(v){setState(()=>autoplaySetting=v);playback.autoplay=v;_savePlaybackSetting('hte_autoplay',v);}),
+        SwitchListTile(title:const Text('Shuffle'),subtitle:const Text('Play queued tracks in random order'),value:shuffleSetting,onChanged:(v){setState(()=>shuffleSetting=v);playback.shuffle=v;player.setShuffleModeEnabled(v);_savePlaybackSetting('hte_shuffle',v);}),
+        const ListTile(
+          leading: Icon(Icons.campaign_outlined, color: Color(0xFFD4AF37)),
+          title: Text('HT Audio Advertisements'),
+          subtitle: Text('No advert plays when the app opens or when you pause and resume. A sponsored audio advert may play only after 8 completed songs.'),
+        ),
+      ])),
+      const SizedBox(height: 12),
+      Card(child: Column(children: [
+        ListTile(leading: const Icon(Icons.language), title: const Text('High-Tech Entertainment website'), trailing: const Icon(Icons.open_in_new),
+          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/'), mode: LaunchMode.externalApplication)),
+        ListTile(leading: const Icon(Icons.privacy_tip_outlined), title: const Text('Privacy policy'), trailing: const Icon(Icons.open_in_new),
+          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html'), mode: LaunchMode.externalApplication)),
+        ListTile(leading: const Icon(Icons.delete_outline), title: const Text('Request account deletion'), trailing: const Icon(Icons.open_in_new),
+          onTap: () => launchUrl(Uri.parse('https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html'), mode: LaunchMode.externalApplication)),
+      ])),
+      const Heading('About the developer'),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text('HIGH TECHNOLOGIES', style: TextStyle(color: Color(0xFFD9B96E), fontWeight: FontWeight.w800, letterSpacing: 1.5, fontSize: 16)),
+              SizedBox(height: 12),
+              _DeveloperDetail(label: 'Product', value: 'High-Tech Entertainment'),
+              _DeveloperDetail(label: 'Founder', value: 'Suwilanji Sinkamba'),
+              _DeveloperDetail(label: 'Location', value: 'Kitwe, Zambia'),
+              SizedBox(height: 10),
+              Text('Combining innovative technology, music, entertainment and digital experiences in one platform.', style: TextStyle(color: Colors.white70, height: 1.5)),
+              SizedBox(height: 12),
+              Text('Copyright 2026 High Technologies.', style: TextStyle(color: Colors.white54, fontSize: 12)),
+            ],
+          ),
+        ),
+      ),
+      const Padding(padding: EdgeInsets.all(20), child: Text('Quality Sound, Global Vibes.\\nMusic. Beats. Production. Beyond.',
+        textAlign: TextAlign.center, style: TextStyle(color: Colors.white54))),
+    ]),
+  );
+}
+
+class _DeveloperDetail extends StatelessWidget {
+  const _DeveloperDetail({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: 82, child: Text(label, style: const TextStyle(color: Colors.white54))),
+        Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600))),
+      ],
+    ),
+  );
+}
+
+bool isSpotifyUrl(String raw) {
+  final value = raw.trim();
+  if (value.startsWith('spotify:')) return true;
+  final uri = Uri.tryParse(value);
+  final host = (uri?.host ?? '').toLowerCase();
+  return host == 'spotify.com' || host.endsWith('.spotify.com') || host == 'spotify.link';
+}
+
+String? spotifyEmbedUrl(String raw) {
+  final value = raw.trim();
+  final uri = Uri.tryParse(value);
+  String? type;
+  String? id;
+  if (value.startsWith('spotify:')) {
+    final parts = value.split(':');
+    if (parts.length == 3) {
+      type = parts[1];
+      id = parts[2];
+    }
+  } else if (uri != null && (uri.host == 'open.spotify.com' || uri.host.endsWith('.spotify.com'))) {
+    final parts = uri.pathSegments;
+    final offset = parts.isNotEmpty && parts.first == 'embed' ? 1 : 0;
+    if (parts.length > offset + 1) {
+      type = parts[offset];
+      id = parts[offset + 1];
+    }
+  }
+  const supported = {'track', 'album', 'playlist', 'episode', 'show'};
+  final validId = id != null && id.isNotEmpty && id.codeUnits.every((unit) =>
+      (unit >= 48 && unit <= 57) ||
+      (unit >= 65 && unit <= 90) ||
+      (unit >= 97 && unit <= 122));
+  if (type == null || !supported.contains(type) || !validId) return null;
+  return 'https://open.spotify.com/embed/$type/$id?utm_source=generator&theme=0';
+}
+
+bool _isPlayableTrack(Map<String, dynamic> track) {
+  final title = (track['title'] ?? '').toString().trim();
+  final audioUrl = (track['audio_url'] ?? '').toString().trim();
+  final uri = Uri.tryParse(audioUrl);
+  return title.isNotEmpty &&
+      (isSpotifyUrl(audioUrl) || (uri != null && uri.scheme == 'https' && uri.host.isNotEmpty));
+}
+
+Future<List<Map<String, dynamic>>> publishedTracks([String term = '']) async {
+  var query = db.from('tracks')
+      .select()
+      .eq('is_published', true);
+  if (term.trim().isNotEmpty) {
+    query = query.ilike('title', '%${term.trim()}%');
+  }
+  final data = await query.order('created_at', ascending: false).limit(100);
+  return List<Map<String, dynamic>>.from(data).where(_isPlayableTrack).toList();
+}
+
+Future<List<Map<String, dynamic>>> playableTracks() => publishedTracks();
+
+class SpotifyEmbedPage extends StatefulWidget {
+  const SpotifyEmbedPage({super.key, required this.title, required this.artist, required this.embedUrl});
+  final String title;
+  final String artist;
+  final String embedUrl;
+  @override
+  State<SpotifyEmbedPage> createState() => _SpotifyEmbedPageState();
+}
+
+class _SpotifyEmbedPageState extends State<SpotifyEmbedPage> {
+  late final WebViewController controller;
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF08090B))
+      ..setNavigationDelegate(NavigationDelegate(
+        onPageFinished: (_) {
+          if (mounted) setState(() => loading = false);
+        },
+      ))
+      ..loadRequest(Uri.parse(widget.embedUrl));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis)),
+    body: Column(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(widget.artist, style: const TextStyle(
+            color: Color(0xFFD9B96E), letterSpacing: 1.2, fontSize: 11, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 5),
+          const Text('Now playing on Spotify', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          const Text('Playback is provided by Spotify. Sign in to Spotify if prompted.',
+            style: TextStyle(color: Colors.white60, fontSize: 12)),
+        ]),
+      ),
+      Expanded(child: Stack(children: [
+        WebViewWidget(controller: controller),
+        if (loading) const Center(child: CircularProgressIndicator(color: Color(0xFFD9B96E))),
+      ])),
+    ]),
+  );
+}
+
+Future<List<Map<String, dynamic>>> rows(String table, String orderBy) async {
+  final result = await db.from(table).select().eq('is_published', true).order(orderBy, ascending: false);
+  return List<Map<String, dynamic>>.from(result);
+}
+
+/// A FutureBuilder with a real reload action for failed network requests.
+/// The loader is called again only when the user taps Retry.
+class RetryFutureBuilder<T> extends StatefulWidget {
+  const RetryFutureBuilder({super.key, required this.future, required this.builder});
+  final Future<T> Function() future;
+  final Widget Function(BuildContext, AsyncSnapshot<T>) builder;
+
+  @override
+  State<RetryFutureBuilder<T>> createState() => _RetryFutureBuilderState<T>();
+}
+
+class _RetryFutureBuilderState<T> extends State<RetryFutureBuilder<T>> {
+  late Future<T> _pending;
+
+  @override
+  void initState() {
+    super.initState();
+    _pending = widget.future();
+  }
+
+  void _retry() {
+    setState(() => _pending = widget.future());
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<T>(
+    future: _pending,
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return Notice(friendlyErrorMessage(snapshot.error!), onRetry: _retry);
+      }
+      return widget.builder(context, snapshot);
+    },
+  );
+}
+
+class Busy extends StatelessWidget {
+  const Busy({super.key});
+  @override
+  Widget build(BuildContext context) => const Center(
+    child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
+  );
+}
+
+class Notice extends StatelessWidget {
+  const Notice(this.message, {super.key, this.onRetry});
+  final String message;
+  final VoidCallback? onRetry;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(22),
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)),
+      if (onRetry != null) ...[
+        const SizedBox(height: 14),
+        OutlinedButton.icon(
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('Retry'),
+        ),
+      ],
+    ]),
+  );
+
+}, caseSensitive: false), '')
+          .trim();
+      final latestBuild = int.tryParse(
+        RegExp(r'Android build:\s*(\d+)', caseSensitive: false)
+            .firstMatch((release['body'] ?? '').toString())
+            ?.group(1) ?? '',
+      ) ?? 0;
+      final installedBuild = int.tryParse(info.buildNumber) ?? 0;
+      final comparison = _compareVersions(latest, installed);
+      final updateAvailable = latest.isNotEmpty &&
+          (comparison > 0 ||
+              (comparison == 0 && latestBuild > installedBuild) ||
+              (isSuRelease && !installedSu));
+      if (!updateAvailable) return;
+
+      final assets = release['assets'] as List<dynamic>? ?? [];
+      final hasApk = assets.any((raw) {
+        if (raw is! Map<String, dynamic>) return false;
+        final name = (raw['name'] ?? '').toString().toLowerCase();
+        final url = (raw['browser_download_url'] ?? '').toString();
+        final size = (raw['size'] as num?)?.toInt() ?? 0;
+        return name.endsWith('.apk') && url.startsWith('https://') && size > 0;
+      });
+      if (!hasApk || !mounted) return;
+      setState(() => _availableVersion = latest);
+    } catch (error) {
+      // Automatic update discovery is best-effort. Manual checking remains
+      // available in Settings, and an offline start must never block the app.
+      debugPrint('HTE automatic update check skipped: $error');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final version = _availableVersion;
+    if (version == null) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 15),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF3A2D1B), Color(0xFF192631)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE0B96E)),
+      ),
+      child: Row(children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: const Color(0xFF111820),
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: const Color(0xFF6B5838)),
+          ),
+          child: const Icon(Icons.system_update_alt_rounded, color: Color(0xFFE3BD70)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('UPDATE AVAILABLE · v$version',
+              style: const TextStyle(color: Color(0xFFF0D18B), fontSize: 9,
+                fontWeight: FontWeight.w900, letterSpacing: .8)),
+            const SizedBox(height: 4),
+            const Text('A new High-Tech experience is ready.',
+              style: TextStyle(color: Color(0xFFD3DDE4), fontSize: 10)),
+          ],
+        )),
+        const SizedBox(width: 8),
+        IconButton(
+          tooltip: 'Review app update',
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const SettingsPage(autoCheckForUpdates: true)),
+          ),
+          icon: const Icon(Icons.arrow_forward_rounded, color: Color(0xFFE3BD70)),
+        ),
+      ]),
+    );
+  }
+}
+
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
 
