@@ -1,6 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:high_tech_entertainment/main.dart'
-    show isValidEmailAddress, isValidPasswordPair;
+    show friendlyErrorMessage, isValidEmailAddress, isValidPasswordPair;
 
 void main() {
   group('Account input validation', () {
@@ -21,6 +23,27 @@ void main() {
       expect(isValidPasswordPair('HighTech123', 'HighTech123'), isTrue);
       expect(isValidPasswordPair('short', 'short'), isFalse);
       expect(isValidPasswordPair('HighTech123', 'HighTech124'), isFalse);
+    });
+  });
+
+  group('Safe error messages', () {
+    test('turns network failures into a friendly offline message', () {
+      final message = friendlyErrorMessage(const SocketException('Failed host lookup'));
+      expect(message, contains('No internet connection'));
+      expect(message, isNot(contains('SocketException')));
+    });
+
+    test('explains missing media without exposing raw HTTP details', () {
+      final message = friendlyErrorMessage(const HttpException('Download failed (HTTP 404).'));
+      expect(message, contains('media file is no longer available'));
+      expect(message, isNot(contains('404')));
+    });
+
+    test('explains unsupported file formats safely', () {
+      expect(
+        friendlyErrorMessage(const FormatException('raw parser detail')),
+        contains('format is not supported'),
+      );
     });
   });
 }
