@@ -2446,7 +2446,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp', 'avif'],
         withData: false,
       );
-      if (result == null || result.files.isEmpty) return;
+      if (!mounted || result == null || result.files.isEmpty) return;
       final selected = result.files.single;
       if (selected.size <= 0 || selected.size > 5 * 1024 * 1024) {
         throw const FormatException('Choose a profile image smaller than 5 MB.');
@@ -2485,6 +2485,14 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           upsert: false,
         ),
       );
+      if (!mounted) {
+        try {
+          await db.storage.from('hte-artwork').remove([storagePath]);
+        } catch (cleanupError) {
+          debugPrint('Unclaimed HTE profile image cleanup skipped: $cleanupError');
+        }
+        return;
+      }
       final publicUrl = db.storage.from('hte-artwork').getPublicUrl(storagePath);
       setState(() => _avatarUrl = publicUrl);
       await _persistProfile();
