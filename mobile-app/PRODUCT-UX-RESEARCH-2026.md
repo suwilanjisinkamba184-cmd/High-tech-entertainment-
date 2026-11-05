@@ -33,7 +33,7 @@ This is a directional synthesis of current 2025–2026 product coverage, communi
 ### Already present in the inspected Android code
 
 - Home, Discover, Releases, Library, Profile and More navigation.
-- Shared player bar, full player, seek, previous/next, shuffle, repeat and queue entry point.
+- Shared player bar, full player, seek, previous/next, shuffle, repeat and queue entry point. The track list now also exposes **Play next** and **Add to queue**, with manual priority tracks ahead of playlist/autoplay.
 - Favourites revision state, local/offline media library, downloads and media sharing.
 - Artist and release pages, video previews, Spotify embed hand-off.
 - Smart autoplay, appearance settings, startup jingle, notifications and diagnostics.
