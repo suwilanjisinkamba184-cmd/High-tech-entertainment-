@@ -279,15 +279,15 @@ jobs:
           print(f"Updated plugin Android compile SDK declarations: {len(changed)}")
           print("\n".join(changed))
           PY
-      - name: Verify native Google sign-in configuration
+      - name: Check optional native Google sign-in configuration
         env:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
         run: |
           if [ -z "$GOOGLE_WEB_CLIENT_ID" ]; then
-            echo "::error::GOOGLE_WEB_CLIENT_ID is required for native Google sign-in. Add it to repository Actions secrets before releasing."
-            exit 1
+            echo "::warning::GOOGLE_WEB_CLIENT_ID is not configured. The app will use the configured Supabase Google OAuth deep-link fallback."
+          else
+            echo "PASS: Native Google sign-in client configuration is present."
           fi
-          echo "PASS: Native Google sign-in client configuration is present."
       - name: Build signed Android APK
         working-directory: ${{ runner.temp }}/hte_app
         env:
