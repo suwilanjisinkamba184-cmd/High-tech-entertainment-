@@ -60,18 +60,10 @@ Future<bool> playStartupJingle() async {
           ? duration + const Duration(seconds: 8)
           : const Duration(seconds: 30);
 
-      // Subscribe before play() so the completed state cannot be missed.
-      final completed = _startupSoundPlayer.processingStateStream.firstWhere(
-        (state) => state == ProcessingState.completed,
-      );
-
-      // just_audio's play future completes when playback ends or is stopped.
-      // Wait for BOTH its future and the completed state: a pause/interruption
-      // must not be mistaken for a successfully finished startup jingle.
-      await Future.wait<void>([
-        _startupSoundPlayer.play(),
-        completed.then<void>((_) {}),
-      ]).timeout(
+      // just_audio's play future completes when playback ends, pauses or
+      // stops. Await it, then verify the final state so an interruption is
+      // never mistaken for a successfully completed startup jingle.
+      await _startupSoundPlayer.play().timeout(
         maxWait,
         onTimeout: () async {
           await _startupSoundPlayer.stop();
