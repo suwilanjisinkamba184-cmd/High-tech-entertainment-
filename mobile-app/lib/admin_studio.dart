@@ -509,10 +509,12 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isFounder) return Scaffold(
-      appBar: AppBar(title: const Text('HT ADMIN')),
-      body: const Center(child: _AdminEmpty('Founder authorization required. This area is private.')),
-    );
+    if (!_isFounder) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('HT ADMIN')),
+        body: const Center(child: _AdminEmpty('Founder authorization required. This area is private.')),
+      );
+    }
     return Scaffold(
       appBar:AppBar(
         backgroundColor: const Color(0xFF080D13),
