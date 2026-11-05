@@ -10,15 +10,15 @@ class HteDiagnostics {
   static String _redact(String value) {
     var result = value;
     result = result.replaceAll(
-      RegExp(r'(?i)(bearer\\s+)[A-Za-z0-9._~+/-]+=*'),
+      RegExp(r'(?i)(bearer\s+)[A-Za-z0-9._~+/-]+=*'),
       r'\$1[REDACTED]',
     );
     result = result.replaceAll(
-      RegExp(r'(?i)(apikey|api_key|access_token|refresh_token|password)(\\s*[:=]\\s*)[^\\s,;]+'),
+      RegExp(r'(?i)(apikey|api_key|access_token|refresh_token|password)(\s*[:=]\s*)[^\s,;]+'),
       r'\$1\$2[REDACTED]',
     );
     result = result.replaceAll(
-      RegExp(r'eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}'),
+      RegExp(r'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}'),
       '[REDACTED_TOKEN]',
     );
     return result.length > 12000 ? result.substring(0, 12000) : result;
