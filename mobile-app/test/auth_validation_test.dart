@@ -94,6 +94,17 @@ void main() {
         expect(counter.recordCompletion(interval: 8, enabled: true), isFalse);
       }
     });
+
+    test('restores the count safely after an app restart', () {
+      final counter = CompletedTrackAdCounter();
+      counter.restore(7);
+      expect(counter.completedTracks, 7);
+      expect(counter.recordCompletion(interval: 8, enabled: true), isTrue);
+      counter.restore(8);
+      expect(counter.completedTracks, 7);
+      counter.restore(-5);
+      expect(counter.completedTracks, 0);
+    });
   });
 
 }
