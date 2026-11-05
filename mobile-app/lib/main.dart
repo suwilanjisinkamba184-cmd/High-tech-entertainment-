@@ -3152,6 +3152,7 @@ class _SettingsPageState extends State<SettingsPage> {
   String updateStatus = '';
   bool autoplaySetting = true;
   bool shuffleSetting = false;
+  double videoSpeedSetting = 1.0;
 
   @override
   void initState() {
@@ -3169,6 +3170,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs=await SharedPreferences.getInstance();
     autoplaySetting=prefs.getBool('hte_autoplay')??true;
     shuffleSetting=prefs.getBool('hte_shuffle')??false;
+    videoSpeedSetting=prefs.getDouble('hte_video_speed')??1.0;
     playback.autoplay=autoplaySetting; playback.shuffle=shuffleSetting; playback.audioAdsEnabled=true; playback.adEvery=HtePlayback.advertInterval;
     if(mounted)setState((){});
   }
@@ -3395,6 +3397,42 @@ class _SettingsPageState extends State<SettingsPage> {
     ));
   }
 
+  Future<void> _chooseVideoSpeed() async {
+    const speeds = <double>[0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+    final selected = await showModalBottomSheet<double>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Default video playback speed',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              ),
+            ),
+            ...speeds.map((speed) => ListTile(
+              leading: Icon(
+                videoSpeedSetting == speed ? Icons.radio_button_checked : Icons.radio_button_off,
+                color: videoSpeedSetting == speed ? const Color(0xFFD4AF37) : null,
+              ),
+              title: Text(speed == 1.0 ? 'Normal (1×)' : '${speed}×'),
+              onTap: () => Navigator.pop(sheetContext, speed),
+            )),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (selected == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('hte_video_speed', selected);
+    if (mounted) setState(() => videoSpeedSetting = selected);
+  }
+
   Future<void> _clearTemporaryCache() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -3578,6 +3616,14 @@ class _SettingsPageState extends State<SettingsPage> {
       Card(child: Column(children: [
         SwitchListTile(title:const Text('Smart Autoplay'),subtitle:const Text('Continue with recommended music when the queue ends'),value:autoplaySetting,onChanged:(v){setState(()=>autoplaySetting=v);playback.autoplay=v;_savePlaybackSetting('hte_autoplay',v);}),
         SwitchListTile(title:const Text('Shuffle'),subtitle:const Text('Play queued tracks in random order'),value:shuffleSetting,onChanged:(v){setState(()=>shuffleSetting=v);playback.shuffle=v;player.setShuffleModeEnabled(v);_savePlaybackSetting('hte_shuffle',v);}),
+        ListTile(
+          leading: const Icon(Icons.slow_motion_video_outlined, color: Color(0xFFD4AF37)),
+          title: const Text('Default video playback speed'),
+          subtitle: Text(videoSpeedSetting == 1.0 ? 'Normal speed (1×)' : '${videoSpeedSetting}× speed'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _chooseVideoSpeed,
+        ),
+        const Divider(height: 1),
         const ListTile(
           leading: Icon(Icons.campaign_outlined, color: Color(0xFFD4AF37)),
           title: Text('HT Audio Advertisements'),
