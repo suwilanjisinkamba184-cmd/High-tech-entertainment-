@@ -52,7 +52,7 @@ class _HteVideoPlayerPageState extends State<HteVideoPlayerPage> {
     }
 
     try {
-      _resumeMusic = music.player.playing;
+      _resumeMusic = _resumeMusic || music.player.playing;
       if (_resumeMusic) await music.player.pause();
       if (!mounted) return;
 
