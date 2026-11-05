@@ -519,9 +519,9 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         debugPrintStack(stackTrace: stackTrace);
       }
 
-      // Prepare backend services while the launch jingle plays. The splash
-      // remains visible until both tasks finish; once the jingle completes,
-      // there is no artificial minimum display delay.
+      // Complete essential services first, then play the startup jingle.
+      // The jingle is the final startup gate: when it finishes, the app can
+      // transition immediately without an artificial minimum splash delay.
       await _initializeCoreServices();
       await _playStartupSound();
 
