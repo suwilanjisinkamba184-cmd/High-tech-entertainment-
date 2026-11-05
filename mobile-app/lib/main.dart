@@ -17,6 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'playback_engine.dart';
@@ -44,6 +45,17 @@ final AudioPlayer _startupSoundPlayer = AudioPlayer();
 /// Plays the bundled launch ident once and waits for its completion so the
 /// animated loading screen and sound finish together. This is never an advert.
 Future<bool> playStartupJingle({bool force = false}) async {
+  // Respect the listener's saved startup-sound preference. Preview playback
+  // deliberately bypasses this preference so the jingle can be tested.
+  if (!force) {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      if (!(preferences.getBool('hte_startup_sound') ?? true)) return false;
+    } catch (error) {
+      debugPrint('HTE startup sound preference could not be read; using enabled default: $error');
+    }
+  }
+
   // Retry once after a clean player reset. The startup ident has its own player
   // and must never compete with music, adverts, or the background player.
   for (var attempt = 1; attempt <= 2; attempt++) {
@@ -522,6 +534,17 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
           debugPrint('HTE background audio initialisation failed: $audioError');
           debugPrintStack(stackTrace: stackTrace);
         }
+      }
+
+      // Explicitly configure Android's shared media audio focus after the
+      // background-audio plugin has initialised. This keeps the launch ident
+      // and the music player on the same media audio policy.
+      try {
+        final audioSession = await AudioSession.instance;
+        await audioSession.configure(AudioSessionConfiguration.music());
+      } catch (sessionError, stackTrace) {
+        debugPrint('HTE media audio session configuration failed: $sessionError');
+        debugPrintStack(stackTrace: stackTrace);
       }
 
       // Keep the animated loading screen visible until BOTH the supplied
@@ -3338,6 +3361,7 @@ class _SettingsPageState extends State<SettingsPage> {
   String updateStatus = '';
   bool autoplaySetting = true;
   bool shuffleSetting = false;
+  bool startupSoundSetting = true;
   double videoSpeedSetting = 1.0;
 
   @override
@@ -3357,6 +3381,7 @@ class _SettingsPageState extends State<SettingsPage> {
       final prefs = await SharedPreferences.getInstance();
       autoplaySetting = prefs.getBool('hte_autoplay') ?? true;
       shuffleSetting = prefs.getBool('hte_shuffle') ?? false;
+      startupSoundSetting = prefs.getBool('hte_startup_sound') ?? true;
       videoSpeedSetting = prefs.getDouble('hte_video_speed') ?? 1.0;
       playback.autoplay = autoplaySetting;
       playback.shuffle = shuffleSetting;
@@ -3871,11 +3896,18 @@ class _SettingsPageState extends State<SettingsPage> {
             unawaited(_savePlaybackSetting('hte_shuffle', value));
           },
         ),
-        ListTile(
-          leading: const Icon(Icons.volume_up_outlined, color: Color(0xFFD4AF37)),
+        SwitchListTile(
+          secondary: const Icon(Icons.volume_up_outlined, color: Color(0xFFD4AF37)),
           title: const Text('Startup sound'),
-          subtitle: const Text('Enabled at every launch and synchronised with the animated loading screen'),
-          trailing: const Icon(Icons.shield_outlined, color: Color(0xFFD4AF37)),
+          subtitle: Text(startupSoundSetting
+              ? 'Play the High-Tech jingle during the animated launch screen'
+              : 'Startup jingle is turned off'),
+          value: startupSoundSetting,
+          onChanged: (value) {
+            setState(() => startupSoundSetting = value);
+            unawaited(_savePlaybackSetting('hte_startup_sound', value));
+            if (!value) unawaited(_startupSoundPlayer.stop());
+          },
         ),
         ListTile(
           leading: const Icon(Icons.volume_up_outlined, color: Color(0xFFD4AF37)),
