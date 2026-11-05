@@ -12,6 +12,16 @@ on:
       - 'mobile-app/**'
       - '.github/workflows/mobile-build.yml'
   workflow_dispatch:
+    inputs:
+      operation:
+        description: "OTA patch for Dart-only changes, or full Shorebird APK release"
+        required: true
+        type: choice
+        options:
+          - auto
+          - patch
+          - release
+        default: auto
 
 concurrency:
   group: hte-mobile-build-${{ github.ref }}
@@ -29,6 +39,420 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Setup Shorebird
+        if: github.event_name != 'pull_request'
+        uses: shorebirdtech/setup-shorebird@v1
+        with:
+          cache: true
+      - name: Select OTA operation
+        id: ota_mode
+        shell: bash
+        run: |
+          MODE="validate"
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            REQUESTED="${{ inputs.operation || 'auto' }}"
+            if [ "$REQUESTED" = "patch" ] || [ "$REQUESTED" = "release" ]; then
+              MODE="$REQUESTED"
+            elif [ ! -f mobile-app/shorebird.yaml ]; then
+              MODE="release"
+            elif [ "${{ github.event_name }}" = "push" ]; then
+              BEFORE="${{ github.event.before }}"
+              if [ -z "$BEFORE" ] || [[ "$BEFORE" =~ ^0+$ ]]; then
+                MODE="release"
+              else
+                CHANGED="$(git diff --name-only "$BEFORE" "${{ github.sha }}")"
+                if [ -n "$CHANGED" ] && ! printf '%s\n' "$CHANGED" | grep -Ev '^mobile-app/lib/.*\.dart        shell: bash
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager -print -quit 2>/dev/null)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::error::Android sdkmanager was not found under $SDK_ROOT/cmdline-tools"
+            exit 1
+          fi
+          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+          yes | "$SDKMANAGER" --licenses || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358" "cmake;3.22.1"
+      - name: Read Android app version
+        id: app_version
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          line = next(line for line in Path("mobile-app/pubspec.yaml").read_text().splitlines() if line.startswith("version:"))
+          raw_version = line.split(":", 1)[1].strip()
+          version, build = raw_version.split("+", 1) if "+" in raw_version else (raw_version, "1")
+          if not version or version.count(".") != 2 or not build.isdigit():
+              raise SystemExit("Invalid semantic app version/build number in pubspec.yaml")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("version=" + version + "\n")
+              output.write("build=" + build + "\n")
+          PY
+      - name: Create Flutter platform scaffold
+        run: |
+          flutter create --platforms=android --org com.hightechentertainment --project-name app "$RUNNER_TEMP/hte_app"
+          cp mobile-app/pubspec.yaml "$RUNNER_TEMP/hte_app/pubspec.yaml"
+          rm -rf "$RUNNER_TEMP/hte_app/lib" "$RUNNER_TEMP/hte_app/test"
+          cp -R mobile-app/lib "$RUNNER_TEMP/hte_app/lib"
+          if [ -d mobile-app/test ]; then
+            cp -R mobile-app/test "$RUNNER_TEMP/hte_app/test"
+          else
+            mkdir -p "$RUNNER_TEMP/hte_app/test"
+          fi
+          mkdir -p "$RUNNER_TEMP/hte_app/assets"
+          cp -R mobile-app/assets/. "$RUNNER_TEMP/hte_app/assets/"
+          python3 -m pip install --quiet cairosvg
+          python3 -c "import cairosvg; cairosvg.svg2png(url='$RUNNER_TEMP/hte_app/assets/high-tech-logo.svg', write_to='$RUNNER_TEMP/hte_app/assets/high-tech-logo.png', output_width=1024, output_height=1024)"
+      - name: Configure Shorebird app identity
+        if: steps.ota_mode.outputs.mode != 'validate'
+        working-directory: ${{ runner.temp }}/hte_app
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+        shell: bash
+        run: |
+          if [ -z "$SHOREBIRD_TOKEN" ]; then
+            echo "::error::SHOREBIRD_TOKEN is missing from repository Actions secrets."
+            exit 1
+          fi
+          if [ -f "$GITHUB_WORKSPACE/mobile-app/shorebird.yaml" ]; then
+            cp "$GITHUB_WORKSPACE/mobile-app/shorebird.yaml" shorebird.yaml
+            python3 - <<'PY'
+          from pathlib import Path
+          path = Path("pubspec.yaml")
+          text = path.read_text()
+          if "    - shorebird.yaml" not in text:
+              marker = "  assets:\n"
+              if marker not in text:
+                  raise SystemExit("Could not find Flutter assets section in pubspec.yaml")
+              text = text.replace(marker, marker + "    - shorebird.yaml\n", 1)
+              path.write_text(text)
+          PY
+          else
+            shorebird init --display-name "High-Tech Entertainment"
+            cp shorebird.yaml "$GITHUB_WORKSPACE/mobile-app/shorebird.yaml"
+            cp pubspec.yaml "$GITHUB_WORKSPACE/mobile-app/pubspec.yaml"
+            cd "$GITHUB_WORKSPACE"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add mobile-app/shorebird.yaml mobile-app/pubspec.yaml
+            git commit -m "Initialize Shorebird OTA updates" || true
+            git push origin "HEAD:${{ github.ref_name }}"
+            cd "$RUNNER_TEMP/hte_app"
+          fi
+      - name: Set Play Store Android identity, SDK levels and target API
+        working-directory: ${{ runner.temp }}/hte_app
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          text = manifest.read_text()
+          if 'xmlns:tools=' not in text:
+              text = text.replace('<manifest ', '<manifest xmlns:tools="http://schemas.android.com/tools" ', 1)
+          required_permissions = [
+              "android.permission.INTERNET",
+              "android.permission.WAKE_LOCK",
+              "android.permission.FOREGROUND_SERVICE",
+              "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+              "android.permission.REQUEST_INSTALL_PACKAGES",
+          ]
+          for permission in required_permissions:
+              if permission not in text:
+                  text = text.replace("<application", f'    <uses-permission android:name="{permission}" />\n    <application', 1)
+          text = re.sub(r'android:label="[^"]*"', 'android:label="High-Tech Entertainment"', text)
+          activity_pattern = r'(<activity\b(?:(?!>).)*?\bandroid:name=")[^"]+"'
+          text, activity_count = re.subn(
+              activity_pattern,
+              r'\1com.ryanheise.audioservice.AudioServiceActivity"',
+              text,
+              count=1,
+              flags=re.S,
+          )
+          if activity_count != 1 or 'android:name="com.ryanheise.audioservice.AudioServiceActivity"' not in text:
+              raise SystemExit("Could not set the required AudioServiceActivity in AndroidManifest.xml")
+          if "android:scheme=\"com.hightechentertainment.app\"" not in text:
+              intent = """<intent-filter>
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="com.hightechentertainment.app" android:host="login-callback" />
+                      </intent-filter>"""
+              text = text.replace("</activity>", intent + "\n                  </activity>", 1)
+          if 'android:name="com.ryanheise.audioservice.AudioService"' not in text:
+              components = """<service android:name="com.ryanheise.audioservice.AudioService"
+                      android:foregroundServiceType="mediaPlayback"
+                      android:exported="true" tools:ignore="Instantiatable">
+                      <intent-filter>
+                          <action android:name="android.media.browse.MediaBrowserService" />
+                      </intent-filter>
+                  </service>
+                  <receiver android:name="com.ryanheise.audioservice.MediaButtonReceiver"
+                      android:exported="true" tools:ignore="Instantiatable">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MEDIA_BUTTON" />
+                      </intent-filter>
+                  </receiver>"""
+              text = text.replace("</application>", components + "\n    </application>", 1)
+          manifest.write_text(text)
+          gradle_files = [Path("android/app/build.gradle"), Path("android/app/build.gradle.kts")]
+          found = False
+          for path in gradle_files:
+              if not path.exists():
+                  continue
+              found = True
+              text = path.read_text()
+              if path.name == "build.gradle.kts":
+                  text, min_n = re.subn(r'(?m)^(\s*minSdk\s*=\s*)[^\n]+', r'\g<1>26', text)
+                  text, compile_n = re.subn(r'(?m)^(\s*compileSdk\s*=\s*)[^\n]+', r'\g<1>36', text)
+                  text, target_n = re.subn(r'(?m)^(\s*targetSdk\s*=\s*)[^\n]+', r'\g<1>36', text)
+              else:
+                  text, min_n = re.subn(r'(?m)^(\s*minSdkVersion\s+)[^\n]+', r'\g<1>26', text)
+                  text, compile_n = re.subn(r'(?m)^(\s*compileSdkVersion?\s+)[^\n]+', r'\g<1>36', text)
+                  text, target_n = re.subn(r'(?m)^(\s*targetSdkVersion\s+)[^\n]+', r'\g<1>36', text)
+              if min_n == 0 or compile_n == 0 or target_n == 0:
+                  raise SystemExit(f"Could not configure minSdk 26, compileSdk 36 and targetSdk 36 in {path}")
+              if path.name == "build.gradle.kts" and 'create("su")' not in text:
+                  flavor = """    flavorDimensions += "edition"
+              productFlavors {
+                  create("su") { dimension = "edition"; versionNameSuffix = " SU" }
+              }
+          """
+                  text = text.replace("    buildTypes {", flavor + "    buildTypes {", 1)
+              elif path.name == "build.gradle" and "su {" not in text:
+                  flavor = """    flavorDimensions "edition"
+              productFlavors {
+                  su { dimension "edition"; versionNameSuffix " SU" }
+              }
+          """
+                  text = text.replace("    buildTypes {", flavor + "    buildTypes {", 1)
+              path.write_text(text)
+          if not found:
+              raise SystemExit("Android app Gradle build file not found")
+          PY
+          grep -R -E "minSdk|compileSdk|targetSdk" android/app/build.gradle*
+      - name: Configure Android upload-key signing
+        id: android_signing
+        working-directory: ${{ runner.temp }}/hte_app
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_STORE_PASSWORD" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hte-upload-key.p12"
+            keytool -list -keystore "$RUNNER_TEMP/hte-upload-key.p12" -storepass "$ANDROID_STORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
+            CERT_SHA256="$(keytool -list -v -keystore "$RUNNER_TEMP/hte-upload-key.p12" -storepass "$ANDROID_STORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" | awk -F': ' '/SHA256:/{print $2; exit}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+            if [ -z "$CERT_SHA256" ]; then
+              echo "::error::Could not read the upload certificate SHA-256 fingerprint."
+              exit 1
+            fi
+            echo "release_cert_sha256=$CERT_SHA256" >> "$GITHUB_OUTPUT"
+            cat > android/key.properties <<EOF
+          storePassword=$ANDROID_STORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=$RUNNER_TEMP/hte-upload-key.p12
+          EOF
+            python3 - <<'PY'
+          from pathlib import Path
+          kts = Path("android/app/build.gradle.kts")
+          groovy = Path("android/app/build.gradle")
+          if kts.exists():
+              text = kts.read_text()
+              imports = 'import java.util.Properties\nimport java.io.FileInputStream\n\nval keystoreProperties = Properties()\nval keystorePropertiesFile = rootProject.file("key.properties")\nif (keystorePropertiesFile.exists()) { keystoreProperties.load(FileInputStream(keystorePropertiesFile)) }\n\n'
+              if "val keystorePropertiesFile" not in text:
+                  text = imports + text
+              block = """    signingConfigs {
+                  create("release") {
+                      keyAlias = keystoreProperties["keyAlias"] as String
+                      keyPassword = keystoreProperties["keyPassword"] as String
+                      storeFile = file(keystoreProperties["storeFile"] as String)
+                      storePassword = keystoreProperties["storePassword"] as String
+                  }
+              }
+          """
+              if 'create("release")' not in text:
+                  text = text.replace("    buildTypes {", block + "    buildTypes {")
+              text = text.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
+              kts.write_text(text)
+          elif groovy.exists():
+              text = groovy.read_text()
+              imports = "def keystoreProperties = new Properties()\ndef keystorePropertiesFile = rootProject.file('key.properties')\nif (keystorePropertiesFile.exists()) { keystoreProperties.load(new FileInputStream(keystorePropertiesFile)) }\n\n"
+              if "keystorePropertiesFile" not in text:
+                  text = imports + text
+              block = """    signingConfigs {
+              release {
+                  keyAlias keystoreProperties['keyAlias']
+                  keyPassword keystoreProperties['keyPassword']
+                  storeFile file(keystoreProperties['storeFile'])
+                  storePassword keystoreProperties['storePassword']
+              }
+          }
+          """
+              if "signingConfigs {" not in text:
+                  text = text.replace("    buildTypes {", block + "    buildTypes {")
+              text = text.replace("signingConfig signingConfigs.debug", "signingConfig signingConfigs.release")
+              groovy.write_text(text)
+          else:
+              raise SystemExit("Android Gradle build file not found")
+          PY
+            echo "release_signing_ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::One or more required Android signing secrets are missing or empty. Add all four repository Actions secrets before building a distributable APK."
+            exit 1
+          fi
+      - name: Verify bundled startup sound and scheduled advert
+        working-directory: ${{ runner.temp }}/hte_app
+        run: |
+          for asset in assets/high-tech-startup.mp3 assets/AUD-20261103-WA0002.mp3 assets/high-tech-logo.svg; do
+            test -s "$asset" || { echo "::error::Required High-Tech asset is missing: $asset"; find assets -maxdepth 1 -type f -printf "%f %s bytes\\n"; exit 1; }
+            echo "PASS: $asset ($(stat -c%s "$asset") bytes)."
+          done
+      - name: Install dependencies and generate branded launcher icon
+        working-directory: ${{ runner.temp }}/hte_app
+        run: |
+          flutter pub get
+          dart run flutter_launcher_icons
+          flutter test
+          flutter analyze
+      - name: Align Android plugin compile SDK with API 36
+        working-directory: ${{ runner.temp }}/hte_app
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          cache = Path.home() / ".pub-cache" / "hosted" / "pub.dev"
+          if not cache.exists():
+              raise SystemExit("Pub package cache was not found.")
+          pattern = re.compile(r"(?m)^(\s*compileSdk(?:Version)?\s*(?:=\s*)?)(\d+)(\s*(?://.*)?$)")
+          changed = []
+          for gradle in cache.glob("*/android/build.gradle*"):
+              source = gradle.read_text()
+              updated, count = pattern.subn(
+                  lambda match: match.group(1) + "36" + match.group(3)
+                  if int(match.group(2)) < 36 else match.group(0),
+                  source,
+              )
+              if count and updated != source:
+                  gradle.write_text(updated)
+                  changed.append(str(gradle))
+          picker = list(cache.glob("file_picker-*/android/build.gradle*"))
+          if not picker:
+              raise SystemExit("Resolved file_picker Android Gradle file was not found.")
+          picker_text = "\n".join(path.read_text() for path in picker)
+          if re.search(r"(?m)^\s*compileSdk(?:Version)?\s*(?:=\s*)?34\b", picker_text):
+              raise SystemExit("file_picker is still configured for Android API 34.")
+          print(f"Updated plugin Android compile SDK declarations: {len(changed)}")
+          print("\n".join(changed))
+          PY
+      - name: Check optional native Google sign-in configuration
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          if [ -z "$GOOGLE_WEB_CLIENT_ID" ]; then
+            echo "::warning::GOOGLE_WEB_CLIENT_ID is not configured. The app will use the configured Supabase Google OAuth deep-link fallback."
+          else
+            echo "PASS: Native Google sign-in client configuration is present."
+          fi
+      - name: Build Shorebird release APK
+        if: steps.ota_mode.outputs.mode == 'release'
+        working-directory: ${{ runner.temp }}/hte_app
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+        run: shorebird release android --flavor su --artifact apk --target-platform android-arm,android-arm64 -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+      - name: Publish OTA patch for Dart-only changes
+        if: steps.ota_mode.outputs.mode == 'patch'
+        working-directory: ${{ runner.temp }}/hte_app
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+        run: shorebird patch android --flavor su --release-version "${{ steps.app_version.outputs.version }}+${{ steps.app_version.outputs.build }}" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+      - name: Build validation APK (pull requests only)
+        if: steps.ota_mode.outputs.mode == 'validate'
+        working-directory: ${{ runner.temp }}/hte_app
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: flutter build apk --flavor su --release --target-platform android-arm,android-arm64 --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+      - name: Verify release APK signature
+        if: steps.ota_mode.outputs.mode == 'release' || steps.ota_mode.outputs.mode == 'validate'
+        working-directory: ${{ runner.temp }}/hte_app
+        env:
+          EXPECTED_CERT_SHA256: ${{ steps.android_signing.outputs.release_cert_sha256 }}
+        shell: bash
+        run: |
+          APK="build/app/outputs/flutter-apk/app-su-release.apk"
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          if [ ! -s "$APK" ]; then
+            echo "::error::Signed APK verification executed, but no APK was produced by the build step."
+            exit 1
+          fi
+          if [ ! -x "$APKSIGNER" ]; then
+            echo "::error::Android apksigner was not installed."
+            exit 1
+          fi
+          if [ -z "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::Expected upload certificate fingerprint is missing."
+            exit 1
+          fi
+          VERIFY_OUTPUT="$("$APKSIGNER" verify --verbose --print-certs "$APK" 2>&1)" || {
+            printf '%s\n' "$VERIFY_OUTPUT"
+            echo "::error::APK signature verification failed."
+            exit 1
+          }
+          printf '%s\n' "$VERIFY_OUTPUT"
+          ACTUAL_CERT_SHA256="$(printf '%s\n' "$VERIFY_OUTPUT" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print $2; exit}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          if [ -z "$ACTUAL_CERT_SHA256" ] || [ "$ACTUAL_CERT_SHA256" != "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::APK is not signed with the configured High-Tech Entertainment upload certificate."
+            exit 1
+          fi
+          echo "PASS: APK signature is valid and matches the configured upload certificate."
+      - name: Apply official High-Tech Entertainment download filename
+        if: steps.ota_mode.outputs.mode == 'release'
+        working-directory: ${{ runner.temp }}/hte_app
+        run: |
+          APK="build/app/outputs/flutter-apk/app-su-release.apk"
+          test -s "$APK" || { echo "::error::Expected Shorebird SU APK was not found: $APK"; find build/app/outputs -maxdepth 5 -type f -print; exit 1; }
+          mv "$APK" "build/app/outputs/flutter-apk/High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU.apk"
+      - name: Upload standalone Android APK
+        if: steps.ota_mode.outputs.mode == 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU-APK
+          path: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU.apk
+          if-no-files-found: error
+          compression-level: 0
+      - name: Publish public Android APK release
+        if: github.event_name != 'pull_request' && steps.ota_mode.outputs.mode == 'release' && steps.android_signing.outputs.release_signing_ready == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.app_version.outputs.version }}-SU
+          name: High-Tech Entertainment v${{ steps.app_version.outputs.version }} SU
+          target_commitish: ${{ github.sha }}
+          body: |
+            Official High-Tech Entertainment Android SU flavour. Semantic version: ${{ steps.app_version.outputs.version }}; Android build: ${{ steps.app_version.outputs.build }}. SU identifies this build flavour.
+            Download the APK and install it on a compatible Android device.
+            This release is signed with the project's private upload key.
+          files: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU.apk
+          overwrite_files: true
+          make_latest: true
+ | grep -q .; then
+                  MODE="patch"
+                else
+                  MODE="release"
+                fi
+              fi
+            else
+              MODE="release"
+            fi
+          fi
+          if [ "$MODE" = "patch" ] && [ ! -f mobile-app/shorebird.yaml ]; then
+            echo "::error::Cannot publish an OTA patch before the first Shorebird release."
+            exit 1
+          fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "Selected OTA operation: $MODE"
       - name: Install Android 36 platform, build tools and native toolchain
         shell: bash
         run: |
