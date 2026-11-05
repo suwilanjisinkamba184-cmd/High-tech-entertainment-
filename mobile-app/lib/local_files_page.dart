@@ -23,11 +23,12 @@ Future<String> downloadRemoteMedia({
     throw const FormatException('This is not a direct downloadable media URL.');
   }
 
-  final client = HttpClient();
+  final client = HttpClient()..connectionTimeout = const Duration(seconds: 20);
+  File? outputFile;
   try {
-    final request = await client.getUrl(uri);
+    final request = await client.getUrl(uri).timeout(const Duration(seconds: 25));
     request.headers.set(HttpHeaders.acceptHeader, '*/*');
-    final response = await request.close();
+    final response = await request.close().timeout(const Duration(seconds: 45));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       await response.drain<void>();
       throw HttpException('Download failed (HTTP ${response.statusCode}).', uri: uri);
@@ -37,36 +38,86 @@ Future<String> downloadRemoteMedia({
     final mediaDirectory = Directory('${directory.path}/hte_media');
     await mediaDirectory.create(recursive: true);
 
-    var extension = uri.pathSegments.isNotEmpty
-        ? uri.pathSegments.last.split('.').last.toLowerCase()
+    final lastSegment = uri.pathSegments.isEmpty ? '' : uri.pathSegments.last;
+    final dot = lastSegment.lastIndexOf('.');
+    var extension = dot > 0 && dot < lastSegment.length - 1
+        ? lastSegment.substring(dot + 1).toLowerCase()
         : '';
-    if (!RegExp(r'^[a-z0-9]{2,5}$').hasMatch(extension)) {
-      final mime = response.headers.contentType?.mimeType ?? '';
-      extension = mime == 'video/mp4'
-          ? 'mp4'
-          : mime == 'audio/mpeg'
-              ? 'mp3'
-              : kind.toLowerCase();
+    final mime = (response.headers.contentType?.mimeType ?? '').toLowerCase();
+    const mimeExtensions = <String, String>{
+      'audio/mpeg': 'mp3',
+      'audio/mp3': 'mp3',
+      'audio/mp4': 'm4a',
+      'audio/x-m4a': 'm4a',
+      'audio/aac': 'aac',
+      'audio/wav': 'wav',
+      'audio/x-wav': 'wav',
+      'audio/ogg': 'ogg',
+      'audio/flac': 'flac',
+      'audio/opus': 'opus',
+      'audio/aiff': 'aiff',
+      'video/mp4': 'mp4',
+      'video/x-m4v': 'm4v',
+      'video/quicktime': 'mov',
+      'video/webm': 'webm',
+      'video/x-matroska': 'mkv',
+      'video/3gpp': '3gp',
+    };
+    const supportedExtensions = {
+      'mp3', 'm4a', 'aac', 'wav', 'flac', 'ogg', 'opus', 'aiff',
+      'mp4', 'm4v', 'mov', 'mkv', 'webm', '3gp',
+    };
+    if (!supportedExtensions.contains(extension)) {
+      extension = mimeExtensions[mime] ?? '';
     }
-    if (!RegExp(r'^[a-z0-9]{2,5}$').hasMatch(extension)) {
-      throw const FormatException('The downloaded media type is not supported.');
+    if (!supportedExtensions.contains(extension)) {
+      throw const FormatException('The server did not provide a supported audio or video file.');
+    }
+    if (mime == 'text/html' || mime == 'application/json') {
+      throw const FormatException('The media server returned a web page instead of a media file.');
     }
 
-    final safeTitle = title.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-    final file = File(
-      '${mediaDirectory.path}/${DateTime.now().microsecondsSinceEpoch}_$safeTitle.$extension',
+    final safeTitle = title.trim().replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+    final fileTitle = safeTitle.isEmpty ? 'high-tech-media' : safeTitle;
+    outputFile = File(
+      '${mediaDirectory.path}/${DateTime.now().microsecondsSinceEpoch}_$fileTitle.$extension',
     );
-    await response.pipe(file.openWrite());
+    final sink = outputFile.openWrite();
+    try {
+      await for (final chunk in response.timeout(const Duration(seconds: 90))) {
+        sink.add(chunk);
+      }
+      await sink.flush();
+    } catch (_) {
+      await sink.close();
+      if (await outputFile.exists()) await outputFile.delete();
+      rethrow;
+    }
+    await sink.close();
+
+    if (await outputFile.length() == 0) {
+      await outputFile.delete();
+      throw const FormatException('The downloaded media file is empty.');
+    }
 
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getStringList('hte_saved_local_media_v1') ?? [];
     saved.add(jsonEncode({
-      'path': file.path,
+      'path': outputFile.path,
       'name': '$title.$extension',
       'extension': extension,
     }));
     await prefs.setStringList('hte_saved_local_media_v1', saved);
-    return file.path;
+    return outputFile.path;
+  } catch (_) {
+    if (outputFile != null && await outputFile.exists()) {
+      try {
+        await outputFile.delete();
+      } catch (cleanupError) {
+        debugPrint('Could not remove incomplete HTE download: $cleanupError');
+      }
+    }
+    rethrow;
   } finally {
     client.close(force: true);
   }
