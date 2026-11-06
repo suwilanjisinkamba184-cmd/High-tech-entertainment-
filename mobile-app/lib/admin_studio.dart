@@ -569,6 +569,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
           _metric('Users',_metrics['Users']??0,Icons.people_alt),
           _metric('Audio ads',_metrics['Audio ads']??0,Icons.campaign_outlined),
         ]),
+        ),
         const SizedBox(height:18),FilledButton.icon(onPressed:()=>setState(()=>_section=1),icon:const Icon(Icons.upload),label:const Text('Upload new music')),
         const SizedBox(height:20),const Text('Recent catalogue',style:TextStyle(fontWeight:FontWeight.w700)),_trackRows(),
       ]);
