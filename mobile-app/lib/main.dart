@@ -476,7 +476,15 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
 
   void _setStartupProgress(double value) {
     if (!mounted) return;
-    setState(() => _startupProgress = value.clamp(0.0, 1.0));
+    setState(() => _startupProgress = value.clamp(0.0, 1.0).toDouble());
+  }
+
+  Future<void> _enforceMinimumSplashDuration() async {
+    const minimumSplash = Duration(seconds: 15);
+    final elapsed = DateTime.now().difference(_launchStartedAt);
+    if (elapsed < minimumSplash) {
+      await Future<void>.delayed(minimumSplash - elapsed);
+    }
   }
 
   /// Coalesce overlapping startup initialization requests.
