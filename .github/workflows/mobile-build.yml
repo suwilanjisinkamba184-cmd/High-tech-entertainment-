@@ -545,12 +545,14 @@ jobs:
           print(version, build)
           PY
           )
-          if [ "$OTA_BASELINE_VERSION" != "2.2.8" ] || [ "$OTA_BASELINE_BUILD" != "25" ]; then
-            echo "::error::OTA baseline must match the published app v2.2.8 SU build 25; found $OTA_BASELINE_VERSION+$OTA_BASELINE_BUILD."
+          if [ -z "$OTA_BASELINE_VERSION" ] || [ -z "$OTA_BASELINE_BUILD" ]; then
+            echo "::error::Could not resolve the exact Shorebird release version/build from pubspec.yaml."
             exit 1
           fi
-          echo "Publishing OTA patch against High-Tech Entertainment $OTA_BASELINE_VERSION SU+$OTA_BASELINE_BUILD"
-          shorebird patch android --allow-asset-diffs --flavor su --release-version "$OTA_BASELINE_VERSION SU+$OTA_BASELINE_BUILD" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+          echo "Publishing OTA patch against High-Tech Entertainment $OTA_BASELINE_VERSION+$OTA_BASELINE_BUILD (SU flavour)"
+          # Shorebird patches are Dart-only. Never bypass native-code or asset
+          # compatibility checks: those changes require a full APK release.
+          shorebird patch android --flavor su --release-version "$OTA_BASELINE_VERSION+$OTA_BASELINE_BUILD" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Build validation APK (non-release checks)
         if: steps.ota_mode.outputs.mode == 'validate'
         working-directory: ${{ runner.temp }}/hte_app
