@@ -1228,7 +1228,7 @@ class Brand extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: const Color(0xFF344B5A)),
         ),
-        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.graphic_eq_rounded, color: Color(0xFFE2BC69), size: 13),
           SizedBox(width: 5),
           Text('HT MUSIC', style: TextStyle(color: Color(0xFFC7D5DF), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: .8)),
@@ -1399,100 +1399,7 @@ class HomeTab extends StatelessWidget {
     children: [
       const Brand(),
       const AppUpdateBanner(),
-      Container(
-        margin: const EdgeInsets.fromLTRB(16, 2, 16, 18),
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: const Color(0xFF8B6B35).withValues(alpha: .8)),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [Color(0xFF292319), Color(0xFF111923), Color(0xFF090D13)],
-            stops: [0, .56, 1],
-          ),
-          boxShadow: const [
-            BoxShadow(color: Color(0x553A2A10), blurRadius: 30, offset: Offset(0, 14)),
-            BoxShadow(color: Color(0x222D536A), blurRadius: 28, offset: Offset(10, -8)),
-          ],
-        ),
-        child: Stack(children: [
-          Positioned(right: -92, top: -76,
-            child: Container(width: 290, height: 290,
-              decoration: BoxDecoration(shape: BoxShape.circle,
-                border: Border.all(color: const Color(0x44D7B66B), width: 1.1)))),
-          Positioned(right: -60, top: -43,
-            child: Container(width: 225, height: 225,
-              decoration: BoxDecoration(shape: BoxShape.circle,
-                border: Border.all(color: const Color(0x223D7894), width: 1.1)))),
-          Positioned(right: 8, top: 54,
-            child: Opacity(opacity: .12,
-              child: SvgPicture.asset('assets/high-tech-logo.svg', width: 150, height: 150))),
-          Positioned(right: 24, bottom: 34,
-            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              for (final h in [12.0, 22.0, 16.0, 34.0, 23.0, 43.0, 29.0, 18.0, 36.0, 24.0, 15.0])
-                Container(width: 3, height: h, margin: const EdgeInsets.symmetric(horizontal: 2),
-                  decoration: BoxDecoration(color: const Color(0xFFDDBB70).withValues(alpha: .58),
-                    borderRadius: BorderRadius.circular(4))),
-            ])),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 22, 22, 23),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Container(width: 7, height: 7,
-                  decoration: const BoxDecoration(color: Color(0xFF8ED2B2), shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: Color(0x668ED2B2), blurRadius: 8)])),
-                const SizedBox(width: 8),
-                const Text('THE OFFICIAL HIGH-TECH EXPERIENCE',
-                  style: TextStyle(color: Color(0xFFC6D3DC), fontSize: 8,
-                    fontWeight: FontWeight.w800, letterSpacing: 1.35)),
-                const Spacer(),
-                const Icon(Icons.auto_awesome, color: Color(0xFFE3C47D), size: 17),
-              ]),
-              const SizedBox(height: 29),
-              const Text('SOUND WITHOUT\nLIMITS.',
-                style: TextStyle(fontSize: 39, height: 1.0, fontWeight: FontWeight.w900,
-                  letterSpacing: -1.7, color: Color(0xFFF8F4E9))),
-              const SizedBox(height: 13),
-              const SizedBox(width: 270,
-                child: Text('Discover the artists, original releases and sound shaping the next wave.',
-                  style: TextStyle(color: Color(0xFFB9C4CC), height: 1.55, fontSize: 12))),
-              const SizedBox(height: 23),
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                FilledButton.icon(
-                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MusicTab())),
-                  icon: const Icon(Icons.play_arrow_rounded, size: 19),
-                  label: const Text('Explore music'),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(0, 46),
-                    padding: const EdgeInsets.symmetric(horizontal: 17),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(
-                    appBar: AppBar(title: const Text('Videos')), body: const VideosTab()))),
-                  icon: const Icon(Icons.play_circle_outline_rounded, size: 18),
-                  label: const Text('Watch visuals'),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 46),
-                    foregroundColor: const Color(0xFFD5E0E7),
-                    side: const BorderSide(color: Color(0xFF526575)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-              ]),
-              const SizedBox(height: 24),
-              Row(children: [
-                const Icon(Icons.graphic_eq_rounded, color: Color(0xFFE3C47D), size: 15),
-                const SizedBox(width: 7),
-                const Text('MUSIC  /  BEATS  /  PRODUCTION',
-                  style: TextStyle(color: Color(0xFF8799A7), fontSize: 8,
-                    fontWeight: FontWeight.w800, letterSpacing: 1.2)),
-              ]),
-            ]),
-          ),
-        ]),
-      ),
+      const HteNeoHero(),
       Padding(
         padding: const EdgeInsets.fromLTRB(19, 4, 19, 10),
         child: Row(children: [
@@ -1560,6 +1467,148 @@ class HomeTab extends StatelessWidget {
             letterSpacing: 1.2, height: 1.8)),
       ),
     ],
+  );
+}
+
+
+/// Premium NEO hero inspired by futuristic music-streaming interfaces:
+/// deep graphite surfaces, restrained gold/cyan lighting and glass-like panels.
+class HteNeoHero extends StatelessWidget {
+  const HteNeoHero({super.key});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.fromLTRB(16, 2, 16, 20),
+    clipBehavior: Clip.antiAlias,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(30),
+      border: Border.all(color: const Color(0xFF78613A).withValues(alpha: .78)),
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF18232D), Color(0xFF0C121A), Color(0xFF080B10)],
+      ),
+      boxShadow: const [
+        BoxShadow(color: Color(0x4439A7B8), blurRadius: 34, offset: Offset(12, -8)),
+        BoxShadow(color: Color(0x553A2A10), blurRadius: 28, offset: Offset(0, 14)),
+      ],
+    ),
+    child: Stack(
+      children: [
+        Positioned(right: -82, top: -92, child: Container(
+          width: 270, height: 270,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0x335CC9D8), width: 1.2),
+            boxShadow: const [BoxShadow(color: Color(0x223AB8C8), blurRadius: 36, spreadRadius: 12)],
+          ),
+        )),
+        Positioned(right: -35, top: -45, child: Container(
+          width: 180, height: 180,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0x44D7B66B), width: 1),
+          ),
+        )),
+        Positioned(right: 12, top: 52,
+          child: Opacity(opacity: .10,
+            child: SvgPicture.asset('assets/high-tech-logo.svg', width: 160, height: 160))),
+        Positioned(right: 20, bottom: 28, child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            for (final h in [12.0, 24.0, 17.0, 35.0, 22.0, 46.0, 29.0, 18.0, 38.0, 25.0, 14.0, 31.0])
+              Container(
+                width: 3, height: h,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF64C6D2).withValues(alpha: .52),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+          ],
+        )),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(21, 21, 21, 22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: const Color(0x1A62C6D2),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: const Color(0x555CC9D8)),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF7FE0C0), shape: BoxShape.circle)),
+                    SizedBox(width: 7),
+                    Text('HIGH-TECH · SOUND SYSTEM',
+                      style: TextStyle(color: Color(0xFFD2E0E5), fontSize: 8,
+                        fontWeight: FontWeight.w800, letterSpacing: 1.05)),
+                  ]),
+                ),
+                const Spacer(),
+                const Icon(Icons.auto_awesome, color: Color(0xFFE6C77D), size: 19),
+              ]),
+              const SizedBox(height: 30),
+              const Text('ENTER A NEW\nFREQUENCY.',
+                style: TextStyle(
+                  fontSize: 36, height: 1.02, fontWeight: FontWeight.w900,
+                  letterSpacing: -1.5, color: Color(0xFFF6F4ED),
+                )),
+              const SizedBox(height: 12),
+              const SizedBox(
+                width: 265,
+                child: Text(
+                  'Discover original music, artists and releases. Your sound, connected.',
+                  style: TextStyle(color: Color(0xFFB4C2CB), height: 1.55, fontSize: 12),
+                ),
+              ),
+              const SizedBox(height: 22),
+              Wrap(spacing: 9, runSpacing: 9, children: [
+                FilledButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const MusicTab())),
+                  icon: const Icon(Icons.play_arrow_rounded, size: 19),
+                  label: const Text('Explore music'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 46),
+                    padding: const EdgeInsets.symmetric(horizontal: 17),
+                    backgroundColor: const Color(0xFFE3BD70),
+                    foregroundColor: const Color(0xFF17130B),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => Scaffold(
+                      appBar: AppBar(title: const Text('Videos')),
+                      body: const VideosTab(),
+                    ))),
+                  icon: const Icon(Icons.play_circle_outline_rounded, size: 18),
+                  label: const Text('Watch visuals'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 46),
+                    foregroundColor: const Color(0xFFD8E5EA),
+                    side: const BorderSide(color: Color(0xFF527783)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 24),
+              Row(children: [
+                const Icon(Icons.graphic_eq_rounded, color: Color(0xFFE3C47D), size: 15),
+                const SizedBox(width: 7),
+                const Text('MUSIC  /  BEATS  /  PRODUCTION',
+                  style: TextStyle(color: Color(0xFF91A6B2), fontSize: 8,
+                    fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+              ]),
+            ],
+          ),
+        ),
+      ],
+    ),
   );
 }
 
