@@ -471,7 +471,7 @@ jobs:
           def icons(files, revision=None):
               found = set()
               for path in files:
-                  found.update(re.findall(r"Icons\\.([A-Za-z0-9_]+)", read_source(path, revision)))
+                  found.update(re.findall(r"Icons\.([A-Za-z0-9_]+)", read_source(path, revision)))
               return found
           current_files = sorted(str(path) for path in Path("mobile-app/lib").rglob("*.dart"))
           new_icons = sorted(icons(current_files) - icons(baseline_files, base))
