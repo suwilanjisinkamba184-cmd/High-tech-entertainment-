@@ -53,19 +53,27 @@ AudioPlayer get _startupSoundPlayer =>
 Future<bool> playStartupJingle() async {
   for (var attempt = 1; attempt <= 2; attempt++) {
     try {
-      final session = await AudioSession.instance;
-      await session.configure(AudioSessionConfiguration.music());
+      // Bound every native audio setup operation so a slow Android audio
+      // service cannot leave the splash waiting forever.
+      final session = await AudioSession.instance.timeout(
+        const Duration(seconds: 6),
+      );
+      await session.configure(AudioSessionConfiguration.music()).timeout(
+        const Duration(seconds: 6),
+      );
 
       final startupPlayer = _startupSoundPlayer;
-      await startupPlayer.stop();
-      await startupPlayer.setVolume(1.0);
-      await startupPlayer.setLoopMode(LoopMode.off);
+      await startupPlayer.stop().timeout(const Duration(seconds: 5));
+      await startupPlayer.setVolume(1.0).timeout(const Duration(seconds: 5));
+      await startupPlayer.setLoopMode(LoopMode.off).timeout(
+        const Duration(seconds: 5),
+      );
 
       // This MP3 is bundled in the APK. It is intentionally not fetched from
       // the network or executed through a WebView/JavaScript bridge.
       final duration = await startupPlayer.setAudioSource(
         AudioSource.asset('assets/high-tech-startup.mp3'),
-      );
+      ).timeout(const Duration(seconds: 12));
       final maxWait = duration != null && duration > Duration.zero
           ? duration + const Duration(seconds: 8)
           : const Duration(seconds: 30);
