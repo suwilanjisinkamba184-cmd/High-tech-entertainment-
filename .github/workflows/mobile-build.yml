@@ -535,15 +535,20 @@ jobs:
         # Flutter may regenerate the tree-shaken MaterialIcons font; compatibility checks
         # reject new glyphs and changed source assets before allowing this patch.
         run: |
-          python3 - <<'PY'
-          import os
+          # GITHUB_ENV values are only visible to later steps, not this shell.
+          # Resolve the exact full-release version into this step's environment.
+          read -r OTA_BASELINE_VERSION OTA_BASELINE_BUILD < <(python3 - <<'PY'
           from pathlib import Path
           line = next(line for line in Path("pubspec.yaml").read_text().splitlines() if line.startswith("version:"))
           version, build = line.split(":", 1)[1].strip().split("+", 1)
-          with open(os.environ["GITHUB_ENV"], "a") as env:
-              env.write(f"OTA_BASELINE_VERSION={version}\n")
-              env.write(f"OTA_BASELINE_BUILD={build}\n")
+          print(version, build)
           PY
+          )
+          if [ "$OTA_BASELINE_VERSION" != "2.2.8" ] || [ "$OTA_BASELINE_BUILD" != "25" ]; then
+            echo "::error::OTA baseline must match the published app v2.2.8 SU build 25; found $OTA_BASELINE_VERSION+$OTA_BASELINE_BUILD."
+            exit 1
+          fi
+          echo "Publishing OTA patch against High-Tech Entertainment $OTA_BASELINE_VERSION SU+$OTA_BASELINE_BUILD"
           shorebird patch android --allow-asset-diffs --flavor su --release-version "$OTA_BASELINE_VERSION SU+$OTA_BASELINE_BUILD" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Build validation APK (pull requests only)
         if: steps.ota_mode.outputs.mode == 'validate'
