@@ -495,7 +495,8 @@ jobs:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
         run: shorebird release android --flavor su --artifact apk --target-platform android-arm,android-arm64 -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Verify OTA patch asset and icon compatibility
-        if: steps.ota_mode.outputs.mode == 'patch' || steps.ota_mode.outputs.mode == 'validate'
+        # Only a publishable Dart patch needs an existing release baseline. PR validation builds a separate APK and must also support version-bump PRs.
+        if: steps.ota_mode.outputs.mode == 'patch'
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
