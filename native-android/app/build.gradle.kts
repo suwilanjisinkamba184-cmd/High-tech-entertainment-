@@ -10,7 +10,7 @@ android {
         applicationId = "com.hightechentertainment.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 28
+        versionCode = 29
         versionName = "3.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
