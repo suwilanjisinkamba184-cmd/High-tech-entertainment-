@@ -1540,7 +1540,7 @@ class HteNeoHero extends StatelessWidget {
                     borderRadius: BorderRadius.circular(30),
                     border: Border.all(color: const Color(0x555CC9D8)),
                   ),
-                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF7FE0C0), shape: BoxShape.circle)),
                     SizedBox(width: 7),
                     Text('HIGH-TECH · SOUND SYSTEM',
