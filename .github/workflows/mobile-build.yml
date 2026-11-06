@@ -1,4 +1,4 @@
-name: Build High-Tech Entertainment App
+name: High-Tech Entertainment - Android Release & OTA
 
 on:
   push:
@@ -619,3 +619,31 @@ jobs:
           files: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU.apk
           overwrite_files: true
           make_latest: true
+
+      - name: Verify public Android release was actually published
+        if: steps.ota_mode.outputs.mode == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: v${{ steps.app_version.outputs.version }}-SU
+          APK_NAME: High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU.apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            echo "::error::A pull request cannot publish an official Android release."
+            exit 1
+          fi
+          RELEASE_JSON="$(gh release view "$RELEASE_TAG" --json tagName,isDraft,isPrerelease,assets)"
+          python3 - <<'PY'
+          import json, os, sys
+          data = json.loads(os.environ["RELEASE_JSON"])
+          expected = os.environ["APK_NAME"]
+          if data.get("tagName") != os.environ["RELEASE_TAG"]:
+              raise SystemExit("Published release tag does not match the requested app version.")
+          if data.get("isDraft") or data.get("isPrerelease"):
+              raise SystemExit("Android release exists but is draft or prerelease.")
+          assets = {asset.get("name") for asset in data.get("assets", [])}
+          if expected not in assets:
+              raise SystemExit(f"Official APK asset is missing from the public release: {expected}")
+          print(f"PASS: public release {data['tagName']} contains {expected}.")
+          PY
