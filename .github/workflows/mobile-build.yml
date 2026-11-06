@@ -573,7 +573,7 @@ jobs:
           echo "Publishing OTA patch against High-Tech Entertainment $OTA_BASELINE_VERSION+$OTA_BASELINE_BUILD (SU flavour)"
           # Shorebird patches are Dart-only. Never bypass native-code or asset
           # compatibility checks: those changes require a full APK release.
-          shorebird patch android --flavor su --release-version "$OTA_BASELINE_VERSION+$OTA_BASELINE_BUILD" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+          shorebird patch android --flavor su --release-version "$OTA_BASELINE_VERSION SU+$OTA_BASELINE_BUILD" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Build validation APK (non-release checks)
         if: steps.ota_mode.outputs.mode == 'validate'
         working-directory: ${{ runner.temp }}/hte_app
