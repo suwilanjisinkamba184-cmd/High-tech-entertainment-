@@ -465,9 +465,9 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       duration: const Duration(seconds: 7),
     )..repeat();
 
-    // Start the launch ident immediately on the first frame. It must not wait
-    // for Supabase, background playback setup, or authentication.
-    _startupSoundTask = _playStartupSound();
+    // Startup audio is intentionally started inside _initializeServices,
+    // after Android's background audio handler has been registered. Creating
+    // the native player before that registration can prevent playback.
     _initialize();
   }
 
