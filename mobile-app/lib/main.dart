@@ -303,6 +303,7 @@ Future<void> main() async {
   runApp(const HteApp());
   // Load the saved appearance without delaying the startup animation or sound.
   unawaited(AppThemeController.load());
+  unawaited(HteSelfHealingEngine.initialize());
 }
 
 class HteApp extends StatelessWidget {
