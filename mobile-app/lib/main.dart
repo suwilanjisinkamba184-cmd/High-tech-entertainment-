@@ -1,4 +1,4 @@
-// Full-release repair: 2.2.10 SU+27 includes the updated compiled icon asset.
+// Full-release repair: 2.2.10 SU+28 includes responsive phone/tablet layouts.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
