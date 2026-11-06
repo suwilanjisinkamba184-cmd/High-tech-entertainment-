@@ -540,7 +540,12 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
           (message) => debugPrint('HTE startup OTA check: $message'),
         ));
       }
-    } catch (error) {
+    } catch (error, stackTrace) {
+      unawaited(HteDiagnostics.record(
+        error,
+        stackTrace: stackTrace,
+        source: 'startup-initialization',
+      ));
       if (mounted) {
         setState(() {
           _error = friendlyErrorMessage(error);
@@ -550,17 +555,27 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
     }
   }
 
-  /// Restart the native application and reset the dedicated startup player.
-  Future<void> _restartApplication() async {
-    if (_starting) return;
-    setState(() => _starting = true);
+  /// Retry failed startup services in-place instead of mounting a second
+  /// MaterialApp tree. This avoids leaking the old startup controllers and
+  /// preserves a single application root after a transient failure.
+  Future<void> _retryStartup() async {
+    if (_starting || !mounted) return;
+    setState(() {
+      _starting = true;
+      _error = null;
+    });
     try {
       await _startupSoundPlayer.stop();
-    } catch (error) {
-      debugPrint('HTE startup player reset during app restart: $error');
+    } catch (error, stackTrace) {
+      debugPrint('HTE startup player reset before retry failed: $error');
+      unawaited(HteDiagnostics.record(
+        error,
+        stackTrace: stackTrace,
+        source: 'startup-player-reset',
+      ));
     }
     _startupSoundHandled = false;
-    runApp(const HteApp());
+    await _initialize();
   }
 
   Future<void> _initializeCoreServices() async {
@@ -719,9 +734,9 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                   ),
                   const SizedBox(height: 18),
                   OutlinedButton.icon(
-                    onPressed: _starting ? null : _restartApplication,
+                    onPressed: _starting ? null : _retryStartup,
                     icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Restart application'),
+                    label: const Text('Retry startup'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFE5C77F),
                       side: const BorderSide(color: Color(0xFF80663B)),
