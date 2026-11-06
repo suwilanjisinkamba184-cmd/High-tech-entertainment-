@@ -541,8 +541,8 @@ jobs:
           line = next(line for line in Path("pubspec.yaml").read_text().splitlines() if line.startswith("version:"))
           version, build = line.split(":", 1)[1].strip().split("+", 1)
           with open(os.environ["GITHUB_ENV"], "a") as env:
-              env.write(f"OTA_BASELINE_VERSION={version}\\n")
-              env.write(f"OTA_BASELINE_BUILD={build}\\n")
+              env.write(f"OTA_BASELINE_VERSION={version}\n")
+              env.write(f"OTA_BASELINE_BUILD={build}\n")
           PY
           shorebird patch android --allow-asset-diffs --flavor su --release-version "$OTA_BASELINE_VERSION SU+$OTA_BASELINE_BUILD" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Build validation APK (pull requests only)
