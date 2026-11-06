@@ -1,4 +1,4 @@
-// OTA publication marker: preserve the v2.2.8 SU+25 Shorebird baseline.
+// OTA publication marker: patch the published v2.2.9 SU+26 Shorebird baseline.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
