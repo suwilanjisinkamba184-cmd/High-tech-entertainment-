@@ -112,3 +112,10 @@ img,video,iframe{max-width:100%}
 @media(prefers-reduced-motion:reduce){
   .btn:active{transform:none}
 }
+
+/* Priority One: accessible feedback form and booking confirmation fallback. */
+#feedback{order:10}
+.feedback-panel{border-color:rgba(199,150,69,.38);background:linear-gradient(145deg,#17140f,#101112)}
+#feedback .field select{min-height:48px}
+#feedback .status{overflow-wrap:anywhere}
+@media(max-width:680px){#feedback .panel{padding:18px}}
