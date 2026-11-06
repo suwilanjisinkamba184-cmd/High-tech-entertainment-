@@ -444,12 +444,12 @@ jobs:
         if: steps.ota_mode.outputs.mode == 'patch' || steps.ota_mode.outputs.mode == 'validate'
         shell: bash
         env:
-          APP_VERSION: ${{ steps.app_version.outputs.version }}
+          OTA_BASELINE_VERSION: "2.2.7"
         run: |
           python3 - <<'PY'
           import os, re, subprocess
           from pathlib import Path
-          version = os.environ["APP_VERSION"]
+          version = os.environ["OTA_BASELINE_VERSION"]
           tag = f"v{version}-SU"
           try:
               base = subprocess.check_output(
@@ -491,11 +491,13 @@ jobs:
         env:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+          OTA_BASELINE_VERSION: "2.2.7"
+          OTA_BASELINE_BUILD: "24"
         # Flutter may regenerate the tree-shaken MaterialIcons font even when Dart code
         # uses only glyphs already present in the installed release. The compatibility
         # check above rejects new glyphs and changed source assets before allowing this.
         # Shorebird must omit the regenerated font from the patch; never ship it via OTA.
-        run: shorebird patch android --allow-asset-diffs --flavor su --release-version "${{ steps.app_version.outputs.version }} SU+${{ steps.app_version.outputs.build }}" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+        run: shorebird patch android --allow-asset-diffs --flavor su --release-version "$OTA_BASELINE_VERSION SU+$OTA_BASELINE_BUILD" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Build validation APK (pull requests only)
         if: steps.ota_mode.outputs.mode == 'validate'
         working-directory: ${{ runner.temp }}/hte_app
