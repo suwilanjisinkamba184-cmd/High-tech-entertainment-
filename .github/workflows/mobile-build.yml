@@ -14,9 +14,7 @@ on:
     branches: [main]
     paths:
       - 'mobile-app/**'
-      - 'native-android/**'
       - '.github/workflows/mobile-build.yml'
-      - '.github/workflows/native-android-ci.yml'
   workflow_dispatch:
     inputs:
       operation:
@@ -678,61 +676,3 @@ jobs:
               raise SystemExit(f"Official APK asset is missing from the public release: {expected}")
           print(f"PASS: public release {data['tagName']} contains {expected}.")
           PY
-
-  native_changed_files:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    outputs:
-      native: ${{ steps.filter.outputs.native }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Detect native Android changes
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            native:
-              - 'native-android/**'
-
-  native_android_validation:
-    if: needs.native_changed_files.outputs.native == 'true'
-    needs: native_changed_files
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - name: Verify or install Android SDK 36
-        shell: bash
-        run: |
-          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
-          if [ -d "$SDK_ROOT/platforms/android-36" ] && [ -d "$SDK_ROOT/build-tools/36.0.0" ]; then
-            echo "Android API 36 and Build Tools 36.0.0 are already installed."
-          else
-            SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager -print -quit)"
-            if [ -z "$SDKMANAGER" ]; then
-              echo "::error::Android sdkmanager was not found and required SDK packages are missing."
-              exit 1
-            fi
-            yes | "$SDKMANAGER" --licenses || true
-            "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0"
-          fi
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-      - name: Verify Gradle version
-        run: |
-          gradle --version
-          gradle --version | grep -q "Gradle 9.8"
-      - name: Run native unit tests and build debug APK
-        working-directory: native-android
-        run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
-      - name: Upload native validation APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: hte-native-android-debug-${{ github.run_number }}
-          path: native-android/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-          retention-days: 14
