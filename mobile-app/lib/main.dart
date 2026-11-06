@@ -529,13 +529,16 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         debugPrint('HTE media audio session configuration failed: $sessionError');
         debugPrintStack(stackTrace: stackTrace);
       }
-      _setStartupProgress(0.48);
+      _setStartupProgress(0.42);
 
-      // Core app initialization can continue while the separate ident plays.
+      // Register the native audio handler first to avoid competing audio-session
+      // initialization. Start the launch ident before any Supabase work.
+      final soundTask = _startupSoundTask ??= _playStartupSound();
+
+      // Core app initialization runs while the separate ident plays.
       await _initializeCoreServices();
       _setStartupProgress(0.76);
 
-      final soundTask = _startupSoundTask ??= _playStartupSound();
       final soundPlayed = await soundTask;
       if (!soundPlayed) {
         debugPrint('HTE startup audio failed; continuing without blocking sign-in.');
