@@ -6,11 +6,11 @@ High-Tech Entertainment is a focused music and artist platform for discovering r
 
 ## Production addresses
 
-- **Public website (GitHub Pages):** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/\n- **Cloudflare Pages mirror:** https://high-tech-entertainment-16g.pages.dev/
+- **Official public website (GitHub Pages):** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/
 - **Founder Studio:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/admin/
 - **Account:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account/
 
-GitHub and Cloudflare both publish the public website from the same `main` branch. GitHub Pages is deployed by `.github/workflows/publish-github-pages.yml`. Cloudflare Pages is deployed independently by `.github/workflows/publish-cloudflare-pages.yml` using Wrangler Direct Upload from GitHub Actions. Both hosts run `scripts/build-website.sh` and publish the same `dist/` output. GitHub Pages remains the canonical URL for search indexing; Cloudflare Pages is the independently deployed mirror. Supabase remains the backend for authentication, database, media storage and serverless functions.\n\nThe Cloudflare Pages project is `high-tech-entertainment`. Add the repository Actions secret `CLOUDFLARE_API_TOKEN` (Account / Cloudflare Pages / Edit) before the Cloudflare workflow can deploy. The Cloudflare account ID is configured in the workflow and is not treated as a secret. Until both secrets exist, the workflow intentionally skips deployment with a warning rather than failing the GitHub build.
+GitHub Pages is the official and canonical public website host. The `.github/workflows/publish-github-pages.yml` workflow builds `dist/` with `scripts/build-website.sh` and deploys it to GitHub Pages on pushes to `main`. Supabase provides authentication, database, media storage and serverless functions.
 
 ## Project components
 
@@ -56,7 +56,7 @@ Set the production Site URL to:
 https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/
 ```
 
-Add the production routes used by the application to the allowed redirect URLs, including the GitHub Pages routes and the Cloudflare Pages mirror routes:
+Add the production GitHub Pages routes used by the application to the allowed redirect URLs:
 
 ```
 https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/
@@ -111,7 +111,7 @@ The planned Android application ID is `com.hightechentertainment.app`. Verify th
 
 ## GitHub Actions
 
-- `.github/workflows/publish-github-pages.yml` — assembles and publishes the public website to GitHub Pages on every push to `main`.\n- `.github/workflows/publish-cloudflare-pages.yml` — builds the same public website and deploys `dist/` to the Cloudflare Pages Direct Upload project `high-tech-entertainment` on every push to `main` when the Cloudflare Actions secrets are configured.
+- `.github/workflows/publish-github-pages.yml` — assembles and publishes the official public website to GitHub Pages on every push to `main`.
 - `.github/workflows/deploy-pages.yml` — validation only: checks required website files, JavaScript syntax, package JSON and sitemap XML.
 - `.github/workflows/mobile-build.yml` — builds Android and Windows application packages and publishes releases when its required conditions and secrets are satisfied.
 
@@ -172,7 +172,7 @@ Before calling a release production-ready, verify each item in the actual enviro
 
 ## Support and maintenance
 
-Keep this README aligned with the actual routes, Supabase schema, bucket IDs, workflow behavior and Cloudflare configuration. Update it whenever deployment architecture or application build requirements change.
+Keep this README aligned with the actual GitHub Pages deployment, routes, Supabase schema, bucket IDs and workflow behavior. Update it whenever deployment architecture or application build requirements change.
 
 
 ## Legal documents and developer contact
