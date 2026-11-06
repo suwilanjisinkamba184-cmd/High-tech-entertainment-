@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'mobile-app/lib/**'
+      - 'mobile-app/test/**'
       - 'mobile-app/assets/**'
       - 'mobile-app/pubspec.yaml'
       - 'mobile-app/shorebird.yaml'
@@ -98,6 +99,7 @@ jobs:
                           pubspec_version_only = not meaningful
                       patch_safe_changes = changed and all(
                           (p.startswith("mobile-app/lib/") and p.endswith(".dart"))
+                          or (p.startswith("mobile-app/test/") and p.endswith("_test.dart"))
                           or p in patch_safe
                           or (p == "mobile-app/pubspec.yaml" and pubspec_version_only)
                           for p in changed
@@ -419,6 +421,25 @@ jobs:
             test -s "$asset" || { echo "::error::Required High-Tech asset is missing: $asset"; find assets -maxdepth 1 -type f -printf "%f %s bytes\\n"; exit 1; }
             echo "PASS: $asset ($(stat -c%s "$asset") bytes)."
           done
+      - name: Verify startup MP3 decodes successfully
+        working-directory: ${{ runner.temp }}/hte_app
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+          DURATION="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 assets/high-tech-startup.mp3)"
+          python3 - "$DURATION" <<'PY'
+          import sys
+          try:
+              duration = float(sys.argv[1])
+          except (IndexError, ValueError):
+              raise SystemExit("Startup MP3 duration could not be read.")
+          if duration <= 0:
+              raise SystemExit("Startup MP3 has no playable duration.")
+          print(f"PASS: startup MP3 metadata is valid ({duration:.2f} seconds).")
+          PY
+          ffmpeg -v error -i assets/high-tech-startup.mp3 -f null -
+          echo "PASS: startup MP3 decoded without audio-stream errors."
       - name: Install dependencies and generate branded launcher icon
         working-directory: ${{ runner.temp }}/hte_app
         run: |
