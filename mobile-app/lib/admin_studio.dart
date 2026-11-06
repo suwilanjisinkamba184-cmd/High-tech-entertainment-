@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'diagnostics_service.dart';
+import 'responsive_layout.dart';
 
 const _founderId = 'b268df9e-eff5-43b9-a38f-869b33add38b';
 const _gold = Color(0xFFE3BD70);
@@ -556,7 +557,11 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     switch(_section) {
       case 0: return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         _header('PRIVATE FOUNDER STUDIO','Command centre','Manage the High-Tech Entertainment catalogue and publishing operations.'),
-        GridView.count(crossAxisCount:2,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),childAspectRatio:1.45,crossAxisSpacing:8,mainAxisSpacing:8,children:[
+        LayoutBuilder(builder:(context,constraints)=>GridView.count(
+          crossAxisCount:HteResponsiveLayout.adminGridColumns(constraints.maxWidth),
+          shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),
+          childAspectRatio:constraints.maxWidth < 360 ? 1.25 : 1.45,
+          crossAxisSpacing:8,mainAxisSpacing:8,children:[
           _metric('Total tracks',_metrics['Tracks']??0,Icons.music_note),
           _metric('Published',_metrics['Published']??0,Icons.public),
           _metric('Artists',_metrics['Artists']??0,Icons.people),
@@ -564,6 +569,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
           _metric('Users',_metrics['Users']??0,Icons.people_alt),
           _metric('Audio ads',_metrics['Audio ads']??0,Icons.campaign_outlined),
         ]),
+        ),
         const SizedBox(height:18),FilledButton.icon(onPressed:()=>setState(()=>_section=1),icon:const Icon(Icons.upload),label:const Text('Upload new music')),
         const SizedBox(height:20),const Text('Recent catalogue',style:TextStyle(fontWeight:FontWeight.w700)),_trackRows(),
       ]);

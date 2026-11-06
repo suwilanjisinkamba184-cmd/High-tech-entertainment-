@@ -4,7 +4,7 @@ The official Android client is a native Flutter application. The canonical publi
 
 - **Official website:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/
 - **Source repository:** https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-
-- **Current source version:** 2.2.10 SU (build 27)
+- **Current source version:** 2.2.10 SU (build 28)
 - **Android support:** Android 8.0 (API 26) and newer
 - **Application ID:** `com.hightechentertainment.app`
 
@@ -31,6 +31,15 @@ The official Android client is a native Flutter application. The canonical publi
 ## Performance and reliability
 
 - App tabs are mounted on first visit rather than all loading their catalogues at startup, reducing initial network and memory pressure on low-RAM Android devices.
+
+## Responsive device support
+
+- Phone layouts remain edge-to-edge, while tablets and foldables use a centred content width capped at 860 logical pixels.
+- Startup branding scales down on compact or short screens to avoid splash-screen overflow.
+- The home hero heading scales to the available width on narrow devices.
+- Founder Studio metric cards use two, three, or four columns according to available width.
+- Shared breakpoints are implemented in `lib/responsive_layout.dart` and covered by widget-test-compatible unit tests for compact phones, standard phones, tablets, and foldable-width layouts.
+- Layouts preserve Android system text scaling and do not disable accessibility font settings.
 
 ## Audio architecture and startup behaviour
 
