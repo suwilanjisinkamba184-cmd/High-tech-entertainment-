@@ -533,7 +533,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
 
       // Keep the branded startup screen visible long enough to be perceived,
       // even when local initialization and audio finish almost immediately.
-      const minimumSplashDuration = Duration(milliseconds: 1800);
+      const minimumSplashDuration = Duration(seconds: 15);
       final elapsed = DateTime.now().difference(_splashStartedAt);
       final remaining = minimumSplashDuration - elapsed;
       if (remaining > Duration.zero) {
@@ -605,7 +605,6 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
     }
   }
 
-  @override
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _ready) {
