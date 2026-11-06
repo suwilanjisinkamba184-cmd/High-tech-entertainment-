@@ -655,6 +655,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       if (!soundPlayed) {
         // Allow a later manual startup retry to make a fresh playback attempt.
         _startupSoundTask = null;
+        // Keep failed startup playback retryable without delaying app launch.
         debugPrint('HTE startup audio failed; continuing without blocking sign-in.');
       }
       _setStartupStatus('Finalising your experience…');
