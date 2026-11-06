@@ -1,0 +1,12 @@
+/* High-Tech Entertainment priority-one public experience refinement */
+.feedback-section{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(180deg,transparent,#17140f55 45%,transparent)}
+.feedback-section:before{content:"";position:absolute;z-index:-1;width:520px;height:520px;right:-180px;top:5%;border:1px solid #d6b46a22;border-radius:50%;box-shadow:0 0 0 45px #d6b46a08,0 0 0 95px #d6b46a05;pointer-events:none}
+.feedback-section .page-title{max-width:560px}
+.feedback-panel{border-color:#b99a5a55;background:linear-gradient(145deg,#1b1a17f5,#111214f8);box-shadow:0 24px 70px #0008, inset 0 1px #ffffff0a}
+.feedback-points{display:grid;gap:12px;margin-top:28px;color:#d8d1c3;font-size:.92rem}
+.feedback-points span: first-letter{color:var(--gold2)}
+.feedback-panel .field label{color:#e8dfca}
+.feedback-panel input,.feedback-panel select,.feedback-panel textarea{background:#0b0c0e;border-color:#3c372d}
+.feedback-panel input:focus,.feedback-panel select:focus,.feedback-panel textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px #d6b46a20}
+.feedback-panel textarea{min-height:140px;resize:vertical}
+@media(max-width:760px){.feedback-section .contact-grid{grid-template-columns:1fr;gap:24px}.feedback-section .panel{padding:20px}.feedback-points{margin-top:18px}}
