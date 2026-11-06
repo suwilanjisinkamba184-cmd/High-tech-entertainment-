@@ -135,13 +135,13 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   }
   Future<void> _pickAudio() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.custom,
-      allowedExtensions: ['mp3','m4a','aac','wav','ogg','flac'], withData: false);
+      allowedExtensions: ['mp3','m4a','aac','wav','ogg'], withData: false);
     if (mounted && result != null && result.files.isNotEmpty) setState(() => _audio = result.files.first);
   }
   Future<void> _pickAdAudio() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'flac'],
+      allowedExtensions: ['mp3', 'm4a', 'aac', 'wav', 'ogg'],
       withData: false,
     );
     if (mounted && result != null && result.files.isNotEmpty) {
@@ -158,7 +158,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     final path = '$folder/${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')}';
     final ext = _extension(file);
     final mime = <String,String>{
-      'mp3':'audio/mpeg','m4a':'audio/x-m4a','aac':'audio/aac',
+      'mp3':'audio/mpeg','m4a':'audio/mp4','aac':'audio/aac',
       'wav':'audio/wav','ogg':'audio/ogg','flac':'audio/flac',
       'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','avif':'image/avif',
       'mp4':'video/mp4','m4v':'video/x-m4v','mov':'video/quicktime','webm':'video/webm',
