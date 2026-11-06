@@ -1,94 +1,87 @@
-# High-Tech Entertainment — Native Android App
+# High-Tech Entertainment — Android application
 
-The Flutter application in this folder is the native Android client for High-Tech Entertainment.\n\nOfficial website: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/ Current app version: **2.2.8 SU (build 25)**.
+The official Android client is a native Flutter application. The canonical public website and source repository are maintained separately from the private Founder Studio.
 
-## Experiences
+- **Official website:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/
+- **Source repository:** https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-
+- **Current source version:** 2.2.9 SU (build 26)
+- **Android support:** Android 8.0 (API 26) and newer
+- **Application ID:** `com.hightechentertainment.app`
+
+## Product experiences
 
 ### HT Music — public listener experience
-- Branded animated startup with a dedicated bundled High-Tech jingle that starts before Supabase initialization, a 15-second minimum splash, and a gold bottom-edge progress indicator; the startup jingle plays automatically and has no replay control, followed by required Supabase sign-in.
-- Native Google account chooser when GOOGLE_WEB_CLIENT_ID is configured, with a Supabase Google OAuth deep-link fallback; email/password authentication includes deep-link password recovery.
-- Home, Discover, Releases, Library, Favourites, Playlists and Profile.
-- Artist catalogue, music videos, search, track sharing and RLS-protected in-app announcements.
-- Native audio playback, queue, background controls, shuffle, autoplay and sponsored audio.
+
+- Branded 15-second minimum startup screen with animated HTE logo and progress indicator.
+- Bundled startup jingle plays automatically; the splash does not display sound status, volume icons, or an audio visualizer.
+- Required account sign-in, Google OAuth/native Google sign-in when configured, and email/password authentication.
+- Home, Discover, Releases, Library, Favourites, Playlists, Profile, search, artist catalogue, and music videos.
+- Shared native playback service with queue, background controls, shuffle, autoplay, and administrator-configured sponsored audio.
 - Spotify release links and embeds.
-- App settings, privacy, account deletion and automatic GitHub release checks on Home, plus manual update checks, download progress, APK integrity checks and Android's user-approved package installer.
+- Downloads, sharing, privacy, account deletion, update checks, and Android's user-approved APK installer.
 
-### HT Admin — private founder studio
-- Founder-only entry for the configured owner account.
-- Dashboard, music upload, track publishing and deletion.
-- Artist and release draft creation and publishing.
-- Public artwork upload, artwork library listing and URL management.
-- Secure user directory through a role-checked Supabase function; destructive account actions and role changes remain server-side only.
-- Live play, unique-listener and ad-impression analytics through a role-checked aggregate function; download counts remain unavailable until download events are recorded.
-- Recent catalogue activity; a full actor-by-actor audit trail requires a dedicated audit-log table.
+### HT Admin — private founder experience
 
-## Supabase integration
+- Founder-only entry, backed by Supabase role checks and row-level security.
+- Dashboard, music upload, track publishing/deletion, artist and release management.
+- Artwork and video management.
+- Role-checked user directory and aggregate listening/advertising analytics.
+- Private on-device diagnostics with explicit redacted report export.
 
-Project: `wqrxacjbsldbnoekbkbf`
+## Audio architecture and startup behaviour
 
-- Auth uses the Supabase publishable key; no service-role key is bundled.
-- Music files use the public `hte-audio` bucket. Upload/delete policies require an HTE owner/admin role.
-- Release artwork uses `hte-artwork`; public reads are enabled while upload/update/delete are restricted to HTE owner/admin roles.
-- Legacy video files remain in `hte-video`; current Founder Studio uploads use the public `hte-videos` bucket (500 MB limit) with owner/admin-only write policies and the public `videos` catalogue.
-- Public catalogue reads are governed by existing RLS policies.
-- User playlists, favourites and listening history are scoped by the signed-in user's RLS policies.
-- In-app announcements use `app_notifications`; authenticated users can read broadcasts and their own notifications, while only HTE owners/admins can create announcements.
-- Public profile photos use the public `hte-artwork` bucket under `avatars/<user-id>/`; upload/delete policies restrict each signed-in user to their own folder, with a 5 MB app-side upload limit.
+- Startup audio uses the bundled `assets/high-tech-startup.mp3` file; it does not depend on a network request, WebView, or JavaScript playback.
+- Startup audio has its own process-scoped player, separate from the single shared music/advert player.
+- The startup routine owns audio-session configuration. Do not configure the same audio session again in the splash initializer.
+- Startup sound failures are logged to private diagnostics and must never trap the user on the splash or expose sound-status UI.
+- The main music experience uses `HtePlayback.instance`. Screens must reuse that service; do not instantiate additional music players inside widgets, tabs, or routes.
+- Background notification and lock-screen controls must operate the same shared player.
+- The scheduled advert is separate from startup audio and is only eligible after eight completed music tracks. It must not play on startup or on pause/resume.
 
-The artwork, in-app notification and video-storage changes are recorded under `database/changes/` and have been applied to the connected project. The secure user directory and analytics functions are also applied and return records only to authenticated HTE owners/admins.
+## Backend and data protection
 
-## Android build
+Supabase project: `wqrxacjbsldbnoekbkbf`.
 
-The GitHub Actions workflow runs Flutter tests and static analysis, creates the Android platform scaffold, copies the Flutter source and assets, configures Android 8+ (min SDK 26), configures the app link and background audio service, and builds APK and AAB outputs. Signed Android releases use semantic version tags so the in-app update checker can compare versions.
+- The app uses the Supabase publishable key. A service-role key must never be bundled in the client.
+- Public catalogue reads are controlled by database row-level security.
+- Music storage uses `hte-audio`; artwork uses `hte-artwork`; video storage uses `hte-videos` (legacy `hte-video` files may remain).
+- Founder uploads, publishing, deletion, user administration, and analytics require server-side role checks and appropriate RLS policies.
+- User playlists, favourites, and listening history must remain scoped to the authenticated user.
+
+## Build, test, and release
+
+The GitHub Actions workflow is `.github/workflows/mobile-build.yml`. It creates the Android scaffold, installs dependencies, runs Flutter tests and static analysis, configures signing, builds the SU APK, verifies its signature, and publishes the APK as a GitHub Release asset.
 
 Required repository Actions secrets:
+
 - `ANDROID_KEYSTORE_BASE64`
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_STORE_PASSWORD`
 - `ANDROID_KEY_PASSWORD`
-- `GOOGLE_WEB_CLIENT_ID` (optional; enables the native Google account chooser instead of the Supabase OAuth deep-link fallback)
-- `SHOREBIRD_TOKEN` (required; used only by GitHub Actions to publish signed OTA patches and Shorebird releases)
+- `SHOREBIRD_TOKEN` (required for Shorebird release/patch publishing)
+- `GOOGLE_WEB_CLIENT_ID` (optional; enables native Google sign-in instead of the OAuth deep-link fallback)
 
-## OTA updates
+### Local checks
 
-The Android release workflow initializes Shorebird on the first production build and commits the generated `shorebird.yaml` configuration to `mobile-app/`. Dart-only changes under `mobile-app/lib/` automatically publish a patch to the stable track. Changes to assets, dependencies, app configuration, or build workflows trigger a full signed Shorebird APK release; increment the app version/build number in `pubspec.yaml` before that release. Pull requests run validation only. You can also run the workflow manually and choose `patch` or `release`. Shorebird patches cannot update native Android code, permissions, native plugin changes, or bundled assets; those require users to install a new APK.
+Run from `mobile-app/` with the Flutter SDK installed:
 
-Build locally from this directory:
 ```bash
 flutter pub get
+dart format --output=none --set-exit-if-changed lib test
 flutter analyze
 flutter test
-flutter build apk --release
 ```
 
-Windows source files are preserved, but Windows build execution and release packaging are paused. The current CI validation and distributable release target is Android only. iOS distribution is not currently part of the supported release target.
+A successful build verifies compilation and packaging, not audible output on every Android device. Startup audio, background playback, notification controls, account sign-in, and media streaming must also be verified on a physical Android device.
 
+### Shorebird OTA rules
 
-## Single-instance audio playback
+- A Shorebird patch updates Dart code for one exact published release. It cannot add/change bundled assets, native Android code, permissions, native plugins, or the Flutter engine.
+- The workflow resolves the release version and build from `pubspec.yaml`, then targets the matching Shorebird release using the exact `version+build` value.
+- Asset/native compatibility checks must not be bypassed. If a change needs assets, native code, a new native plugin, or a Flutter engine update, publish a new signed APK release instead.
+- Pull requests validate only; publishing happens after approved changes reach `main`.
+- Do not reuse a Shorebird patch baseline from an older app version. The Android app version, GitHub release tag, and Shorebird release must agree.
 
-HT Music uses one process-wide `HtePlayback.instance` service and one `just_audio` `AudioPlayer`. The service owns the active track, queue, completion handling, audio-ad insertion, and playback error state. The mini-player, full player, queue screen, and all catalogue screens must read and control that same service; do not create `AudioPlayer()` instances in widgets, tabs, routes, or screen state objects.
+## Known verification limits
 
-- Background audio is initialized once at application startup with `JustAudioBackground.init` before the shared playback service is first accessed. The separate bundled startup sound and scheduled advert are isolated from authentication startup: if either fails, the app continues to sign-in. The scheduled advert is only eligible after eight completed music tracks, never on startup or pause/resume. The completion count is saved locally so a normal app restart does not reset the interval.
-- Track changes replace the source on the shared player; navigation must not dispose or recreate it.
-- The notification and lock-screen controls are backed by the same player and media metadata.
-- The service is exposed through `HtePlayback.instance`. The `HtePlayback()` factory remains as a compatibility entry point and returns the same singleton.
-- Run `flutter test` and `flutter analyze lib` after playback changes. Verify play/pause, previous/next, navigation persistence, notification controls, and locked-screen playback on a physical Android device.
-
-A singleton prevents duplicate app-owned player instances, but a successful build alone does not prove Android background playback on every device; physical-device verification remains required.
-
-## Network and error handling
-
-The app converts low-level connectivity and service exceptions into plain-language messages instead of exposing raw exception text, backend response codes or stack traces.
-
-- When a network request fails because the device is offline or cannot reach the service, the user sees: **“No internet connection. Connect to the internet and try again.”**
-- Authentication, media-not-found, permission, unsupported-format and local-storage failures receive specific plain-language guidance; unknown failures use: **“Something went wrong. Please try again.”**
-- During startup, the existing **Try again** button reruns service initialisation after the user reconnects.
-- Diagnostic exception details are retained in the private on-device Founder Studio diagnostics journal (up to 100 events). The founder can review and explicitly export a redacted report; reports are not uploaded automatically.
-
-
-
-## Founder Studio diagnostics and legal documents
-
-The private Founder Studio includes a Developer diagnostics section for locally recorded Flutter framework and uncaught platform errors. It shows timestamps and stack traces, supports explicit report export through the share sheet, and lets the founder clear local history. Common credential patterns are redacted before storage. Diagnostic reports are not sent to a server automatically.
-
-The Settings page links to the current privacy policy and terms of use. The developer contact shown in the app and legal pages is Simon Suwilanji Sinkamba. OTA patches apply only to compatible Shorebird installations; native Android changes and bundled asset changes can require a full APK update.
+CI can verify formatting, static analysis, tests, APK creation, signature integrity, and release publication. It cannot prove the sound is physically audible, that every device's audio focus behaves identically, or that all Supabase accounts and media records behave correctly. Those checks require an installed build and a real-device acceptance test.
