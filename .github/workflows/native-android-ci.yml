@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: hte-native-android-\${{ github.ref }}
+  group: hte-native-android-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -31,12 +31,17 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
       - name: Install Android SDK 36
+        shell: bash
         run: |
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
-          yes | sdkmanager --licenses
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager -print -quit)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::error::Android sdkmanager was not found."
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0"
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Verify Gradle version
@@ -50,7 +55,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: hte-native-android-debug-\${{ github.run_number }}
+          name: hte-native-android-debug-${{ github.run_number }}
           path: |
             native-android/app/build/outputs/apk/debug/*.apk
             native-android/app/build/reports/tests/
