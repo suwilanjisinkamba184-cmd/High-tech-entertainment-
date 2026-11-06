@@ -449,6 +449,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   bool _ready = false;
   bool _starting = true;
   bool _startupSoundHandled = false;
+  final DateTime _splashStartedAt = DateTime.now();
   String? _error;
   Future<void>? _initialization;
   late final AnimationController _startupAnimation;
@@ -522,11 +523,22 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         debugPrintStack(stackTrace: stackTrace);
       }
 
-      // Complete essential services first, then play the startup jingle.
-      // The jingle is the final startup gate: when it finishes, the app can
-      // transition immediately without an artificial minimum splash delay.
+      // Give Android time to paint the branded splash before starting audio.
+      // Start the jingle independently of Supabase/preferences so a slow
+      // network or local storage operation cannot suppress the startup sound.
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      final startupSound = _playStartupSound();
       await _initializeCoreServices();
-      await _playStartupSound();
+      await startupSound;
+
+      // Keep the branded startup screen visible long enough to be perceived,
+      // even when local initialization and audio finish almost immediately.
+      const minimumSplashDuration = Duration(milliseconds: 1800);
+      final elapsed = DateTime.now().difference(_splashStartedAt);
+      final remaining = minimumSplashDuration - elapsed;
+      if (remaining > Duration.zero) {
+        await Future<void>.delayed(remaining);
+      }
 
       if (!_startupSoundHandled) {
         debugPrint('HTE startup audio failed; continuing into the app interface.');
