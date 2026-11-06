@@ -445,7 +445,7 @@ class StartupGate extends StatefulWidget {
   State<StartupGate> createState() => _StartupGateState();
 }
 
-class _StartupGateState extends State<StartupGate> with SingleTickerProviderStateMixin {
+class _StartupGateState extends State<StartupGate> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   bool _ready = false;
   bool _starting = true;
   bool _startupSoundHandled = false;
@@ -457,6 +457,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _startupAnimation = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -593,7 +594,18 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   }
 
   @override
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _ready) {
+      unawaited(HteOtaUpdateService.checkAndInstall().then(
+        (message) => debugPrint('HTE resume OTA check: $message'),
+      ));
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _startupAnimation.dispose();
     _ringAnimation.dispose();
     super.dispose();
