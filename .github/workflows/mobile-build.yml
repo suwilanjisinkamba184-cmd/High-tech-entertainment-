@@ -491,9 +491,11 @@ jobs:
         env:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
-        # Do not bypass Shorebird asset checks: changed fonts/images are not shipped in Dart patches.
-        # The app code is kept to Material icons already bundled in release 2.2.5 SU+22.
-        run: shorebird patch android --flavor su --release-version "${{ steps.app_version.outputs.version }} SU+${{ steps.app_version.outputs.build }}" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+        # Flutter may regenerate the tree-shaken MaterialIcons font even when Dart code
+        # uses only glyphs already present in the installed release. The compatibility
+        # check above rejects new glyphs and changed source assets before allowing this.
+        # Shorebird must omit the regenerated font from the patch; never ship it via OTA.
+        run: shorebird patch android --allow-asset-diffs --flavor su --release-version "${{ steps.app_version.outputs.version }} SU+${{ steps.app_version.outputs.build }}" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Build validation APK (pull requests only)
         if: steps.ota_mode.outputs.mode == 'validate'
         working-directory: ${{ runner.temp }}/hte_app
