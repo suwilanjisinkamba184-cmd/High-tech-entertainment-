@@ -633,7 +633,7 @@ jobs:
             echo "::error::A pull request cannot publish an official Android release."
             exit 1
           fi
-          RELEASE_JSON="$(gh release view "$RELEASE_TAG" --json tagName,isDraft,isPrerelease,assets)"
+          export RELEASE_JSON="$(gh release view "$RELEASE_TAG" --json tagName,isDraft,isPrerelease,assets)"
           python3 - <<'PY'
           import json, os, sys
           data = json.loads(os.environ["RELEASE_JSON"])
