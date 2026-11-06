@@ -72,6 +72,8 @@ flutter analyze
 flutter test
 ```
 
+The playback regression suite covers the single-player service contract, direct media URL validation, and the eight-completed-track advert counter. CI also verifies that the bundled startup MP3 has readable duration metadata and decodes without stream errors.
+
 A successful build verifies compilation and packaging, not audible output on every Android device. Startup audio, background playback, notification controls, account sign-in, and media streaming must also be verified on a physical Android device.
 
 ### Shorebird OTA rules
