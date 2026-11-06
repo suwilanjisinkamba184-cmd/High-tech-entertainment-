@@ -98,4 +98,30 @@ void main() {
       expect(HtePlayback.directAudioUri('file:///music/song.mp3'), isNull);
     });
   });
+
+  group('Scheduled audio advert selection', () {
+    final now = DateTime.utc(2026, 11, 7, 10);
+    test('selects the highest-priority published active advert', () {
+      final selected = selectActiveAudioAd([
+        {'id': 'low', 'audio_url': 'https://cdn.example.com/low.mp3', 'is_published': true, 'priority': 1},
+        {'id': 'high', 'audio_url': 'https://cdn.example.com/high.mp3', 'is_published': true, 'priority': 5},
+      ], now: now);
+      expect(selected?['id'], 'high');
+    });
+    test('ignores drafts and adverts outside their schedule', () {
+      final selected = selectActiveAudioAd([
+        {'id': 'draft', 'audio_url': 'https://cdn.example.com/draft.mp3', 'is_published': false},
+        {'id': 'future', 'audio_url': 'https://cdn.example.com/future.mp3', 'is_published': true, 'starts_at': '2026-11-07T11:00:00Z'},
+        {'id': 'expired', 'audio_url': 'https://cdn.example.com/expired.mp3', 'is_published': true, 'ends_at': '2026-11-07T09:59:59Z'},
+      ], now: now);
+      expect(selected, isNull);
+    });
+    test('rejects Spotify pages as direct audio adverts', () {
+      final selected = selectActiveAudioAd([
+        {'id': 'spotify', 'audio_url': 'https://open.spotify.com/track/abc123', 'is_published': true},
+      ], now: now);
+      expect(selected, isNull);
+    });
+  });
+
 }

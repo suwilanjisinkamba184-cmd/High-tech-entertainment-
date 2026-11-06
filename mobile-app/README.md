@@ -4,7 +4,7 @@ The official Android client is a native Flutter application. The canonical publi
 
 - **Official website:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/
 - **Source repository:** https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-
-- **Current source version:** 2.2.9 SU (build 26)
+- **Current source version:** 2.2.10 SU (build 27)
 - **Android support:** Android 8.0 (API 26) and newer
 - **Application ID:** `com.hightechentertainment.app`
 
@@ -23,10 +23,14 @@ The official Android client is a native Flutter application. The canonical publi
 ### HT Admin — private founder experience
 
 - Founder-only entry, backed by Supabase role checks and row-level security.
-- Dashboard, music upload, track publishing/deletion, artist and release management.
+- Dashboard, music upload, track publishing/deletion, artist and release management, and sponsored audio-ad management.
 - Artwork and video management.
 - Role-checked user directory and aggregate listening/advertising analytics.
 - Private on-device diagnostics with explicit redacted report export.
+
+## Performance and reliability
+
+- App tabs are mounted on first visit rather than all loading their catalogues at startup, reducing initial network and memory pressure on low-RAM Android devices.
 
 ## Audio architecture and startup behaviour
 

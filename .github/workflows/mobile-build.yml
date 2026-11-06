@@ -422,12 +422,15 @@ jobs:
             echo "PASS: $asset ($(stat -c%s "$asset") bytes)."
           done
       - name: Verify startup MP3 decodes successfully
+        timeout-minutes: 4
         working-directory: ${{ runner.temp }}/hte_app
         shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes ffmpeg
-          DURATION="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 assets/high-tech-startup.mp3)"
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            timeout 90s sudo apt-get update
+            timeout 60s sudo apt-get install --yes ffmpeg
+          fi
+          DURATION="$(timeout 20s ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 assets/high-tech-startup.mp3)"
           python3 - "$DURATION" <<'PY'
           import sys
           try:
@@ -438,7 +441,7 @@ jobs:
               raise SystemExit("Startup MP3 has no playable duration.")
           print(f"PASS: startup MP3 metadata is valid ({duration:.2f} seconds).")
           PY
-          ffmpeg -v error -i assets/high-tech-startup.mp3 -f null -
+          timeout 30s ffmpeg -nostdin -v error -i assets/high-tech-startup.mp3 -f null -
           echo "PASS: startup MP3 decoded without audio-stream errors."
       - name: Install dependencies and generate branded launcher icon
         working-directory: ${{ runner.temp }}/hte_app
@@ -495,7 +498,8 @@ jobs:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
         run: shorebird release android --flavor su --artifact apk --target-platform android-arm,android-arm64 -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Verify OTA patch asset and icon compatibility
-        if: steps.ota_mode.outputs.mode == 'patch' || steps.ota_mode.outputs.mode == 'validate'
+        # Only a publishable Dart patch needs an existing release baseline. PR validation builds a separate APK and must also support version-bump PRs.
+        if: steps.ota_mode.outputs.mode == 'patch'
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}

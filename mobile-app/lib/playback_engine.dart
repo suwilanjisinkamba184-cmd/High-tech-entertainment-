@@ -7,6 +7,29 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+
+/// Returns the highest-priority advert whose publication window includes [now].
+Map<String, dynamic>? selectActiveAudioAd(
+  List<Map<String, dynamic>> ads, {
+  DateTime? now,
+}) {
+  final instant = now ?? DateTime.now();
+  final active = ads.where((ad) {
+    if (ad['is_published'] != true) return false;
+    final startsAt = DateTime.tryParse((ad['starts_at'] ?? '').toString());
+    final endsAt = DateTime.tryParse((ad['ends_at'] ?? '').toString());
+    if (startsAt != null && startsAt.isAfter(instant)) return false;
+    if (endsAt != null && !endsAt.isAfter(instant)) return false;
+    return HtePlayback.directAudioUri(ad['audio_url']) != null;
+  }).toList();
+  active.sort((a, b) {
+    final priorityA = (a['priority'] as num?)?.toInt() ?? 0;
+    final priorityB = (b['priority'] as num?)?.toInt() ?? 0;
+    return priorityB.compareTo(priorityA);
+  });
+  return active.isEmpty ? null : active.first;
+}
+
 /// Counts completed music tracks independently of track selection.
 ///
 /// Starting, skipping to, or manually selecting a track must not reset this
@@ -266,29 +289,85 @@ class HtePlayback {
       _currentSourceIsMusic = false;
       _completionHandledForSource = false;
       playbackError.value = null;
+      Map<String, dynamic>? remoteAd;
+      try {
+        final rows = await Supabase.instance.client
+            .from('audio_ads')
+            .select()
+            .eq('is_published', true)
+            .order('priority', ascending: false)
+            .limit(20)
+            .timeout(const Duration(seconds: 5));
+        remoteAd = selectActiveAudioAd(List<Map<String, dynamic>>.from(rows));
+      } catch (error) {
+        // Ads are best-effort. A catalogue/API outage must not interrupt music.
+        debugPrint('HTE remote ad lookup failed; using bundled fallback: $error');
+      }
+      final remoteUri = HtePlayback.directAudioUri(remoteAd?['audio_url']);
+      final adId = remoteAd?['id'];
+      final adTitle = (remoteAd?['title'] ?? 'Advertisement').toString();
       currentTrack.value = {
-        'title': 'Advertisement',
+        'title': adTitle,
         'artist': 'High-Tech Entertainment',
       };
-      await player.setAudioSource(
-        AudioSource.asset(
-          startupAdvertAsset,
-          tag: MediaItem(
-            id: 'hte-audio-advert',
-            title: 'Advertisement',
-            artist: 'High-Tech Entertainment',
-            album: 'High-Tech Entertainment',
-          ),
-        ),
-        preload: true,
+      final tag = MediaItem(
+        id: adId?.toString() ?? 'hte-bundled-audio-advert',
+        title: adTitle,
+        artist: 'High-Tech Entertainment',
+        album: 'High-Tech Entertainment',
       );
+      var remoteAdLoaded = false;
+      if (remoteUri != null) {
+        try {
+          await player.setAudioSource(
+            AudioSource.uri(remoteUri, tag: tag),
+            preload: true,
+          ).timeout(const Duration(seconds: 20));
+          remoteAdLoaded = true;
+        } catch (error) {
+          debugPrint('HTE remote advert failed to load; using bundled fallback: $error');
+        }
+      }
+      if (!remoteAdLoaded) {
+        await player.setAudioSource(
+          AudioSource.asset(
+            startupAdvertAsset,
+            tag: MediaItem(
+              id: 'hte-bundled-audio-advert',
+              title: 'Advertisement',
+              artist: 'High-Tech Entertainment',
+              album: 'High-Tech Entertainment',
+            ),
+          ),
+          preload: true,
+        );
+      }
+      if (remoteAdLoaded && adId != null) {
+        unawaited(_recordAdImpression(adId));
+      }
       unawaited(_startPlayback());
       return true;
     } catch (error) {
       adPlaying.value = false;
+      _currentSourceIsMusic = false;
+      _completionHandledForSource = true;
       playbackError.value = _friendlyError(error);
-      debugPrint('HTE bundled advert playback failed: $error');
+      debugPrint('HTE advert playback failed: $error');
       return false;
+    }
+  }
+
+  Future<void> _recordAdImpression(Object adId) async {
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
+      await Supabase.instance.client.from('ad_impressions').insert({
+        'ad_id': adId,
+        'user_id': user.id,
+      });
+    } catch (error) {
+      // Analytics must never block or stop playback.
+      debugPrint('HTE ad impression could not be recorded: $error');
     }
   }
 

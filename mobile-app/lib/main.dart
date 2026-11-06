@@ -1,4 +1,4 @@
-// OTA publication marker: patch the published v2.2.9 SU+26 Shorebird baseline.
+// Full-release repair: 2.2.10 SU+27 includes the updated compiled icon asset.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -1118,7 +1118,11 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int tab = 0;
-  final pages = const [HomeTab(), DiscoverTab(), ReleasesTab(), LibraryTab(), AccountTab(), MoreTab()];
+  static const _pages = <Widget>[
+    HomeTab(), DiscoverTab(), ReleasesTab(), LibraryTab(), AccountTab(), MoreTab(),
+  ];
+  // Mount tabs on first visit to avoid six simultaneous catalogue loads on low-RAM phones.
+  final Set<int> _visitedTabs = <int>{0};
   static const _items = [
     (Icons.space_dashboard_rounded, 'Home'),
     (Icons.explore_rounded, 'Discover'),
@@ -1144,7 +1148,17 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ),
       ),
-      SafeArea(child: IndexedStack(index: tab, children: pages)),
+      SafeArea(
+        child: IndexedStack(
+          index: tab,
+          children: List<Widget>.generate(
+            _pages.length,
+            (index) => _visitedTabs.contains(index)
+                ? _pages[index]
+                : const SizedBox.shrink(),
+          ),
+        ),
+      ),
     ]),
     bottomNavigationBar: Container(
       decoration: const BoxDecoration(
@@ -1173,7 +1187,7 @@ class _MainScreenState extends State<MainScreen> {
                     label: item.$2,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(15),
-                      onTap: () => setState(() => tab = index),
+                      onTap: () => setState(() { tab = index; _visitedTabs.add(index); }),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 240),
                         curve: Curves.easeOutCubic,
