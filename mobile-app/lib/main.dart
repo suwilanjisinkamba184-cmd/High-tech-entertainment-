@@ -39,8 +39,12 @@ bool _audioBackgroundInitialized = false;
 // audio background handler has been initialized in StartupGate.
 final HtePlayback playback = HtePlayback.instance;
 final AudioPlayer player = HtePlayback.instance.player;
-// Separate from the music/ad player and retained across StartupGate -> AuthGate.
-final AudioPlayer _startupSoundPlayer = AudioPlayer();
+// Lazily created only after JustAudioBackground.init has registered the
+// Android audio service. This process-scoped player remains separate from the
+// music/ad player and survives the StartupGate -> AuthGate transition.
+AudioPlayer? _startupSoundPlayerInstance;
+AudioPlayer get _startupSoundPlayer =>
+    _startupSoundPlayerInstance ??= AudioPlayer();
 
 /// Plays the bundled launch ident once and waits for actual playback completion.
 /// This player is separate from the music/ad player. A sound failure is logged
