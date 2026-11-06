@@ -1,0 +1,35 @@
+/* High-Tech Entertainment priority-one public experience refinement */
+.feedback-section{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(180deg,transparent,#17140f55 45%,transparent)}
+.feedback-section:before{content:"";position:absolute;z-index:-1;width:520px;height:520px;right:-180px;top:5%;border:1px solid #d6b46a22;border-radius:50%;box-shadow:0 0 0 45px #d6b46a08,0 0 0 95px #d6b46a05;pointer-events:none}
+.feedback-section .page-title{max-width:560px}
+.feedback-panel{border-color:#b99a5a55;background:linear-gradient(145deg,#1b1a17f5,#111214f8);box-shadow:0 24px 70px #0008, inset 0 1px #ffffff0a}
+.feedback-points{display:grid;gap:12px;margin-top:28px;color:#d8d1c3;font-size:.92rem}
+.feedback-points span::first-letter{color:var(--gold2)}
+.feedback-panel .field label{color:#e8dfca}
+.feedback-panel input,.feedback-panel select,.feedback-panel textarea{background:#0b0c0e;border-color:#3c372d}
+.feedback-panel input:focus,.feedback-panel select:focus,.feedback-panel textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px #d6b46a20}
+.feedback-panel textarea{min-height:140px;resize:vertical}
+@media(max-width:760px){.feedback-section .contact-grid{grid-template-columns:1fr;gap:24px}.feedback-section .panel{padding:20px}.feedback-points{margin-top:18px}}
+
+/* Shared public-page polish */
+html{scroll-behavior:smooth;scroll-padding-top:92px}
+.topbar{box-shadow:0 12px 36px #0005}
+.navlinks a{padding:8px 0;position:relative;transition:color .2s ease}
+.navlinks a:after{content:"";position:absolute;left:0;right:100%;bottom:1px;height:1px;background:var(--gold);transition:right .2s ease}
+.navlinks a:hover:after,.navlinks a:focus-visible:after{right:0}
+.hero{position:relative;isolation:isolate;overflow:hidden}
+.hero:before{content:"";position:absolute;z-index:-1;inset:0;background:linear-gradient(110deg,#d6b46a08,transparent 52%),radial-gradient(ellipse at 84% 44%,#d6b46a12,transparent 40%);pointer-events:none}
+.hero-grid{min-height:510px}
+.hero-art{box-shadow:0 32px 90px #0009,inset 0 1px #ffffff12}
+.hero-crest{filter:drop-shadow(0 14px 34px #d6b46a35)}
+.section{padding-top:clamp(58px,7vw,94px);padding-bottom:clamp(58px,7vw,94px)}
+.section-head{margin-bottom:26px}
+.section-head h2,.contact-copy h2{letter-spacing:-.045em}
+.music-card,.artist-card,.release-card,.service-card{border:1px solid #ffffff13;border-radius:20px;background:linear-gradient(145deg,#19191a,#101113);box-shadow:0 16px 44px #0004;transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}
+.music-card:hover,.artist-card:hover,.release-card:hover,.service-card:hover{transform:translateY(-4px);border-color:#d6b46a66;box-shadow:0 22px 52px #0007}
+.panel{border:1px solid #ffffff18;border-radius:24px;background:linear-gradient(145deg,#191a1c,#101113);box-shadow:0 24px 70px #0006}
+.feature-band{border:1px solid #d6b46a44;border-radius:26px;background:radial-gradient(ellipse at 90% 0,#d6b46a18,transparent 45%),linear-gradient(120deg,#1d1a14,#121315 65%);box-shadow:0 26px 70px #0006}
+.status{min-height:1.5em}
+@media(max-width:900px){.nav{gap:12px}.navlinks{gap:12px;flex-wrap:wrap;justify-content:center}.nav-actions{margin-left:auto}}
+@media(max-width:760px){html{scroll-padding-top:120px}.hero{padding:58px 0 48px}.hero-grid{min-height:0;gap:30px}.hero-art{max-height:340px}.section{padding-top:54px;padding-bottom:54px}.feature-band{padding:22px;border-radius:20px}.music-card:hover,.artist-card:hover,.release-card:hover,.service-card:hover{transform:none}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
