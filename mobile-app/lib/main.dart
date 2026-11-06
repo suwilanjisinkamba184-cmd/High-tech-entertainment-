@@ -4240,7 +4240,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         const Divider(height: 1),
         ListTile(
-          leading: const Icon(Icons.history_rounded, color: Color(0xFFD4AF37)),
+          leading: const Icon(Icons.info_outline, color: Color(0xFFD4AF37)),
           title: const Text('OTA update history & diagnostics'),
           subtitle: const Text('Review downloaded, pending and activated patches'),
           trailing: const Icon(Icons.chevron_right),
