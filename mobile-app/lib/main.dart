@@ -46,52 +46,46 @@ final AudioPlayer _startupSoundPlayer = AudioPlayer();
 /// This player is separate from the music/ad player. A sound failure is logged
 /// and returned as false; it must never trap the user on the splash screen.
 Future<bool> playStartupJingle() async {
+  // Configure the dedicated startup player before requesting audio focus.
+  // This is deliberately independent of Supabase and the music/ad player.
   for (var attempt = 1; attempt <= 2; attempt++) {
     try {
+      final session = await AudioSession.instance;
+      await session.configure(AudioSessionConfiguration.music());
+      await session.setActive(true);
+
       await _startupSoundPlayer.stop();
       await _startupSoundPlayer.setVolume(1.0);
       await _startupSoundPlayer.setLoopMode(LoopMode.off);
-
-      // setAsset may return null for some MP3 encodings. A missing duration
-      // must not prevent playback; use a bounded fallback timeout instead.
-      final duration =
-          await _startupSoundPlayer.setAsset('assets/high-tech-startup.mp3');
+      final duration = await _startupSoundPlayer.setAudioSource(
+        AudioSource.asset('assets/high-tech-startup.mp3'),
+      );
       final maxWait = duration != null && duration > Duration.zero
           ? duration + const Duration(seconds: 8)
           : const Duration(seconds: 30);
 
-      // just_audio's play future completes when playback ends, pauses or
-      // stops. Await it, then verify the final state so an interruption is
-      // never mistaken for a successfully completed startup jingle.
-      await _startupSoundPlayer.play().timeout(
-        maxWait,
-        onTimeout: () async {
-          await _startupSoundPlayer.stop();
-          throw TimeoutException(
-            'High-Tech startup sound did not complete within $maxWait.',
-          );
-        },
+      // Subscribe before play() so a short ident cannot complete before the
+      // completion listener is attached. Do not await play() itself.
+      final completed = _startupSoundPlayer.processingStateStream.firstWhere(
+        (state) => state == ProcessingState.completed,
       );
-
-      if (_startupSoundPlayer.processingState != ProcessingState.completed) {
-        throw StateError(
-          'High-Tech startup sound stopped before reaching completion.',
-        );
-      }
+      unawaited(_startupSoundPlayer.play());
+      await completed.timeout(maxWait);
 
       debugPrint('HTE startup sound completed successfully on attempt $attempt.');
+      await session.setActive(false);
       return true;
     } catch (error, stackTrace) {
       debugPrint('HTE startup sound attempt $attempt failed: $error');
       debugPrintStack(stackTrace: stackTrace);
       try {
         await _startupSoundPlayer.stop();
-      } catch (stopError) {
-        debugPrint('HTE startup player reset failed: $stopError');
+        await AudioSession.instance.then((session) => session.setActive(false));
+      } catch (resetError) {
+        debugPrint('HTE startup audio reset failed: $resetError');
       }
-
       if (attempt < 2) {
-        await Future<void>.delayed(const Duration(milliseconds: 350));
+        await Future<void>.delayed(const Duration(milliseconds: 500));
       }
     }
   }
@@ -449,6 +443,9 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   bool _startupSoundHandled = false;
   String? _error;
   Future<void>? _initialization;
+  Future<bool>? _startupSoundTask;
+  final DateTime _launchStartedAt = DateTime.now();
+  double _startupProgress = 0.06;
   late final AnimationController _startupAnimation;
   late final AnimationController _ringAnimation;
 
@@ -463,16 +460,26 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(seconds: 7),
     )..repeat();
+
+    // Start the launch ident immediately on the first frame. It must not wait
+    // for Supabase, background playback setup, or authentication.
+    _startupSoundTask = _playStartupSound();
     _initialize();
   }
 
-  Future<void> _playStartupSound() async {
-    if (_startupSoundHandled) return;
-    _startupSoundHandled = await playStartupJingle();
+  Future<bool> _playStartupSound() async {
+    if (_startupSoundHandled) return true;
+    final played = await playStartupJingle();
+    _startupSoundHandled = played;
+    return played;
+  }
+
+  void _setStartupProgress(double value) {
+    if (!mounted) return;
+    setState(() => _startupProgress = value.clamp(0.0, 1.0));
   }
 
   /// Coalesce overlapping startup initialization requests.
-  /// A failed attempt can be retried without reassigning late-final services.
   Future<void> _initialize() {
     final running = _initialization;
     if (running != null) return running;
@@ -480,9 +487,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
     final attempt = _initializeServices();
     _initialization = attempt;
     return attempt.whenComplete(() {
-      if (identical(_initialization, attempt)) {
-        _initialization = null;
-      }
+      if (identical(_initialization, attempt)) _initialization = null;
     });
   }
 
@@ -491,10 +496,11 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       setState(() {
         _starting = true;
         _error = null;
+        _startupProgress = 0.08;
       });
     }
     try {
-      // Initialise Android background audio for normal music playback.
+      // Normal background music setup is isolated from the startup ident.
       if (defaultTargetPlatform == TargetPlatform.android &&
           !_audioBackgroundInitialized) {
         try {
@@ -507,10 +513,15 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         } catch (audioError, stackTrace) {
           debugPrint('HTE background audio initialisation failed: $audioError');
           debugPrintStack(stackTrace: stackTrace);
+          unawaited(HteDiagnostics.record(
+            audioError,
+            stackTrace: stackTrace,
+            source: 'background-audio-init',
+          ));
         }
       }
+      _setStartupProgress(0.28);
 
-      // Configure Android media audio focus for normal music playback.
       try {
         final audioSession = await AudioSession.instance;
         await audioSession.configure(AudioSessionConfiguration.music());
@@ -518,24 +529,32 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         debugPrint('HTE media audio session configuration failed: $sessionError');
         debugPrintStack(stackTrace: stackTrace);
       }
+      _setStartupProgress(0.48);
 
-      // Complete essential services first, then play the startup jingle.
-      // The jingle is the final startup gate: when it finishes, the app can
-      // transition immediately without an artificial minimum splash delay.
+      // Core app initialization can continue while the separate ident plays.
       await _initializeCoreServices();
-      await _playStartupSound();
+      _setStartupProgress(0.76);
 
-      if (!_startupSoundHandled) {
-        debugPrint('HTE startup audio failed; continuing into the app interface.');
+      final soundTask = _startupSoundTask ??= _playStartupSound();
+      final soundPlayed = await soundTask;
+      if (!soundPlayed) {
+        debugPrint('HTE startup audio failed; continuing without blocking sign-in.');
+      }
+      _setStartupProgress(0.90);
+
+      // Preserve the agreed minimum 15-second branded startup experience.
+      final elapsed = DateTime.now().difference(_launchStartedAt);
+      const minimumSplash = Duration(seconds: 15);
+      if (elapsed < minimumSplash) {
+        await Future<void>.delayed(minimumSplash - elapsed);
       }
 
-      // Transition immediately after startup audio and essential initialization.
       if (mounted) {
         setState(() {
+          _startupProgress = 1.0;
           _ready = true;
           _starting = false;
         });
-        // Explicitly check Stable OTA after the app is ready; never block startup.
         unawaited(HteOtaUpdateService.checkAndInstall().then(
           (message) => debugPrint('HTE startup OTA check: $message'),
         ));
@@ -555,14 +574,13 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
     }
   }
 
-  /// Retry failed startup services in-place instead of mounting a second
-  /// MaterialApp tree. This avoids leaking the old startup controllers and
-  /// preserves a single application root after a transient failure.
+  /// Retry core startup in-place. No replay control is exposed to the user.
   Future<void> _retryStartup() async {
     if (_starting || !mounted) return;
     setState(() {
       _starting = true;
       _error = null;
+      _startupProgress = 0.08;
     });
     try {
       await _startupSoundPlayer.stop();
@@ -575,6 +593,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       ));
     }
     _startupSoundHandled = false;
+    _startupSoundTask = _playStartupSound();
     await _initialize();
   }
 
@@ -602,6 +621,15 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
     if (_ready) return const AuthGate();
     return Scaffold(
       backgroundColor: const Color(0xFF080808),
+      bottomNavigationBar: SizedBox(
+        height: 3,
+        child: LinearProgressIndicator(
+          value: _startupProgress,
+          minHeight: 3,
+          backgroundColor: const Color(0xFF29231A),
+          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFD9B96E)),
+        ),
+      ),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -645,8 +673,6 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                                 ),
                               ),
                             ),
-                            // The logo itself rotates smoothly as requested; the
-                            // independent outer ring continues its own motion.
                             Transform.rotate(
                               angle: -_ringAnimation.value * 6.283185307179586,
                               child: SvgPicture.asset(
@@ -677,11 +703,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                           height: 9 + (phase * 19),
                           margin: const EdgeInsets.symmetric(horizontal: 3),
                           decoration: BoxDecoration(
-                            color: Color.lerp(
-                              const Color(0xFF8A6420),
-                              const Color(0xFFFFD978),
-                              phase,
-                            ),
+                            color: Color.lerp(const Color(0xFF8A6420), const Color(0xFFFFD978), phase),
                             borderRadius: BorderRadius.circular(5),
                             boxShadow: [
                               BoxShadow(
@@ -698,32 +720,27 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                 const SizedBox(height: 24),
                 const Text(
                   'HIGH-TECH',
-                  style: TextStyle(
-                    fontSize: 25,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 4,
-                  ),
+                  style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900, letterSpacing: 4),
                 ),
                 const SizedBox(height: 5),
                 const Text(
                   'ENTERTAINMENT',
-                  style: TextStyle(
-                    color: Color(0xFFD4AF37),
-                    fontSize: 12,
-                    letterSpacing: 5,
-                  ),
+                  style: TextStyle(color: Color(0xFFD4AF37), fontSize: 12, letterSpacing: 5),
                 ),
                 const SizedBox(height: 26),
-                if (_starting)
-                  const CircularProgressIndicator(
-                    color: Color(0xFFD4AF37),
-                    strokeWidth: 2.5,
-                  ),
                 if (_starting) ...[
-                  const SizedBox(height: 14),
                   const Text(
                     'Preparing your experience…',
                     style: TextStyle(color: Colors.white60),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '${(_startupProgress * 100).round()}%',
+                    style: const TextStyle(
+                      color: Color(0xFFD9B96E),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
                 if (_error != null) ...[
@@ -751,7 +768,6 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
     );
   }
 }
-
 
 /// Keeps the native app behind Supabase authentication. A saved session
 /// opens the app; signing out returns the user to the sign-in screen.
