@@ -23,6 +23,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'playback_engine.dart';
 import 'video_player_page.dart';
+import 'responsive_layout.dart';
 import 'local_files_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -411,9 +412,11 @@ class HteApp extends StatelessWidget {
     builder: (context, child) => LayoutBuilder(
       builder: (context, constraints) => Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 860),
+          constraints: const BoxConstraints(maxWidth: HteResponsiveLayout.contentMaxWidth),
           child: SizedBox(
-            width: constraints.maxWidth > 860 ? 860 : constraints.maxWidth,
+            width: constraints.maxWidth > HteResponsiveLayout.contentMaxWidth
+                ? HteResponsiveLayout.contentMaxWidth
+                : constraints.maxWidth,
             height: constraints.maxHeight,
             child: child ?? const SizedBox.shrink(),
           ),
@@ -734,8 +737,8 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     if (_ready) return const AuthGate();
     final screen = MediaQuery.sizeOf(context);
-    final compact = screen.height < 680 || screen.width < 350;
-    final logoSize = compact ? 164.0 : 224.0;
+    final compact = HteResponsiveLayout.isCompact(screen);
+    final logoSize = HteResponsiveLayout.splashLogoSize(screen);
     return Scaffold(
       backgroundColor: const Color(0xFF080808),
       bottomNavigationBar: SafeArea(
@@ -1677,13 +1680,9 @@ class HteNeoHero extends StatelessWidget {
               const SizedBox(height: 30),
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final titleSize = constraints.maxWidth < 300
-                      ? 27.0
-                      : constraints.maxWidth < 360
-                          ? 31.0
-                          : constraints.maxWidth < 430
-                              ? 34.0
-                              : 36.0;
+                  final titleSize = HteResponsiveLayout.heroTitleSize(
+                    constraints.maxWidth,
+                  );
                   return Text('ENTER A NEW\nFREQUENCY.',
                     style: TextStyle(
                       fontSize: titleSize, height: 1.02,
