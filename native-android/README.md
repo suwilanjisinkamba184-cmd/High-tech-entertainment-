@@ -27,7 +27,7 @@ Not yet migrated:
 
 ## Build
 
-Requires JDK 17, Android SDK 36 and Gradle 9.6:
+Requires JDK 17, Android SDK 36 and Gradle 9.8:
 
 \`\`\`bash
 gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
