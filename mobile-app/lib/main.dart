@@ -546,11 +546,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       _setStartupProgress(0.90);
 
       // Preserve the agreed minimum 15-second branded startup experience.
-      final elapsed = DateTime.now().difference(_launchStartedAt);
-      const minimumSplash = Duration(seconds: 15);
-      if (elapsed < minimumSplash) {
-        await Future<void>.delayed(minimumSplash - elapsed);
-      }
+      await _enforceMinimumSplashDuration();
 
       if (mounted) {
         setState(() {
@@ -568,6 +564,9 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         stackTrace: stackTrace,
         source: 'startup-initialization',
       ));
+      // Even a recoverable initialization error must not shorten the
+      // minimum branded startup interval.
+      await _enforceMinimumSplashDuration();
       if (mounted) {
         setState(() {
           _error = friendlyErrorMessage(error);
@@ -575,29 +574,6 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         });
       }
     }
-  }
-
-  /// Retry core startup in-place. No replay control is exposed to the user.
-  Future<void> _retryStartup() async {
-    if (_starting || !mounted) return;
-    setState(() {
-      _starting = true;
-      _error = null;
-      _startupProgress = 0.08;
-    });
-    try {
-      await _startupSoundPlayer.stop();
-    } catch (error, stackTrace) {
-      debugPrint('HTE startup player reset before retry failed: $error');
-      unawaited(HteDiagnostics.record(
-        error,
-        stackTrace: stackTrace,
-        source: 'startup-player-reset',
-      ));
-    }
-    _startupSoundHandled = false;
-    _startupSoundTask = _playStartupSound();
-    await _initialize();
   }
 
   Future<void> _initializeCoreServices() async {
@@ -752,15 +728,11 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.white70),
                   ),
-                  const SizedBox(height: 18),
-                  OutlinedButton.icon(
-                    onPressed: _starting ? null : _retryStartup,
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Retry startup'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFE5C77F),
-                      side: const BorderSide(color: Color(0xFF80663B)),
-                    ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Close and reopen the app after checking your connection.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
                   ),
                 ],
               ],
