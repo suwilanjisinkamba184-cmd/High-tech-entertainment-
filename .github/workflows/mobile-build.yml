@@ -37,6 +37,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Set up Java 17 for Android Gradle
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.47.9'
@@ -69,8 +74,26 @@ jobs:
                       mode = "release"
                   else:
                       changed = subprocess.check_output(["git", "diff", "--name-only", before, os.environ["EVENT_SHA"]], text=True).splitlines()
-                      patch_safe = (".github/workflows/mobile-build.yml", "mobile-app/shorebird.yaml")
-                      mode = "patch" if changed and all((p.startswith("mobile-app/lib/") and p.endswith(".dart")) or p in patch_safe for p in changed) else "release"
+                      patch_safe = (".github/workflows/mobile-build.yml", "mobile-app/shorebird.yaml", "mobile-app/README.md")
+                      pubspec_version_only = False
+                      if "mobile-app/pubspec.yaml" in changed:
+                          pubspec_diff = subprocess.check_output(
+                              ["git", "diff", before, os.environ["EVENT_SHA"], "--", "mobile-app/pubspec.yaml"],
+                              text=True,
+                          ).splitlines()
+                          meaningful = [
+                              line for line in pubspec_diff
+                              if line.startswith(("+", "-"))
+                              and not line.startswith(("+++", "---"))
+                              and not line[1:].startswith("version:")
+                          ]
+                          pubspec_version_only = not meaningful
+                      mode = "patch" if changed and all(
+                          (p.startswith("mobile-app/lib/") and p.endswith(".dart"))
+                          or p in patch_safe
+                          or (p == "mobile-app/pubspec.yaml" and pubspec_version_only)
+                          for p in changed
+                      ) else "release"
               else:
                   mode = "release"
           if mode == "patch" and not Path("mobile-app/shorebird.yaml").exists():
@@ -444,12 +467,12 @@ jobs:
         if: steps.ota_mode.outputs.mode == 'patch' || steps.ota_mode.outputs.mode == 'validate'
         shell: bash
         env:
-          APP_VERSION: ${{ steps.app_version.outputs.version }}
+          OTA_BASELINE_VERSION: "2.2.7"
         run: |
           python3 - <<'PY'
           import os, re, subprocess
           from pathlib import Path
-          version = os.environ["APP_VERSION"]
+          version = os.environ["OTA_BASELINE_VERSION"]
           tag = f"v{version}-SU"
           try:
               base = subprocess.check_output(
@@ -491,11 +514,13 @@ jobs:
         env:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+          OTA_BASELINE_VERSION: "2.2.7"
+          OTA_BASELINE_BUILD: "24"
         # Flutter may regenerate the tree-shaken MaterialIcons font even when Dart code
         # uses only glyphs already present in the installed release. The compatibility
         # check above rejects new glyphs and changed source assets before allowing this.
         # Shorebird must omit the regenerated font from the patch; never ship it via OTA.
-        run: shorebird patch android --allow-asset-diffs --flavor su --release-version "${{ steps.app_version.outputs.version }} SU+${{ steps.app_version.outputs.build }}" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+        run: shorebird patch android --allow-asset-diffs --flavor su --release-version "$OTA_BASELINE_VERSION SU+$OTA_BASELINE_BUILD" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Build validation APK (pull requests only)
         if: steps.ota_mode.outputs.mode == 'validate'
         working-directory: ${{ runner.temp }}/hte_app
