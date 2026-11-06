@@ -725,7 +725,7 @@ jobs:
       - name: Verify Gradle version
         run: |
           gradle --version
-          gradle --version | grep -q "Gradle 9.6"
+          gradle --version | grep -q "Gradle 9.8"
       - name: Run native unit tests and build debug APK
         working-directory: native-android
         run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
