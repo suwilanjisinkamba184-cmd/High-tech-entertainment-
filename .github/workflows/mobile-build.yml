@@ -76,7 +76,15 @@ jobs:
                       changed = subprocess.check_output(["git", "diff", "--name-only", before, os.environ["EVENT_SHA"]], text=True).splitlines()
                       patch_safe = (".github/workflows/mobile-build.yml", "mobile-app/shorebird.yaml", "mobile-app/README.md")
                       pubspec_version_only = False
+                      version_bumped = False
                       if "mobile-app/pubspec.yaml" in changed:
+                          old_pubspec = subprocess.check_output(
+                              ["git", "show", f"{before}:mobile-app/pubspec.yaml"], text=True
+                          )
+                          new_pubspec = Path("mobile-app/pubspec.yaml").read_text()
+                          old_version = next(line.split(":", 1)[1].strip() for line in old_pubspec.splitlines() if line.startswith("version:"))
+                          new_version = next(line.split(":", 1)[1].strip() for line in new_pubspec.splitlines() if line.startswith("version:"))
+                          version_bumped = old_version != new_version
                           pubspec_diff = subprocess.check_output(
                               ["git", "diff", before, os.environ["EVENT_SHA"], "--", "mobile-app/pubspec.yaml"],
                               text=True,
@@ -88,12 +96,13 @@ jobs:
                               and not line[1:].startswith("version:")
                           ]
                           pubspec_version_only = not meaningful
-                      mode = "patch" if changed and all(
+                      patch_safe_changes = changed and all(
                           (p.startswith("mobile-app/lib/") and p.endswith(".dart"))
                           or p in patch_safe
                           or (p == "mobile-app/pubspec.yaml" and pubspec_version_only)
                           for p in changed
-                      ) else "release"
+                      )
+                      mode = "release" if version_bumped else ("patch" if patch_safe_changes else "release")
               else:
                   mode = "release"
           if mode == "patch" and not Path("mobile-app/shorebird.yaml").exists():
@@ -467,12 +476,19 @@ jobs:
         if: steps.ota_mode.outputs.mode == 'patch' || steps.ota_mode.outputs.mode == 'validate'
         shell: bash
         env:
-          OTA_BASELINE_VERSION: "2.2.7"
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
         run: |
           python3 - <<'PY'
           import os, re, subprocess
           from pathlib import Path
-          version = os.environ["OTA_BASELINE_VERSION"]
+          baseline_ref = f"origin/{os.environ['BASE_REF']}" if os.environ["EVENT_NAME"] == "pull_request" else "HEAD"
+          baseline_pubspec = subprocess.check_output(
+              ["git", "show", f"{baseline_ref}:mobile-app/pubspec.yaml"], text=True
+          )
+          version_line = next(line for line in baseline_pubspec.splitlines() if line.startswith("version:"))
+          version, build = version_line.split(":", 1)[1].strip().split("+", 1)
+          os.environ["OTA_BASELINE_VERSION"] = version
           tag = f"v{version}-SU"
           try:
               base = subprocess.check_output(
@@ -514,13 +530,21 @@ jobs:
         env:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
-          OTA_BASELINE_VERSION: "2.2.7"
-          OTA_BASELINE_BUILD: "24"
-        # Flutter may regenerate the tree-shaken MaterialIcons font even when Dart code
-        # uses only glyphs already present in the installed release. The compatibility
-        # check above rejects new glyphs and changed source assets before allowing this.
-        # Shorebird must omit the regenerated font from the patch; never ship it via OTA.
-        run: shorebird patch android --allow-asset-diffs --flavor su --release-version "$OTA_BASELINE_VERSION SU+$OTA_BASELINE_BUILD" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+        # Resolve the installed Shorebird baseline from the current app version/build.
+        # Version bumps are forced into full-release mode above, never OTA patch mode.
+        # Flutter may regenerate the tree-shaken MaterialIcons font; compatibility checks
+        # reject new glyphs and changed source assets before allowing this patch.
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          line = next(line for line in Path("pubspec.yaml").read_text().splitlines() if line.startswith("version:"))
+          version, build = line.split(":", 1)[1].strip().split("+", 1)
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write(f"OTA_BASELINE_VERSION={version}\\n")
+              env.write(f"OTA_BASELINE_BUILD={build}\\n")
+          PY
+          shorebird patch android --allow-asset-diffs --flavor su --release-version "$OTA_BASELINE_VERSION SU+$OTA_BASELINE_BUILD" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Build validation APK (pull requests only)
         if: steps.ota_mode.outputs.mode == 'validate'
         working-directory: ${{ runner.temp }}/hte_app
