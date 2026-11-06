@@ -101,10 +101,77 @@ Future<bool> playStartupJingle() async {
   return false;
 }
 
-/// Centralised Shorebird OTA checker. All checks target the public Stable track.
+/// Centralised Shorebird OTA manager. Tracks lifecycle events locally so
+/// users can distinguish a downloaded patch from an activated patch.
 class HteOtaUpdateService {
   static final ShorebirdUpdater _updater = ShorebirdUpdater();
   static Future<String>? _activeCheck;
+  static const _historyKey = 'hte_ota_history_v1';
+  static const _lastVerifiedKey = 'hte_ota_last_verified_v1';
+
+  static Future<void> _record(String status, {int? patch, String? detail}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final entries = prefs.getStringList(_historyKey) ?? <String>[];
+      entries.insert(0, jsonEncode({
+        'time': DateTime.now().toUtc().toIso8601String(),
+        'status': status,
+        if (patch != null) 'patch': patch,
+        if (detail != null) 'detail': detail,
+      }));
+      await prefs.setStringList(_historyKey, entries.take(20).toList());
+    } catch (error) {
+      debugPrint('HTE OTA history could not be saved: $error');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> readHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final entries = prefs.getStringList(_historyKey) ?? <String>[];
+    return entries.map((entry) {
+      try {
+        return Map<String, dynamic>.from(jsonDecode(entry) as Map);
+      } catch (_) {
+        return <String, dynamic>{'status': 'Unreadable history entry'};
+      }
+    }).toList();
+  }
+
+  /// Called once on app startup, before another update check. A current patch
+  /// is the confirmation that Shorebird activated it in this process.
+  static Future<String> verifyActivation() async {
+    if (!Platform.isAndroid) return 'OTA activation verification is Android-only.';
+    if (!_updater.isAvailable) {
+      return 'Shorebird is unavailable. This installation may not be a Shorebird release APK.';
+    }
+    try {
+      final current = await _updater.readCurrentPatch();
+      final next = await _updater.readNextPatch();
+      final prefs = await SharedPreferences.getInstance();
+      final currentNumber = current?.number;
+      final previous = prefs.getInt(_lastVerifiedKey);
+      if (currentNumber != null) {
+        await prefs.setInt(_lastVerifiedKey, currentNumber);
+        if (previous != currentNumber) {
+          await _record('activated', patch: currentNumber,
+              detail: 'Active patch confirmed after application startup.');
+        }
+        return 'Verified: Patch #$currentNumber is active.';
+      }
+      if (next != null) {
+        await _record('restart-pending', patch: next.number,
+            detail: 'Patch downloaded; activation awaits a full app restart.');
+        return 'Patch #${next.number} is downloaded but not yet confirmed active. Restart the app.';
+      }
+      await _record('base-release', detail: 'No active patch detected.');
+      return 'Base release is active. No OTA patch is currently installed.';
+    } catch (error, stackTrace) {
+      debugPrint('HTE OTA activation verification failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      await _record('verification-error', detail: error.toString());
+      return 'Activation could not be verified. Check diagnostics and retry.';
+    }
+  }
 
   static Future<String> checkAndInstall() {
     final active = _activeCheck;
@@ -121,6 +188,7 @@ class HteOtaUpdateService {
       return 'OTA patch updates are currently enabled for Android only.';
     }
     if (!_updater.isAvailable) {
+      await _record('unavailable', detail: 'Shorebird is unavailable in this installation.');
       return 'Shorebird OTA is unavailable in this installation. This app must be installed from a Shorebird release build.';
     }
     try {
@@ -129,23 +197,35 @@ class HteOtaUpdateService {
         case UpdateStatus.outdated:
           await _updater.update(track: UpdateTrack.stable);
           final nextPatch = await _updater.readNextPatch();
-          final patchLabel = nextPatch == null ? 'latest patch' : 'Patch #${nextPatch.number}';
-          return '$patchLabel downloaded successfully. Fully close and reopen the app to activate it.';
+          final number = nextPatch?.number;
+          await _record('downloaded', patch: number,
+              detail: 'Patch downloaded; restart the app to activate it.');
+          return number == null
+              ? 'Latest patch downloaded. Fully close and reopen the app to activate it.'
+              : 'Patch #$number downloaded. Fully close and reopen the app to activate it.';
         case UpdateStatus.restartRequired:
           final nextPatch = await _updater.readNextPatch();
-          final patchLabel = nextPatch == null ? 'The downloaded patch' : 'Patch #${nextPatch.number}';
-          return '$patchLabel is ready. Fully close and reopen the app to activate it.';
+          final number = nextPatch?.number;
+          await _record('restart-pending', patch: number);
+          return number == null
+              ? 'A patch is ready. Fully close and reopen the app to activate it.'
+              : 'Patch #$number is ready. Fully close and reopen the app to activate it.';
         case UpdateStatus.upToDate:
           final currentPatch = await _updater.readCurrentPatch();
-          return currentPatch == null
+          final number = currentPatch?.number;
+          await _record(number == null ? 'base-release' : 'active',
+              patch: number, detail: 'Stable channel check completed.');
+          return number == null
               ? 'No new OTA patch is available. This installation is running the base release.'
-              : 'No new OTA patch is available. Installed patch: #${currentPatch.number}.';
+              : 'No new OTA patch is available. Installed patch: #$number.';
         case UpdateStatus.unavailable:
+          await _record('unavailable');
           return 'Shorebird OTA is unavailable in this app installation.';
       }
     } catch (error, stackTrace) {
       debugPrint('HTE OTA update check failed: $error');
       debugPrintStack(stackTrace: stackTrace);
+      await _record('failed', detail: error.toString());
       return 'OTA check failed. Check your internet connection and try again.';
     }
   }
@@ -569,9 +649,12 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
           _ready = true;
           _starting = false;
         });
-        unawaited(HteOtaUpdateService.checkAndInstall().then(
-          (message) => debugPrint('HTE startup OTA check: $message'),
-        ));
+        unawaited(() async {
+          final activation = await HteOtaUpdateService.verifyActivation();
+          debugPrint('HTE startup OTA activation: $activation');
+          final message = await HteOtaUpdateService.checkAndInstall();
+          debugPrint('HTE startup OTA check: $message');
+        }());
       }
     } catch (error, stackTrace) {
       unawaited(HteDiagnostics.record(
@@ -3701,6 +3784,42 @@ class _SettingsPageState extends State<SettingsPage> {
     return 0;
   }
 
+  Future<void> _showOtaHistory() async {
+    final history = await HteOtaUpdateService.readHistory();
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('OTA update history'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: history.isEmpty
+              ? const Text('No OTA activity has been recorded on this installation yet.')
+              : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: history.length,
+                  separatorBuilder: (_, __) => const Divider(),
+                  itemBuilder: (context, index) {
+                    final item = history[index];
+                    final time = DateTime.tryParse(item['time']?.toString() ?? '');
+                    final patch = item['patch'] == null ? '' : ' • Patch #${item['patch']}';
+                    return ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('${item['status'] ?? 'Unknown'}$patch'),
+                      subtitle: Text([
+                        if (time != null) time.toLocal().toString(),
+                        if ((item['detail'] ?? '').toString().isNotEmpty) item['detail'].toString(),
+                      ].join('\\n')),
+                    );
+                  },
+                ),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+      ),
+    );
+  }
+
   Future<void> _checkForOtaUpdates() async {
     if (checking || downloading) return;
     setState(() {
@@ -4118,6 +4237,14 @@ class _SettingsPageState extends State<SettingsPage> {
               ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.chevron_right),
           onTap: (checking || downloading) ? null : _checkForOtaUpdates,
+        ),
+        const Divider(height: 1),
+        ListTile(
+          leading: const Icon(Icons.history_rounded, color: Color(0xFFD4AF37)),
+          title: const Text('OTA update history & diagnostics'),
+          subtitle: const Text('Review downloaded, pending and activated patches'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _showOtaHistory,
         ),
         const Divider(height: 1),
         ListTile(
