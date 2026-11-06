@@ -20,6 +20,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'self_healing_engine.dart';
 import 'playback_engine.dart';
 import 'video_player_page.dart';
 import 'local_files_page.dart';
@@ -285,14 +286,14 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    unawaited(HteDiagnostics.record(
+    unawaited(HteSelfHealingEngine.recordAndRecover(
       details.exception,
       stackTrace: details.stack,
       source: 'flutter-framework',
     ));
   };
   PlatformDispatcher.instance.onError = (error, stackTrace) {
-    unawaited(HteDiagnostics.record(
+    unawaited(HteSelfHealingEngine.recordAndRecover(
       error,
       stackTrace: stackTrace,
       source: 'platform-dispatcher',
