@@ -1015,104 +1015,182 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
+
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int tab = 0;
-  final pages = const [HomeTab(), DiscoverTab(), ReleasesTab(), LibraryTab(), AccountTab(), MoreTab()];
-  static const _items = [
+  static const _items = <(IconData, String)>[
     (Icons.space_dashboard_rounded, 'Home'),
     (Icons.explore_rounded, 'Discover'),
     (Icons.album_rounded, 'Releases'),
     (Icons.library_music_rounded, 'Library'),
-    (Icons.person_rounded, 'Profile'),
+    (Icons.person_rounded, 'Account'),
     (Icons.grid_view_rounded, 'More'),
   ];
 
+  late final List<Widget Function()> _builders;
+  late final List<Widget?> _pages;
+  int _tab = 0;
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: Stack(children: [
-      const Positioned.fill(
-        child: IgnorePointer(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: Alignment(-0.85, -0.95),
-                radius: 1.25,
-                colors: [Color(0x1A9C762E), Color(0x0007090D)],
-              ),
-            ),
-          ),
-        ),
-      ),
-      SafeArea(child: IndexedStack(index: tab, children: pages)),
-    ]),
-    bottomNavigationBar: Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xF2141B24), Color(0xFF080B10)],
-        ),
-        border: Border(top: BorderSide(color: Color(0xFF34404D), width: .7)),
-        boxShadow: [BoxShadow(color: Color(0x66000000), blurRadius: 24, offset: Offset(0, -8))],
-      ),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const PlayerBar(),
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 7),
-            child: Row(
-              children: List.generate(_items.length, (index) {
-                final selected = tab == index;
-                final item = _items[index];
-                return Expanded(
-                  child: Semantics(
-                    button: true,
-                    selected: selected,
-                    label: item.$2,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(15),
-                      onTap: () => setState(() => tab = index),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 240),
-                        curve: Curves.easeOutCubic,
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          gradient: selected ? const LinearGradient(
-                            begin: Alignment.topLeft, end: Alignment.bottomRight,
-                            colors: [Color(0xFF4A3920), Color(0xFF211D17)],
-                          ) : null,
-                          color: selected ? null : Colors.transparent,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: selected ? const Color(0xFFB68B43) : Colors.transparent,
-                          ),
-                        ),
-                        child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(item.$1, size: 20,
-                            color: selected ? const Color(0xFFF0CC7B) : const Color(0xFF82909E)),
-                          const SizedBox(height: 4),
-                          Text(item.$2, maxLines: 1,
-                            style: TextStyle(fontSize: 9, letterSpacing: .2,
-                              fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
-                              color: selected ? const Color(0xFFF0CC7B) : const Color(0xFF9BA7B2))),
-                        ]),
-                      ),
+  void initState() {
+    super.initState();
+    _builders = <Widget Function()>[
+      () => const HomeTab(),
+      () => const DiscoverTab(),
+      () => const ReleasesTab(),
+      () => const LibraryTab(),
+      () => const AccountTab(),
+      () => const MoreTab(),
+    ];
+    _pages = List<Widget?>.filled(_builders.length, null);
+    _pages[0] = _builders[0]();
+  }
+
+  void _selectTab(int index) {
+    if (index < 0 || index >= _builders.length || index == _tab) return;
+    setState(() {
+      _pages[index] ??= _builders[index]();
+      _tab = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    return PopScope(
+      canPop: _tab == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _tab != 0) _selectTab(0);
+      },
+      child: Scaffold(
+        body: Stack(
+          children: [
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment(-0.85, -0.95),
+                      radius: 1.25,
+                      colors: [Color(0x1A9C762E), Color(0x0007090D)],
                     ),
                   ),
-                );
-              }),
+                ),
+              ),
             ),
+            SafeArea(
+              bottom: false,
+              child: IndexedStack(
+                index: _tab,
+                children: List<Widget>.generate(_pages.length, (index) {
+                  return TickerMode(
+                    enabled: index == _tab,
+                    child: _pages[index] ?? const SizedBox.shrink(),
+                  );
+                }),
+              ),
+            ),
+          ],
+        ),
+        bottomNavigationBar: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xF2141B24), Color(0xFF080B10)],
+            ),
+            border: Border(top: BorderSide(color: Color(0xFF34404D), width: .7)),
+            boxShadow: [
+              BoxShadow(color: Color(0x66000000), blurRadius: 24, offset: Offset(0, -8)),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const PlayerBar(),
+              Padding(
+                padding: EdgeInsets.fromLTRB(6, 7, 6, bottomInset > 0 ? 5 : 8),
+                child: Row(
+                  children: List<Widget>.generate(_items.length, (index) {
+                    final selected = _tab == index;
+                    final item = _items[index];
+                    return Expanded(
+                      child: Semantics(
+                        button: true,
+                        selected: selected,
+                        label: item.$2,
+                        child: Tooltip(
+                          message: item.$2,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(14),
+                              onTap: () => _selectTab(index),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 220),
+                                curve: Curves.easeOutCubic,
+                                constraints: const BoxConstraints(minHeight: 54),
+                                margin: const EdgeInsets.symmetric(horizontal: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 7),
+                                decoration: BoxDecoration(
+                                  gradient: selected
+                                      ? const LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [Color(0xFF4A3920), Color(0xFF211D17)],
+                                        )
+                                      : null,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: selected ? const Color(0xFFB68B43) : Colors.transparent,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      item.$1,
+                                      size: 21,
+                                      color: selected
+                                          ? const Color(0xFFF0CC7B)
+                                          : const Color(0xFF82909E),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        item.$2,
+                                        maxLines: 1,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          letterSpacing: .1,
+                                          fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                                          color: selected
+                                              ? const Color(0xFFF0CC7B)
+                                              : const Color(0xFF9BA7B2),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ],
           ),
         ),
-      ]),
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class MoreTab extends StatelessWidget {
