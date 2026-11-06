@@ -4,7 +4,7 @@ The official Android client is a native Flutter application. The canonical publi
 
 - **Official website:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/
 - **Source repository:** https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-
-- **Current source version:** 2.2.9 SU (build 26)
+- **Current source version:** 2.2.10 SU (build 27)
 - **Android support:** Android 8.0 (API 26) and newer
 - **Application ID:** `com.hightechentertainment.app`
 
