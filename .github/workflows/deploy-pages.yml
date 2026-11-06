@@ -27,6 +27,10 @@ jobs:
           test -s assets/app.js
           test -s assets/site.css
           test -s assets/videos.js
+          test -s assets/booking-confirmation.aac
+          grep -q 'id="feedback-form"' index.html
+          grep -q 'booking-confirmation.aac' assets/app.js
+          grep -q "f.matches('#contact-form,#feedback-form')" assets/app.js
           test -s account/index.html
           test -s admin/index.html
           grep -q 'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/' index.html
