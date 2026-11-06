@@ -1,11 +1,11 @@
 # High-Tech Entertainment — Native Android App
 
-The Flutter application in this folder is the native Android client for High-Tech Entertainment.\n\nOfficial website: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/ Current app version: **2.2.6**.
+The Flutter application in this folder is the native Android client for High-Tech Entertainment.\n\nOfficial website: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/ Current app version: **2.2.8 SU (build 25)**.
 
 ## Experiences
 
 ### HT Music — public listener experience
-- Branded animated startup with a separate offline-capable High-Tech jingle, persistent startup-sound preference and preview control, followed by required Supabase sign-in.
+- Branded animated startup with a dedicated bundled High-Tech jingle that starts before Supabase initialization, a 15-second minimum splash, and a gold bottom-edge progress indicator, followed by required Supabase sign-in.
 - Native Google account chooser when GOOGLE_WEB_CLIENT_ID is configured, with a Supabase Google OAuth deep-link fallback; email/password authentication includes deep-link password recovery.
 - Home, Discover, Releases, Library, Favourites, Playlists and Profile.
 - Artist catalogue, music videos, search, track sharing and RLS-protected in-app announcements.
