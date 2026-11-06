@@ -441,7 +441,7 @@ jobs:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
         run: shorebird release android --flavor su --artifact apk --target-platform android-arm,android-arm64 -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Verify OTA patch asset and icon compatibility
-        if: steps.ota_mode.outputs.mode == 'patch'
+        if: steps.ota_mode.outputs.mode == 'patch' || steps.ota_mode.outputs.mode == 'validate'
         shell: bash
         env:
           APP_VERSION: ${{ steps.app_version.outputs.version }}
