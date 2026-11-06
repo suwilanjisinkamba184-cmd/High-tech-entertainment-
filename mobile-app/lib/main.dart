@@ -794,7 +794,6 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                   },
                 ),
                 const SizedBox(height: 26),
-                const SizedBox(height: 26),
                 const SizedBox(height: 24),
                 const Text(
                   'HIGH-TECH',
