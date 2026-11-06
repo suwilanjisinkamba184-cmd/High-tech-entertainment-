@@ -102,7 +102,8 @@ jobs:
                           or (p == "mobile-app/pubspec.yaml" and pubspec_version_only)
                           for p in changed
                       )
-                      mode = "release" if version_bumped else ("patch" if patch_safe_changes else "release")
+                      has_dart_changes = any(p.startswith("mobile-app/lib/") and p.endswith(".dart") for p in changed)
+                      mode = "release" if version_bumped else ("patch" if patch_safe_changes and has_dart_changes else ("validate" if patch_safe_changes else "release"))
               else:
                   mode = "release"
           if mode == "patch" and not Path("mobile-app/shorebird.yaml").exists():
@@ -550,7 +551,7 @@ jobs:
           fi
           echo "Publishing OTA patch against High-Tech Entertainment $OTA_BASELINE_VERSION SU+$OTA_BASELINE_BUILD"
           shorebird patch android --allow-asset-diffs --flavor su --release-version "$OTA_BASELINE_VERSION SU+$OTA_BASELINE_BUILD" --track stable -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
-      - name: Build validation APK (pull requests only)
+      - name: Build validation APK (non-release checks)
         if: steps.ota_mode.outputs.mode == 'validate'
         working-directory: ${{ runner.temp }}/hte_app
         env:
