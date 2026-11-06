@@ -85,6 +85,11 @@ Future<bool> playStartupJingle() async {
     } catch (error, stackTrace) {
       debugPrint('HTE startup sound attempt $attempt failed: $error');
       debugPrintStack(stackTrace: stackTrace);
+      unawaited(HteDiagnostics.record(
+        error,
+        stackTrace: stackTrace,
+        source: 'startup-sound',
+      ));
       try {
         await _startupSoundPlayer.stop();
       } catch (resetError, resetStackTrace) {
@@ -528,6 +533,8 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   bool _ready = false;
   bool _starting = true;
   bool _startupSoundHandled = false;
+  String _startupStatus = 'Preparing the entertainment experience…';
+  String _startupSoundStatus = 'Preparing startup audio…';
   String? _error;
   Future<void>? _initialization;
   Future<bool>? _startupSoundTask;
@@ -556,9 +563,22 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
 
   Future<bool> _playStartupSound() async {
     if (_startupSoundHandled) return true;
+    if (mounted) {
+      setState(() => _startupSoundStatus = 'Playing High-Tech startup sound…');
+    }
     final played = await playStartupJingle();
     _startupSoundHandled = played;
+    if (mounted) {
+      setState(() => _startupSoundStatus = played
+          ? 'Startup sound completed'
+          : 'Startup sound could not play — check media volume');
+    }
     return played;
+  }
+
+  void _setStartupStatus(String value) {
+    if (!mounted) return;
+    setState(() => _startupStatus = value);
   }
 
   void _setStartupProgress(double value) {
@@ -592,6 +612,8 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         _starting = true;
         _error = null;
         _startupProgress = 0.08;
+        _startupStatus = 'Preparing audio and app services…';
+        _startupSoundStatus = 'Preparing startup audio…';
       });
     }
     try {
@@ -616,6 +638,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         }
       }
       _setStartupProgress(0.28);
+      _setStartupStatus('Preparing audio session…');
 
       try {
         final audioSession = await AudioSession.instance;
@@ -625,6 +648,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         debugPrintStack(stackTrace: stackTrace);
       }
       _setStartupProgress(0.42);
+      _setStartupStatus('Playing the High-Tech startup ident…');
 
       // Register the native audio handler first to avoid competing audio-session
       // initialization. Start the launch ident before any Supabase work.
@@ -633,11 +657,15 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       // Core app initialization runs while the separate ident plays.
       await _initializeCoreServices();
       _setStartupProgress(0.76);
+      _setStartupStatus('Finishing app setup…');
 
       final soundPlayed = await soundTask;
       if (!soundPlayed) {
         debugPrint('HTE startup audio failed; continuing without blocking sign-in.');
       }
+      _setStartupStatus(soundPlayed
+          ? 'Startup sound complete. Finalising…'
+          : 'Audio unavailable. Finalising startup…');
       _setStartupProgress(0.90);
 
       // Preserve the agreed minimum 15-second branded startup experience.
@@ -646,6 +674,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       if (mounted) {
         setState(() {
           _startupProgress = 1.0;
+          _startupStatus = 'Ready';
           _ready = true;
           _starting = false;
         });
@@ -668,6 +697,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       if (mounted) {
         setState(() {
           _error = friendlyErrorMessage(error);
+          _startupStatus = 'Startup needs attention';
           _starting = false;
         });
       }
@@ -698,13 +728,19 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
     if (_ready) return const AuthGate();
     return Scaffold(
       backgroundColor: const Color(0xFF080808),
-      bottomNavigationBar: SizedBox(
-        height: 3,
-        child: LinearProgressIndicator(
-          value: _startupProgress,
-          minHeight: 3,
-          backgroundColor: const Color(0xFF29231A),
-          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFD9B96E)),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: _startupProgress,
+              minHeight: 8,
+              backgroundColor: const Color(0xFF29231A),
+              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFD9B96E)),
+            ),
+          ),
         ),
       ),
       body: SafeArea(
@@ -806,17 +842,46 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 26),
                 if (_starting) ...[
-                  const Text(
-                    'Preparing your experience…',
-                    style: TextStyle(color: Colors.white60),
-                  ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 2),
                   Text(
-                    '${(_startupProgress * 100).round()}%',
+                    _startupStatus,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 9),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _startupSoundStatus == 'Startup sound completed'
+                            ? Icons.volume_up_rounded
+                            : _startupSoundStatus.startsWith('Startup sound could not')
+                                ? Icons.volume_off_rounded
+                                : Icons.graphic_eq_rounded,
+                        color: const Color(0xFFD9B96E),
+                        size: 17,
+                      ),
+                      const SizedBox(width: 7),
+                      Flexible(
+                        child: Text(
+                          _startupSoundStatus,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white54, fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 9),
+                  Text(
+                    '${(_startupProgress * 100).round()}% complete',
                     style: const TextStyle(
                       color: Color(0xFFD9B96E),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ],
@@ -3718,6 +3783,8 @@ class _SettingsPageState extends State<SettingsPage> {
   bool autoplaySetting = true;
   bool shuffleSetting = false;
   double videoSpeedSetting = 1.0;
+  bool previewingStartupSound = false;
+  String startupSoundPreviewStatus = 'Test the bundled startup sound on this device';
 
   @override
   void initState() {
@@ -3743,6 +3810,34 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) {
         setState(() => updateStatus = 'OTA status could not be loaded. Tap to check again.');
       }
+    }
+  }
+
+  Future<void> _previewStartupSound() async {
+    if (previewingStartupSound) return;
+    setState(() {
+      previewingStartupSound = true;
+      startupSoundPreviewStatus = 'Playing startup sound…';
+    });
+    try {
+      final played = await playStartupJingle();
+      if (!mounted) return;
+      setState(() => startupSoundPreviewStatus = played
+          ? 'Playback completed successfully'
+          : 'Playback failed. Check media volume and diagnostic history.');
+    } catch (error, stackTrace) {
+      debugPrint('HTE startup sound preview failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      unawaited(HteDiagnostics.record(
+        error,
+        stackTrace: stackTrace,
+        source: 'startup-sound-preview',
+      ));
+      if (mounted) {
+        setState(() => startupSoundPreviewStatus = 'Playback error. See diagnostics.');
+      }
+    } finally {
+      if (mounted) setState(() => previewingStartupSound = false);
     }
   }
 
@@ -4284,6 +4379,16 @@ class _SettingsPageState extends State<SettingsPage> {
       const SizedBox(height: 12),
       const Heading('Playback preferences'),
       Card(child: Column(children: [
+        ListTile(
+          leading: const Icon(Icons.volume_up_rounded, color: Color(0xFFD4AF37)),
+          title: const Text('Startup sound test'),
+          subtitle: Text(startupSoundPreviewStatus),
+          trailing: previewingStartupSound
+              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.play_circle_outline_rounded, color: Color(0xFFD4AF37)),
+          onTap: previewingStartupSound ? null : _previewStartupSound,
+        ),
+        const Divider(height: 1),
         SwitchListTile(
           title: const Text('Smart Autoplay'),
           subtitle: const Text('Continue with recommended music when the queue ends'),
