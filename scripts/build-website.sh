@@ -28,7 +28,7 @@ done
 
 touch dist/.nojekyll
 
-# Required output checks shared by GitHub Pages and Cloudflare Pages.
+# Required output checks for the official GitHub Pages deployment.
 for file in index.html app-download.html robots.txt sitemap.xml supabase-config.js account-deletion.html privacy-policy.html terms-of-service.html admin/index.html account/index.html assets/site.css assets/app.js assets/videos.js assets/booking-confirmation.aac; do
   test -s "dist/$file" || { echo "Missing required build output: dist/$file" >&2; exit 1; }
 done
