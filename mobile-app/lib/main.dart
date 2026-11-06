@@ -542,7 +542,6 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   bool _starting = true;
   bool _startupSoundHandled = false;
   String _startupStatus = 'Preparing the entertainment experience…';
-  String _startupSoundStatus = 'Preparing startup audio…';
   String? _error;
   Future<void>? _initialization;
   Future<bool>? _startupSoundTask;
@@ -571,16 +570,10 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
 
   Future<bool> _playStartupSound() async {
     if (_startupSoundHandled) return true;
-    if (mounted) {
-      setState(() => _startupSoundStatus = 'Playing High-Tech startup sound…');
-    }
+    // Playback is intentionally silent in the UI: errors are recorded only
+    // in private diagnostics, never as splash text, icons, or visualizers.
     final played = await playStartupJingle();
     _startupSoundHandled = played;
-    if (mounted) {
-      setState(() => _startupSoundStatus = played
-          ? 'Startup sound completed'
-          : 'Startup sound could not play — check media volume');
-    }
     return played;
   }
 
@@ -620,8 +613,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
         _starting = true;
         _error = null;
         _startupProgress = 0.08;
-        _startupStatus = 'Preparing audio and app services…';
-        _startupSoundStatus = 'Preparing startup audio…';
+        _startupStatus = 'Preparing your experience…';
       });
     }
     try {
@@ -645,18 +637,10 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
           ));
         }
       }
-      _setStartupProgress(0.28);
-      _setStartupStatus('Preparing audio session…');
-
-      try {
-        final audioSession = await AudioSession.instance;
-        await audioSession.configure(AudioSessionConfiguration.music());
-      } catch (sessionError, stackTrace) {
-        debugPrint('HTE media audio session configuration failed: $sessionError');
-        debugPrintStack(stackTrace: stackTrace);
-      }
+      // playStartupJingle owns the single audio-session configuration.
+      // Avoid configuring the same native session a second time here.
       _setStartupProgress(0.42);
-      _setStartupStatus('Playing the High-Tech startup ident…');
+      _setStartupStatus('Preparing your experience…');
 
       // Register the native audio handler first to avoid competing audio-session
       // initialization. Start the launch ident before any Supabase work.
@@ -669,11 +653,11 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
 
       final soundPlayed = await soundTask;
       if (!soundPlayed) {
+        // Allow a later manual startup retry to make a fresh playback attempt.
+        _startupSoundTask = null;
         debugPrint('HTE startup audio failed; continuing without blocking sign-in.');
       }
-      _setStartupStatus(soundPlayed
-          ? 'Startup sound complete. Finalising…'
-          : 'Audio unavailable. Finalising startup…');
+      _setStartupStatus('Finalising your experience…');
       _setStartupProgress(0.90);
 
       // Preserve the agreed minimum 15-second branded startup experience.
@@ -810,34 +794,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                   },
                 ),
                 const SizedBox(height: 26),
-                AnimatedBuilder(
-                  animation: _startupAnimation,
-                  builder: (context, child) {
-                    final pulse = _startupAnimation.value;
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: List.generate(5, (index) {
-                        final phase = (pulse + (index * 0.17)) % 1.0;
-                        return Container(
-                          width: 4,
-                          height: 9 + (phase * 19),
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
-                          decoration: BoxDecoration(
-                            color: Color.lerp(const Color(0xFF8A6420), const Color(0xFFFFD978), phase),
-                            borderRadius: BorderRadius.circular(5),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFD9A52B).withValues(alpha: 0.25),
-                                blurRadius: 7,
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                    );
-                  },
-                ),
+                const SizedBox(height: 26),
                 const SizedBox(height: 24),
                 const Text(
                   'HIGH-TECH',
@@ -861,29 +818,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                     ),
                   ),
                   const SizedBox(height: 9),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _startupSoundStatus == 'Startup sound completed'
-                            ? Icons.volume_up_rounded
-                            : _startupSoundStatus.startsWith('Startup sound could not')
-                                ? Icons.volume_off_rounded
-                                : Icons.graphic_eq_rounded,
-                        color: const Color(0xFFD9B96E),
-                        size: 17,
-                      ),
-                      const SizedBox(width: 7),
-                      Flexible(
-                        child: Text(
-                          _startupSoundStatus,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white54, fontSize: 11),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 9),
+
                   Text(
                     '${(_startupProgress * 100).round()}% complete',
                     style: const TextStyle(
