@@ -46,47 +46,49 @@ AudioPlayer? _startupSoundPlayerInstance;
 AudioPlayer get _startupSoundPlayer =>
     _startupSoundPlayerInstance ??= AudioPlayer();
 
-/// Plays the bundled launch ident once and waits for actual playback completion.
-/// This player is separate from the music/ad player. A sound failure is logged
-/// and returned as false; it must never trap the user on the splash screen.
+/// Plays the bundled launch ident once and waits for the player's own
+/// playback future. The startup player is isolated from music/ad playback and
+/// from Supabase initialization; failures never trap the user on the splash.
 Future<bool> playStartupJingle() async {
-  // Configure the dedicated startup player before requesting audio focus.
-  // This is deliberately independent of Supabase and the music/ad player.
   for (var attempt = 1; attempt <= 2; attempt++) {
     try {
       final session = await AudioSession.instance;
       await session.configure(AudioSessionConfiguration.music());
-      await session.setActive(true);
 
-      await _startupSoundPlayer.stop();
-      await _startupSoundPlayer.setVolume(1.0);
-      await _startupSoundPlayer.setLoopMode(LoopMode.off);
-      final duration = await _startupSoundPlayer.setAudioSource(
+      final startupPlayer = _startupSoundPlayer;
+      await startupPlayer.stop();
+      await startupPlayer.setVolume(1.0);
+      await startupPlayer.setLoopMode(LoopMode.off);
+
+      // This MP3 is bundled in the APK. It is intentionally not fetched from
+      // the network or executed through a WebView/JavaScript bridge.
+      final duration = await startupPlayer.setAudioSource(
         AudioSource.asset('assets/high-tech-startup.mp3'),
       );
       final maxWait = duration != null && duration > Duration.zero
           ? duration + const Duration(seconds: 8)
           : const Duration(seconds: 30);
 
-      // Subscribe before play() so a short ident cannot complete before the
-      // completion listener is attached. Do not await play() itself.
-      final completed = _startupSoundPlayer.processingStateStream.firstWhere(
-        (state) => state == ProcessingState.completed,
-      );
-      unawaited(_startupSoundPlayer.play());
-      await completed.timeout(maxWait);
+      // Await play() itself so decoder, audio-focus and playback errors reach
+      // this try/catch instead of becoming an unobserved background failure.
+      await startupPlayer.play().timeout(maxWait);
+      if (startupPlayer.processingState != ProcessingState.completed) {
+        throw StateError(
+          'Startup audio stopped before reaching the completed state '
+          '(state: ${startupPlayer.processingState}).',
+        );
+      }
 
-      debugPrint('HTE startup sound completed successfully on attempt $attempt.');
-      await session.setActive(false);
+      debugPrint('HTE bundled startup sound completed on attempt $attempt.');
       return true;
     } catch (error, stackTrace) {
       debugPrint('HTE startup sound attempt $attempt failed: $error');
       debugPrintStack(stackTrace: stackTrace);
       try {
         await _startupSoundPlayer.stop();
-        await AudioSession.instance.then((session) => session.setActive(false));
-      } catch (resetError) {
+      } catch (resetError, resetStackTrace) {
         debugPrint('HTE startup audio reset failed: $resetError');
+        debugPrintStack(stackTrace: resetStackTrace);
       }
       if (attempt < 2) {
         await Future<void>.delayed(const Duration(milliseconds: 500));
