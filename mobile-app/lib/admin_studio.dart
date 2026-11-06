@@ -34,6 +34,9 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   final _notificationTitle = TextEditingController();
   final _notificationBody = TextEditingController();
   final _adTitle = TextEditingController();
+  final _adStartsAt = TextEditingController();
+  final _adEndsAt = TextEditingController();
+  final _adPriority = TextEditingController(text: '0');
   PlatformFile? _audio;
   PlatformFile? _artwork;
   PlatformFile? _video;
@@ -55,7 +58,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   @override
   void dispose() {
     _title.dispose(); _artist.dispose(); _genre.dispose();
-    _artistName.dispose(); _artistBio.dispose(); _releaseTitle.dispose(); _spotifyUrl.dispose(); _releaseCoverUrl.dispose(); _coverUrl.dispose(); _videoTitle.dispose(); _videoArtist.dispose(); _videoDescription.dispose(); _notificationTitle.dispose(); _notificationBody.dispose(); _adTitle.dispose();
+    _artistName.dispose(); _artistBio.dispose(); _releaseTitle.dispose(); _spotifyUrl.dispose(); _releaseCoverUrl.dispose(); _coverUrl.dispose(); _videoTitle.dispose(); _videoArtist.dispose(); _videoDescription.dispose(); _notificationTitle.dispose(); _notificationBody.dispose(); _adTitle.dispose(); _adStartsAt.dispose(); _adEndsAt.dispose(); _adPriority.dispose();
     super.dispose();
   }
 
@@ -223,6 +226,18 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       _toast('Enter an advert title and choose an audio file.');
       return;
     }
+    final startsText = _adStartsAt.text.trim();
+    final endsText = _adEndsAt.text.trim();
+    final startsAt = startsText.isEmpty ? null : DateTime.tryParse(startsText);
+    final endsAt = endsText.isEmpty ? null : DateTime.tryParse(endsText);
+    final priority = int.tryParse(_adPriority.text.trim()) ?? 0;
+    if ((startsText.isNotEmpty && startsAt == null) ||
+        (endsText.isNotEmpty && endsAt == null) ||
+        (startsAt != null && endsAt != null && !endsAt.isAfter(startsAt)) ||
+        priority < 0 || priority > 100) {
+      _toast('Check the ISO 8601 schedule times and priority (0–100).');
+      return;
+    }
     setState(() => _busy = true);
     try {
       final url = await _uploadFile(_adAudio!, 'audio-ads', 'hte-audio');
@@ -230,10 +245,15 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         'title': _adTitle.text.trim(),
         'audio_url': url,
         'is_published': false,
-        'priority': 0,
+        'priority': priority,
+        if (startsAt != null) 'starts_at': startsAt.toUtc().toIso8601String(),
+        if (endsAt != null) 'ends_at': endsAt.toUtc().toIso8601String(),
       });
       if (!mounted) return;
       _adTitle.clear();
+      _adStartsAt.clear();
+      _adEndsAt.clear();
+      _adPriority.text = '0';
       setState(() => _adAudio = null);
       await _loadAll();
       _toast('Audio advert saved as a draft. Publish it when ready.');
@@ -649,6 +669,21 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
           'Upload audio adverts, keep them as drafts, and publish or unpublish them. Published active adverts play after the configured music interval.'),
         TextField(controller: _adTitle, maxLength: 150,
           decoration: const InputDecoration(labelText: 'Advert title')),
+        const SizedBox(height: 10),
+        TextField(controller: _adStartsAt,
+          decoration: const InputDecoration(
+            labelText: 'Start time (optional, ISO 8601 UTC)',
+            hintText: '2026-11-08T09:00:00Z',
+          )),
+        const SizedBox(height: 10),
+        TextField(controller: _adEndsAt,
+          decoration: const InputDecoration(
+            labelText: 'End time (optional, ISO 8601 UTC)',
+            hintText: '2026-11-15T18:00:00Z',
+          )),
+        const SizedBox(height: 10),
+        TextField(controller: _adPriority, keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Priority (0–100)')),
         const SizedBox(height: 10),
         OutlinedButton.icon(
           onPressed: _busy ? null : _pickAdAudio,
