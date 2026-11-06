@@ -33,10 +33,13 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   final _videoDescription = TextEditingController();
   final _notificationTitle = TextEditingController();
   final _notificationBody = TextEditingController();
+  final _adTitle = TextEditingController();
   PlatformFile? _audio;
   PlatformFile? _artwork;
   PlatformFile? _video;
+  PlatformFile? _adAudio;
   List<Map<String,dynamic>> _videos = [];
+  List<Map<String,dynamic>> _audioAds = [];
   List<Map<String,dynamic>> _tracks = [];
   List<Map<String,dynamic>> _artists = [];
   List<Map<String,dynamic>> _releases = [];
@@ -45,14 +48,14 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   Map<String,dynamic> _analytics = {};
   Map<String,int> _metrics = {};
   List<Map<String,dynamic>> _diagnostics = [];
-  static const _sections = ['Overview','Music uploads','Tracks','Artists','Releases','Artwork','Users','Analytics','Activity','Videos','Notifications','Developer diagnostics'];
+  static const _sections = ['Overview','Music uploads','Tracks','Artists','Releases','Artwork','Users','Analytics','Activity','Videos','Notifications','Audio ads','Developer diagnostics'];
 
   @override
   void initState() { super.initState(); _loadAll(); }
   @override
   void dispose() {
     _title.dispose(); _artist.dispose(); _genre.dispose();
-    _artistName.dispose(); _artistBio.dispose(); _releaseTitle.dispose(); _spotifyUrl.dispose(); _releaseCoverUrl.dispose(); _coverUrl.dispose(); _videoTitle.dispose(); _videoArtist.dispose(); _videoDescription.dispose(); _notificationTitle.dispose(); _notificationBody.dispose();
+    _artistName.dispose(); _artistBio.dispose(); _releaseTitle.dispose(); _spotifyUrl.dispose(); _releaseCoverUrl.dispose(); _coverUrl.dispose(); _videoTitle.dispose(); _videoArtist.dispose(); _videoDescription.dispose(); _notificationTitle.dispose(); _notificationBody.dispose(); _adTitle.dispose();
     super.dispose();
   }
 
@@ -90,6 +93,8 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       _releases = List<Map<String,dynamic>>.from(values[2]);
       final videoRows = await _supabase.from('videos').select().order('created_at', ascending: false).limit(100);
       _videos = List<Map<String,dynamic>>.from(videoRows);
+      final adRows = await _supabase.from('audio_ads').select().order('priority', ascending: false).limit(100);
+      _audioAds = List<Map<String,dynamic>>.from(adRows);
       try {
         final files = await _supabase.storage.from('hte-artwork').list(path: 'releases');
         _artworkFiles = files.map((file) => {'name':file.name}).toList();
@@ -106,7 +111,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       } catch (e) { debugPrint('Secure platform analytics unavailable: $e'); }
       _metrics = {
         'Tracks': _tracks.length, 'Published': _tracks.where((e)=>e['is_published']==true).length,
-        'Artists': _artists.length, 'Releases': _releases.length, 'Users': _users.length, 'Videos': _videos.length,
+        'Artists': _artists.length, 'Releases': _releases.length, 'Users': _users.length, 'Videos': _videos.length, 'Audio ads': _audioAds.length,
       };
     } catch (e) { debugPrint('Founder Studio load failed: $e'); _error = 'Could not load Founder Studio data. Check your connection and retry.'; }
     if (mounted) setState(() => _busy = false);
@@ -133,6 +138,17 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
       allowedExtensions: ['mp3','m4a','aac','wav','ogg','flac'], withData: false);
     if (mounted && result != null && result.files.isNotEmpty) setState(() => _audio = result.files.first);
   }
+  Future<void> _pickAdAudio() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'flac'],
+      withData: false,
+    );
+    if (mounted && result != null && result.files.isNotEmpty) {
+      setState(() => _adAudio = result.files.first);
+    }
+  }
+
   String _extension(PlatformFile file) => (file.extension ?? 'bin').toLowerCase();
   Future<String> _uploadFile(PlatformFile file, String folder, String bucket) async {
     final localPath = file.path;
@@ -202,6 +218,115 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     try { await _supabase.from('releases').update({'is_published':published}).eq('id',item['id']); await _loadAll(); }
     catch(e) { debugPrint('Release update failed: $e'); _toast('Could not update this release. Please retry.'); }
   }
+  Future<void> _saveAudioAd() async {
+    if (_adTitle.text.trim().isEmpty || _adAudio == null) {
+      _toast('Enter an advert title and choose an audio file.');
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final url = await _uploadFile(_adAudio!, 'audio-ads', 'hte-audio');
+      await _supabase.from('audio_ads').insert({
+        'title': _adTitle.text.trim(),
+        'audio_url': url,
+        'is_published': false,
+        'priority': 0,
+      });
+      if (!mounted) return;
+      _adTitle.clear();
+      setState(() => _adAudio = null);
+      await _loadAll();
+      _toast('Audio advert saved as a draft. Publish it when ready.');
+    } catch (error) {
+      debugPrint('HTE audio advert upload failed: $error');
+      _toast('Advert upload failed. Check the file, connection and storage permissions.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _publishAudioAd(Map<String, dynamic> item, bool published) async {
+    try {
+      await _supabase.from('audio_ads').update({'is_published': published}).eq('id', item['id']);
+      await _loadAll();
+      _toast(published ? 'Audio advert published.' : 'Audio advert unpublished.');
+    } catch (error) {
+      debugPrint('HTE audio advert update failed: $error');
+      _toast('Could not update this advert. Please retry.');
+    }
+  }
+
+  Future<void> _deleteAudioAd(Map<String, dynamic> item) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete audio advert?'),
+        content: Text('Delete "${item['title']}"? This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (yes != true) return;
+    try {
+      final uri = Uri.tryParse((item['audio_url'] ?? '').toString());
+      final segments = uri?.pathSegments ?? const <String>[];
+      final bucketIndex = segments.indexOf('hte-audio');
+      if (bucketIndex >= 0 && bucketIndex + 1 < segments.length) {
+        final objectPath = segments.skip(bucketIndex + 1).join('/');
+        if (objectPath.startsWith('audio-ads/')) {
+          await _supabase.storage.from('hte-audio').remove([objectPath]);
+        }
+      }
+      await _supabase.from('audio_ads').delete().eq('id', item['id']);
+      await _loadAll();
+      _toast('Audio advert deleted.');
+    } catch (error) {
+      debugPrint('HTE audio advert deletion failed: $error');
+      _toast('Could not delete this advert. Please retry.');
+    }
+  }
+
+  Widget _audioAdRows() => _audioAds.isEmpty
+      ? const _AdminEmpty('No audio adverts yet. Upload an advert to manage sponsored playback.')
+      : Column(
+          children: _audioAds.map((item) {
+            final published = item['is_published'] == true;
+            final starts = (item['starts_at'] ?? '').toString();
+            final ends = (item['ends_at'] ?? '').toString();
+            return Card(
+              child: ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFF30260E),
+                  child: Icon(Icons.campaign_outlined, color: _gold),
+                ),
+                title: Text((item['title'] ?? 'Untitled advert').toString()),
+                subtitle: Text(
+                  '${published ? 'Published' : 'Draft'} · Priority ${item['priority'] ?? 0}'
+                  '${starts.isEmpty ? '' : ' · Starts $starts'}'
+                  '${ends.isEmpty ? '' : ' · Ends $ends'}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'toggle') _publishAudioAd(item, !published);
+                    if (value == 'delete') _deleteAudioAd(item);
+                  },
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: 'toggle',
+                      child: Text(published ? 'Unpublish' : 'Publish'),
+                    ),
+                    const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        );
+
   Future<void> _pickVideo() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -417,6 +542,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
           _metric('Artists',_metrics['Artists']??0,Icons.people),
           _metric('Releases',_metrics['Releases']??0,Icons.album),
           _metric('Users',_metrics['Users']??0,Icons.people_alt),
+          _metric('Audio ads',_metrics['Audio ads']??0,Icons.campaign_outlined),
         ]),
         const SizedBox(height:18),FilledButton.icon(onPressed:()=>setState(()=>_section=1),icon:const Icon(Icons.upload),label:const Text('Upload new music')),
         const SizedBox(height:20),const Text('Recent catalogue',style:TextStyle(fontWeight:FontWeight.w700)),_trackRows(),
@@ -518,7 +644,29 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
         const SizedBox(height: 12),
         SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: _busy ? null : _sendNotification, icon: const Icon(Icons.send), label: const Text('Send announcement'))),
       ]);
-      case 11: return FutureBuilder<List<Map<String,dynamic>>>(
+      case 11: return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _header('SPONSORED PLAYBACK', 'Audio adverts',
+          'Upload audio adverts, keep them as drafts, and publish or unpublish them. Published active adverts play after the configured music interval.'),
+        TextField(controller: _adTitle, maxLength: 150,
+          decoration: const InputDecoration(labelText: 'Advert title')),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          onPressed: _busy ? null : _pickAdAudio,
+          icon: const Icon(Icons.audio_file_outlined),
+          label: Text(_adAudio?.name ?? 'Choose advert audio'),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(width: double.infinity, child: FilledButton(
+          onPressed: _busy ? null : _saveAudioAd,
+          child: _busy ? const CircularProgressIndicator() : const Text('Upload advert draft'),
+        )),
+        const SizedBox(height: 20),
+        const Text('Published and draft adverts', style: TextStyle(fontWeight: FontWeight.w700)),
+        _audioAdRows(),
+        const SizedBox(height: 12),
+        const _AdminEmpty('When no published advert is active, the player uses the bundled High-Tech fallback advert.'),
+      ]);
+      case 12: return FutureBuilder<List<Map<String,dynamic>>>(
         future: HteDiagnostics.read(),
         builder: (context, snapshot) {
           final events = snapshot.data ?? _diagnostics;
