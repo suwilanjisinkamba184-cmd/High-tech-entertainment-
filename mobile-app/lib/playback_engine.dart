@@ -296,7 +296,8 @@ class HtePlayback {
             .select()
             .eq('is_published', true)
             .order('priority', ascending: false)
-            .limit(20);
+            .limit(20)
+            .timeout(const Duration(seconds: 5));
         remoteAd = selectActiveAudioAd(List<Map<String, dynamic>>.from(rows));
       } catch (error) {
         // Ads are best-effort. A catalogue/API outage must not interrupt music.
@@ -315,13 +316,35 @@ class HtePlayback {
         artist: 'High-Tech Entertainment',
         album: 'High-Tech Entertainment',
       );
-      await player.setAudioSource(
-        remoteUri == null
-            ? AudioSource.asset(startupAdvertAsset, tag: tag)
-            : AudioSource.uri(remoteUri, tag: tag),
-        preload: true,
-      );
-      if (adId != null) unawaited(_recordAdImpression(adId));
+      var remoteAdLoaded = false;
+      if (remoteUri != null) {
+        try {
+          await player.setAudioSource(
+            AudioSource.uri(remoteUri, tag: tag),
+            preload: true,
+          ).timeout(const Duration(seconds: 20));
+          remoteAdLoaded = true;
+        } catch (error) {
+          debugPrint('HTE remote advert failed to load; using bundled fallback: $error');
+        }
+      }
+      if (!remoteAdLoaded) {
+        await player.setAudioSource(
+          AudioSource.asset(
+            startupAdvertAsset,
+            tag: MediaItem(
+              id: 'hte-bundled-audio-advert',
+              title: 'Advertisement',
+              artist: 'High-Tech Entertainment',
+              album: 'High-Tech Entertainment',
+            ),
+          ),
+          preload: true,
+        );
+      }
+      if (remoteAdLoaded && adId != null) {
+        unawaited(_recordAdImpression(adId));
+      }
       unawaited(_startPlayback());
       return true;
     } catch (error) {
