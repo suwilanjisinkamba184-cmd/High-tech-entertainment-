@@ -23,10 +23,14 @@ The official Android client is a native Flutter application. The canonical publi
 ### HT Admin — private founder experience
 
 - Founder-only entry, backed by Supabase role checks and row-level security.
-- Dashboard, music upload, track publishing/deletion, artist and release management.
+- Dashboard, music upload, track publishing/deletion, artist and release management, and sponsored audio-ad management.
 - Artwork and video management.
 - Role-checked user directory and aggregate listening/advertising analytics.
 - Private on-device diagnostics with explicit redacted report export.
+
+## Performance and reliability
+
+- App tabs are mounted on first visit rather than all loading their catalogues at startup, reducing initial network and memory pressure on low-RAM Android devices.
 
 ## Audio architecture and startup behaviour
 
