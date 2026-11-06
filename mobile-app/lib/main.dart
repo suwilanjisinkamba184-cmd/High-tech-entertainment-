@@ -3724,10 +3724,25 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     _loadVersion();
     _loadPlaybackSettings();
+    _loadOtaStatus();
     if (widget.autoCheckForUpdates) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _checkForUpdates();
       });
+    }
+  }
+
+  Future<void> _loadOtaStatus() async {
+    try {
+      final status = await HteOtaUpdateService.verifyActivation();
+      if (!mounted) return;
+      setState(() => updateStatus = status);
+    } catch (error, stackTrace) {
+      debugPrint('HTE settings OTA status load failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (mounted) {
+        setState(() => updateStatus = 'OTA status could not be loaded. Tap to check again.');
+      }
     }
   }
 
@@ -4230,7 +4245,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(
           leading: const Icon(Icons.system_update_alt_rounded, color: Color(0xFFD4AF37)),
           title: const Text('OTA Update Checker'),
-          subtitle: Text(checking && updateStatus.startsWith('Checking Stable')
+          subtitle: Text(updateStatus.isNotEmpty
               ? updateStatus
               : 'Check and download Stable-channel app patches'),
           trailing: checking && updateStatus.startsWith('Checking Stable')
