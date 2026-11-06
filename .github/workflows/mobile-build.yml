@@ -69,8 +69,26 @@ jobs:
                       mode = "release"
                   else:
                       changed = subprocess.check_output(["git", "diff", "--name-only", before, os.environ["EVENT_SHA"]], text=True).splitlines()
-                      patch_safe = (".github/workflows/mobile-build.yml", "mobile-app/shorebird.yaml")
-                      mode = "patch" if changed and all((p.startswith("mobile-app/lib/") and p.endswith(".dart")) or p in patch_safe for p in changed) else "release"
+                      patch_safe = (".github/workflows/mobile-build.yml", "mobile-app/shorebird.yaml", "mobile-app/README.md")
+                      pubspec_version_only = False
+                      if "mobile-app/pubspec.yaml" in changed:
+                          pubspec_diff = subprocess.check_output(
+                              ["git", "diff", before, os.environ["EVENT_SHA"], "--", "mobile-app/pubspec.yaml"],
+                              text=True,
+                          ).splitlines()
+                          meaningful = [
+                              line for line in pubspec_diff
+                              if line.startswith(("+", "-"))
+                              and not line.startswith(("+++", "---"))
+                              and not line[1:].startswith("version:")
+                          ]
+                          pubspec_version_only = not meaningful
+                      mode = "patch" if changed and all(
+                          (p.startswith("mobile-app/lib/") and p.endswith(".dart"))
+                          or p in patch_safe
+                          or (p == "mobile-app/pubspec.yaml" and pubspec_version_only)
+                          for p in changed
+                      ) else "release"
               else:
                   mode = "release"
           if mode == "patch" and not Path("mobile-app/shorebird.yaml").exists():
