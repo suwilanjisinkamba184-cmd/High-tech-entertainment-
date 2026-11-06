@@ -5,8 +5,8 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.videos (
   id uuid primary key default gen_random_uuid(),
-  title text not null check (char_length(btrim(title)) between 1 and 150),
-  artist text not null default '' check (char_length(artist) <= 150),
+  title text not null check (char_length(btrim(title)) between 1 and 160),
+  artist text not null default '' check (char_length(artist) <= 180),
   description text not null default '' check (char_length(description) <= 3000),
   video_url text not null check (video_url ~ '^https://'),
   thumbnail_url text,
@@ -51,7 +51,7 @@ create policy "HTE founder deletes videos" on public.videos
 -- currently use different historical names.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values
-  ('hte-video','hte-video',true,524288000,array['video/mp4','video/x-m4v','video/quicktime','video/webm']),
+  ('hte-video','hte-video',true,104857600,array['video/mp4','video/x-m4v','video/quicktime','video/webm']),
   ('hte-videos','hte-videos',true,524288000,array['video/mp4','video/x-m4v','video/quicktime','video/webm'])
 on conflict (id) do update set
   public = true,
