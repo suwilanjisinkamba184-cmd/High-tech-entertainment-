@@ -1228,7 +1228,7 @@ class Brand extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: const Color(0xFF344B5A)),
         ),
-        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.graphic_eq_rounded, color: Color(0xFFE2BC69), size: 13),
           SizedBox(width: 5),
           Text('HT MUSIC', style: TextStyle(color: Color(0xFFC7D5DF), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: .8)),
