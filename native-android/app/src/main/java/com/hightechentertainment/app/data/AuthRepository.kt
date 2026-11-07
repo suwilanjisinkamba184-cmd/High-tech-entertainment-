@@ -107,7 +107,8 @@ class AuthRepository(
         query: Map<String, String> = emptyMap(),
         body: JSONObject,
         allowConfirmationWithoutSession: Boolean = false
-    ): AuthResult = try {
+    ): AuthResult {
+        return try {
         val response = client.request(
             method = "POST",
             path = path,
@@ -149,10 +150,11 @@ class AuthRepository(
         )
         sessions.write(session)
         AuthResult.Success(session)
-    } catch (cancelled: CancellationException) {
-        throw cancelled
-    } catch (_: Exception) {
-        AuthResult.Failure("Unable to reach account services. Check your connection and retry.")
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            AuthResult.Failure("Unable to reach account services. Check your connection and retry.")
+        }
     }
 
     private fun String.isValidEmail(): Boolean =
