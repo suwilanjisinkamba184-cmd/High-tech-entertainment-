@@ -40,6 +40,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.hightechentertainment.app.playback.PlaybackService
+import com.hightechentertainment.app.playback.StartupJingle
 import com.hightechentertainment.app.data.CatalogRepository
 import com.hightechentertainment.app.data.NativeTrack
 import com.hightechentertainment.app.data.AuthRepository
@@ -72,6 +73,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         connectToPlaybackService()
+        if (savedInstanceState == null) StartupJingle.playOnce(applicationContext)
         setContent {
             HteTheme {
                 val signedInSession by sessionManager.session.collectAsState()
