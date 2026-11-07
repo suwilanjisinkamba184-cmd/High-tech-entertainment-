@@ -912,6 +912,8 @@ class FlutterHostActivity : FlutterActivity() {
                                 status.toString().contains("ERROR", true)
                             ) {
                                 mediaController?.volume = 1f
+                                voiceSession = null
+                                voiceMuted = false
                             }
                         }
                     },
