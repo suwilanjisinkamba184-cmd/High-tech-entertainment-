@@ -46,17 +46,8 @@ import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.hightechentertainment.app.playback.PlaybackService
 import com.hightechentertainment.app.playback.StartupJingle
-import com.hightechentertainment.app.data.CatalogRepository
 import com.hightechentertainment.app.data.NativeTrack
-import com.hightechentertainment.app.data.AuthRepository
-import com.hightechentertainment.app.data.AuthSessionManager
 import com.hightechentertainment.app.data.AuthResult
-import com.hightechentertainment.app.data.SecureSessionStore
-import com.hightechentertainment.app.data.SupabaseRestClient
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
@@ -66,11 +57,14 @@ private val HteGold = Color(0xFFD7A83E)
 private val HteMuted = Color(0xFFAAA39A)
 
 class MainActivity : ComponentActivity() {
-    private val catalogRepository by lazy { CatalogRepository() }
-    private val authStore by lazy { SecureSessionStore(applicationContext) }
-    private val authRepository by lazy { AuthRepository(SupabaseRestClient(), authStore) }
-    private val sessionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val sessionManager by lazy { AuthSessionManager(authRepository, authStore, sessionScope) }
+    private val hteApplication: HteApplication
+        get() = application as HteApplication
+    private val catalogRepository
+        get() = hteApplication.catalogRepository
+    private val authRepository
+        get() = hteApplication.authRepository
+    private val sessionManager
+        get() = hteApplication.sessionManager
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var playbackPlayer by mutableStateOf<Player?>(null)
     private var playbackIsReady by mutableStateOf(false)
@@ -252,7 +246,6 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        sessionScope.cancel()
         controllerFuture?.let { MediaController.releaseFuture(it) }
         controllerFuture = null
         playbackPlayer = null
