@@ -65,6 +65,23 @@ fun AdditionalFeatureScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var newVideoTitle by remember { mutableStateOf("") }
     var newVideoUrl by remember { mutableStateOf("") }
+    val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) scope.launch {
+            busy = true
+            val mime = context.contentResolver.getType(uri) ?: "video/mp4"
+            val extension = when (mime) {
+                "video/webm" -> "webm"
+                "video/quicktime" -> "mov"
+                "video/x-m4v" -> "m4v"
+                else -> "mp4"
+            }
+            features.uploadVideo(context, uri, mime, extension).onSuccess {
+                newVideoUrl = it
+                message = "Video uploaded. Its public URL has been added to the video form."
+            }.onFailure { message = it.message }
+            busy = false
+        }
+    }
     var newVideoDescription by remember { mutableStateOf("") }
     var newTrackTitle by remember { mutableStateOf("") }
     var newTrackArtist by remember { mutableStateOf("") }
@@ -295,6 +312,8 @@ fun AdditionalFeatureScreen(
                     Text("PUBLISH VIDEO", style = MaterialTheme.typography.titleMedium)
                     OutlinedTextField(newVideoTitle, { newVideoTitle = it }, Modifier.fillMaxWidth(), label = { Text("Video title") })
                     OutlinedTextField(newVideoUrl, { newVideoUrl = it }, Modifier.fillMaxWidth(), label = { Text("HTTPS video URL") })
+                    OutlinedButton(onClick = { videoPicker.launch("video/*") }, enabled = !busy,
+                        modifier = Modifier.fillMaxWidth()) { Text("Choose and upload video (up to 50 MB)") }
                     OutlinedTextField(newVideoDescription, { newVideoDescription = it }, Modifier.fillMaxWidth(), label = { Text("Description") })
                     Button(enabled = !busy, onClick = {
                         scope.launch {
@@ -344,7 +363,7 @@ fun AdditionalFeatureScreen(
                             busy = false
                         }
                     }) { Text("Create release") }
-                    Text("Tracks can upload audio files up to 20 MB. Videos use HTTPS media URLs; video file upload is not yet supported in this screen.", style = MaterialTheme.typography.bodySmall)
+                    Text("Tracks can upload audio files up to 20 MB. Videos can be uploaded directly up to 50 MB or added using an HTTPS media URL.", style = MaterialTheme.typography.bodySmall)
                     HorizontalDivider(Modifier.padding(vertical = 12.dp))
                     Text("CONTENT DRAFTS", style = MaterialTheme.typography.titleMedium)
                     if (drafts.isEmpty()) Text("No unpublished content drafts.")
