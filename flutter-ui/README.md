@@ -14,9 +14,9 @@ This directory is the Flutter UI module embedded into the existing Kotlin Androi
 
 This branch is the full Flutter app migration for Android 3.1. Flutter is the target for every user-facing experience; the legacy Compose app is not the destination UI. Any remaining native screen handoff is temporary migration debt and must be removed before release.
 
-Implemented in the current branch: branded startup, email/password authentication UI, session restoration, listener catalogue screens, profile and booking UI, basic Founder Studio, sponsored-audio campaign controls, playlist/library UI and native media upload bridges.
+Implemented in the current branch: branded startup, Flutter email/password and Google OAuth flows, session restoration, listener catalogue screens, profile and booking UI, basic Founder Studio, sponsored-audio campaign controls, playlist/library UI, native document picker and bounded media/avatar upload bridges, plus a Flutter Voice Companion screen backed by the existing ElevenLabs Android SDK.
 
-Still incomplete or awaiting verification: a fully Flutter-native Google OAuth return experience, Flutter AI Voice Companion screen, settings/password reset/account deletion, complete Founder Studio edit/delete workflows, campaign editing, automated media upload tests, Android 8+/Android Go physical testing and full release acceptance.
+Still incomplete or awaiting verification: full settings/privacy and account deletion processing, complete Founder Studio draft/campaign edit/delete workflows, live ElevenLabs token configuration and conversation test, automated upload tests, Android 8+/Android Go physical testing and full release acceptance.
 
 See `docs/FULL-APP-MIGRATION-3.1.md` for the feature-parity checklist and release gates. Do not merge or publish until those gates pass.
 
