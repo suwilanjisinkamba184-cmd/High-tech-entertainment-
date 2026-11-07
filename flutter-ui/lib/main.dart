@@ -355,6 +355,26 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  Future<void> _requestPasswordReset() async {
+    if (_email.text.trim().isEmpty) {
+      setState(() => _message = 'Enter your email address first.');
+      return;
+    }
+    setState(() { _busy = true; _message = null; });
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'requestPasswordReset', {'email': _email.text.trim()});
+      if (mounted) {
+        setState(() => _message = response?['message']?.toString()
+            ?? (response?['success'] == true ? 'Check your email for reset instructions.' : 'Password reset could not be requested.'));
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Password reset could not be requested.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _startGoogleSignIn() async {
     setState(() => _busy = true);
     try {
@@ -456,6 +476,11 @@ class _AuthScreenState extends State<AuthScreen> {
                           )
                         : Text(_createAccount ? 'CREATE ACCOUNT' : 'SIGN IN'),
                   ),
+                  if (!_createAccount)
+                    TextButton(
+                      onPressed: _busy ? null : _requestPasswordReset,
+                      child: const Text('Forgot password?'),
+                    ),
                   TextButton(
                     onPressed: _busy
                         ? null
