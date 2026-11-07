@@ -1,8 +1,10 @@
 package com.hightechentertainment.app
 
+import android.Manifest
 import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
+import android.content.pm.PackageManager
 import android.provider.OpenableColumns
 import android.os.Bundle
 import androidx.core.content.ContextCompat
@@ -17,10 +19,17 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import com.hightechentertainment.app.data.AuthResult
+import io.elevenlabs.ClientTool
+import io.elevenlabs.ClientToolResult
+import io.elevenlabs.ConversationClient
+import io.elevenlabs.ConversationConfig
+import io.elevenlabs.ConversationSession
 import com.hightechentertainment.app.playback.StartupJingle
 import com.hightechentertainment.app.playback.PlaybackService
 import com.hightechentertainment.app.playback.OfflineMusicDownloads
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Flutter owns presentation. This bridge reuses the existing process-scoped
@@ -29,6 +38,7 @@ import kotlinx.coroutines.launch
 class FlutterHostActivity : FlutterActivity() {
     companion object {
         private const val REQUEST_MEDIA_PICKER = 4812
+        private const val REQUEST_RECORD_AUDIO = 4813
     }
 
     private val startupChannelName = "com.hightechentertainment.app/startup"
@@ -42,6 +52,10 @@ class FlutterHostActivity : FlutterActivity() {
     private var oauthInProgress = false
     private var pendingMediaPickerResult: MethodChannel.Result? = null
     private var pendingMediaPickerKind: String? = null
+    private var appMethodChannel: MethodChannel? = null
+    private var pendingVoicePermissionResult: MethodChannel.Result? = null
+    private var voiceSession: ConversationSession? = null
+    private var voiceMuted = false
     private var playbackFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
     private val offlineDownloads by lazy { OfflineMusicDownloads(applicationContext) }
@@ -111,8 +125,9 @@ class FlutterHostActivity : FlutterActivity() {
                 }
             }
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, appChannelName)
-            .setMethodCallHandler { call, result ->
+        val appChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, appChannelName)
+        appMethodChannel = appChannel
+        appChannel.setMethodCallHandler { call, result ->
                 when (call.method) {
                     "pickAndUploadMedia" -> launchMediaPicker(
                         call.argument<String>("kind").orEmpty(), result
@@ -130,6 +145,10 @@ class FlutterHostActivity : FlutterActivity() {
                         )))
                         result.success(true)
                     }
+                    "requestVoicePermission" -> requestVoicePermission(result)
+                    "startVoiceSession" -> startVoiceSession(result)
+                    "endVoiceSession" -> endVoiceSession(result)
+                    "setVoiceMuted" -> setVoiceMuted(call.argument<Boolean>("muted") ?: false, result)
                     "openVoiceCompanion" -> {
                         startActivity(Intent(this, MainActivity::class.java).apply {
                             putExtra(MainActivity.EXTRA_OPEN_VOICE_COMPANION, true)
@@ -577,6 +596,184 @@ class FlutterHostActivity : FlutterActivity() {
                 result.success(mapOf("success" to false, "message" to (error.message ?: "Upload failed.")))
             }
         }
+    }
+
+    private fun requestVoicePermission(result: MethodChannel.Result) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            result.success(mapOf("granted" to true))
+            return
+        }
+        if (pendingVoicePermissionResult != null) {
+            result.success(mapOf("granted" to false, "message" to "A microphone permission request is already active."))
+            return
+        }
+        pendingVoicePermissionResult = result
+        requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_RECORD_AUDIO)
+    }
+
+    @Deprecated("Android microphone permission callback")
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_RECORD_AUDIO) {
+            val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
+            pendingVoicePermissionResult?.success(mapOf("granted" to granted))
+            pendingVoicePermissionResult = null
+        }
+    }
+
+    private fun startVoiceSession(result: MethodChannel.Result) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            result.success(mapOf("success" to false, "permissionRequired" to true))
+            return
+        }
+        if (voiceSession != null) {
+            result.success(mapOf("success" to true, "alreadyConnected" to true))
+            return
+        }
+        lifecycleScope.launch {
+            try {
+                sendVoiceEvent("status", "Securing your private voice session…")
+                val activeSession = sessionManager.session.value
+                    ?: throw IllegalStateException("Sign in to use the Voice Companion.")
+                val token = hteApplication.voiceSessionTokenRepository.fetchToken()
+                val catalogue = hteApplication.catalogRepository.publishedTracks().items
+                val favourites = hteApplication.userLibraryRepository.favouriteTrackIds().getOrDefault(emptyList()).toSet()
+                val founderAccess = hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)
+                val tools = mapOf(
+                    "control_playback" to object : ClientTool {
+                        override suspend fun execute(parameters: Map<String, Any>): ClientToolResult? {
+                            val action = parameters["action"] as? String
+                                ?: return ClientToolResult.failure("A playback action was not supplied.")
+                            if (action == "play_favourites" && favourites.isEmpty()) {
+                                return ClientToolResult.failure("There are no saved favourites to play yet.")
+                            }
+                            withContext(Dispatchers.Main.immediate) {
+                                when (action) {
+                                    "pause" -> mediaController?.pause()
+                                    "resume" -> mediaController?.play()
+                                    "next" -> mediaController?.seekToNextMediaItem()
+                                    "previous" -> mediaController?.seekToPreviousMediaItem()
+                                    "stop" -> mediaController?.stop()
+                                    "play_favourites" -> lifecycleScope.launch {
+                                        val selected = catalogue.filter { it.id in favourites && !it.audioUrl.isNullOrBlank() }
+                                        val ad = hteApplication.sponsoredAudioRepository.nextActiveAd().getOrNull()
+                                        val queue = buildList {
+                                            ad?.let { add(MediaItem.Builder().setMediaId("hte-ad:${it.id}").setUri(it.audioUrl).build()) }
+                                            selected.forEach { track ->
+                                                add(MediaItem.Builder().setMediaId(track.id).setUri(
+                                                    offlineDownloads.localUri(track.id)?.toString() ?: track.audioUrl!!
+                                                ).build())
+                                            }
+                                        }
+                                        mediaController?.setMediaItems(queue)
+                                        mediaController?.prepare()
+                                        mediaController?.play()
+                                    }
+                                    else -> return@withContext
+                                }
+                            }
+                            return ClientToolResult.success("The app received the $action playback command.")
+                        }
+                    },
+                    "navigate_app" to object : ClientTool {
+                        override suspend fun execute(parameters: Map<String, Any>): ClientToolResult? {
+                            val destination = parameters["destination"] as? String
+                                ?: return ClientToolResult.failure("A destination was not supplied.")
+                            if (destination.equals("Founder Studio", true) && !founderAccess) {
+                                return ClientToolResult.failure("This account does not have Founder Studio access.")
+                            }
+                            withContext(Dispatchers.Main.immediate) {
+                                appMethodChannel?.invokeMethod("voiceNavigate", mapOf("destination" to destination))
+                            }
+                            return ClientToolResult.success("Requested navigation to $destination.")
+                        }
+                    },
+                    "search_catalogue" to object : ClientTool {
+                        override suspend fun execute(parameters: Map<String, Any>): ClientToolResult? {
+                            val query = parameters["query"] as? String
+                                ?: return ClientToolResult.failure("A search term was not supplied.")
+                            val matches = catalogue.filter {
+                                it.title.contains(query, true) || it.artist.contains(query, true) ||
+                                    (it.genre?.contains(query, true) == true)
+                            }.take(5)
+                            if (matches.isEmpty()) return ClientToolResult.failure("No published tracks matched that search.")
+                            withContext(Dispatchers.Main.immediate) {
+                                appMethodChannel?.invokeMethod("voiceSearch", mapOf("query" to query))
+                            }
+                            val summary = matches.joinToString("; ") { "${it.title} by ${it.artist}" }
+                            return ClientToolResult.success("Found these published tracks: $summary")
+                        }
+                    }
+                )
+                val config = ConversationConfig(
+                    conversationToken = token,
+                    userId = activeSession.userId,
+                    onStatusChange = { status ->
+                        runOnUiThread {
+                            sendVoiceEvent("status", status.toString())
+                            if (status.toString().contains("DISCONNECTED", true) ||
+                                status.toString().contains("ERROR", true)
+                            ) {
+                                mediaController?.volume = 1f
+                            }
+                        }
+                    },
+                    onModeChange = { mode ->
+                        runOnUiThread {
+                            val speaking = mode.toString().contains("SPEAKING", true)
+                            mediaController?.volume = if (speaking) 0.25f else 1f
+                            sendVoiceEvent("mode", if (speaking) "Speaking" else "Listening")
+                        }
+                    },
+                    onUserTranscriptEvent = { text, _ -> runOnUiThread { sendVoiceEvent("userTranscript", text) } },
+                    onAgentResponseEvent = { text, _ -> runOnUiThread { sendVoiceEvent("agentTranscript", text) } },
+                    clientTools = tools
+                )
+                voiceSession = ConversationClient.startSession(config, this@FlutterHostActivity)
+                sendVoiceEvent("status", "Connecting to High-Tech Voice Companion…")
+                result.success(mapOf("success" to true))
+            } catch (error: Exception) {
+                mediaController?.volume = 1f
+                sendVoiceEvent("status", error.message ?: "Could not start the online voice session.")
+                result.success(mapOf("success" to false, "message" to (error.message ?: "Voice session failed.")))
+            }
+        }
+    }
+
+    private fun endVoiceSession(result: MethodChannel.Result) {
+        val active = voiceSession
+        voiceSession = null
+        voiceMuted = false
+        mediaController?.volume = 1f
+        lifecycleScope.launch {
+            runCatching { active?.endSession() }
+            sendVoiceEvent("status", "Disconnected")
+            result.success(mapOf("success" to true))
+        }
+    }
+
+    private fun setVoiceMuted(muted: Boolean, result: MethodChannel.Result) {
+        val active = voiceSession
+        if (active == null) {
+            result.success(mapOf("success" to false, "message" to "Start a voice session first."))
+            return
+        }
+        lifecycleScope.launch {
+            runCatching { active.setMicMuted(muted) }
+                .onSuccess {
+                    voiceMuted = muted
+                    result.success(mapOf("success" to true, "muted" to muted))
+                }
+                .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+        }
+    }
+
+    private fun sendVoiceEvent(event: String, value: String) {
+        appMethodChannel?.invokeMethod("voiceEvent", mapOf("event" to event, "value" to value))
     }
 
     private fun connectToPlaybackService() {
