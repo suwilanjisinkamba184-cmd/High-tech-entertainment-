@@ -1,4 +1,5 @@
 plugins {
-    // AGP 8.13.0 is the supported pairing for Kotlin Gradle Plugin 2.3.0.
-    id("com.android.application") version "8.13.0" apply false
+    // Keep the Android Gradle Plugin on the stable 8.10 line for legacy
+    // Android Gradle APIs still used by the Kotlin/Flutter plugin toolchain.
+    id("com.android.application") version "8.10.1" apply false
 }
