@@ -71,6 +71,34 @@ class SupabaseRestClient(
         }
     }
 
+    suspend fun uploadStorageObject(
+        bucket: String,
+        objectPath: String,
+        bytes: ByteArray,
+        contentType: String
+    ): Response = withContext(Dispatchers.IO) {
+        require(segment(bucket) == bucket)
+        require(objectPath.isNotBlank() && !objectPath.startsWith("/") && !objectPath.contains(".."))
+        val encodedPath = objectPath.split("/").joinToString("/") { encode(it).replace("+", "%20") }
+        val request = Request.Builder()
+            .url(baseUrl.trimEnd('/') + "/storage/v1/object/$bucket/$encodedPath")
+            .header("apikey", publishableKey)
+            .header("Authorization", "Bearer ${accessToken()?.takeIf { it.isNotBlank() } ?: publishableKey}")
+            .header("Content-Type", contentType)
+            .header("x-upsert", "false")
+            .post(bytes.toRequestBody(contentType.toMediaType()))
+            .build()
+        http.newCall(request).execute().use { response ->
+            Response(response.code, response.body?.string().orEmpty())
+        }
+    }
+
+    fun publicStorageUrl(bucket: String, objectPath: String): String {
+        require(segment(bucket) == bucket)
+        val encodedPath = objectPath.split("/").joinToString("/") { encode(it).replace("+", "%20") }
+        return baseUrl.trimEnd('/') + "/storage/v1/object/public/$bucket/$encodedPath"
+    }
+
     private fun segment(value: String): String {
         require(value.matches(Regex("[A-Za-z0-9_]+"))) { "Invalid API resource name." }
         return value
