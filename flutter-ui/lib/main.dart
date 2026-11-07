@@ -739,27 +739,22 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
   }
 
   Future<void> _playVideo(Map<String, dynamic> video) async {
-    try {
-      final response = await _appChannel.invokeMapMethod<String, dynamic>(
-        'playVideo',
-        {
-          'videoId': video['id']?.toString() ?? '',
-          'videoUrl': video['videoUrl']?.toString() ?? '',
-          'title': video['title']?.toString() ?? '',
-        },
+    final videoUrl = video['videoUrl']?.toString() ?? '';
+    final uri = Uri.tryParse(videoUrl);
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This video does not have a valid secure playback URL.')),
       );
-      if (response?['success'] != true && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response?['message']?.toString() ?? 'Video could not be opened.')),
-        );
-      }
-    } on PlatformException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message ?? 'Video could not be opened.')),
-        );
-      }
+      return;
     }
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => FlutterVideoPlayerScreen(
+          videoUrl: uri.toString(),
+          title: video['title']?.toString() ?? 'High-Tech Video',
+        ),
+      ),
+    );
   }
 
   Future<void> _downloadTrack(Map<String, dynamic> track) async {
@@ -2763,6 +2758,172 @@ class _ErrorState extends StatelessWidget {
             const SizedBox(height: 18),
             FilledButton(onPressed: onRetry, child: const Text('TRY AGAIN')),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+
+/// Flutter-owned video playback screen. Native Android remains responsible
+/// only for the shared audio MediaSession; video presentation is Flutter UI.
+class FlutterVideoPlayerScreen extends StatefulWidget {
+  const FlutterVideoPlayerScreen({
+    super.key,
+    required this.videoUrl,
+    required this.title,
+  });
+
+  final String videoUrl;
+  final String title;
+
+  @override
+  State<FlutterVideoPlayerScreen> createState() => _FlutterVideoPlayerScreenState();
+}
+
+class _FlutterVideoPlayerScreenState extends State<FlutterVideoPlayerScreen> {
+  late final VideoPlayerController _controller;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+    _initializeVideo();
+  }
+
+  Future<void> _initializeVideo() async {
+    try {
+      await _controller.initialize();
+      if (!mounted) return;
+      setState(() {});
+      await _controller.play();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error = 'This video could not be loaded. Check your connection and try again.';
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final hours = duration.inHours;
+    return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _black,
+      appBar: AppBar(
+        backgroundColor: _black,
+        title: Text(
+          widget.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      body: SafeArea(
+        child: Center(
+          child: _error != null
+              ? Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.video_library_outlined, size: 54, color: _gold),
+                      const SizedBox(height: 16),
+                      Text(_error!, textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white70)),
+                      const SizedBox(height: 18),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() => _error = null);
+                          _initializeVideo();
+                        },
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('TRY AGAIN'),
+                      ),
+                    ],
+                  ),
+                )
+              : !_controller.value.isInitialized
+                  ? const CircularProgressIndicator(color: _gold)
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: AspectRatio(
+                              aspectRatio: _controller.value.aspectRatio,
+                              child: VideoPlayer(_controller),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Text(
+                            widget.title,
+                            style: const TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          ValueListenableBuilder<VideoPlayerValue>(
+                            valueListenable: _controller,
+                            builder: (context, value, _) => Column(
+                              children: [
+                                VideoProgressIndicator(
+                                  _controller,
+                                  allowScrubbing: true,
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  colors: const VideoProgressColors(
+                                    playedColor: _gold,
+                                    bufferedColor: Colors.white30,
+                                    backgroundColor: Colors.white12,
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    Text(_formatDuration(value.position),
+                                        style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                                    const Spacer(),
+                                    IconButton.filled(
+                                      onPressed: () {
+                                        if (value.isPlaying) {
+                                          _controller.pause();
+                                        } else {
+                                          _controller.play();
+                                        }
+                                      },
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: _gold,
+                                        foregroundColor: _black,
+                                      ),
+                                      icon: Icon(value.isPlaying ? Icons.pause : Icons.play_arrow),
+                                    ),
+                                    const Spacer(),
+                                    Text(_formatDuration(value.duration),
+                                        style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
         ),
       ),
     );
