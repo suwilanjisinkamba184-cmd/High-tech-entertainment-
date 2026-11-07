@@ -1,8 +1,13 @@
 pluginManagement {
     repositories { google(); mavenCentral(); gradlePluginPortal() }
 }
+plugins {
+    // Flutter 3.47 requires KGP >= 2.2.20. Keep built-in Kotlin disabled on AGP 8.
+    id("org.jetbrains.kotlin.android") version "2.2.21" apply false
+}
 
-// AGP 9.0.1 provides built-in Kotlin; do not apply the legacy Kotlin Android plugin.
+// AGP 8.11.1 + KGP 2.2.21 is a supported pairing. The generated Flutter module
+// is included below and reads the same root plugin version during configuration.
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     val storageUrl = System.getenv("FLUTTER_STORAGE_BASE_URL") ?: "https://storage.googleapis.com"
@@ -10,15 +15,12 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven("$storageUrl/download.flutter.io")
-        // LiveKit's AudioSwitch transitive dependency is hosted on JitPack.
         maven { url = uri("https://jitpack.io") }
     }
 }
 rootProject.name = "HighTechEntertainment"
 include(":app")
 
-// Flutter's generated integration script registers the :flutter module and
-// its plugin subprojects. The generated .android directory is not committed.
 val flutterInclude = settingsDir.parentFile.resolve("flutter-ui/.android/include_flutter.groovy")
 require(flutterInclude.isFile) {
     "Flutter module bootstrap is missing. Run flutter pub get in ../flutter-ui first."
