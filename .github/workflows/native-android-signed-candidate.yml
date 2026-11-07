@@ -6,12 +6,6 @@ on:
     paths:
       - "native-android/**"
       - ".github/workflows/native-android-signed-candidate.yml"
-  push:
-    branches:
-      - migration/native-android-kotlin-3.0-foundation
-    paths:
-      - "native-android/**"
-      - ".github/workflows/native-android-signed-candidate.yml"
   workflow_dispatch:
     inputs:
       publish_release:
