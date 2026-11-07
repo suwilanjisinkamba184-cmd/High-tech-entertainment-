@@ -46,8 +46,21 @@ jobs:
         with:
           flutter-version: '3.47.9'
           cache: true
+      - name: Detect Shorebird credentials
+        id: shorebird
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+        shell: bash
+        run: |
+          if [ -n "$SHOREBIRD_TOKEN" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "Shorebird OTA credentials are available."
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::SHOREBIRD_TOKEN is not configured; this release will still produce a signed standalone APK without OTA publishing."
+          fi
       - name: Setup Shorebird
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.shorebird.outputs.available == 'true'
         uses: shorebirdtech/setup-shorebird@v1
         with:
           cache: true
@@ -307,7 +320,7 @@ jobs:
           PY
           grep -R -E "minSdk|compileSdk|targetSdk" android/app/build.gradle*
       - name: Configure Shorebird app identity
-        if: steps.ota_mode.outputs.mode != 'validate'
+        if: steps.ota_mode.outputs.mode != 'validate' && steps.shorebird.outputs.available == 'true'
         working-directory: ${{ runner.temp }}/hte_app
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
@@ -494,12 +507,18 @@ jobs:
             echo "PASS: Native Google sign-in client configuration is present."
           fi
       - name: Build Shorebird release APK
-        if: steps.ota_mode.outputs.mode == 'release'
+        if: steps.ota_mode.outputs.mode == 'release' && steps.shorebird.outputs.available == 'true'
         working-directory: ${{ runner.temp }}/hte_app
         env:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
         run: shorebird release android --flavor su --artifact apk --target-platform android-arm,android-arm64 -- --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+      - name: Build signed standalone APK when Shorebird is unavailable
+        if: steps.ota_mode.outputs.mode == 'release' && steps.shorebird.outputs.available != 'true'
+        working-directory: ${{ runner.temp }}/hte_app
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: flutter build apk --flavor su --release --target-platform android-arm,android-arm64 --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Verify OTA patch asset and icon compatibility
         # Only a publishable Dart patch needs an existing release baseline. PR validation builds a separate APK and must also support version-bump PRs.
         if: steps.ota_mode.outputs.mode == 'patch'
