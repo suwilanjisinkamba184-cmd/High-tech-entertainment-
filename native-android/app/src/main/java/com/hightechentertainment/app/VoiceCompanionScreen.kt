@@ -64,7 +64,8 @@ fun VoiceCompanionScreen(
     onStop: () -> Unit,
     onNavigate: (String) -> Unit,
     onSearch: (String) -> Unit,
-    onPlayFavourites: () -> Unit
+    onPlayFavourites: () -> Unit,
+    isFounder: Boolean
 ) {
     val context = LocalContext.current
     var status by remember { mutableStateOf("Checking on-device speech services…") }
@@ -139,7 +140,12 @@ fun VoiceCompanionScreen(
     fun speakOffline(message: String) {
         val engine = tts ?: return
         val voice = availableOfflineVoices.firstOrNull { it.name == selectedVoiceName }
-        if (voice != null) engine.voice = voice
+            ?: availableOfflineVoices.firstOrNull()
+        if (voice == null) {
+            status = "Install an offline Android speaking voice before using spoken responses."
+            return
+        }
+        engine.voice = voice
         engine.speak(message, TextToSpeech.QUEUE_FLUSH, null, "hte-voice-response")
     }
 
@@ -175,7 +181,7 @@ fun VoiceCompanionScreen(
             command.contains("open downloads") -> { onNavigate("Downloads"); "Opening downloads." }
             command.contains("open profile") || command.contains("open account") -> { onNavigate("Profile"); "Opening your profile." }
             command.contains("open bookings") -> { onNavigate("Bookings"); "Opening bookings." }
-            command.contains("open founder studio") -> { onNavigate("Founder Studio"); "Opening Founder Studio if your account is authorised." }
+            command.contains("open founder studio") -> if (isFounder) { onNavigate("Founder Studio"); "Opening Founder Studio." } else "Your account does not have Founder Studio access."
             else -> "I heard $raw. That command is not available offline yet."
         }
         status = response
