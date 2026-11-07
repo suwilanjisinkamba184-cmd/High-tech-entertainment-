@@ -1,6 +1,8 @@
 package com.hightechentertainment.app
 
 import android.content.ComponentName
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -75,6 +77,8 @@ class MainActivity : ComponentActivity() {
     private var currentTrackState by mutableStateOf<NativeTrack?>(null)
     private var playbackPositionMs by mutableLongStateOf(0L)
     private var playbackDurationMs by mutableLongStateOf(0L)
+    private var pendingAuthMessage by mutableStateOf<String?>(null)
+    private var oauthInProgress by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,8 +93,8 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(Unit) { sessionManager.restore() }
                 if (signedInSession == null) {
                     NativeAuthScreen(
-                        busy = authBusy || authStatus == "restoring",
-                        message = authMessage,
+                        busy = authBusy || oauthInProgress || authStatus == "restoring",
+                        message = authMessage ?: pendingAuthMessage,
                         onSignIn = { email, password ->
                             authBusy = true
                             authMessage = null
@@ -126,7 +130,8 @@ class MainActivity : ComponentActivity() {
                                 }
                                 authBusy = false
                             }
-                        }
+                        },
+                        onGoogleSignIn = { startGoogleOAuth() }
                     )
                 } else {
                 var tracks by remember { mutableStateOf<List<NativeTrack>>(emptyList()) }
@@ -213,6 +218,58 @@ class MainActivity : ComponentActivity() {
                     }
                 )
                 }
+            }
+        }
+        handleOAuthCallback(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleOAuthCallback(intent)
+    }
+
+    private fun startGoogleOAuth() {
+        val redirectUri = "com.hightechentertainment.app://login-callback"
+        val authorizationUrl = authRepository.googleOAuthAuthorizationUrl(redirectUri)
+        if (authorizationUrl == null) {
+            pendingAuthMessage = "Google sign-in could not be started. Please try again."
+            return
+        }
+        pendingAuthMessage = null
+        runCatching {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(authorizationUrl)))
+        }.onFailure {
+            pendingAuthMessage = "No browser is available to complete Google sign-in."
+        }
+    }
+
+    private fun handleOAuthCallback(callbackIntent: Intent?) {
+        val callback = callbackIntent?.data ?: return
+        if (callback.scheme != "com.hightechentertainment.app" || callback.host != "login-callback") return
+        val providerError = callback.getQueryParameter("error_description")
+            ?: callback.getQueryParameter("error")
+        if (!providerError.isNullOrBlank()) {
+            pendingAuthMessage = "Google sign-in was not completed. Please try again."
+            return
+        }
+        val code = callback.getQueryParameter("code")
+        if (code.isNullOrBlank()) {
+            pendingAuthMessage = "Google sign-in returned an invalid callback. Please try again."
+            return
+        }
+        if (oauthInProgress) return
+        oauthInProgress = true
+        pendingAuthMessage = null
+        lifecycleScope.launch {
+            try {
+                when (val result = authRepository.exchangeGoogleOAuthCode(code)) {
+                    is AuthResult.Success -> sessionManager.accept(result.session)
+                    is AuthResult.Failure -> pendingAuthMessage = result.message
+                    is AuthResult.Notice -> pendingAuthMessage = result.message
+                }
+            } finally {
+                oauthInProgress = false
             }
         }
     }
