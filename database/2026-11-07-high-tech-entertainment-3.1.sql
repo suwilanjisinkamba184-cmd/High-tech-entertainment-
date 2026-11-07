@@ -40,6 +40,7 @@ create policy "Admins process bookings" on public.bookings
   using (private.hte_has_role(array['owner','admin']))
   with check (private.hte_has_role(array['owner','admin']));
 
+revoke all on public.bookings from anon;
 grant select, insert on public.bookings to authenticated;
 grant update on public.bookings to authenticated;
 
