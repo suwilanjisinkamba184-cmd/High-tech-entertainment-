@@ -59,6 +59,8 @@ class NativeUpdateManager(private val context: Context) {
 
             for (i in 0 until releases.length()) {
                 val release = releases.optJSONObject(i) ?: continue
+                // Never offer drafts or prerelease candidates to ordinary app users.
+                if (release.optBoolean("draft", false) || release.optBoolean("prerelease", false)) continue
                 val assets = release.optJSONArray("assets") ?: continue
                 val manifestAsset = (0 until assets.length()).mapNotNull { assets.optJSONObject(it) }
                     .firstOrNull { it.optString("name") == "manifest.json" } ?: continue
@@ -74,6 +76,8 @@ class NativeUpdateManager(private val context: Context) {
                     it.body?.string()
                 } ?: continue
                 val manifest = JSONObject(manifestJson)
+                // Production OTA updates must be explicitly published on the production channel.
+                if (manifest.optString("channel") != "production") continue
                 val packageName = manifest.optString("packageName")
                 val versionCode = manifest.optLong("versionCode")
                 if (packageName != context.packageName || versionCode <= currentCode) continue
