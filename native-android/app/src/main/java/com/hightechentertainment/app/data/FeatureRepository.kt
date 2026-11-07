@@ -83,6 +83,18 @@ class FeatureRepository(
             row?.optString("phone").orEmpty(), row?.optString("avatar_url").orEmpty())
     }
 
+    suspend fun uploadVideo(context: android.content.Context, uri: android.net.Uri, contentType: String, extension: String): Result<String> = runCatching {
+        userId()
+        require(contentType in setOf("video/mp4", "video/webm", "video/quicktime", "video/x-m4v")) {
+            "Choose an MP4, WebM or QuickTime video."
+        }
+        val safeExtension = extension.lowercase().filter(Char::isLetterOrDigit).take(5).ifBlank { "mp4" }
+        val path = "founder/${System.currentTimeMillis()}.$safeExtension"
+        val response = client.uploadStorageUri(context, "hte-videos", path, uri, contentType, 50L * 1024L * 1024L)
+        check(response.isSuccessful) { "Video upload failed (HTTP ${response.statusCode})." }
+        client.publicStorageUrl("hte-videos", path)
+    }
+
     suspend fun uploadAudio(bytes: ByteArray, contentType: String, extension: String): Result<String> = runCatching {
         userId()
         require(bytes.isNotEmpty() && bytes.size <= 20 * 1024 * 1024) { "For phone stability, choose audio files up to 20 MB." }
