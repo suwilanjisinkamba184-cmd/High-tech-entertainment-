@@ -39,3 +39,7 @@ flutter pub get
 flutter analyze
 flutter test
 ```
+
+
+## Continuous validation
+This Flutter module is validated by the repository Flutter UI and native signed-candidate GitHub Actions workflows. Changes to this directory trigger Flutter dependency resolution, static analysis, widget tests and the native Android signed-candidate pipeline.
