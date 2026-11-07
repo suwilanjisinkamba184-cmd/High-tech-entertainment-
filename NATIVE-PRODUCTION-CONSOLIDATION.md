@@ -58,6 +58,15 @@ These are not marked complete until evidence exists:
 - Physical-device test startup audio, background playback, audio focus, Bluetooth/headset controls, video playback, offline mode, app process recreation, Android Go memory pressure, API 26+, tablets, TalkBack, and font scaling.
 - Test update install, app data preservation, rollback, and failure recovery.
 
+## Existing production security-advisor findings
+
+The current Supabase Security Advisor reports:
+- Leaked-password protection is disabled in Auth. Enable this in the Supabase Auth password-security settings before public production release.
+- Two existing admin RPCs (`hte_admin_get_analytics` and `hte_admin_list_users`) are SECURITY DEFINER and trigger advisor warnings. Their inspected definitions use an empty search_path and explicitly reject callers who fail `private.hte_has_role(['owner','admin'])`; retain only after a final authorization review.
+- The native Founder access RPC is SECURITY INVOKER and authenticated execution is available.
+
+These are tracked as go-live security checks; they are not silently changed as part of this native client migration.
+
 ## Production gates
 
 1. No merge to production and no public native release while any critical CI, security, signer, or physical-device gate is open.
