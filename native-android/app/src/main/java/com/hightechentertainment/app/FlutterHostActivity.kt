@@ -499,7 +499,10 @@ class FlutterHostActivity : FlutterActivity() {
                         }
                         hteApplication.featureRepository.createRelease(
                             call.argument<String>("title").orEmpty(),
-                            call.argument<String>("description").orEmpty()
+                            call.argument<String>("description").orEmpty(),
+                            call.argument<String>("coverUrl").orEmpty(),
+                            call.argument<String>("releaseDate").orEmpty(),
+                            call.argument<String>("spotifyUrl").orEmpty()
                         ).onSuccess { result.success(mapOf("success" to true)) }
                             .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
                     }
