@@ -4,10 +4,21 @@ This directory is the Flutter UI module embedded into the existing Kotlin Androi
 
 ## Architecture contract
 
-- Flutter owns presentation, navigation, responsive layouts, and UI animation.
-- The Kotlin host remains the Android application host and owns Android lifecycle, authentication/session integration, Media3 audio/video playback, background playback, downloads, notifications, and permission handling.
-- Supabase remains the existing backend. Do not create a second production database or duplicate playback engine.
-- Native-to-Flutter calls currently use the startup bridge `com.hightechentertainment.app/startup`. Expand this into a versioned, typed Pigeon API as feature migration proceeds.
+- Flutter owns **all user-facing screens, navigation, responsive layout, accessibility, forms and interaction**.
+- Kotlin is retained as the Android platform layer: lifecycle, secure OAuth callbacks, permissions, Media3 playback/background service, downloads, native file access, notifications and system intents.
+- Supabase remains the only production backend. Preserve the existing project, authentication, tables, storage buckets, Edge Functions and row-level security.
+- ElevenLabs remains the existing AI agent provider. API credentials must stay in Supabase Edge Function secrets and must never be packaged in the app.
+- Native playback is a single shared Media3 engine. Flutter controls it through `com.hightechentertainment.app/data`; the startup cue uses the separate `com.hightechentertainment.app/startup` channel.
+
+## Full migration status
+
+This branch is the full Flutter app migration for Android 3.1. Flutter is the target for every user-facing experience; the legacy Compose app is not the destination UI. Any remaining native screen handoff is temporary migration debt and must be removed before release.
+
+Implemented in the current branch: branded startup, email/password authentication UI, session restoration, listener catalogue screens, profile and booking UI, basic Founder Studio, sponsored-audio campaign controls, playlist/library UI and native media upload bridges.
+
+Still incomplete or awaiting verification: a fully Flutter-native Google OAuth return experience, Flutter AI Voice Companion screen, settings/password reset/account deletion, complete Founder Studio edit/delete workflows, campaign editing, automated media upload tests, Android 8+/Android Go physical testing and full release acceptance.
+
+See `docs/FULL-APP-MIGRATION-3.1.md` for the feature-parity checklist and release gates. Do not merge or publish until those gates pass.
 
 ## Priority One: synchronized 15-second startup
 
