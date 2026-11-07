@@ -5,6 +5,8 @@ import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.provider.OpenableColumns
 import android.os.Bundle
 import androidx.core.content.ContextCompat
@@ -187,6 +189,21 @@ class FlutterHostActivity : FlutterActivity() {
                         result.success(playbackState())
                     }
                     "downloadTrack" -> lifecycleScope.launch {
+                        val preferences = hteApplication.featureRepository.getAppPreferences().getOrDefault(
+                            com.hightechentertainment.app.data.NativeAppPreferences()
+                        )
+                        if (preferences.wifiOnlyDownloads) {
+                            val connectivity = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+                            val network = connectivity.activeNetwork
+                            val capabilities = network?.let(connectivity::getNetworkCapabilities)
+                            if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) != true) {
+                                result.success(mapOf(
+                                    "success" to false,
+                                    "message" to "Wi-Fi only downloads is enabled. Connect to Wi-Fi or change this setting."
+                                ))
+                                return@launch
+                            }
+                        }
                         val id = call.argument<String>("trackId").orEmpty()
                         val track = hteApplication.catalogRepository.publishedTracks().items.firstOrNull { it.id == id }
                         val downloadId = track?.let { offlineDownloads.enqueue(it) }
@@ -992,16 +1009,30 @@ class FlutterHostActivity : FlutterActivity() {
                 result.success(mapOf("success" to false, "message" to "This track has no published audio file."))
                 return@launch
             }
+            val preferences = hteApplication.featureRepository.getAppPreferences().getOrDefault(
+                com.hightechentertainment.app.data.NativeAppPreferences()
+            )
             val sponsoredAd = hteApplication.sponsoredAudioRepository.nextActiveAd().getOrNull()
+            val remainingTracks = if (preferences.autoplay) {
+                playableTracks.drop(startIndex)
+            } else {
+                listOf(playableTracks[startIndex])
+            }
+            val orderedTracks = if (preferences.shuffle && remainingTracks.size > 1) {
+                listOf(remainingTracks.first()) + remainingTracks.drop(1).shuffled()
+            } else {
+                remainingTracks
+            }
             val queue = buildList {
                 sponsoredAd?.let { ad ->
                     add(MediaItem.Builder().setMediaId("hte-ad:${ad.id}").setUri(ad.audioUrl).build())
                 }
-                addAll(playableTracks.drop(startIndex).map { track ->
+                addAll(orderedTracks.map { track ->
                     val uri = offlineDownloads.localUri(track.id)?.toString() ?: track.audioUrl!!
                     MediaItem.Builder().setMediaId(track.id).setUri(uri).build()
                 })
             }
+            controller.shuffleModeEnabled = false
             controller.setMediaItems(queue, 0, C.TIME_UNSET)
             controller.prepare()
             controller.play()
