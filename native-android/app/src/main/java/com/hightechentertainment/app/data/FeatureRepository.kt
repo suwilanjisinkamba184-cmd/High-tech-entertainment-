@@ -65,6 +65,14 @@ class FeatureRepository(
         }
     }
 
+    suspend fun updatePassword(newPassword: String): Result<Unit> = runCatching {
+        userId()
+        require(newPassword.length >= 8) { "Use a password with at least 8 characters." }
+        val response = client.request("PUT", "/auth/v1/user",
+            body = JSONObject().put("password", newPassword).toString())
+        check(response.isSuccessful) { "Password update failed (HTTP ${response.statusCode})." }
+    }
+
     suspend fun getProfile(): Result<NativeProfile> = runCatching {
         val id = userId()
         val response = client.get("profiles", mapOf("id" to "eq.$id", "limit" to "1"),
