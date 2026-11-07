@@ -328,6 +328,47 @@ class FlutterHostActivity : FlutterActivity() {
                         ).onSuccess { result.success(mapOf("success" to true)) }
                             .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
                     }
+                    "getDraftDetails" -> lifecycleScope.launch {
+                        val authorized = hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)
+                        if (!authorized) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                        } else {
+                            hteApplication.featureRepository.draftDetails(
+                                call.argument<String>("table").orEmpty(),
+                                call.argument<String>("id").orEmpty()
+                            ).onSuccess { result.success(mapOf("success" to true, "draft" to it)) }
+                                .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                        }
+                    }
+                    "updateDraft" -> lifecycleScope.launch {
+                        val authorized = hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)
+                        if (!authorized) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                        } else {
+                            hteApplication.featureRepository.updateDraft(
+                                call.argument<String>("table").orEmpty(),
+                                call.argument<String>("id").orEmpty(),
+                                call.argument<String>("title").orEmpty(),
+                                call.argument<String>("artist").orEmpty(),
+                                call.argument<String>("description").orEmpty(),
+                                call.argument<String>("mediaUrl").orEmpty(),
+                                call.argument<String>("genre").orEmpty()
+                            ).onSuccess { result.success(mapOf("success" to true)) }
+                                .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                        }
+                    }
+                    "deleteDraft" -> lifecycleScope.launch {
+                        val authorized = hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)
+                        if (!authorized) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                        } else {
+                            hteApplication.featureRepository.deleteDraft(
+                                call.argument<String>("table").orEmpty(),
+                                call.argument<String>("id").orEmpty()
+                            ).onSuccess { result.success(mapOf("success" to true)) }
+                                .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                        }
+                    }
                     "setDraftPublished" -> lifecycleScope.launch {
                         val table = call.argument<String>("table").orEmpty()
                         if (table !in setOf("tracks", "artists", "releases", "videos")) {
