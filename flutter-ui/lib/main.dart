@@ -7,7 +7,31 @@ import 'package:flutter_svg/flutter_svg.dart';
 const _gold = Color(0xFFD7A83E);
 const _black = Color(0xFF080808);
 const _surface = Color(0xFF151515);
+
 const _startupChannel = MethodChannel('com.hightechentertainment.app/startup');
+
+/// Official four-colour Google mark. Keep the provider identity recognizable;
+/// the surrounding control uses the High-Tech gold/obsidian design system.
+class _GoogleBrandMark extends StatelessWidget {
+  const _GoogleBrandMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return SvgPicture.string(
+      '''
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.44a5.5 5.5 0 0 1-2.39 3.61v2.94h3.87c2.27-2.09 3.57-5.17 3.57-8.79z"/>
+        <path fill="#34A853" d="M12 24c3.24 0 5.96-1.08 7.95-2.94l-3.87-2.94c-1.08.72-2.45 1.15-4.08 1.15-3.14 0-5.8-2.12-6.75-4.98H1.25v3.03A12 12 0 0 0 12 24z"/>
+        <path fill="#FBBC05" d="M5.25 14.29a7.22 7.22 0 0 1 0-4.58V6.68H1.25a12 12 0 0 0 0 10.64l4-3.03z"/>
+        <path fill="#EA4335" d="M12 4.73c1.77 0 3.36.61 4.61 1.82l3.45-3.45C17.95 1.14 15.24 0 12 0A12 12 0 0 0 1.25 6.68l4 3.03C6.2 6.85 8.86 4.73 12 4.73z"/>
+      </svg>
+      ''',
+      width: 22,
+      height: 22,
+      fit: BoxFit.contain,
+    );
+  }
+}
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +56,18 @@ class HighTechEntertainmentApp extends StatelessWidget {
         ),
         useMaterial3: true,
         fontFamily: 'Roboto',
+        iconTheme: const IconThemeData(color: _gold, size: 22),
+        navigationBarTheme: NavigationBarThemeData(
+          iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+            color: states.contains(WidgetState.selected) ? _gold : Colors.white54,
+            size: 23,
+          )),
+          labelTextStyle: WidgetStateProperty.all(
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.3),
+          ),
+          indicatorColor: _gold.withValues(alpha: 0.14),
+          backgroundColor: _surface,
+        ),
       ),
       home: const StartupExperience(),
     );
@@ -494,7 +530,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   const Divider(height: 30, color: Colors.white24),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _startGoogleSignIn,
-                    icon: const Icon(Icons.login),
+                    icon: const _GoogleBrandMark(),
                     label: const Text('Continue with Google'),
                   ),
                   const SizedBox(height: 10),
