@@ -3,6 +3,14 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val startupJingleResDir = layout.buildDirectory.dir("generated/res/startupJingle")
+
+val prepareStartupJingle by tasks.registering(Copy::class) {
+    from(rootProject.file("../mobile-app/assets/high-tech-startup.mp3"))
+    into(startupJingleResDir.map { it.dir("raw") })
+    rename { "high_tech_startup.mp3" }
+}
+
 android {
     namespace = "com.hightechentertainment.app"
     compileSdk = 36
@@ -15,6 +23,8 @@ android {
         versionName = "3.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+
+    sourceSets.getByName("main").res.srcDir(startupJingleResDir)
 
     buildFeatures {
         compose = true
@@ -58,3 +68,6 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }
+
+// Bundle the existing production startup MP3 as a native Android raw resource.
+tasks.named("preBuild").configure { dependsOn(prepareStartupJingle) }
