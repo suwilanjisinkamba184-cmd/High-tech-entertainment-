@@ -57,6 +57,7 @@ internal fun OnlineVoiceCompanionPanel(
     userId: String,
     tracks: List<NativeTrack>,
     favouriteIds: Set<String>,
+    onVoiceAudioActive: (Boolean) -> Unit,
     isFounder: Boolean,
     onPause: () -> Unit,
     onResume: () -> Unit,
@@ -137,11 +138,18 @@ internal fun OnlineVoiceCompanionPanel(
                     conversationToken = token,
                     userId = userId,
                     onStatusChange = { newStatus ->
-                        scope.launch(Dispatchers.Main.immediate) { status = newStatus.toString() }
+                        scope.launch(Dispatchers.Main.immediate) {
+                            status = newStatus.toString()
+                            if (newStatus.toString().contains("DISCONNECTED", true) || newStatus.toString().contains("ERROR", true)) {
+                                onVoiceAudioActive(false)
+                            }
+                        }
                     },
                     onModeChange = { mode ->
                         scope.launch(Dispatchers.Main.immediate) {
-                            status = if (mode.toString().contains("SPEAKING", true)) "Speaking" else "Listening"
+                            val speaking = mode.toString().contains("SPEAKING", true)
+                            status = if (speaking) "Speaking" else "Listening"
+                            onVoiceAudioActive(speaking)
                         }
                     },
                     onUserTranscriptEvent = { text, _ ->
@@ -155,6 +163,7 @@ internal fun OnlineVoiceCompanionPanel(
                 session = ConversationClient.startSession(config, activity)
                 status = "Connecting to High-Tech Voice Companion…"
             } catch (error: Exception) {
+                onVoiceAudioActive(false)
                 status = error.message ?: "Could not start the online voice session."
             } finally {
                 connecting = false
@@ -171,6 +180,7 @@ internal fun OnlineVoiceCompanionPanel(
 
     DisposableEffect(Unit) {
         onDispose {
+            onVoiceAudioActive(false)
             val activeSession = session
             if (activeSession != null) {
                 CoroutineScope(Dispatchers.Main.immediate).launch { activeSession.endSession() }
@@ -206,6 +216,7 @@ internal fun OnlineVoiceCompanionPanel(
                             val activeSession = session
                             session = null
                             muted = false
+                            onVoiceAudioActive(false)
                             status = "Disconnected"
                             scope.launch { activeSession?.endSession() }
                         } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
