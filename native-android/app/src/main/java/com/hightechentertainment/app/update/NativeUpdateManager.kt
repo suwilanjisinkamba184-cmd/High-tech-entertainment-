@@ -10,7 +10,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.core.content.pm.PackageInfoCompat
-import com.hightechentertainment.app.MainActivity
+import com.hightechentertainment.app.FlutterHostActivity
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
@@ -163,7 +163,7 @@ class NativeUpdateManager(private val context: Context) {
                     session.fsync(output)
                 }
             }
-            val statusIntent = Intent(context, MainActivity::class.java)
+            val statusIntent = Intent(context, FlutterHostActivity::class.java)
                 .setAction("com.hightechentertainment.app.UPDATE_INSTALL_STATUS")
                 .putExtra("update_version_code", versionCode)
             val flags = PendingIntent.FLAG_UPDATE_CURRENT or
