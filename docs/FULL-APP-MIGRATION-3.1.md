@@ -53,11 +53,11 @@ Migrate the complete Android application experience to Flutter while retaining K
 
 - Flutter is the launcher UI hosted by the Kotlin Android app.
 - Splash, sign-in/sign-up, catalogue screens, profile/booking, basic Founder Studio and sponsored campaign management are present.
-- Flutter Google sign-in still hands off to the native authentication screen; session refresh on return has been added.
-- Voice Companion still opens the legacy native Compose screen; this is not full UI migration.
+- Google OAuth now starts from the Flutter experience and its deep-link callback is handled by the Flutter host Activity; the legacy Compose sign-in screen is no longer required for this flow.
+- Voice Companion now has a Flutter screen; Kotlin hosts the existing ElevenLabs conversation SDK, microphone permission, audio ducking and playback/navigation/catalogue client tools behind the Flutter method channel.
 - Playlist CRUD/add-track bridge and Flutter playlist/library interface have just been added; these require CI and device verification.
-- Founder content forms still accept URLs instead of selecting and uploading media files.
-- Account settings, password reset in Flutter, avatar upload, account deletion, full editing/deletion workflows and seamless Flutter voice UI remain incomplete.
+- Founder Studio now uses the Android document picker and bounded Supabase Storage uploads for audio/video, with profile image upload for signed-in users.
+- Flutter password reset, password update, avatar upload and account-deletion request entry points have been added. Full edit/delete lifecycle for catalogue drafts and campaigns, complete settings/privacy screens and physical verification remain incomplete.
 - AI token endpoint previously logged a missing server configuration error. The actual ElevenLabs API key must be configured as a Supabase Edge Function secret and tested without exposing it to the client.
 
 ## Release acceptance gates
