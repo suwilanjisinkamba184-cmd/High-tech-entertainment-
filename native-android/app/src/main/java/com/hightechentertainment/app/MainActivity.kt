@@ -182,6 +182,7 @@ class MainActivity : ComponentActivity() {
                     featureRepository = hteApplication.featureRepository,
                     userLibraryRepository = hteApplication.userLibraryRepository,
                     sponsoredAudioRepository = hteApplication.sponsoredAudioRepository,
+                    downloads = offlineDownloads,
                     sponsoredAudioPlaying = sponsoredAudioPlaying,
                     isFounderAccount = founderAccess,
                     userId = activeSession.userId,
@@ -406,7 +407,8 @@ private val destinations = listOf(
     AppDestination("Discover", Icons.Rounded.Search),
     AppDestination("Videos", Icons.Rounded.VideoLibrary),
     AppDestination("Library", Icons.Rounded.LibraryMusic),
-    AppDestination("Favourites", Icons.Rounded.FavoriteBorder)
+    AppDestination("Favourites", Icons.Rounded.FavoriteBorder),
+    AppDestination("Downloads", Icons.Rounded.Download)
 )
 
 @Composable
@@ -416,6 +418,7 @@ private fun HighTechApp(
     featureRepository: com.hightechentertainment.app.data.FeatureRepository,
     userLibraryRepository: com.hightechentertainment.app.data.UserLibraryRepository,
     sponsoredAudioRepository: com.hightechentertainment.app.data.SponsoredAudioRepository,
+    downloads: OfflineMusicDownloads,
     sponsoredAudioPlaying: Boolean,
     isFounderAccount: Boolean,
     userId: String?,
@@ -495,10 +498,11 @@ private fun HighTechApp(
                             TextButton(onClick = { moreExpanded = true }) { Text("MORE", color = HteGold) }
                             DropdownMenu(expanded = moreExpanded, onDismissRequest = { moreExpanded = false }) {
                                 buildList {
-                                    add("Bookings" to 5)
-                                    add("Profile" to 6)
-                                    add("App updates" to 8)
-                                    if (isFounderAccount) add("Founder Studio" to 7)
+                                    add("Downloads" to 5)
+                                    add("Bookings" to 6)
+                                    add("Profile" to 7)
+                                    add("App updates" to 9)
+                                    if (isFounderAccount) add("Founder Studio" to 8)
                                 }.forEach { (label, index) ->
                                     DropdownMenuItem(text = { Text(label) }, onClick = {
                                         selectedTab = index
@@ -517,10 +521,11 @@ private fun HighTechApp(
                                 2 -> "Music videos"
                                 3 -> "Your library"
                                 4 -> "Favourites"
-                                5 -> "Your bookings"
-                                6 -> "Your profile"
-                                7 -> "Founder Studio"
-                                8 -> "App updates"
+                                5 -> "Offline downloads"
+                                6 -> "Your bookings"
+                                7 -> "Your profile"
+                                8 -> "Founder Studio"
+                                9 -> "App updates"
                                 else -> "Music. Beats. Production. Beyond."
                             },
                             style = MaterialTheme.typography.headlineMedium,
@@ -636,16 +641,18 @@ private fun HighTechApp(
                                 destination = when (selectedTab) {
                                     2 -> "Videos"
                                     3 -> "Library"
-                                    5 -> "Bookings"
-                                    6 -> "Profile"
-                                    7 -> "Founder Studio"
-                                    8 -> "App Updates"
+                                    5 -> "Downloads"
+                                    6 -> "Bookings"
+                                    7 -> "Profile"
+                                    8 -> "Founder Studio"
+                                    9 -> "App Updates"
                                     else -> "Library"
                                 },
                                 tracks = tracks,
                                 features = featureRepository,
                                 library = userLibraryRepository,
                                 sponsoredAudio = sponsoredAudioRepository,
+                                downloads = downloads,
                                 isFounder = isFounderAccount,
                                 userId = userId,
                                 onPlayTrack = onPlay
