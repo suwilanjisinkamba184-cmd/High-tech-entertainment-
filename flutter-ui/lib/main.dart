@@ -102,21 +102,29 @@ class _StartupExperienceState extends State<StartupExperience>
   }
 
   Future<void> _startExperience() async {
-    // Start the visual clock before crossing the platform channel. A slow or
-    // stalled native bridge must never extend the splash beyond 15 seconds.
-    _progress.forward();
-    _timer = Timer(_duration, _finishExperience);
+    // Arm a hard fallback first: a stalled native bridge cannot trap the user
+    // on the splash. If audio starts successfully, rebase to its confirmed
+    // native start so the visual transition and 15-second audio cue stay in sync.
+    _armSplashDeadline();
 
     try {
-      await _startupChannel.invokeMethod<void>('playStartup');
+      final audioStarted =
+          await _startupChannel.invokeMethod<bool>('playStartup');
+      if (!mounted || _finished) return;
+      if (audioStarted == true) {
+        _armSplashDeadline();
+      }
     } on PlatformException {
-      // Audio is optional in module previews; the splash deadline is not.
+      // Audio is optional in module previews; the fallback deadline remains.
     } on MissingPluginException {
       // Native audio is unavailable in a standalone Flutter preview.
     }
+  }
 
-    // Do not restart or extend the deadline if the native call returns late.
-    if (!mounted || _finished) return;
+  void _armSplashDeadline() {
+    _timer?.cancel();
+    _progress.forward(from: 0);
+    _timer = Timer(_duration, _finishExperience);
   }
 
   void _finishExperience() {
