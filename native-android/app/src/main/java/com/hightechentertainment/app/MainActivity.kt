@@ -231,7 +231,12 @@ class MainActivity : ComponentActivity() {
                             startIndex < 0 ->
                                 error = "This track does not have a playable audio file yet."
                             else -> lifecycleScope.launch {
-                                val sponsoredAd = hteApplication.sponsoredAudioRepository.nextActiveAd().getOrNull()
+                                val sponsoredAdResult = hteApplication.sponsoredAudioRepository.nextActiveAd()
+                                if (sponsoredAdResult.isFailure) {
+                                    error = "Sponsored audio could not be verified. Please try again."
+                                    return@launch
+                                }
+                                val sponsoredAd = sponsoredAdResult.getOrNull()
                                 val musicQueue = if (sponsoredAd != null) playableTracks.drop(startIndex) else playableTracks
                                 val queue = buildList {
                                     sponsoredAd?.let { ad ->
@@ -266,7 +271,12 @@ class MainActivity : ComponentActivity() {
                             favouriteQueue.isEmpty() ->
                                 error = "You do not have any downloadable favourites to play yet."
                             else -> lifecycleScope.launch {
-                                val sponsoredAd = hteApplication.sponsoredAudioRepository.nextActiveAd().getOrNull()
+                                val sponsoredAdResult = hteApplication.sponsoredAudioRepository.nextActiveAd()
+                                if (sponsoredAdResult.isFailure) {
+                                    error = "Sponsored audio could not be verified. Please try again."
+                                    return@launch
+                                }
+                                val sponsoredAd = sponsoredAdResult.getOrNull()
                                 val queue = buildList {
                                     sponsoredAd?.let { ad ->
                                         add(MediaItem.Builder().setMediaId("hte-ad:${ad.id}").setUri(ad.audioUrl).build())
