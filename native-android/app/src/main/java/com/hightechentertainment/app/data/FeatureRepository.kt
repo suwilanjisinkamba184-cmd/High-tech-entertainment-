@@ -362,9 +362,10 @@ class FeatureRepository(
         val response = client.request(
             "PATCH", "/rest/v1/$table",
             mapOf("id" to "eq.$id", "is_published" to "eq.false"),
-            body.toString(), mapOf("Prefer" to "return=minimal")
+            body.toString(), mapOf("Prefer" to "return=representation")
         )
         check(response.isSuccessful) { "Could not update draft (HTTP ${response.statusCode})." }
+        check(JSONArray(response.body).length() > 0) { "Draft not found, or it has already been published." }
     }
 
     suspend fun deleteDraft(table: String, id: String): Result<Unit> = runCatching {
