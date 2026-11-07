@@ -110,7 +110,7 @@ class SupabaseRestClient(
         require(
             contentType.startsWith("video/") ||
                 contentType.startsWith("audio/") ||
-                contentType in setOf("image/jpeg", "image/png", "image/webp")
+                contentType in setOf("image/jpeg", "image/png", "image/webp", "image/avif")
         ) { "Unsupported media content type." }
         require(maxBytes > 0L) { "A valid upload size limit is required." }
         val descriptor = context.contentResolver.openAssetFileDescriptor(uri, "r")
