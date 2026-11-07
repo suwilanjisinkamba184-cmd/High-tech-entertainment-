@@ -502,6 +502,7 @@ private fun HighTechApp(
                                     add("Bookings" to 6)
                                     add("Profile" to 7)
                                     add("App updates" to 9)
+                                    add("Voice Companion" to 10)
                                     if (isFounderAccount) add("Founder Studio" to 8)
                                 }.forEach { (label, index) ->
                                     DropdownMenuItem(text = { Text(label) }, onClick = {
@@ -526,6 +527,7 @@ private fun HighTechApp(
                                 7 -> "Your profile"
                                 8 -> "Founder Studio"
                                 9 -> "App updates"
+                                10 -> "Voice Companion"
                                 else -> "Music. Beats. Production. Beyond."
                             },
                             style = MaterialTheme.typography.headlineMedium,
@@ -637,7 +639,36 @@ private fun HighTechApp(
                 } else {
                     item {
                         Box(Modifier.fillParentMaxSize()) {
-                            AdditionalFeatureScreen(
+                            if (selectedTab == 10) {
+                                VoiceCompanionScreen(
+                                    onPause = onPause,
+                                    onResume = onResume,
+                                    onNext = onNext,
+                                    onPrevious = onPrevious,
+                                    onStop = { playbackPlayer?.stop() },
+                                    onNavigate = { destination ->
+                                        selectedTab = when (destination) {
+                                            "Home" -> 0
+                                            "Discover" -> 1
+                                            "Library" -> 3
+                                            "Downloads" -> 5
+                                            "Bookings" -> 6
+                                            "Profile" -> 7
+                                            "Founder Studio" -> if (isFounderAccount) 8 else selectedTab
+                                            else -> selectedTab
+                                        }
+                                    },
+                                    onSearch = { query ->
+                                        search = query
+                                        selectedTab = 1
+                                    },
+                                    onPlayFavourites = {
+                                        tracks.firstOrNull { it.id in favouriteIds && !it.audioUrl.isNullOrBlank() }
+                                            ?.let(onPlay)
+                                    },
+                                    isFounder = isFounderAccount
+                                )
+                            } else AdditionalFeatureScreen(
                                 destination = when (selectedTab) {
                                     2 -> "Videos"
                                     3 -> "Library"
