@@ -51,6 +51,7 @@ fun AdditionalFeatureScreen(
         }
     }
     var overview by remember { mutableStateOf<FounderOverview?>(null) }
+    var drafts by remember { mutableStateOf<List<NativeDraftItem>>(emptyList()) }
     var selectedVideo by remember { mutableStateOf<NativeVideo?>(null) }
     var playlistName by remember { mutableStateOf("") }
     var bookingName by remember { mutableStateOf("") }
@@ -93,6 +94,7 @@ fun AdditionalFeatureScreen(
                     features.founderOverview().onSuccess { overview = it }.onFailure { message = it.message }
                     features.founderBookings().onSuccess { bookings = it }.onFailure { message = it.message }
                     sponsoredAudio.campaigns().onSuccess { campaigns = it }.onFailure { message = it.message }
+                    features.founderDrafts().onSuccess { drafts = it }.onFailure { message = it.message }
                 } else message = "Founder access is restricted to the authorized account."
             }
             busy = false
@@ -264,6 +266,26 @@ fun AdditionalFeatureScreen(
                         }
                     }) { Text("Create release") }
                     Text("Catalogue uploads are created as drafts. Audio/video file upload and publication controls still need their secure storage workflow.", style = MaterialTheme.typography.bodySmall)
+                    HorizontalDivider(Modifier.padding(vertical = 12.dp))
+                    Text("CONTENT DRAFTS", style = MaterialTheme.typography.titleMedium)
+                    if (drafts.isEmpty()) Text("No unpublished content drafts.")
+                    drafts.forEach { draft ->
+                        ListItem(
+                            headlineContent = { Text(draft.title) },
+                            supportingContent = { Text(draft.table.removeSuffix("s").replaceFirstChar(Char::uppercase)) },
+                            trailingContent = {
+                                TextButton(onClick = {
+                                    scope.launch {
+                                        features.setDraftPublished(draft.table, draft.id, true)
+                                            .onSuccess { message = "${draft.title} published." }
+                                            .onFailure { message = it.message }
+                                        drafts = features.founderDrafts().getOrDefault(emptyList())
+                                        overview = features.founderOverview().getOrNull()
+                                    }
+                                }) { Text("Publish") }
+                            }
+                        )
+                    }
                     HorizontalDivider(Modifier.padding(vertical = 12.dp))
                     Text("SPONSORED AUDIO CAMPAIGNS", style = MaterialTheme.typography.titleMedium)
                     OutlinedTextField(campaignTitle, { campaignTitle = it }, Modifier.fillMaxWidth(), label = { Text("Campaign title") })
