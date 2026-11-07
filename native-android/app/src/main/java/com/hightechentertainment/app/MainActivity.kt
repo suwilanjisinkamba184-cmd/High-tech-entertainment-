@@ -226,8 +226,8 @@ class MainActivity : ComponentActivity() {
                                     })
                                 }
                                 activePlayer.setMediaItems(queue, if (sponsoredAd != null) 0 else startIndex, C.TIME_UNSET)
-                                activePlayer.shuffleModeEnabled = shuffleEnabled
-                                activePlayer.repeatMode = repeatMode
+                                activePlayer.shuffleModeEnabled = if (sponsoredAd == null) shuffleEnabled else false
+                                activePlayer.repeatMode = if (sponsoredAd == null) repeatMode else Player.REPEAT_MODE_OFF
                                 currentTrackState = if (sponsoredAd == null) track else null
                                 activePlayer.prepare()
                                 activePlayer.play()
@@ -343,6 +343,8 @@ class MainActivity : ComponentActivity() {
                                 val adId = mediaId.removePrefix("hte-ad:")
                                 lifecycleScope.launch { hteApplication.sponsoredAudioRepository.recordImpression(adId) }
                             } else {
+                                controller.shuffleModeEnabled = shuffleEnabled
+                                controller.repeatMode = repeatMode
                                 currentTrackState = mediaId?.let { id -> knownTracks.firstOrNull { it.id == id } }
                                 mediaId?.let { trackId ->
                                     lifecycleScope.launch { hteApplication.userLibraryRepository.recordListening(trackId) }
