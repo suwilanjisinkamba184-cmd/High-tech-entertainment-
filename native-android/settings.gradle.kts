@@ -1,6 +1,13 @@
 pluginManagement {
     repositories { google(); mavenCentral(); gradlePluginPortal() }
 }
+
+// Flutter 3.47.9 requires Kotlin Gradle Plugin 2.2.20 or newer.
+// Pin the compatible KGP version at the host build level so the generated
+// Flutter Android module cannot fall back to the older 2.2.10 template default.
+plugins {
+    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
+}
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     val storageUrl = System.getenv("FLUTTER_STORAGE_BASE_URL") ?: "https://storage.googleapis.com"
