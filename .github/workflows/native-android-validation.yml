@@ -58,6 +58,18 @@ jobs:
       - name: Run unit tests and build debug APK
         run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
 
+      - name: Verify startup MP3 is packaged in the native APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find app/build/outputs/apk/debug -maxdepth 1 -type f -name '*.apk' -print -quit)"
+          test -n "$APK" || { echo "::error::Native debug APK was not produced."; exit 1; }
+          if ! unzip -l "$APK" | grep -Eq 'res/raw/high_tech_startup[^/]*\.mp3'; then
+            echo "::error::Bundled startup MP3 is missing from the native APK."
+            unzip -l "$APK" | grep 'res/raw/' || true
+            exit 1
+          fi
+          echo "PASS: startup MP3 is packaged inside the native APK."
       - name: Upload validation APK
         uses: actions/upload-artifact@v4
         with:
