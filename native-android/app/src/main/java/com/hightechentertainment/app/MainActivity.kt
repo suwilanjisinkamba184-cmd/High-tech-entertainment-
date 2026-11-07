@@ -172,6 +172,9 @@ class MainActivity : ComponentActivity() {
 
                 HighTechApp(
                     favouriteIds = favouriteIds,
+                    featureRepository = hteApplication.featureRepository,
+                    userLibraryRepository = hteApplication.userLibraryRepository,
+                    userId = signedInSession.userId,
                     onToggleFavourite = { track ->
                         lifecycleScope.launch {
                             val isSaved = track.id in favouriteIds
@@ -213,9 +216,6 @@ class MainActivity : ComponentActivity() {
                                 activePlayer.shuffleModeEnabled = shuffleEnabled
                                 activePlayer.repeatMode = repeatMode
                                 currentTrackState = track
-                                lifecycleScope.launch {
-                                    hteApplication.userLibraryRepository.recordListening(track.id)
-                                }
                                 activePlayer.prepare()
                                 activePlayer.play()
                             }
@@ -327,6 +327,9 @@ class MainActivity : ComponentActivity() {
                             currentTrackState = mediaItem?.mediaId?.let { id ->
                                 knownTracks.firstOrNull { it.id == id }
                             }
+                            mediaItem?.mediaId?.let { trackId ->
+                                lifecycleScope.launch { hteApplication.userLibraryRepository.recordListening(trackId) }
+                            }
                         }
                     })
                 }
@@ -379,6 +382,9 @@ private val destinations = listOf(
 private fun HighTechApp(
     tracks: List<NativeTrack>,
     favouriteIds: Set<String>,
+    featureRepository: com.hightechentertainment.app.data.FeatureRepository,
+    userLibraryRepository: com.hightechentertainment.app.data.UserLibraryRepository,
+    userId: String?,
     onToggleFavourite: (NativeTrack) -> Unit,
     loading: Boolean,
     error: String?,
@@ -400,6 +406,7 @@ private fun HighTechApp(
     onSignOut: () -> Unit
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    var moreExpanded by rememberSaveable { mutableStateOf(false) }
     var search by rememberSaveable { mutableStateOf("") }
     val visibleTracks = tracks.filter {
         it.title.contains(search, true) || it.artist.contains(search, true) ||
@@ -449,6 +456,17 @@ private fun HighTechApp(
                         IconButton(onClick = onRefresh, enabled = !loading) {
                             Icon(Icons.Rounded.Refresh, contentDescription = "Refresh catalogue", tint = HteGold)
                         }
+                        Box {
+                            TextButton(onClick = { moreExpanded = true }) { Text("MORE", color = HteGold) }
+                            DropdownMenu(expanded = moreExpanded, onDismissRequest = { moreExpanded = false }) {
+                                listOf("Bookings" to 5, "Profile" to 6, "Founder Studio" to 7).forEach { (label, index) ->
+                                    DropdownMenuItem(text = { Text(label) }, onClick = {
+                                        selectedTab = index
+                                        moreExpanded = false
+                                    })
+                                }
+                            }
+                        }
                     }
                 }
                 item {
@@ -459,6 +477,9 @@ private fun HighTechApp(
                                 2 -> "Music videos"
                                 3 -> "Your library"
                                 4 -> "Favourites"
+                                5 -> "Your bookings"
+                                6 -> "Your profile"
+                                7 -> "Founder Studio"
                                 else -> "Music. Beats. Production. Beyond."
                             },
                             style = MaterialTheme.typography.headlineMedium,
@@ -567,15 +588,23 @@ private fun HighTechApp(
                     }
                 } else {
                     item {
-                        StatusCard(
-                            when (selectedTab) {
-                                2 -> "Video catalogue and full-screen playback are not connected yet."
-                                3 -> "Playlist management and full listening history are still being implemented."
-                                else -> "This section is not available yet."
-                            },
-                            "Refresh catalogue",
-                            onRefresh
-                        )
+                        Box(Modifier.fillParentMaxSize()) {
+                            AdditionalFeatureScreen(
+                                destination = when (selectedTab) {
+                                    2 -> "Videos"
+                                    3 -> "Library"
+                                    5 -> "Bookings"
+                                    6 -> "Profile"
+                                    7 -> "Founder Studio"
+                                    else -> "Library"
+                                },
+                                tracks = tracks,
+                                features = featureRepository,
+                                library = userLibraryRepository,
+                                userId = userId,
+                                onPlayTrack = onPlay
+                            )
+                        }
                     }
                 }
                 if (error != null && tracks.isNotEmpty()) {
