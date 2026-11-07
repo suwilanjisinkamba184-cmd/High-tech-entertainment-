@@ -273,15 +273,46 @@ fun AdditionalFeatureScreen(
                                 headlineContent = { Text(track.title) },
                                 supportingContent = { Text(track.artist) },
                                 trailingContent = {
-                                    TextButton(onClick = {
-                                        scope.launch {
-                                            val result = library.removeTrackFromPlaylist(playlist.id, track.id)
-                                            if (result.successful) {
-                                                playlistTrackIdsById = playlistTrackIdsById +
-                                                    (playlist.id to playlistTrackIdsById[playlist.id].orEmpty().filterNot { it == track.id })
-                                            } else message = result.message
-                                        }
-                                    }) { Text("REMOVE") }
+                                    val currentOrder = playlistTrackIdsById[playlist.id].orEmpty()
+                                    val currentIndex = currentOrder.indexOf(track.id)
+                                    Row {
+                                        TextButton(enabled = currentIndex > 0, onClick = {
+                                            scope.launch {
+                                                val reordered = currentOrder.toMutableList()
+                                                val previous = reordered[currentIndex - 1]
+                                                reordered[currentIndex - 1] = reordered[currentIndex]
+                                                reordered[currentIndex] = previous
+                                                val result = library.reorderPlaylist(playlist.id, reordered)
+                                                if (result.successful) {
+                                                    playlistTrackIdsById = playlistTrackIdsById + (playlist.id to reordered)
+                                                } else message = result.message
+                                            }
+                                        }) { Text("↑") }
+                                        TextButton(enabled = currentIndex >= 0 && currentIndex < currentOrder.lastIndex, onClick = {
+                                            scope.launch {
+                                                val reordered = currentOrder.toMutableList()
+                                                val next = reordered[currentIndex + 1]
+                                                reordered[currentIndex + 1] = reordered[currentIndex]
+                                                reordered[currentIndex] = next
+                                                val result = library.reorderPlaylist(playlist.id, reordered)
+                                                if (result.successful) {
+                                                    playlistTrackIdsById = playlistTrackIdsById + (playlist.id to reordered)
+                                                } else message = result.message
+                                            }
+                                        }) { Text("↓") }
+                                        TextButton(onClick = {
+                                            scope.launch {
+                                                val result = library.removeTrackFromPlaylist(playlist.id, track.id)
+                                                if (result.successful) {
+                                                    val remaining = currentOrder.filterNot { it == track.id }
+                                                    val reordered = library.reorderPlaylist(playlist.id, remaining)
+                                                    if (reordered.successful) {
+                                                        playlistTrackIdsById = playlistTrackIdsById + (playlist.id to remaining)
+                                                    } else message = reordered.message
+                                                } else message = result.message
+                                            }
+                                        }) { Text("REMOVE") }
+                                    }
                                 }
                             )
                         }
