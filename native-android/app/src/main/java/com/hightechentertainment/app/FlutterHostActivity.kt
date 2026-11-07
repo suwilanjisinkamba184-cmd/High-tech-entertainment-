@@ -651,7 +651,7 @@ class FlutterHostActivity : FlutterActivity() {
     }
 
     private fun launchMediaPicker(kind: String, result: MethodChannel.Result) {
-        if (kind !in setOf("audio", "video", "image")) {
+        if (kind !in setOf("audio", "video", "image", "artwork")) {
             result.success(mapOf("success" to false, "message" to "Unsupported media type."))
             return
         }
@@ -708,6 +708,7 @@ class FlutterHostActivity : FlutterActivity() {
                         "image/png" -> "png"
                         "image/webp" -> "webp"
                         "image/jpeg" -> "jpg"
+                        "image/avif" -> "avif"
                         else -> ""
                     }
                 }
@@ -727,6 +728,13 @@ class FlutterHostActivity : FlutterActivity() {
                         hteApplication.featureRepository.uploadVideo(applicationContext, uri, mimeType, extension)
                     }
                     "image" -> hteApplication.featureRepository.uploadAvatar(applicationContext, uri, mimeType, extension)
+                    "artwork" -> {
+                        if (!hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                            return@launch
+                        }
+                        hteApplication.featureRepository.uploadArtwork(applicationContext, uri, mimeType, extension)
+                    }
                     else -> {
                         result.success(mapOf("success" to false, "message" to "Unsupported media type."))
                         return@launch
