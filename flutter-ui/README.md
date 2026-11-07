@@ -5,7 +5,7 @@ This directory is the Flutter UI module embedded into the existing Kotlin Androi
 ## Architecture contract
 
 - Flutter owns **all user-facing screens, navigation, responsive layout, accessibility, forms and interaction**.
-- Kotlin is retained as the Android platform layer: lifecycle, secure OAuth callbacks, permissions, Media3 playback/background service, downloads, native file access, notifications and system intents.
+- Kotlin is retained as the Android platform layer: lifecycle, secure OAuth callbacks, permissions, Media3 playback/background service, downloads, native document picker, notifications and system intents. Legacy Compose application screens and dependencies have been removed from this branch.
 - Supabase remains the only production backend. Preserve the existing project, authentication, tables, storage buckets, Edge Functions and row-level security.
 - ElevenLabs remains the existing AI agent provider. API credentials must stay in Supabase Edge Function secrets and must never be packaged in the app.
 - Native playback is a single shared Media3 engine. Flutter controls it through `com.hightechentertainment.app/data`; the startup cue uses the separate `com.hightechentertainment.app/startup` channel.
