@@ -945,31 +945,370 @@ class _NowPlayingBar extends StatelessWidget {
   }
 }
 
-class _ProfilePanel extends StatelessWidget {
+class _ProfilePanel extends StatefulWidget {
   const _ProfilePanel({required this.onSignOut});
   final Future<void> Function() onSignOut;
 
   @override
+  State<_ProfilePanel> createState() => _ProfilePanelState();
+}
+
+class _ProfilePanelState extends State<_ProfilePanel> {
+  final _displayName = TextEditingController();
+  final _bio = TextEditingController();
+  final _phone = TextEditingController();
+  final _bookingName = TextEditingController();
+  final _bookingEmail = TextEditingController();
+  final _bookingType = TextEditingController(text: 'Music production');
+  final _bookingDate = TextEditingController();
+  final _bookingMessage = TextEditingController();
+  bool _loading = true;
+  bool _saving = false;
+  String? _message;
+  List<Map<String, dynamic>> _bookings = [];
+  Map<String, dynamic>? _founder;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _displayName.dispose();
+    _bio.dispose();
+    _phone.dispose();
+    _bookingName.dispose();
+    _bookingEmail.dispose();
+    _bookingType.dispose();
+    _bookingDate.dispose();
+    _bookingMessage.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final profile = await _appChannel.invokeMapMethod<String, dynamic>('getProfile');
+      final bookings = await _appChannel.invokeListMethod<dynamic>('getMyBookings') ?? [];
+      final founder = await _appChannel.invokeMapMethod<String, dynamic>('getFounderData');
+      if (!mounted) return;
+      _displayName.text = profile?['displayName']?.toString() ?? '';
+      _bio.text = profile?['bio']?.toString() ?? '';
+      _phone.text = profile?['phone']?.toString() ?? '';
+      setState(() {
+        _bookings = bookings.whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList();
+        _founder = founder?['authorized'] == true ? founder : null;
+        _loading = false;
+      });
+    } on PlatformException catch (error) {
+      if (mounted) setState(() {
+        _message = error.message ?? 'Could not load account information.';
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    setState(() { _saving = true; _message = null; });
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>('saveProfile', {
+        'displayName': _displayName.text,
+        'bio': _bio.text,
+        'phone': _phone.text,
+        'avatarUrl': '',
+      });
+      if (mounted) setState(() => _message = result?['success'] == true
+          ? 'Profile saved.'
+          : result?['message']?.toString() ?? 'Profile could not be saved.');
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Profile could not be saved.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _submitBooking() async {
+    setState(() { _saving = true; _message = null; });
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>('submitBooking', {
+        'name': _bookingName.text,
+        'email': _bookingEmail.text,
+        'bookingType': _bookingType.text,
+        'requestedDate': _bookingDate.text.trim().isEmpty ? null : _bookingDate.text.trim(),
+        'message': _bookingMessage.text,
+      });
+      if (result?['success'] == true) {
+        _bookingName.clear();
+        _bookingEmail.clear();
+        _bookingDate.clear();
+        _bookingMessage.clear();
+        await _load();
+      }
+      if (mounted) setState(() => _message = result?['success'] == true
+          ? 'Your booking request has been submitted.'
+          : result?['message']?.toString() ?? 'Booking could not be submitted.');
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Booking could not be submitted.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _setDraftPublished(Map<String, dynamic> draft) async {
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>('setDraftPublished', {
+        'table': draft['table'], 'id': draft['id'], 'published': true,
+      });
+      if (response?['success'] == true) {
+        await _load();
+      } else if (mounted) {
+        setState(() => _message = response?['message']?.toString() ?? 'Publishing was rejected.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Publishing was rejected.');
+    }
+  }
+
+  Future<void> _updateBooking(Map<String, dynamic> booking, String status) async {
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>('updateBookingStatus', {
+        'id': booking['id'], 'status': status,
+      });
+      if (response?['success'] == true) {
+        await _load();
+      } else if (mounted) {
+        setState(() => _message = response?['message']?.toString() ?? 'Booking update failed.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Booking update failed.');
+    }
+  }
+
+  Future<void> _createContent(String kind) async {
+    final title = TextEditingController();
+    final secondary = TextEditingController();
+    final details = TextEditingController();
+    final genre = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: _surface,
+        title: Text('Create ' + kind.toLowerCase()),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: title, decoration: InputDecoration(
+                labelText: kind == 'Artist' ? 'Artist name' : 'Title')),
+              if (kind == 'Track' || kind == 'Video')
+                TextField(controller: secondary, decoration: const InputDecoration(labelText: 'Artist')),
+              if (kind == 'Track' || kind == 'Video')
+                TextField(controller: details, decoration: InputDecoration(
+                  labelText: kind == 'Track' ? 'Secure audio URL' : 'Secure video URL')),
+              if (kind == 'Track')
+                TextField(controller: genre, decoration: const InputDecoration(labelText: 'Genre')),
+              if (kind == 'Artist' || kind == 'Release')
+                TextField(controller: details, decoration: InputDecoration(
+                  labelText: kind == 'Artist' ? 'Biography' : 'Description')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('SAVE DRAFT')),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      title.dispose(); secondary.dispose(); details.dispose(); genre.dispose();
+      return;
+    }
+    final method = switch (kind) {
+      'Track' => 'createTrack',
+      'Artist' => 'createArtist',
+      'Release' => 'createRelease',
+      _ => 'createVideo',
+    };
+    final Map<String, dynamic> args = switch (kind) {
+      'Track' => {'title': title.text, 'artist': secondary.text, 'audioUrl': details.text, 'genre': genre.text},
+      'Artist' => {'name': title.text, 'bio': details.text},
+      'Release' => {'title': title.text, 'description': details.text},
+      _ => {'title': title.text, 'artist': secondary.text, 'videoUrl': details.text, 'description': ''},
+    };
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(method, args);
+      if (response?['success'] == true) {
+        setState(() => _message = kind + ' draft saved.');
+        await _load();
+      } else if (mounted) {
+        setState(() => _message = response?['message']?.toString() ?? 'Could not save draft.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Could not save draft.');
+    } finally {
+      title.dispose(); secondary.dispose(); details.dispose(); genre.dispose();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_loading) return const Center(child: CircularProgressIndicator(color: _gold));
+    final overview = _founder?['overview'] is Map
+        ? Map<String, dynamic>.from(_founder!['overview'] as Map)
+        : <String, dynamic>{};
+    final drafts = ((_founder?['drafts'] as List?) ?? [])
+        .whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList();
+    final founderBookings = ((_founder?['bookings'] as List?) ?? [])
+        .whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList();
     return ListView(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(18),
       children: [
-        const CircleAvatar(
-          radius: 38,
-          backgroundColor: _surface,
-          child: Icon(Icons.person, color: _gold, size: 38),
+        const Text('YOUR ACCOUNT', style: TextStyle(color: _gold, fontSize: 11, letterSpacing: 1.8, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 12),
+        _PanelCard(
+          title: 'Profile details',
+          child: Column(
+            children: [
+              TextField(controller: _displayName, decoration: const InputDecoration(labelText: 'Display name')),
+              TextField(controller: _bio, decoration: const InputDecoration(labelText: 'Bio'), maxLines: 3),
+              TextField(controller: _phone, decoration: const InputDecoration(labelText: 'Phone number'), keyboardType: TextInputType.phone),
+              const SizedBox(height: 14),
+              FilledButton(onPressed: _saving ? null : _saveProfile,
+                style: FilledButton.styleFrom(backgroundColor: _gold, foregroundColor: _black),
+                child: const Text('SAVE PROFILE')),
+            ],
+          ),
         ),
-        const SizedBox(height: 18),
-        const Center(child: Text('Your High-Tech account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
-        const SizedBox(height: 8),
-        const Center(child: Text('Profile editing and bookings are being migrated.', style: TextStyle(color: Colors.white54))),
-        const SizedBox(height: 28),
-        OutlinedButton.icon(
-          onPressed: onSignOut,
-          icon: const Icon(Icons.logout),
-          label: const Text('Sign out'),
+        const SizedBox(height: 14),
+        _PanelCard(
+          title: 'Request a booking',
+          child: Column(
+            children: [
+              TextField(controller: _bookingName, decoration: const InputDecoration(labelText: 'Your name')),
+              TextField(controller: _bookingEmail, decoration: const InputDecoration(labelText: 'Email'), keyboardType: TextInputType.emailAddress),
+              TextField(controller: _bookingType, decoration: const InputDecoration(labelText: 'Booking type')),
+              TextField(controller: _bookingDate, decoration: const InputDecoration(labelText: 'Requested date (YYYY-MM-DD)')),
+              TextField(controller: _bookingMessage, decoration: const InputDecoration(labelText: 'Tell us about your project'), maxLines: 3),
+              const SizedBox(height: 14),
+              FilledButton(onPressed: _saving ? null : _submitBooking,
+                style: FilledButton.styleFrom(backgroundColor: _gold, foregroundColor: _black),
+                child: const Text('SUBMIT BOOKING')),
+            ],
+          ),
         ),
+        const SizedBox(height: 14),
+        _PanelCard(
+          title: 'My bookings',
+          child: _bookings.isEmpty
+              ? const Text('Your booking requests will appear here.', style: TextStyle(color: Colors.white60))
+              : Column(
+                  children: _bookings.map((booking) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(booking['type']?.toString() ?? 'Booking'),
+                    subtitle: Text((booking['requestedDate'] ?? 'Date not specified').toString() + ' • ' + (booking['status'] ?? 'pending').toString()),
+                  )).toList(),
+                ),
+        ),
+        if (_message != null) ...[
+          const SizedBox(height: 12),
+          Text(_message!, style: const TextStyle(color: _gold)),
+        ],
+        if (_founder != null) ...[
+          const SizedBox(height: 28),
+          const Text('FOUNDER STUDIO', style: TextStyle(color: _gold, fontSize: 11, letterSpacing: 1.8, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 12),
+          _PanelCard(
+            title: 'Studio overview',
+            child: Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: overview.entries.map((entry) => Chip(
+                label: Text(entry.key.toUpperCase() + ': ' + entry.value.toString()),
+                backgroundColor: const Color(0xFF302515),
+                labelStyle: const TextStyle(color: _gold),
+              )).toList(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _PanelCard(
+            title: 'Create content drafts',
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ['Track', 'Artist', 'Release', 'Video'].map((kind) => OutlinedButton(
+                onPressed: () => _createContent(kind),
+                child: Text('NEW ' + kind.toUpperCase()),
+              )).toList(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _PanelCard(
+            title: 'Unpublished content',
+            child: drafts.isEmpty
+                ? const Text('No drafts awaiting publication.', style: TextStyle(color: Colors.white60))
+                : Column(
+                    children: drafts.map((draft) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(draft['title']?.toString() ?? 'Untitled'),
+                      subtitle: Text(draft['table']?.toString() ?? ''),
+                      trailing: TextButton(onPressed: () => _setDraftPublished(draft), child: const Text('PUBLISH')),
+                    )).toList(),
+                  ),
+          ),
+          const SizedBox(height: 12),
+          _PanelCard(
+            title: 'Booking management',
+            child: founderBookings.isEmpty
+                ? const Text('No booking requests.', style: TextStyle(color: Colors.white60))
+                : Column(
+                    children: founderBookings.map((booking) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(booking['name']?.toString() ?? 'Client'),
+                      subtitle: Text((booking['type'] ?? 'Booking').toString() + ' • ' + (booking['status'] ?? 'pending').toString()),
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (status) => _updateBooking(booking, status),
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'confirmed', child: Text('Confirm')),
+                          PopupMenuItem(value: 'declined', child: Text('Decline')),
+                          PopupMenuItem(value: 'completed', child: Text('Complete')),
+                        ],
+                      ),
+                    )).toList(),
+                  ),
+          ),
+        ],
+        const SizedBox(height: 20),
+        OutlinedButton.icon(onPressed: widget.onSignOut, icon: const Icon(Icons.logout), label: const Text('SIGN OUT')),
+        const SizedBox(height: 20),
       ],
+    );
+  }
+}
+
+class _PanelCard extends StatelessWidget {
+  const _PanelCard({required this.title, required this.child});
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(17),
+      decoration: BoxDecoration(
+        color: _surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
     );
   }
 }
