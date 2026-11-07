@@ -699,6 +699,7 @@ private fun HighTechApp(
                                 isFavorite = true,
                                 onFavourite = { onToggleFavourite(track) },
                                 onDownload = { onDownloadTrack(track) },
+                                onShare = { shareTrack(track) },
                                 onClick = { onPlay(track) }
                             )
                         }
