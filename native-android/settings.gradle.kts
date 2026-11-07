@@ -2,11 +2,10 @@ pluginManagement {
     repositories { google(); mavenCentral(); gradlePluginPortal() }
 }
 
-// Kotlin 2.2.20 + AGP 8.10.1 is a conservative compatible toolchain for
-// Flutter add-to-app on Gradle 8.14.3. AGP 8.11+/KGP 2.3 produced missing
-// legacy Android Gradle API classes during plugin configuration.
+// Kotlin 2.2.10 is paired with AGP 8.11.1 and Gradle 8.14.3.
+// Keep the Flutter-generated module integration below unchanged.
 plugins {
-    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
+    id("org.jetbrains.kotlin.android") version "2.2.10" apply false
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
