@@ -22,6 +22,7 @@ concurrency:
 
 jobs:
   flutter-ui:
+    if: ${{ hashFiles('flutter-ui/pubspec.yaml') != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
