@@ -313,6 +313,49 @@ class FlutterHostActivity : FlutterActivity() {
                         }
                         result.success(mapOf("success" to operation.successful, "message" to operation.message))
                     }
+                    "getPlaylists" -> lifecycleScope.launch {
+                        hteApplication.userLibraryRepository.playlists()
+                            .onSuccess { rows ->
+                                result.success(rows.map { mapOf("id" to it.id, "name" to it.name, "description" to it.description) })
+                            }
+                            .onFailure { result.error("PLAYLISTS_ERROR", it.message, null) }
+                    }
+                    "createPlaylist" -> lifecycleScope.launch {
+                        hteApplication.userLibraryRepository.createPlaylist(
+                            call.argument<String>("name").orEmpty(),
+                            call.argument<String>("description").orEmpty()
+                        ).onSuccess { playlist ->
+                            result.success(mapOf("success" to true, "playlist" to mapOf(
+                                "id" to playlist.id, "name" to playlist.name, "description" to playlist.description
+                            )))
+                        }.onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                    }
+                    "getPlaylistTracks" -> lifecycleScope.launch {
+                        hteApplication.userLibraryRepository.playlistTrackIds(
+                            call.argument<String>("playlistId").orEmpty()
+                        ).onSuccess { result.success(it) }
+                            .onFailure { result.error("PLAYLIST_TRACKS_ERROR", it.message, null) }
+                    }
+                    "addTrackToPlaylist" -> lifecycleScope.launch {
+                        val operation = hteApplication.userLibraryRepository.addTrackToPlaylist(
+                            call.argument<String>("playlistId").orEmpty(),
+                            call.argument<String>("trackId").orEmpty()
+                        )
+                        result.success(mapOf("success" to operation.successful, "message" to operation.message))
+                    }
+                    "removeTrackFromPlaylist" -> lifecycleScope.launch {
+                        val operation = hteApplication.userLibraryRepository.removeTrackFromPlaylist(
+                            call.argument<String>("playlistId").orEmpty(),
+                            call.argument<String>("trackId").orEmpty()
+                        )
+                        result.success(mapOf("success" to operation.successful, "message" to operation.message))
+                    }
+                    "deletePlaylist" -> lifecycleScope.launch {
+                        val operation = hteApplication.userLibraryRepository.removePlaylist(
+                            call.argument<String>("playlistId").orEmpty()
+                        )
+                        result.success(mapOf("success" to operation.successful, "message" to operation.message))
+                    }
                     else -> result.notImplemented()
                 }
             }
