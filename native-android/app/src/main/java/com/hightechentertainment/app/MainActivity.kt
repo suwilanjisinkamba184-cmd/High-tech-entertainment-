@@ -246,6 +246,36 @@ class MainActivity : ComponentActivity() {
                     onResume = { playbackPlayer?.play() },
                     onNext = { playbackPlayer?.seekToNextMediaItem() },
                     onPrevious = { playbackPlayer?.seekToPreviousMediaItem() },
+                    onStop = { playbackPlayer?.stop() },
+                    onPlayFavourites = {
+                        val activePlayer = playbackPlayer
+                        val favouriteQueue = tracks.filter { it.id in favouriteIds && !it.audioUrl.isNullOrBlank() }
+                        when {
+                            !playbackIsReady || activePlayer == null ->
+                                error = "The audio player is still connecting. Please try again."
+                            favouriteQueue.isEmpty() ->
+                                error = "You do not have any downloadable favourites to play yet."
+                            else -> lifecycleScope.launch {
+                                val sponsoredAd = hteApplication.sponsoredAudioRepository.nextActiveAd().getOrNull()
+                                val queue = buildList {
+                                    sponsoredAd?.let { ad ->
+                                        add(MediaItem.Builder().setMediaId("hte-ad:${ad.id}").setUri(ad.audioUrl).build())
+                                    }
+                                    addAll(favouriteQueue.map { item ->
+                                        val uri = offlineDownloads.localUri(item.id)?.toString() ?: item.audioUrl!!
+                                        MediaItem.Builder().setMediaId(item.id).setUri(uri).build()
+                                    })
+                                }
+                                activePlayer.setMediaItems(queue, if (sponsoredAd != null) 0 else 0, C.TIME_UNSET)
+                                activePlayer.shuffleModeEnabled = false
+                                activePlayer.repeatMode = repeatMode
+                                currentTrackState = if (sponsoredAd == null) favouriteQueue.first() else null
+                                sponsoredAudioPlaying = sponsoredAd != null
+                                activePlayer.prepare()
+                                activePlayer.play()
+                            }
+                        }
+                    },
                     onToggleShuffle = {
                         shuffleEnabled = !shuffleEnabled
                         playbackPlayer?.shuffleModeEnabled = shuffleEnabled
@@ -434,6 +464,8 @@ private fun HighTechApp(
     onResume: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
+    onStop: () -> Unit,
+    onPlayFavourites: () -> Unit,
     onToggleShuffle: () -> Unit,
     onToggleRepeat: () -> Unit,
     shuffleEnabled: Boolean,
@@ -645,7 +677,7 @@ private fun HighTechApp(
                                     onResume = onResume,
                                     onNext = onNext,
                                     onPrevious = onPrevious,
-                                    onStop = { playbackPlayer?.stop() },
+                                    onStop = onStop,
                                     onNavigate = { destination ->
                                         selectedTab = when (destination) {
                                             "Home" -> 0
@@ -662,10 +694,7 @@ private fun HighTechApp(
                                         search = query
                                         selectedTab = 1
                                     },
-                                    onPlayFavourites = {
-                                        tracks.firstOrNull { it.id in favouriteIds && !it.audioUrl.isNullOrBlank() }
-                                            ?.let(onPlay)
-                                    },
+                                    onPlayFavourites = onPlayFavourites,
                                     isFounder = isFounderAccount
                                 )
                             } else AdditionalFeatureScreen(
