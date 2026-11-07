@@ -42,16 +42,22 @@ class MainActivity : ComponentActivity() {
 private fun HteTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
-            primary = HteGold, onPrimary = HteBlack,
-            background = HteBlack, onBackground = Color.White,
-            surface = HteSurface, onSurface = Color.White,
+            primary = HteGold,
+            onPrimary = HteBlack,
+            background = HteBlack,
+            onBackground = Color.White,
+            surface = HteSurface,
+            onSurface = Color.White,
             secondary = Color(0xFFC5C5C5)
         ),
         content = content
     )
 }
 
-private data class AppDestination(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+private data class AppDestination(
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector
+)
 
 private val destinations = listOf(
     AppDestination("Home", Icons.Rounded.Home),
@@ -95,7 +101,9 @@ private fun HighTechApp() {
                             CircleShape
                         ),
                         contentAlignment = Alignment.Center
-                    ) { Text("HT", color = HteBlack, fontWeight = FontWeight.Black) }
+                    ) {
+                        Text("HT", color = HteBlack, fontWeight = FontWeight.Black)
+                    }
                     Column(Modifier.padding(start = 12.dp)) {
                         Text("HIGH-TECH", color = Color.White, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
                         Text("ENTERTAINMENT", color = HteGold, fontSize = 10.sp, letterSpacing = 2.sp)
@@ -135,14 +143,16 @@ private fun HighTechApp() {
                     ) {
                         Text("HIGH-TECH ENTERTAINMENT", color = HteGold, fontSize = 11.sp, letterSpacing = 1.5.sp)
                         Spacer(Modifier.height(10.dp))
-                        Text("Your sound.\\nYour world.", color = Color.White, fontSize = 32.sp, lineHeight = 37.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("Your sound.\nYour world.", color = Color.White, fontSize = 32.sp, lineHeight = 37.sp, fontWeight = FontWeight.ExtraBold)
                         Spacer(Modifier.height(10.dp))
                         Text("Discover music, releases and videos from the High-Tech family.", color = HteMuted)
                         Spacer(Modifier.height(18.dp))
                         Button(
                             onClick = { selectedTab = 1 },
                             colors = ButtonDefaults.buttonColors(containerColor = HteGold, contentColor = HteBlack)
-                        ) { Text("Explore music", fontWeight = FontWeight.Bold) }
+                        ) {
+                            Text("Explore music", fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -150,10 +160,15 @@ private fun HighTechApp() {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
                     Text(
                         if (selectedTab == 0) "Made for your next discovery" else destinations[selectedTab].label,
-                        color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge
                     )
                     Spacer(Modifier.height(10.dp))
-                    Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = HteSurface)) {
+                    Card(
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = HteSurface)
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -161,12 +176,17 @@ private fun HighTechApp() {
                             Box(
                                 modifier = Modifier.size(56.dp).background(Color(0xFF2A2112), RoundedCornerShape(12.dp)),
                                 contentAlignment = Alignment.Center
-                            ) { Icon(Icons.Rounded.LibraryMusic, contentDescription = null, tint = HteGold) }
+                            ) {
+                                Icon(Icons.Rounded.LibraryMusic, contentDescription = null, tint = HteGold)
+                            }
                             Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
                                 Text("Your music is getting ready", color = Color.White, fontWeight = FontWeight.SemiBold)
                                 Text(
-                                    "Connect your account to load the catalogue.",
-                                    color = HteMuted, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis
+                                    "The native catalogue connection is being completed.",
+                                    color = HteMuted,
+                                    fontSize = 12.sp,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                             Icon(Icons.Rounded.FavoriteBorder, contentDescription = "Add to favourites", tint = HteGold)
@@ -176,8 +196,10 @@ private fun HighTechApp() {
             }
             item {
                 Text(
-                    "NATIVE ANDROID FOUNDATION",
-                    color = HteMuted, fontSize = 10.sp, letterSpacing = 1.5.sp,
+                    "NATIVE ANDROID FOUNDATION — MIGRATION IN PROGRESS",
+                    color = HteMuted,
+                    fontSize = 10.sp,
+                    letterSpacing = 1.5.sp,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
                 )
             }
