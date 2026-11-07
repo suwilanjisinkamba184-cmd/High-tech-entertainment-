@@ -530,6 +530,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
   Set<String> _favourites = {};
   Map<String, dynamic>? _nowPlayingTrack;
   bool _isPlaying = false;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -546,19 +547,28 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
   }
 
   Future<void> _openVoiceCompanion() async {
-    try {
-      await _appChannel.invokeMethod<void>('openVoiceCompanion');
-    } on PlatformException catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message ?? 'Voice Companion could not be opened.')),
-      );
-    } on MissingPluginException {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Voice Companion is unavailable in this build.')),
-      );
-    }
+    if (mounted) setState(() => _tab = 5);
+  }
+
+  void _navigateFromVoice(String destination) {
+    final key = destination.toLowerCase();
+    final nextTab = switch (key) {
+      'music' || 'home' => 0,
+      'artists' => 1,
+      'videos' => 2,
+      'library' || 'favourites' || 'favorites' => 3,
+      'profile' || 'account' || 'founder studio' => 4,
+      'voice' || 'voice companion' => 5,
+      _ => 0,
+    };
+    if (mounted) setState(() => _tab = nextTab);
+  }
+
+  void _searchFromVoice(String query) {
+    if (mounted) setState(() {
+      _searchQuery = query;
+      _tab = 0;
+    });
   }
 
   Future<void> _refresh() async {
@@ -747,7 +757,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final titles = ['Music', 'Artists', 'Videos', 'Your Library', 'Profile'];
+    final titles = ['Music', 'Artists', 'Videos', 'Your Library', 'Profile', 'Voice Companion'];
     return Scaffold(
       appBar: AppBar(
         title: Text(titles[_tab], style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -772,7 +782,11 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
                   index: _tab,
                   children: [
                     _MusicList(
-                      tracks: _tracks,
+                      tracks: _searchQuery.trim().isEmpty
+                          ? _tracks
+                          : _tracks.where((track) =>
+                              ('${track['title'] ?? ''} ${track['artist'] ?? ''} ${track['genre'] ?? ''}')
+                                  .toLowerCase().contains(_searchQuery.toLowerCase())).toList(),
                       favourites: _favourites,
                       onFavourite: _toggleFavourite,
                       onPlay: _playTrack,
@@ -790,6 +804,10 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
                       onRefresh: _refresh,
                     ),
                     _ProfilePanel(onSignOut: _signOut),
+                    _VoiceCompanionPanel(
+                      onNavigate: _navigateFromVoice,
+                      onSearch: _searchFromVoice,
+                    ),
                   ],
                 ),
       bottomNavigationBar: Column(
@@ -815,10 +833,190 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
           NavigationDestination(icon: Icon(Icons.video_library_outlined), selectedIcon: Icon(Icons.video_library), label: 'Videos'),
           NavigationDestination(icon: Icon(Icons.favorite_border), selectedIcon: Icon(Icons.favorite), label: 'Library'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
+          NavigationDestination(icon: Icon(Icons.graphic_eq_outlined), selectedIcon: Icon(Icons.graphic_eq), label: 'Voice'),
         ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _VoiceCompanionPanel extends StatefulWidget {
+  const _VoiceCompanionPanel({required this.onNavigate, required this.onSearch});
+  final void Function(String destination) onNavigate;
+  final void Function(String query) onSearch;
+
+  @override
+  State<_VoiceCompanionPanel> createState() => _VoiceCompanionPanelState();
+}
+
+class _VoiceCompanionPanelState extends State<_VoiceCompanionPanel> {
+  String _status = 'Ready to connect';
+  String _userTranscript = '';
+  String _agentTranscript = '';
+  bool _connecting = false;
+  bool _connected = false;
+  bool _muted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _appChannel.setMethodCallHandler(_handleNativeEvent);
+  }
+
+  @override
+  void dispose() {
+    _appChannel.setMethodCallHandler(null);
+    if (_connected) {
+      _appChannel.invokeMethod<void>('endVoiceSession');
+    }
+    super.dispose();
+  }
+
+  Future<void> _handleNativeEvent(MethodCall call) async {
+    if (call.method == 'voiceEvent' && call.arguments is Map) {
+      final event = Map<String, dynamic>.from(call.arguments as Map);
+      if (!mounted) return;
+      setState(() {
+        final value = event['value']?.toString() ?? '';
+        switch (event['event']) {
+          case 'status':
+          case 'mode':
+            _status = value;
+            if (value.toLowerCase().contains('disconnect') || value.toLowerCase().contains('error')) {
+              _connected = false;
+              _muted = false;
+            }
+            break;
+          case 'userTranscript':
+            _userTranscript = value;
+            break;
+          case 'agentTranscript':
+            _agentTranscript = value;
+            break;
+        }
+      });
+    } else if (call.method == 'voiceNavigate' && call.arguments is Map) {
+      final args = Map<String, dynamic>.from(call.arguments as Map);
+      widget.onNavigate(args['destination']?.toString() ?? 'Music');
+    } else if (call.method == 'voiceSearch' && call.arguments is Map) {
+      final args = Map<String, dynamic>.from(call.arguments as Map);
+      widget.onSearch(args['query']?.toString() ?? '');
+    }
+  }
+
+  Future<void> _start() async {
+    setState(() { _connecting = true; _status = 'Requesting microphone permission…'; });
+    try {
+      final permission = await _appChannel.invokeMapMethod<String, dynamic>('requestVoicePermission');
+      if (permission?['granted'] != true) {
+        setState(() => _status = permission?['message']?.toString()
+            ?? 'Microphone permission is required for voice conversations.');
+        return;
+      }
+      final response = await _appChannel.invokeMapMethod<String, dynamic>('startVoiceSession');
+      if (response?['success'] == true) {
+        setState(() { _connected = true; _muted = false; });
+      } else {
+        setState(() => _status = response?['message']?.toString()
+            ?? 'Voice session could not be started.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _status = error.message ?? 'Voice session failed.');
+    } on MissingPluginException {
+      if (mounted) setState(() => _status = 'Voice service is unavailable in this build.');
+    } finally {
+      if (mounted) setState(() => _connecting = false);
+    }
+  }
+
+  Future<void> _end() async {
+    try {
+      await _appChannel.invokeMethod<void>('endVoiceSession');
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _status = error.message ?? 'Could not end voice session.');
+    }
+    if (mounted) setState(() { _connected = false; _muted = false; });
+  }
+
+  Future<void> _toggleMute() async {
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'setVoiceMuted', {'muted': !_muted});
+      if (response?['success'] == true) {
+        setState(() => _muted = response?['muted'] == true);
+      } else {
+        setState(() => _status = response?['message']?.toString() ?? 'Microphone control failed.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _status = error.message ?? 'Microphone control failed.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(18),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: _surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: _gold.withValues(alpha: 0.35)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(Icons.graphic_eq_rounded, color: _gold, size: 56),
+              const SizedBox(height: 14),
+              const Text('HIGH-TECH VOICE COMPANION',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: _gold, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+              const SizedBox(height: 8),
+              const Text('Talk to your music assistant. Control playback, explore the catalogue and navigate the app.',
+                textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, height: 1.5)),
+              const SizedBox(height: 20),
+              Center(child: Text(_status, textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w700))),
+              const SizedBox(height: 18),
+              if (!_connected)
+                FilledButton.icon(
+                  onPressed: _connecting ? null : _start,
+                  icon: _connecting
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.mic),
+                  label: Text(_connecting ? 'CONNECTING…' : 'START VOICE SESSION'),
+                  style: FilledButton.styleFrom(backgroundColor: _gold, foregroundColor: _black,
+                    padding: const EdgeInsets.symmetric(vertical: 15)),
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(child: FilledButton.icon(
+                      onPressed: _toggleMute,
+                      icon: Icon(_muted ? Icons.mic_off : Icons.mic),
+                      label: Text(_muted ? 'UNMUTE' : 'MUTE'),
+                      style: FilledButton.styleFrom(backgroundColor: _gold, foregroundColor: _black),
+                    )),
+                    const SizedBox(width: 10),
+                    Expanded(child: OutlinedButton.icon(
+                      onPressed: _end,
+                      icon: const Icon(Icons.call_end),
+                      label: const Text('END SESSION'),
+                    )),
+                  ],
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (_userTranscript.isNotEmpty)
+          _PanelCard(title: 'YOU', child: Text(_userTranscript)),
+        if (_agentTranscript.isNotEmpty)
+          _PanelCard(title: 'HIGH-TECH AI', child: Text(_agentTranscript)),
+      ],
     );
   }
 }
