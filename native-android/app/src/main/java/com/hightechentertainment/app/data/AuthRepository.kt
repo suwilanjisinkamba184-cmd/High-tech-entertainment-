@@ -1,6 +1,10 @@
 package com.hightechentertainment.app.data
 
+import android.net.Uri
+import android.util.Base64
 import kotlinx.coroutines.CancellationException
+import java.security.MessageDigest
+import java.security.SecureRandom
 import org.json.JSONObject
 
 data class NativeSession(
@@ -45,6 +49,39 @@ class AuthRepository(
             path = "/auth/v1/signup",
             body = JSONObject().put("email", email.trim()).put("password", password),
             allowConfirmationWithoutSession = true
+        )
+    }
+
+    fun googleOAuthAuthorizationUrl(redirectUri: String): String? = runCatching {
+        val random = ByteArray(32).also { SecureRandom().nextBytes(it) }
+        val verifier = Base64.encodeToString(
+            random,
+            Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP
+        )
+        val challenge = Base64.encodeToString(
+            MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray(Charsets.US_ASCII)),
+            Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP
+        )
+        sessions.writeOAuthVerifier(verifier)
+        Uri.parse("${SupabaseConfig.BASE_URL}/auth/v1/authorize").buildUpon()
+            .appendQueryParameter("provider", "google")
+            .appendQueryParameter("redirect_to", redirectUri)
+            .appendQueryParameter("code_challenge", challenge)
+            .appendQueryParameter("code_challenge_method", "s256")
+            .build()
+            .toString()
+    }.getOrNull()
+
+    suspend fun exchangeGoogleOAuthCode(code: String): AuthResult {
+        if (code.isBlank()) return AuthResult.Failure("Google sign-in returned an empty authorization code.")
+        val verifier = sessions.consumeOAuthVerifier()
+            ?: return AuthResult.Failure("The secure Google sign-in session expired. Please try again.")
+        return authenticate(
+            path = "/auth/v1/token",
+            query = mapOf("grant_type" to "pkce"),
+            body = JSONObject()
+                .put("auth_code", code)
+                .put("code_verifier", verifier)
         )
     }
 
