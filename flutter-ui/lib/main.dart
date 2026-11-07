@@ -548,19 +548,16 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
   }
 
   Future<void> _openVoiceCompanion() async {
-    if (mounted) setState(() => _tab = 6);
+    if (mounted) setState(() => _tab = 3);
   }
 
   void _navigateFromVoice(String destination) {
     final key = destination.toLowerCase();
     final nextTab = switch (key) {
-      'music' || 'home' => 0,
-      'artists' => 1,
-      'releases' || 'albums' => 2,
-      'videos' => 3,
-      'library' || 'favourites' || 'favorites' => 4,
-      'profile' || 'account' || 'founder studio' => 5,
-      'voice' || 'voice companion' => 6,
+      'music' || 'home' || 'artists' || 'releases' || 'albums' || 'videos' => 0,
+      'library' || 'favourites' || 'favorites' => 1,
+      'profile' || 'account' || 'founder studio' => 2,
+      'voice' || 'voice companion' => 3,
       _ => 0,
     };
     if (mounted) setState(() => _tab = nextTab);
@@ -784,7 +781,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final titles = ['Music', 'Artists', 'Releases', 'Videos', 'Your Library', 'Profile', 'Voice Companion'];
+    final titles = ['Discover', 'Your Library', 'Profile', 'Voice Companion'];
     return Scaffold(
       appBar: AppBar(
         title: Text(titles[_tab], style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -814,21 +811,22 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
               : IndexedStack(
                   index: _tab,
                   children: [
-                    _MusicList(
+                    _DiscoverPanel(
                       tracks: _searchQuery.trim().isEmpty
                           ? _tracks
                           : _tracks.where((track) =>
                               ('${track['title'] ?? ''} ${track['artist'] ?? ''} ${track['genre'] ?? ''}')
                                   .toLowerCase().contains(_searchQuery.toLowerCase())).toList(),
+                      artists: _artists,
+                      releases: _releases,
+                      videos: _videos,
                       favourites: _favourites,
                       onFavourite: _toggleFavourite,
                       onPlay: _playTrack,
                       onDownload: _downloadTrack,
+                      onPlayVideo: _playVideo,
                       onRefresh: _refresh,
                     ),
-                    _ArtistList(artists: _artists),
-                    _ReleaseList(releases: _releases),
-                    _VideoList(videos: _videos, onPlay: _playVideo),
                     _LibraryPanel(
                       tracks: _tracks,
                       favourites: _favourites,
@@ -862,10 +860,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
         selectedIndex: _tab,
         onDestinationSelected: (index) => setState(() => _tab = index),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.music_note_outlined), selectedIcon: Icon(Icons.music_note), label: 'Music'),
-          NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people), label: 'Artists'),
-          NavigationDestination(icon: Icon(Icons.album_outlined), selectedIcon: Icon(Icons.album), label: 'Releases'),
-          NavigationDestination(icon: Icon(Icons.video_library_outlined), selectedIcon: Icon(Icons.video_library), label: 'Videos'),
+          NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore), label: 'Discover'),
           NavigationDestination(icon: Icon(Icons.favorite_border), selectedIcon: Icon(Icons.favorite), label: 'Library'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
           NavigationDestination(icon: Icon(Icons.graphic_eq_outlined), selectedIcon: Icon(Icons.graphic_eq), label: 'Voice'),
@@ -1449,6 +1444,70 @@ class _ArtistList extends StatelessWidget {
           subtitle: Text(artist['bio']?.toString() ?? '', maxLines: 2, overflow: TextOverflow.ellipsis),
         );
       },
+    );
+  }
+}
+
+class _DiscoverPanel extends StatelessWidget {
+  const _DiscoverPanel({
+    required this.tracks,
+    required this.artists,
+    required this.releases,
+    required this.videos,
+    required this.favourites,
+    required this.onFavourite,
+    required this.onPlay,
+    required this.onDownload,
+    required this.onPlayVideo,
+    required this.onRefresh,
+  });
+
+  final List<Map<String, dynamic>> tracks;
+  final List<Map<String, dynamic>> artists;
+  final List<Map<String, dynamic>> releases;
+  final List<Map<String, dynamic>> videos;
+  final Set<String> favourites;
+  final Future<void> Function(String) onFavourite;
+  final Future<void> Function(Map<String, dynamic>) onPlay;
+  final Future<void> Function(Map<String, dynamic>) onDownload;
+  final Future<void> Function(Map<String, dynamic>) onPlayVideo;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 4,
+      child: Column(
+        children: [
+          const TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            tabs: [
+              Tab(text: 'Music'),
+              Tab(text: 'Artists'),
+              Tab(text: 'Releases'),
+              Tab(text: 'Videos'),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _MusicList(
+                  tracks: tracks,
+                  favourites: favourites,
+                  onFavourite: onFavourite,
+                  onPlay: onPlay,
+                  onDownload: onDownload,
+                  onRefresh: onRefresh,
+                ),
+                _ArtistList(artists: artists),
+                _ReleaseList(releases: releases),
+                _VideoList(videos: videos, onPlay: onPlayVideo),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
