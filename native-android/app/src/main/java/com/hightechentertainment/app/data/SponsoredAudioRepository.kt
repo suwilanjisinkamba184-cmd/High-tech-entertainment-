@@ -10,7 +10,8 @@ data class SponsoredAudioAd(
     val audioUrl: String,
     val startsAt: String?,
     val endsAt: String?,
-    val priority: Int
+    val priority: Int,
+    val isPublished: Boolean = false
 )
 
 /** Reads only active campaigns; RLS authorizes founder campaign management and impression writes. */
@@ -21,7 +22,7 @@ class SponsoredAudioRepository(
     suspend fun nextActiveAd(): Result<SponsoredAudioAd?> = runCatching {
         val response = client.get("audio_ads",
             mapOf("is_published" to "eq.true", "order" to "priority.desc,created_at.desc", "limit" to "50"),
-            "id,title,audio_url,starts_at,ends_at,priority")
+            "id,title,audio_url,starts_at,ends_at,priority,is_published")
         check(response.isSuccessful) { "Sponsored audio unavailable (HTTP ${response.statusCode})." }
         val now = Instant.now()
         val rows = JSONArray(response.body)
@@ -32,7 +33,7 @@ class SponsoredAudioRepository(
             val validEnd = end?.let { runCatching { !Instant.parse(it).isAfter(now) }.getOrDefault(true) } ?: false
             val url = row.optString("audio_url")
             if (validStart || validEnd || !url.startsWith("https://")) null
-            else SponsoredAudioAd(row.optString("id"), row.optString("title"), url, start, end, row.optInt("priority"))
+            else SponsoredAudioAd(row.optString("id"), row.optString("title"), url, start, end, row.optInt("priority"), row.optBoolean("is_published"))
         }
     }
 
