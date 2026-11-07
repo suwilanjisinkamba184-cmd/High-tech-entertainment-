@@ -56,30 +56,66 @@ jobs:
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/signing/upload.p12"
           APK="$(find native-android/app/build/outputs/apk/release -maxdepth 1 -name '*.apk' -print -quit)"
           test -n "$APK"
+          SIGNED_APK="$RUNNER_TEMP/High-Tech-Entertainment-native-signed.apk"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign \
             --ks "$RUNNER_TEMP/signing/upload.p12" \
             --ks-key-alias "$KEY_ALIAS" \
             --ks-pass "pass:$STORE_PASSWORD" \
             --key-pass "pass:$KEY_PASSWORD" \
-            --out "$RUNNER_TEMP/High-Tech-Entertainment-native-signed.apk" "$APK"
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$RUNNER_TEMP/High-Tech-Entertainment-native-signed.apk"
-          sha256sum "$RUNNER_TEMP/High-Tech-Entertainment-native-signed.apk" | tee "$RUNNER_TEMP/SHA256SUMS.txt"
+            --out "$SIGNED_APK" "$APK"
+          VERIFY_OUTPUT="$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$SIGNED_APK")"
+          printf '%s\\n' "$VERIFY_OUTPUT"
+          CERT_SHA256="$(printf '%s\\n' "$VERIFY_OUTPUT" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print $2; exit}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          APK_SHA256="$(sha256sum "$SIGNED_APK" | awk '{print $1}')"
+          test "${#CERT_SHA256}" -eq 64
+          VERSION_DATA="$(python3 - <<'PY'
+          import re
+          from pathlib import Path
+          gradle = Path("native-android/app/build.gradle.kts").read_text()
+          name = re.search(r'versionName\\s*=\\s*"([^"]+)"', gradle).group(1)
+          code = re.search(r'versionCode\\s*=\\s*(\\d+)', gradle).group(1)
+          print(name, code)
+          PY
+          )"
+          read -r VERSION_NAME VERSION_CODE <<< "$VERSION_DATA"
+          APK_NAME="High-Tech-Entertainment-native-v${VERSION_NAME}.apk"
+          mv "$SIGNED_APK" "$RUNNER_TEMP/$APK_NAME"
+          printf '%s  %s\\n' "$APK_SHA256" "$APK_NAME" > "$RUNNER_TEMP/SHA256SUMS.txt"
+          export VERSION_NAME VERSION_CODE APK_NAME APK_SHA256 CERT_SHA256
+          python3 - <<'PY'
+          import json, os
+          manifest = {
+              "packageName": "com.hightechentertainment.app",
+              "versionName": os.environ["VERSION_NAME"],
+              "versionCode": int(os.environ["VERSION_CODE"]),
+              "apkAssetName": os.environ["APK_NAME"],
+              "sha256": os.environ["APK_SHA256"],
+              "certificateSha256": os.environ["CERT_SHA256"],
+              "releaseNotes": "High-Tech Entertainment native Android signed update."
+          }
+          with open(os.path.join(os.environ["RUNNER_TEMP"], "manifest.json"), "w") as output:
+              json.dump(manifest, output, separators=(",", ":"))
+          PY
           rm -rf "$RUNNER_TEMP/signing"
       - name: Upload signed candidate and checksum
         uses: actions/upload-artifact@v4
         with:
           name: high-tech-entertainment-native-signed-candidate
           path: |
-            ${{ runner.temp }}/High-Tech-Entertainment-native-signed.apk
+            ${{ runner.temp }}/High-Tech-Entertainment-native-v*.apk
             ${{ runner.temp }}/SHA256SUMS.txt
+            ${{ runner.temp }}/manifest.json
           retention-days: 30
       - name: Publish candidate prerelease only when explicitly requested
         if: inputs.publish_release == true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "native-candidate-${GITHUB_RUN_NUMBER}" \
-            "$RUNNER_TEMP/High-Tech-Entertainment-native-signed.apk" \
+          VERSION_NAME="$(python3 -c 'import json,os; print(json.load(open(os.path.join(os.environ["RUNNER_TEMP"],"manifest.json")))["versionName"])')"
+          APK_NAME="$(python3 -c 'import json,os; print(json.load(open(os.path.join(os.environ["RUNNER_TEMP"],"manifest.json")))["apkAssetName"])')"
+          gh release create "native-v${VERSION_NAME}-candidate-${GITHUB_RUN_NUMBER}" \
+            "$RUNNER_TEMP/$APK_NAME" \
             "$RUNNER_TEMP/SHA256SUMS.txt" \
-            --prerelease --title "Native Android signed candidate ${GITHUB_RUN_NUMBER}" \
-            --notes "Validation candidate only. Not approved for in-place production upgrade. Verify package identity, signing certificate and versionCode against the installed production app first."
+            "$RUNNER_TEMP/manifest.json" \
+            --prerelease --title "High-Tech Entertainment native v${VERSION_NAME} candidate ${GITHUB_RUN_NUMBER}" \
+            --notes "Signed native update candidate. The app verifies package identity, version code, APK checksum and signing certificate before requesting Android's user-approved installer. This is a prerelease, not a production release."
