@@ -43,6 +43,7 @@ import io.elevenlabs.ClientToolResult
 import io.elevenlabs.ConversationClient
 import io.elevenlabs.ConversationConfig
 import io.elevenlabs.ConversationSession
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -169,7 +170,12 @@ internal fun OnlineVoiceCompanionPanel(
     }
 
     DisposableEffect(Unit) {
-        onDispose { session?.endSession() }
+        onDispose {
+            val activeSession = session
+            if (activeSession != null) {
+                CoroutineScope(Dispatchers.Main.immediate).launch { activeSession.endSession() }
+            }
+        }
     }
 
     Card(
@@ -197,10 +203,11 @@ internal fun OnlineVoiceCompanionPanel(
                 Button(
                     onClick = {
                         if (session != null) {
-                            session?.endSession()
+                            val activeSession = session
                             session = null
                             muted = false
                             status = "Disconnected"
+                            scope.launch { activeSession?.endSession() }
                         } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                         } else connectOnline()
@@ -214,7 +221,7 @@ internal fun OnlineVoiceCompanionPanel(
                 if (session != null) {
                     OutlinedButton(onClick = {
                         muted = !muted
-                        session?.setMicMuted(muted)
+                        scope.launch { session?.setMicMuted(muted) }
                     }) { Text(if (muted) "Unmute mic" else "Mute mic", color = Color.White) }
                 }
             }
