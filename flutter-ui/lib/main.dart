@@ -79,6 +79,7 @@ class _StartupExperienceState extends State<StartupExperience>
     if (!mounted) return;
     _progress.forward();
     _timer = Timer(_duration, () {
+      _startupChannel.invokeMethod<void>('stopStartup');
       if (!mounted) return;
       setState(() => _finished = true);
     });
@@ -87,6 +88,7 @@ class _StartupExperienceState extends State<StartupExperience>
   @override
   void dispose() {
     _timer?.cancel();
+    _startupChannel.invokeMethod<void>('stopStartup');
     _motion.dispose();
     _progress.dispose();
     super.dispose();
@@ -264,12 +266,17 @@ class ListenerHomeScreen extends StatelessWidget {
                       ),
                     ),
                     IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.notifications_none_rounded),
-                    ),
-                    IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.account_circle_outlined),
+                      tooltip: 'Open current native app',
+                      onPressed: () async {
+                        try {
+                          await _startupChannel.invokeMethod<void>('openNativeApp');
+                        } on PlatformException {
+                          // Native fallback is unavailable in standalone previews.
+                        } on MissingPluginException {
+                          // Native fallback is unavailable in standalone previews.
+                        }
+                      },
+                      icon: const Icon(Icons.apps_rounded),
                     ),
                   ],
                 ),
