@@ -1661,6 +1661,113 @@ class _ProfilePanelState extends State<_ProfilePanel> {
     }
   }
 
+  Future<void> _editDraft(Map<String, dynamic> draft) async {
+    final table = draft['table']?.toString() ?? '';
+    final id = draft['id']?.toString() ?? '';
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'getDraftDetails', {'table': table, 'id': id});
+      if (response?['success'] != true) {
+        if (mounted) setState(() => _message = response?['message']?.toString() ?? 'Could not load draft.');
+        return;
+      }
+      final fields = Map<String, dynamic>.from(response?['draft'] as Map? ?? {});
+      final title = TextEditingController(text: fields['title']?.toString() ?? fields['name']?.toString() ?? '');
+      final artist = TextEditingController(text: fields['artist']?.toString() ?? '');
+      final description = TextEditingController(text: fields['description']?.toString() ?? fields['bio']?.toString() ?? '');
+      final mediaUrl = TextEditingController(text: fields['audio_url']?.toString() ?? fields['video_url']?.toString() ?? '');
+      final genre = TextEditingController(text: fields['genre']?.toString() ?? '');
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: _surface,
+          title: Text('Edit ${draft['title'] ?? 'draft'}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: title, decoration: InputDecoration(
+                  labelText: table == 'artists' ? 'Artist name' : 'Title')),
+                if (table == 'tracks' || table == 'videos')
+                  TextField(controller: artist, decoration: const InputDecoration(labelText: 'Artist')),
+                if (table == 'artists' || table == 'releases' || table == 'videos')
+                  TextField(controller: description, maxLines: 3, decoration: InputDecoration(
+                    labelText: table == 'artists' ? 'Biography' : 'Description')),
+                if (table == 'tracks' || table == 'videos') ...[
+                  TextField(controller: mediaUrl, readOnly: true, decoration: const InputDecoration(labelText: 'Uploaded media URL')),
+                  TextButton.icon(
+                    onPressed: () async {
+                      final url = await _pickAndUploadFounderMedia(table == 'tracks' ? 'Track' : 'Video');
+                      if (url != null) mediaUrl.text = url;
+                    },
+                    icon: const Icon(Icons.upload_file),
+                    label: const Text('REPLACE MEDIA FILE'),
+                  ),
+                ],
+                if (table == 'tracks')
+                  TextField(controller: genre, decoration: const InputDecoration(labelText: 'Genre')),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('SAVE CHANGES')),
+          ],
+        ),
+      );
+      if (confirmed == true) {
+        final updated = await _appChannel.invokeMapMethod<String, dynamic>('updateDraft', {
+          'table': table,
+          'id': id,
+          'title': title.text.trim(),
+          'artist': artist.text.trim(),
+          'description': description.text.trim(),
+          'mediaUrl': mediaUrl.text.trim(),
+          'genre': genre.text.trim(),
+        });
+        if (updated?['success'] == true) {
+          await _load();
+        } else if (mounted) {
+          setState(() => _message = updated?['message']?.toString() ?? 'Draft update failed.');
+        }
+      }
+      title.dispose();
+      artist.dispose();
+      description.dispose();
+      mediaUrl.dispose();
+      genre.dispose();
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Draft update failed.');
+    }
+  }
+
+  Future<void> _deleteDraft(Map<String, dynamic> draft) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete unpublished draft?'),
+        content: const Text('This permanently deletes the selected unpublished item. Published content cannot be deleted from this action.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('DELETE')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>('deleteDraft', {
+        'table': draft['table'], 'id': draft['id'],
+      });
+      if (response?['success'] == true) {
+        await _load();
+      } else if (mounted) {
+        setState(() => _message = response?['message']?.toString() ?? 'Draft deletion failed.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Draft deletion failed.');
+    }
+  }
+
   Future<void> _setDraftPublished(Map<String, dynamic> draft) async {
     try {
       final response = await _appChannel.invokeMapMethod<String, dynamic>('setDraftPublished', {
@@ -2020,7 +2127,16 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(draft['title']?.toString() ?? 'Untitled'),
                       subtitle: Text(draft['table']?.toString() ?? ''),
-                      trailing: TextButton(onPressed: () => _setDraftPublished(draft), child: const Text('PUBLISH')),
+                      trailing: Wrap(
+                        spacing: 2,
+                        children: [
+                          IconButton(tooltip: 'Edit draft', onPressed: () => _editDraft(draft),
+                            icon: const Icon(Icons.edit_outlined, color: _gold)),
+                          IconButton(tooltip: 'Delete draft', onPressed: () => _deleteDraft(draft),
+                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent)),
+                          TextButton(onPressed: () => _setDraftPublished(draft), child: const Text('PUBLISH')),
+                        ],
+                      ),
                     )).toList(),
                   ),
           ),
