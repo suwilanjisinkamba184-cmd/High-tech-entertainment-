@@ -65,6 +65,26 @@ fun AdditionalFeatureScreen(
     var newTrackTitle by remember { mutableStateOf("") }
     var newTrackArtist by remember { mutableStateOf("") }
     var newTrackUrl by remember { mutableStateOf("") }
+    val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) scope.launch {
+            busy = true
+            val mime = context.contentResolver.getType(uri) ?: "audio/mpeg"
+            val bytes = runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+            val extension = when (mime) {
+                "audio/mp4" -> "m4a"
+                "audio/aac" -> "aac"
+                "audio/wav", "audio/x-wav" -> "wav"
+                "audio/ogg" -> "ogg"
+                else -> "mp3"
+            }
+            if (bytes == null) message = "Could not read the selected audio file."
+            else features.uploadAudio(bytes, mime, extension).onSuccess {
+                newTrackUrl = it
+                message = "Audio uploaded. Its secure public URL has been added to the track form."
+            }.onFailure { message = it.message }
+            busy = false
+        }
+    }
     var newTrackGenre by remember { mutableStateOf("") }
     var newArtistName by remember { mutableStateOf("") }
     var newArtistBio by remember { mutableStateOf("") }
@@ -233,6 +253,8 @@ fun AdditionalFeatureScreen(
                     OutlinedTextField(newTrackTitle, { newTrackTitle = it }, Modifier.fillMaxWidth(), label = { Text("Track title") })
                     OutlinedTextField(newTrackArtist, { newTrackArtist = it }, Modifier.fillMaxWidth(), label = { Text("Artist") })
                     OutlinedTextField(newTrackUrl, { newTrackUrl = it }, Modifier.fillMaxWidth(), label = { Text("HTTPS audio URL") })
+                    OutlinedButton(onClick = { audioPicker.launch("audio/*") }, enabled = !busy,
+                        modifier = Modifier.fillMaxWidth()) { Text("Choose and upload audio file (up to 20 MB)") }
                     OutlinedTextField(newTrackGenre, { newTrackGenre = it }, Modifier.fillMaxWidth(), label = { Text("Genre") })
                     Button(enabled = !busy, onClick = {
                         scope.launch {
@@ -265,7 +287,7 @@ fun AdditionalFeatureScreen(
                             busy = false
                         }
                     }) { Text("Create release") }
-                    Text("Catalogue uploads are created as drafts. Audio/video file upload and publication controls still need their secure storage workflow.", style = MaterialTheme.typography.bodySmall)
+                    Text("Tracks can upload audio files up to 20 MB. Videos use HTTPS media URLs; video file upload is not yet supported in this screen.", style = MaterialTheme.typography.bodySmall)
                     HorizontalDivider(Modifier.padding(vertical = 12.dp))
                     Text("CONTENT DRAFTS", style = MaterialTheme.typography.titleMedium)
                     if (drafts.isEmpty()) Text("No unpublished content drafts.")
