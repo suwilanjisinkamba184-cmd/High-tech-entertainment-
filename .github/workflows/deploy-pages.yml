@@ -35,6 +35,9 @@ jobs:
           test -s assets/videos.js
           test -s assets/booking-confirmation.aac
           test -s account/index.html
+          grep -q 'id="booking-form"' account/index.html
+          grep -q 'id="account-downloads"' account/index.html
+          grep -q 'loadAccountDownloads' assets/app.js
           test -s admin/index.html
           grep -q 'id="artists"' website/src/components/PublicCatalogue.tsx
           grep -q "from('artists')" website/src/components/PublicCatalogue.tsx
