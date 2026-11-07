@@ -241,6 +241,17 @@ class FlutterHostActivity : FlutterActivity() {
                             }
                             .onFailure { result.error("ARTISTS_ERROR", it.message, null) }
                     }
+                    "getReleases" -> lifecycleScope.launch {
+                        hteApplication.featureRepository.publishedReleases()
+                            .onSuccess { releases ->
+                                result.success(releases.map { release ->
+                                    mapOf("id" to release.id, "title" to release.title,
+                                        "description" to release.description, "coverUrl" to release.coverUrl,
+                                        "releaseDate" to release.releaseDate, "spotifyUrl" to release.spotifyUrl)
+                                })
+                            }
+                            .onFailure { result.error("RELEASES_ERROR", it.message, null) }
+                    }
                     "getVideos" -> lifecycleScope.launch {
                         hteApplication.featureRepository.publishedVideos()
                             .onSuccess { videos ->
