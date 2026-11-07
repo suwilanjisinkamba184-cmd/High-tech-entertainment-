@@ -115,6 +115,51 @@ class FeatureRepository(
         check(response.isSuccessful) { "Could not update booking (HTTP ${response.statusCode})." }
     }
 
+    suspend fun createVideo(title: String, url: String, description: String, artist: String): Result<Unit> = runCatching {
+        userId()
+        require(title.trim().isNotEmpty() && url.startsWith("https://")) { "Enter a title and secure video URL." }
+        val body = JSONObject().put("title", title.trim().take(180))
+            .put("video_url", url.trim()).put("description", description.trim().take(3000))
+            .put("artist", artist.trim().ifBlank { "High-Tech Entertainment" })
+            .put("is_published", false).toString()
+        val response = client.post("videos", body, "return=minimal")
+        check(response.isSuccessful) { "Could not save video (HTTP ${response.statusCode})." }
+    }
+
+    suspend fun publishVideo(id: String, publish: Boolean): Result<Unit> = runCatching {
+        userId()
+        val response = client.request("PATCH", "/rest/v1/videos", mapOf("id" to "eq.$id"),
+            JSONObject().put("is_published", publish).toString(), mapOf("Prefer" to "return=minimal"))
+        check(response.isSuccessful) { "Could not update video (HTTP ${response.statusCode})." }
+    }
+
+    suspend fun createTrack(title: String, artist: String, audioUrl: String, genre: String): Result<Unit> = runCatching {
+        userId()
+        require(title.isNotBlank() && artist.isNotBlank() && audioUrl.startsWith("https://")) {
+            "Enter a title, artist and secure audio URL."
+        }
+        val response = client.post("tracks", JSONObject().put("title", title.trim())
+            .put("artist", artist.trim()).put("audio_url", audioUrl.trim())
+            .put("genre", genre.trim()).put("is_published", false).toString(), "return=minimal")
+        check(response.isSuccessful) { "Could not create track (HTTP ${response.statusCode})." }
+    }
+
+    suspend fun createArtist(name: String, bio: String): Result<Unit> = runCatching {
+        userId()
+        require(name.isNotBlank()) { "Artist name is required." }
+        val response = client.post("artists", JSONObject().put("name", name.trim())
+            .put("bio", bio.trim()).put("is_published", false).toString(), "return=minimal")
+        check(response.isSuccessful) { "Could not create artist (HTTP ${response.statusCode})." }
+    }
+
+    suspend fun createRelease(title: String, description: String): Result<Unit> = runCatching {
+        userId()
+        require(title.isNotBlank()) { "Release title is required." }
+        val response = client.post("releases", JSONObject().put("title", title.trim())
+            .put("description", description.trim()).put("is_published", false).toString(), "return=minimal")
+        check(response.isSuccessful) { "Could not create release (HTTP ${response.statusCode})." }
+    }
+
     suspend fun founderOverview(): Result<FounderOverview> = runCatching {
         userId()
         suspend fun count(table: String): Int {
