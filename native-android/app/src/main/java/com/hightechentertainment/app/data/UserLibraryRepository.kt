@@ -66,6 +66,47 @@ class UserLibraryRepository(
         }
     }
 
+    suspend fun followedArtistIds(): Result<List<String>> = runCatching {
+        val userId = requireUser()
+        val response = client.get(
+            "artist_follows",
+            mapOf("user_id" to "eq.$userId", "order" to "created_at.desc", "limit" to "500"),
+            "artist_id"
+        )
+        check(response.isSuccessful) { "Could not load followed artists (HTTP ${response.statusCode})." }
+        val rows = JSONArray(response.body)
+        buildList {
+            for (i in 0 until rows.length()) {
+                rows.optJSONObject(i)?.optString("artist_id")
+                    ?.takeIf { it.isNotBlank() && it != "null" }?.let(::add)
+            }
+        }
+    }
+
+    suspend fun followArtist(artistId: String): LibraryOperationResult {
+        if (artistId.isBlank()) return LibraryOperationResult(false, "Select a valid artist.")
+        return request {
+            val userId = requireUser()
+            client.request(
+                "POST", "/rest/v1/artist_follows",
+                mapOf("on_conflict" to "user_id,artist_id"),
+                JSONObject().put("user_id", userId).put("artist_id", artistId).toString(),
+                mapOf("Prefer" to "resolution=merge-duplicates,return=minimal")
+            )
+        }
+    }
+
+    suspend fun unfollowArtist(artistId: String): LibraryOperationResult {
+        if (artistId.isBlank()) return LibraryOperationResult(false, "Select a valid artist.")
+        return request {
+            val userId = requireUser()
+            client.request(
+                "DELETE", "/rest/v1/artist_follows",
+                mapOf("user_id" to "eq.$userId", "artist_id" to "eq.$artistId")
+            )
+        }
+    }
+
     suspend fun recordListening(trackId: String, progressSeconds: Int = 0): LibraryOperationResult {
         if (trackId.isBlank()) return LibraryOperationResult(false, "Select a valid track.")
         return request {
