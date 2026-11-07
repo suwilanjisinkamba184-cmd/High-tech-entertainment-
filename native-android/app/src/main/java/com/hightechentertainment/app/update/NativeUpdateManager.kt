@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.content.pm.PackageInstaller
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -142,7 +143,7 @@ class NativeUpdateManager(private val context: Context) {
 
     private fun installWithPackageInstaller(apkFile: File, versionCode: Long) {
         val installer = context.packageManager.packageInstaller
-        val params = PackageManager.PackageInstaller.SessionParams(PackageManager.PackageInstaller.SessionParams.MODE_FULL_INSTALL)
+        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
         params.setAppPackageName(context.packageName)
         val sessionId = installer.createSession(params)
         installer.openSession(sessionId).use { session ->
@@ -167,9 +168,10 @@ class NativeUpdateManager(private val context: Context) {
         return context.packageManager.getPackageArchiveInfo(file.absolutePath, signingFlags())
     }
 
+    @Suppress("DEPRECATION")
     private fun signingFlags(): Int =
         if (Build.VERSION.SDK_INT >= 28) PackageManager.GET_SIGNING_CERTIFICATES
-        else @Suppress("DEPRECATION") PackageManager.GET_SIGNATURES
+        else PackageManager.GET_SIGNATURES
 
     private fun certificateSha256(info: PackageInfo): String {
         val signatures = if (Build.VERSION.SDK_INT >= 28) {
