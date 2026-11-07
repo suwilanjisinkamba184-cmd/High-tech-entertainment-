@@ -86,7 +86,7 @@ class AuthSessionManager(
             is AuthResult.Failure -> {
                 // A transient network failure must not erase a still-valid refresh token.
                 val stillStored = store.read()
-                val refreshTokenRejected = result.statusCode in setOf(400, 401, 403)
+                val refreshTokenRejected = result.statusCode == 400 || result.statusCode == 401 || result.statusCode == 403
                 if (stillStored == null || refreshTokenRejected) {
                     // Access-token expiry alone does not invalidate the refresh token.
                     // Only a definitive auth rejection should clear persisted credentials.
