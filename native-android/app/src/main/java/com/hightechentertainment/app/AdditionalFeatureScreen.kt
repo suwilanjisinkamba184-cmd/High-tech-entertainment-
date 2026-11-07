@@ -3,6 +3,7 @@ package com.hightechentertainment.app
 import android.view.ViewGroup
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,7 +12,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -180,10 +186,45 @@ fun AdditionalFeatureScreen(
     }
     LaunchedEffect(destination, userId) { refresh() }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(destination, style = MaterialTheme.typography.headlineSmall)
-            TextButton(onClick = { refresh() }, enabled = !busy) { Text("Refresh") }
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF4A3920)),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF17181B))
+        ) {
+            Column(
+                Modifier.fillMaxWidth().background(
+                    Brush.linearGradient(listOf(Color(0xFF49351A), Color(0xFF211A10), Color(0xFF151515)))
+                ).padding(22.dp)
+            ) {
+                Text("HIGH-TECH ENTERTAINMENT", color = Color(0xFFE4B653), fontSize = 9.sp,
+                    fontWeight = FontWeight.ExtraBold, letterSpacing = 1.8.sp)
+                Spacer(Modifier.height(10.dp))
+                Text(destination, color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+                Spacer(Modifier.height(7.dp))
+                Text(
+                    when (destination) {
+                        "Videos" -> "Watch published music videos and visual releases from the High-Tech family."
+                        "Library" -> "Your listening history and playlists, organised in one place."
+                        "Downloads" -> "Your offline listening collection, stored on this device."
+                        "Bookings" -> "Manage your creative and production service requests."
+                        "Profile" -> "Keep your account details and personal information up to date."
+                        "Founder Studio" -> "Founder-only tools for releases, publishing and platform operations."
+                        "App Updates" -> "Check for signed native updates and keep your app current."
+                        else -> "Your High-Tech music and entertainment space."
+                    },
+                    color = Color(0xFFD0C7B8), style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Text("YOUR CONTENT", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            TextButton(onClick = { refresh() }, enabled = !busy) { Text("REFRESH") }
         }
         message?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(vertical = 8.dp)) }
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
