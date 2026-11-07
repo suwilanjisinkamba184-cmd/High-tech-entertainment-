@@ -7,7 +7,6 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import com.hightechentertainment.app.data.AuthResult
-import com.hightechentertainment.app.data.HteApplication
 import com.hightechentertainment.app.playback.StartupJingle
 import kotlinx.coroutines.launch
 
