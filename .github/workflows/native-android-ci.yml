@@ -95,7 +95,17 @@ jobs:
             echo "::error::Flutter logo asset is missing; this APK does not contain the expected Flutter presentation bundle."
             exit 1
           fi
-          BADGING="$("$SDK_ROOT/build-tools/36.0.0/aapt" dump badging "$APK")"
+          # Each GitHub Actions step runs in a fresh shell, so SDK_ROOT from
+          # the SDK-install step is not available here. Resolve it again locally.
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          AAPT="$SDK_ROOT/build-tools/36.0.0/aapt"
+          test -x "$AAPT" || {
+            echo "::error::Android aapt was not found at $AAPT."
+            echo "ANDROID_HOME=${ANDROID_HOME:-<unset>}"
+            echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-<unset>}"
+            exit 1
+          }
+          BADGING="$("$AAPT" dump badging "$APK")"
           printf '%s\n' "$BADGING" | grep -F "launchable-activity: name='com.hightechentertainment.app.FlutterHostActivity'" >/dev/null || {
             echo "::error::FlutterHostActivity is not the APK's launcher activity."
             printf '%s\n' "$BADGING" | grep 'launchable-activity:' || true
