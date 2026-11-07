@@ -228,6 +228,7 @@ jobs:
               text = text.replace('<manifest ', '<manifest xmlns:tools="http://schemas.android.com/tools" ', 1)
           required_permissions = [
               "android.permission.INTERNET",
+              "android.permission.RECORD_AUDIO",
               "android.permission.WAKE_LOCK",
               "android.permission.FOREGROUND_SERVICE",
               "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
@@ -270,6 +271,15 @@ jobs:
                       </intent-filter>
                   </receiver>"""
               text = text.replace("</application>", components + "\n    </application>", 1)
+          if '<queries>' not in text:
+              queries = """<queries>
+                  <intent><action android:name="android.speech.RecognitionService" /></intent>
+                  <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
+              </queries>
+              """
+              text = text.replace("<application", queries + "\\n    <application", 1)
+          if 'android.hardware.microphone' not in text:
+              text = text.replace("<application", '<uses-feature android:name="android.hardware.microphone" android:required="false" />\\n    <application', 1)
           manifest.write_text(text)
           gradle_files = [Path("android/app/build.gradle"), Path("android/app/build.gradle.kts")]
           found = False
