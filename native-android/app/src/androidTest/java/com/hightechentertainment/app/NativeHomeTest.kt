@@ -13,6 +13,6 @@ class NativeHomeTest {
     @Test
     fun homeScreenShowsHighTechBranding() {
         composeRule.onNodeWithText("HIGH-TECH").assertIsDisplayed()
-        composeRule.onNodeWithText("Explore music").assertIsDisplayed()
+        composeRule.onNodeWithText("Music. Beats. Production. Beyond.").assertIsDisplayed()
     }
 }
