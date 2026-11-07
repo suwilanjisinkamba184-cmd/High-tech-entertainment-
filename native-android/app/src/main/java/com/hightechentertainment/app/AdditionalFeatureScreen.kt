@@ -32,6 +32,13 @@ fun AdditionalFeatureScreen(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    var message by remember(destination) { mutableStateOf<String?>(null) }
+    var busy by remember(destination) { mutableStateOf(false) }
+    var videos by remember { mutableStateOf<List<NativeVideo>>(emptyList()) }
+    var history by remember { mutableStateOf<List<String>>(emptyList()) }
+    var playlists by remember { mutableStateOf<List<NativePlaylist>>(emptyList()) }
+    var bookings by remember { mutableStateOf<List<NativeBooking>>(emptyList()) }
+    var profile by remember { mutableStateOf(NativeProfile("", "", "", "")) }
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) scope.launch {
             val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
@@ -43,13 +50,6 @@ fun AdditionalFeatureScreen(
             }.onFailure { message = it.message }
         }
     }
-    var message by remember(destination) { mutableStateOf<String?>(null) }
-    var busy by remember(destination) { mutableStateOf(false) }
-    var videos by remember { mutableStateOf<List<NativeVideo>>(emptyList()) }
-    var history by remember { mutableStateOf<List<String>>(emptyList()) }
-    var playlists by remember { mutableStateOf<List<NativePlaylist>>(emptyList()) }
-    var bookings by remember { mutableStateOf<List<NativeBooking>>(emptyList()) }
-    var profile by remember { mutableStateOf(NativeProfile("", "", "", "")) }
     var overview by remember { mutableStateOf<FounderOverview?>(null) }
     var selectedVideo by remember { mutableStateOf<NativeVideo?>(null) }
     var playlistName by remember { mutableStateOf("") }
