@@ -907,6 +907,11 @@ class _LibraryPanelState extends State<_LibraryPanel> {
     }
   }
 
+  Future<List<dynamic>> _loadPlaylistTrackIds(String playlistId) async {
+    return await _appChannel.invokeListMethod<dynamic>(
+      'getPlaylistTracks', {'playlistId': playlistId}) ?? <dynamic>[];
+  }
+
   Future<void> _deletePlaylist(String id) async {
     try {
       final result = await _appChannel.invokeMapMethod<String, dynamic>('deletePlaylist', {'playlistId': id});
@@ -1002,8 +1007,7 @@ class _LibraryPanelState extends State<_LibraryPanel> {
                 ),
                 children: [
                   FutureBuilder<List<dynamic>>(
-                    future: _appChannel.invokeListMethod<dynamic>(
-                      'getPlaylistTracks', {'playlistId': playlist['id'].toString()}),
+                    future: _loadPlaylistTrackIds(playlist['id'].toString()),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Padding(
