@@ -24,6 +24,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'playback_engine.dart';
 import 'video_player_page.dart';
 import 'local_files_page.dart';
+import 'voice_companion.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -4333,6 +4334,16 @@ class _SettingsPageState extends State<SettingsPage> {
           Text('${(downloadProgress * 100).toStringAsFixed(0)}% downloaded', style: const TextStyle(color: Colors.white60)),
         ]))),
       ],
+      const SizedBox(height: 12),
+      Card(child: ListTile(
+        leading: const Icon(Icons.record_voice_over_rounded, color: Color(0xFFD4AF37)),
+        title: const Text('High-Tech Voice Companion'),
+        subtitle: const Text('Offline voice commands and downloadable device voices'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const VoiceCompanionPage()),
+        ),
+      )),
       const SizedBox(height: 12),
       const Heading('Playback preferences'),
       Card(child: Column(children: [
