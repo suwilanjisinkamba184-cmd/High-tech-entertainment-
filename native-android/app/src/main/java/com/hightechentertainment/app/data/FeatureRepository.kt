@@ -75,6 +75,19 @@ class FeatureRepository(
             row?.optString("phone").orEmpty(), row?.optString("avatar_url").orEmpty())
     }
 
+    suspend fun uploadAudio(bytes: ByteArray, contentType: String, extension: String): Result<String> = runCatching {
+        userId()
+        require(bytes.isNotEmpty() && bytes.size <= 20 * 1024 * 1024) { "For phone stability, choose audio files up to 20 MB." }
+        require(contentType in setOf("audio/mpeg", "audio/mp4", "audio/aac", "audio/wav", "audio/x-wav", "audio/ogg")) {
+            "Choose an MP3, M4A, AAC, WAV or OGG audio file."
+        }
+        val safeExtension = extension.lowercase().filter(Char::isLetterOrDigit).take(5).ifBlank { "mp3" }
+        val path = "founder/${System.currentTimeMillis()}.$safeExtension"
+        val response = client.uploadStorageObject("hte-audio", path, bytes, contentType)
+        check(response.isSuccessful) { "Audio upload failed (HTTP ${response.statusCode})." }
+        client.publicStorageUrl("hte-audio", path)
+    }
+
     suspend fun uploadAvatar(bytes: ByteArray, contentType: String): Result<String> = runCatching {
         val id = userId()
         require(bytes.isNotEmpty() && bytes.size <= 5 * 1024 * 1024) { "Choose an image smaller than 5 MB." }
