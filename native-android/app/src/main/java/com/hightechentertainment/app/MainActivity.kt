@@ -141,6 +141,7 @@ class MainActivity : ComponentActivity() {
                 } else {
                 var tracks by remember { mutableStateOf<List<NativeTrack>>(emptyList()) }
                 var favouriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+                var founderAccess by remember { mutableStateOf(false) }
                 var loading by remember { mutableStateOf(true) }
                 var error by remember { mutableStateOf<String?>(null) }
                 val currentTrack = currentTrackState
@@ -168,10 +169,11 @@ class MainActivity : ComponentActivity() {
                         loading = false
                     }
                 }
-                LaunchedEffect(Unit) {
+                LaunchedEffect(signedInSession.userId) {
                     loadCatalog()
                     hteApplication.userLibraryRepository.favouriteTrackIds()
                         .onSuccess { favouriteIds = it.toSet() }
+                    founderAccess = hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)
                 }
 
                 HighTechApp(
@@ -180,6 +182,7 @@ class MainActivity : ComponentActivity() {
                     userLibraryRepository = hteApplication.userLibraryRepository,
                     sponsoredAudioRepository = hteApplication.sponsoredAudioRepository,
                     sponsoredAudioPlaying = sponsoredAudioPlaying,
+                    isFounderAccount = founderAccess,
                     userId = signedInSession.userId,
                     onDownloadTrack = { track ->
                         val id = offlineDownloads.enqueue(track)
@@ -413,6 +416,7 @@ private fun HighTechApp(
     userLibraryRepository: com.hightechentertainment.app.data.UserLibraryRepository,
     sponsoredAudioRepository: com.hightechentertainment.app.data.SponsoredAudioRepository,
     sponsoredAudioPlaying: Boolean,
+    isFounderAccount: Boolean,
     userId: String?,
     onToggleFavourite: (NativeTrack) -> Unit,
     onDownloadTrack: (NativeTrack) -> Unit,
@@ -493,7 +497,7 @@ private fun HighTechApp(
                                     add("Bookings" to 5)
                                     add("Profile" to 6)
                                     add("App updates" to 8)
-                                    if (userId == "b268df9e-eff5-43b9-a38f-869b33add38b") add("Founder Studio" to 7)
+                                    if (isFounderAccount) add("Founder Studio" to 7)
                                 }.forEach { (label, index) ->
                                     DropdownMenuItem(text = { Text(label) }, onClick = {
                                         selectedTab = index
@@ -641,6 +645,7 @@ private fun HighTechApp(
                                 features = featureRepository,
                                 library = userLibraryRepository,
                                 sponsoredAudio = sponsoredAudioRepository,
+                                isFounder = isFounderAccount,
                                 userId = userId,
                                 onPlayTrack = onPlay
                             )
