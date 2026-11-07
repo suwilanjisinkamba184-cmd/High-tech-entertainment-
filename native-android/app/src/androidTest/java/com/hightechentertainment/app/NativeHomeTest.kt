@@ -1,5 +1,6 @@
 package com.hightechentertainment.app
 
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -11,8 +12,10 @@ class NativeHomeTest {
     val composeRule = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun homeScreenShowsHighTechBranding() {
+    fun unauthenticatedLaunchShowsSecureSignInGate() {
         composeRule.onNodeWithText("HIGH-TECH").assertIsDisplayed()
-        composeRule.onNodeWithText("Music. Beats. Production. Beyond.").assertIsDisplayed()
+        composeRule.onNodeWithText("Welcome back").assertIsDisplayed()
+        composeRule.onNodeWithText("SIGN IN").assertIsDisplayed()
+        composeRule.onNodeWithText("Explore the catalogue").assertDoesNotExist()
     }
 }
