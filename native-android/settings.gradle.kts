@@ -6,8 +6,8 @@ plugins {
     id("org.jetbrains.kotlin.android") version "2.4.21" apply false
 }
 
-// AGP 8.11.1 + KGP 2.2.21 is a supported pairing. The generated Flutter module
-// is included below and reads the same root plugin version during configuration.
+// AGP 8.11.1 + KGP 2.4.21 are within Kotlin's published compatibility range.
+// The generated Flutter module is included below and reads this root plugin version.
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     val storageUrl = System.getenv("FLUTTER_STORAGE_BASE_URL") ?: "https://storage.googleapis.com"
