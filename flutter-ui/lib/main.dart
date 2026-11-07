@@ -497,6 +497,22 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
         .toList();
   }
 
+  Future<void> _openVoiceCompanion() async {
+    try {
+      await _appChannel.invokeMethod<void>('openVoiceCompanion');
+    } on PlatformException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message ?? 'Voice Companion could not be opened.')),
+      );
+    } on MissingPluginException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Voice Companion is unavailable in this build.')),
+      );
+    }
+  }
+
   Future<void> _refresh() async {
     setState(() {
       _loading = true;
@@ -688,6 +704,11 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
       appBar: AppBar(
         title: Text(titles[_tab], style: const TextStyle(fontWeight: FontWeight.w800)),
         actions: [
+          IconButton(
+            tooltip: 'Open AI Voice Companion',
+            onPressed: _openVoiceCompanion,
+            icon: const Icon(Icons.graphic_eq_rounded, color: _gold),
+          ),
           IconButton(
             tooltip: 'Refresh',
             onPressed: _refresh,
