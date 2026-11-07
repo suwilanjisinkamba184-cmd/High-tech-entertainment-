@@ -63,6 +63,12 @@ class FlutterHostActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, appChannelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "openVoiceCompanion" -> {
+                        startActivity(Intent(this, MainActivity::class.java).apply {
+                            putExtra(MainActivity.EXTRA_OPEN_VOICE_COMPANION, true)
+                        })
+                        result.success(true)
+                    }
                     "getSession" -> result.success(sessionMap())
                     "getPlaybackState" -> result.success(playbackState())
                     "playVideo" -> {
