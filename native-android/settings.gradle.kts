@@ -2,10 +2,12 @@ pluginManagement {
     repositories { google(); mavenCentral(); gradlePluginPortal() }
 }
 
-// Kotlin 2.2.10 is paired with AGP 8.11.1 and Gradle 8.14.3.
-// Keep the Flutter-generated module integration below unchanged.
+// Kotlin 2.2.21 is required for full compatibility with AGP 8.11.1.
+// Kotlin 2.2.10 supports AGP only through 8.10.0 and fails during plugin
+// application with NoClassDefFoundError: com/android/build/gradle/api/BaseVariant.
+// Keep Gradle 8.14.3, JDK 17, and the Flutter-generated integration unchanged.
 plugins {
-    id("org.jetbrains.kotlin.android") version "2.2.10" apply false
+    id("org.jetbrains.kotlin.android") version "2.2.21" apply false
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
