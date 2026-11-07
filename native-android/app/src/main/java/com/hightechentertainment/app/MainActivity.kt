@@ -155,6 +155,9 @@ class MainActivity : ComponentActivity() {
                         val result = catalogRepository.publishedTracks()
                         tracks = result.items
                         knownTracks = result.items
+                        currentTrackState = playbackPlayer?.currentMediaItem?.mediaId?.let { id ->
+                            result.items.firstOrNull { it.id == id }
+                        } ?: currentTrackState
                         error = result.error
                         loading = false
                     }
@@ -194,6 +197,7 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     onPause = { playbackPlayer?.pause() },
+                    onResume = { playbackPlayer?.play() },
                     onNext = { playbackPlayer?.seekToNextMediaItem() },
                     onPrevious = { playbackPlayer?.seekToPreviousMediaItem() },
                     onToggleShuffle = {
@@ -283,6 +287,12 @@ class MainActivity : ComponentActivity() {
                 .onSuccess { controller ->
                     playbackPlayer = controller
                     playbackIsReady = true
+                    playbackIsActive = controller.isPlaying
+                    shuffleEnabled = controller.shuffleModeEnabled
+                    repeatMode = controller.repeatMode
+                    currentTrackState = controller.currentMediaItem?.mediaId?.let { id ->
+                        knownTracks.firstOrNull { it.id == id }
+                    }
                     controller.addListener(object : Player.Listener {
                         override fun onIsPlayingChanged(isPlaying: Boolean) {
                             playbackIsActive = isPlaying
@@ -350,6 +360,7 @@ private fun HighTechApp(
     onRefresh: () -> Unit,
     onPlay: (NativeTrack) -> Unit,
     onPause: () -> Unit,
+    onResume: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onToggleShuffle: () -> Unit,
@@ -531,14 +542,14 @@ private fun HighTechApp(
                 Column(
                     Modifier.fillMaxWidth().background(Color(0xFF201A10)).padding(horizontal = 16.dp, vertical = 6.dp)
                 ) {
-                    var seekPreview by remember(currentTrack.id) { mutableFloatStateOf(0f) }
+                    var seekPreview by remember(currentTrack.id) { mutableStateOf<Float?>(null) }
                     val progress = if (durationMs > 0L) (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
                     Slider(
-                        value = seekPreview.takeIf { it > 0f } ?: progress,
+                        value = seekPreview ?: progress,
                         onValueChange = { seekPreview = it },
                         onValueChangeFinished = {
-                            if (durationMs > 0L) onSeek((seekPreview * durationMs).toLong())
-                            seekPreview = 0f
+                            seekPreview?.let { if (durationMs > 0L) onSeek((it * durationMs).toLong()) }
+                            seekPreview = null
                         },
                         enabled = durationMs > 0L
                     )
@@ -553,7 +564,7 @@ private fun HighTechApp(
                     IconButton(onClick = onPrevious) {
                         Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous track", tint = HteMuted)
                     }
-                    IconButton(onClick = { if (playing) onPause() else onPlay(currentTrack) }) {
+                    IconButton(onClick = { if (playing) onPause() else onResume() }) {
                         Icon(
                             if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                             contentDescription = if (playing) "Pause" else "Play",
