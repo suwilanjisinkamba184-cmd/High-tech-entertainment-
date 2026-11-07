@@ -96,9 +96,9 @@ jobs:
             exit 1
           fi
           BADGING="$("$SDK_ROOT/build-tools/36.0.0/aapt" dump badging "$APK")"
-          printf '%s\\n' "$BADGING" | grep -F "launchable-activity: name='com.hightechentertainment.app.FlutterHostActivity'" >/dev/null || {
+          printf '%s\n' "$BADGING" | grep -F "launchable-activity: name='com.hightechentertainment.app.FlutterHostActivity'" >/dev/null || {
             echo "::error::FlutterHostActivity is not the APK's launcher activity."
-            printf '%s\\n' "$BADGING" | grep 'launchable-activity:' || true
+            printf '%s\n' "$BADGING" | grep 'launchable-activity:' || true
             exit 1
           }
           echo "PASS: Flutter UI asset is bundled and FlutterHostActivity is the launcher."
