@@ -45,7 +45,9 @@ jobs:
           SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager -print -quit)"
           test -n "$SDKMANAGER" || { echo "::error::Android sdkmanager not found."; exit 1; }
-          yes | "$SDKMANAGER" --licenses
+          # sdkmanager closes stdin after accepting all licenses; yes may then exit on SIGPIPE.
+          # The following package installation is the authoritative license check.
+          yes | "$SDKMANAGER" --licenses || true
           "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "platform-tools"
           test -x "$SDK_ROOT/build-tools/36.0.0/apksigner"
           test -x "$SDK_ROOT/build-tools/36.0.0/zipalign"
