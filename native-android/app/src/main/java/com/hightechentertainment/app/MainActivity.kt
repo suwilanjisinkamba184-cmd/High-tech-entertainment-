@@ -489,7 +489,11 @@ private fun HighTechApp(
                         Box {
                             TextButton(onClick = { moreExpanded = true }) { Text("MORE", color = HteGold) }
                             DropdownMenu(expanded = moreExpanded, onDismissRequest = { moreExpanded = false }) {
-                                listOf("Bookings" to 5, "Profile" to 6, "Founder Studio" to 7).forEach { (label, index) ->
+                                buildList {
+                                    add("Bookings" to 5)
+                                    add("Profile" to 6)
+                                    if (userId == "b268df9e-eff5-43b9-a38f-869b33add38b") add("Founder Studio" to 7)
+                                }.forEach { (label, index) ->
                                     DropdownMenuItem(text = { Text(label) }, onClick = {
                                         selectedTab = index
                                         moreExpanded = false
