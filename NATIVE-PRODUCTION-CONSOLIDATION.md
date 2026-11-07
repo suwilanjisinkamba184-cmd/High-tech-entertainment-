@@ -46,8 +46,8 @@ The connected production Supabase project was inspected read-only during consoli
 
 These are not marked complete until evidence exists:
 
-- Add in-app download manager with progress, cancellation, quota/storage-full handling, and recovery.
-- Add playlist reorder and verify position persistence.
+- In-app Downloads screen now exposes queue state, transfer progress, removal/cancellation, and completed-storage usage. Quota enforcement, storage-full recovery, and device verification remain.
+- Playlist reorder controls and a single-request position upsert are implemented. Persisted-order and owner-isolation tests remain.
 - Complete artwork/avatar rendering and management.
 - Complete sharing, account deletion, and user-facing privacy controls.
 - Add upload progress/resume and large-file handling; current audio/video limits are 20 MB / 50 MB.
