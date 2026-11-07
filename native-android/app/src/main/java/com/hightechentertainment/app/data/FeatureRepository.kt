@@ -241,6 +241,14 @@ class FeatureRepository(
         check(response.isSuccessful) { "Could not update $table publication status (HTTP ${response.statusCode})." }
     }
 
+    suspend fun hasFounderAccess(): Result<Boolean> = runCatching {
+        userId()
+        val response = client.request("POST", "/rest/v1/rpc/is_hte_admin", body = "{}")
+        check(response.isSuccessful) { "Could not verify Founder Studio access (HTTP ${response.statusCode})." }
+        response.body.trim().toBooleanStrictOrNull()
+            ?: error("Founder access check returned an invalid response.")
+    }
+
     suspend fun founderOverview(): Result<FounderOverview> = runCatching {
         userId()
         suspend fun count(table: String): Int {
