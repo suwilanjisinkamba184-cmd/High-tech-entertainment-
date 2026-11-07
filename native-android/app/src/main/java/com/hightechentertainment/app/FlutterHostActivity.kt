@@ -887,6 +887,11 @@ class FlutterHostActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        voiceSession?.let { active ->
+            lifecycleScope.launch { runCatching { active.endSession() } }
+        }
+        voiceSession = null
+        mediaController?.volume = 1f
         playbackFuture?.let { MediaController.releaseFuture(it) }
         playbackFuture = null
         mediaController = null
