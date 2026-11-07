@@ -446,6 +446,8 @@ fun AdditionalFeatureScreen(
                     Text("SPONSORED AUDIO CAMPAIGNS", style = MaterialTheme.typography.titleMedium)
                     OutlinedTextField(campaignTitle, { campaignTitle = it }, Modifier.fillMaxWidth(), label = { Text("Campaign title") })
                     OutlinedTextField(campaignUrl, { campaignUrl = it }, Modifier.fillMaxWidth(), label = { Text("HTTPS audio advert URL") })
+                    OutlinedButton(onClick = { audioPicker.launch("audio/*") }, enabled = !busy,
+                        modifier = Modifier.fillMaxWidth()) { Text("Choose and upload campaign audio") }
                     OutlinedTextField(campaignStarts, { campaignStarts = it }, Modifier.fillMaxWidth(), label = { Text("Starts at ISO-8601 (optional)") })
                     OutlinedTextField(campaignEnds, { campaignEnds = it }, Modifier.fillMaxWidth(), label = { Text("Ends at ISO-8601 (optional)") })
                     OutlinedTextField(campaignPriority, { campaignPriority = it.filter(Char::isDigit).take(4) }, Modifier.fillMaxWidth(), label = { Text("Priority 0-1000") })
