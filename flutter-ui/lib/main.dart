@@ -1837,6 +1837,85 @@ class _ProfilePanelState extends State<_ProfilePanel> {
     }
   }
 
+  Future<void> _editCampaign(Map<String, dynamic> campaign) async {
+    final title = TextEditingController(text: campaign['title']?.toString() ?? '');
+    final audioUrl = TextEditingController(text: campaign['audioUrl']?.toString() ?? '');
+    final startsAt = TextEditingController(text: campaign['startsAt']?.toString() ?? '');
+    final endsAt = TextEditingController(text: campaign['endsAt']?.toString() ?? '');
+    final priority = TextEditingController(text: (campaign['priority'] ?? 0).toString());
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: _surface,
+        title: const Text('Edit sponsored audio campaign'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: title, decoration: const InputDecoration(labelText: 'Campaign title')),
+              TextField(controller: audioUrl, decoration: const InputDecoration(labelText: 'Secure audio URL')),
+              TextField(controller: startsAt, decoration: const InputDecoration(labelText: 'Start time (ISO 8601, optional)')),
+              TextField(controller: endsAt, decoration: const InputDecoration(labelText: 'End time (ISO 8601, optional)')),
+              TextField(controller: priority, keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Priority (0–1000)')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('SAVE')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      try {
+        final result = await _appChannel.invokeMapMethod<String, dynamic>('updateCampaign', {
+          'id': campaign['id'],
+          'title': title.text.trim(),
+          'audioUrl': audioUrl.text.trim(),
+          'startsAt': startsAt.text.trim().isEmpty ? null : startsAt.text.trim(),
+          'endsAt': endsAt.text.trim().isEmpty ? null : endsAt.text.trim(),
+          'priority': int.tryParse(priority.text.trim()) ?? 0,
+        });
+        if (result?['success'] == true) {
+          if (mounted) setState(() => _message = 'Campaign updated.');
+          await _load();
+        } else if (mounted) {
+          setState(() => _message = result?['message']?.toString() ?? 'Campaign update failed.');
+        }
+      } on PlatformException catch (error) {
+        if (mounted) setState(() => _message = error.message ?? 'Campaign update failed.');
+      }
+    }
+    title.dispose(); audioUrl.dispose(); startsAt.dispose(); endsAt.dispose(); priority.dispose();
+  }
+
+  Future<void> _deleteCampaign(Map<String, dynamic> campaign) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete unpublished campaign?'),
+        content: const Text('Only unpublished campaigns can be deleted. Published campaigns must be unpublished first.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('DELETE')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>(
+        'deleteCampaign', {'id': campaign['id']});
+      if (result?['success'] == true) {
+        await _load();
+      } else if (mounted) {
+        setState(() => _message = result?['message']?.toString() ?? 'Campaign deletion failed.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Campaign deletion failed.');
+    }
+  }
+
   Future<void> _setCampaignPublished(Map<String, dynamic> campaign, bool published) async {
     try {
       final result = await _appChannel.invokeMapMethod<String, dynamic>('setCampaignPublished', {
@@ -2162,12 +2241,22 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                     contentPadding: EdgeInsets.zero,
                     title: Text(campaign['title']?.toString() ?? 'Untitled campaign'),
                     subtitle: Text('Priority: ${campaign['priority'] ?? 0} • ${campaign['isPublished'] == true ? 'Published' : 'Draft'}'),
-                    trailing: PopupMenuButton<bool>(
-                      initialValue: campaign['isPublished'] == true,
-                      onSelected: (publish) => _setCampaignPublished(campaign, publish),
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(value: true, child: Text('Publish')),
-                        PopupMenuItem(value: false, child: Text('Unpublish')),
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (action) {
+                        final published = campaign['isPublished'] == true;
+                        if (action == 'publish') _setCampaignPublished(campaign, true);
+                        if (action == 'unpublish') _setCampaignPublished(campaign, false);
+                        if (action == 'edit' && !published) _editCampaign(campaign);
+                        if (action == 'delete' && !published) _deleteCampaign(campaign);
+                      },
+                      itemBuilder: (_) => [
+                        if (campaign['isPublished'] == true)
+                          const PopupMenuItem(value: 'unpublish', child: Text('Unpublish'))
+                        else ...[
+                          const PopupMenuItem(value: 'publish', child: Text('Publish')),
+                          const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                          const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                        ],
                       ],
                       child: Icon(campaign['isPublished'] == true ? Icons.public : Icons.public_off, color: _gold),
                     ),
