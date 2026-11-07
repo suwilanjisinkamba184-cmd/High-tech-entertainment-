@@ -45,6 +45,7 @@ jobs:
           if [ -f flutter-ui/pubspec.yaml ]; then
             cd flutter-ui
             flutter --version
+            flutter clean
             flutter pub get
           else
             echo "Flutter module is not part of this revision; building native baseline."
