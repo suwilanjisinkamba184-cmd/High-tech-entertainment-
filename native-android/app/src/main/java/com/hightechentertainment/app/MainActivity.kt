@@ -1,8 +1,10 @@
 package com.hightechentertainment.app
 
+import android.content.ComponentName
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -35,7 +37,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.ListenableFuture
+import com.hightechentertainment.app.playback.PlaybackService
 import com.hightechentertainment.app.data.CatalogRepository
 import com.hightechentertainment.app.data.NativeTrack
 import kotlinx.coroutines.launch
@@ -47,20 +52,13 @@ private val HteMuted = Color(0xFFAAA39A)
 
 class MainActivity : ComponentActivity() {
     private val catalogRepository by lazy { CatalogRepository() }
-    private var player: ExoPlayer? = null
+    private var controllerFuture: ListenableFuture<MediaController>? = null
+    private var playbackPlayer by mutableStateOf<Player?>(null)
     private var playbackIsActive by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        player = ExoPlayer.Builder(this).build().also { exoPlayer ->
-            // Delegate audio-focus handling to Media3 so playback ducks/pauses correctly.
-            exoPlayer.setAudioAttributes(AudioAttributes.DEFAULT, true)
-            exoPlayer.addListener(object : Player.Listener {
-                override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    playbackIsActive = isPlaying
-                }
-            })
-        }
+        connectToPlaybackService()
         setContent {
             HteTheme {
                 var tracks by remember { mutableStateOf<List<NativeTrack>>(emptyList()) }
@@ -92,32 +90,47 @@ class MainActivity : ComponentActivity() {
                         val url = track.audioUrl
                         if (url != null) {
                             if (currentTrack?.id != track.id) {
-                                player?.setMediaItem(MediaItem.fromUri(url))
-                                player?.prepare()
+                                playbackPlayer?.setMediaItem(MediaItem.fromUri(url))
+                                playbackPlayer?.prepare()
                                 currentTrack = track
                             }
-                            player?.play()
+                            playbackPlayer?.play()
                         } else {
                             error = "This track does not have a playable audio file yet."
                         }
                     },
                     onPause = {
-                        player?.pause()
+                        playbackPlayer?.pause()
                     }
                 )
             }
         }
     }
 
-    override fun onStop() {
-        super.onStop()
-        // Playback lifecycle will move to MediaSessionService in the background-audio phase.
-        player?.pause()
+    private fun connectToPlaybackService() {
+        val token = SessionToken(this, ComponentName(this, PlaybackService::class.java))
+        val future = MediaController.Builder(this, token).buildAsync()
+        controllerFuture = future
+        future.addListener({
+            runCatching { future.get() }
+                .onSuccess { controller ->
+                    playbackPlayer = controller
+                    controller.addListener(object : Player.Listener {
+                        override fun onIsPlayingChanged(isPlaying: Boolean) {
+                            playbackIsActive = isPlaying
+                        }
+                    })
+                }
+                .onFailure {
+                    playbackIsActive = false
+                }
+        }, ContextCompat.getMainExecutor(this))
     }
 
     override fun onDestroy() {
-        player?.release()
-        player = null
+        controllerFuture?.let { MediaController.releaseFuture(it) }
+        controllerFuture = null
+        playbackPlayer = null
         super.onDestroy()
     }
 }
