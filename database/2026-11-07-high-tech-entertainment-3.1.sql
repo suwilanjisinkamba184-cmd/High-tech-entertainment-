@@ -49,3 +49,17 @@ grant update on public.bookings to authenticated;
 -- Existing RLS policies already restrict these records to their owners.
 -- Video catalogue, scheduled audio_ads and ad_impressions already have
 -- role-based policies and are intentionally not weakened by this migration.
+
+-- Public avatar delivery; uploads/updates/deletes remain restricted to each owner's UUID folder.
+update storage.buckets
+set public = true,
+    file_size_limit = 5242880,
+    allowed_mime_types = array['image/jpeg','image/png','image/webp']
+where id = 'hte-avatars';
+
+drop policy if exists "Public can read HTE avatar files" on storage.objects;
+create policy "Public can read HTE avatar files" on storage.objects
+for select to anon, authenticated
+using (bucket_id = 'hte-avatars');
+
+-- Existing per-user INSERT/UPDATE/DELETE policies remain in place.
