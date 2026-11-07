@@ -22,13 +22,13 @@ concurrency:
 
 jobs:
   flutter-ui:
-    if: ${{ hashFiles('flutter-ui/pubspec.yaml') != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
 
       - name: Set up Flutter stable
+        if: ${{ hashFiles('flutter-ui/pubspec.yaml') != '' }}
         uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.47.9"
@@ -36,22 +36,27 @@ jobs:
           cache: true
 
       - name: Resolve Flutter dependencies
+        if: ${{ hashFiles('flutter-ui/pubspec.yaml') != '' }}
         working-directory: flutter-ui
         run: flutter pub get
 
       - name: Audit Flutter dependency versions
+        if: ${{ hashFiles('flutter-ui/pubspec.yaml') != '' }}
         working-directory: flutter-ui
         run: flutter pub outdated || true
 
       - name: Analyze Flutter UI
+        if: ${{ hashFiles('flutter-ui/pubspec.yaml') != '' }}
         working-directory: flutter-ui
         run: flutter analyze
 
       - name: Run Flutter widget tests
+        if: ${{ hashFiles('flutter-ui/pubspec.yaml') != '' }}
         working-directory: flutter-ui
         run: flutter test
 
       - name: Upload resolved dependency lockfile
+        if: ${{ hashFiles('flutter-ui/pubspec.yaml') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: hte-flutter-dependencies-${{ github.run_number }}
