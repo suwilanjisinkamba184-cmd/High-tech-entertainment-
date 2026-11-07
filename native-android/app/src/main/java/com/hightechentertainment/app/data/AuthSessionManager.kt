@@ -31,6 +31,8 @@ class AuthSessionManager(
     private var refreshJob: Job? = null
 
     suspend fun restore() {
+        refreshJob?.cancel()
+        refreshJob = null
         val saved = store.read()
         if (saved == null) {
             mutableSession.value = null
