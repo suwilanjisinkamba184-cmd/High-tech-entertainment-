@@ -11,7 +11,8 @@
 - Media3 dependencies and callback deep-link declaration.
 - Supabase PostgREST transport using the existing project URL and publishable key; bounded connect/read timeouts, IO dispatcher, safe relative resource paths and generic response handling. No service-role credential is included and RLS remains authoritative.
 - Published-track catalogue query against the existing `tracks` table, with loading, refresh, empty/error states and local title/artist/genre search.
-- Initial in-app Media3 playback for HTTPS track URLs, including audio-focus handling and UI state synchronized with actual player state. Playback pauses when the Activity leaves the foreground; background playback is not yet implemented.
+- Initial Media3 playback for HTTPS track URLs now runs in a dedicated `MediaSessionService`; the Activity connects through `MediaController`, no longer owns/releases the playback engine, and does not pause playback merely because the UI leaves the foreground.
+- Media3 manages audio focus and exposes the standard media-session surface for system/media controls. Device-level notification, Bluetooth/headset, process-recreation and Android-version behaviour still require physical-device acceptance testing.
 - Native validation workflow pinned to the available Gradle 9.8.2 release; smoke-test assertion aligned with the current home-screen content.
 
 ## Remaining migration work — acceptance is feature-based
@@ -21,7 +22,7 @@
 | Identity | Email/password, Google native sign-in, callback handling, password reset/update, sign-out, session refresh and secure token persistence | Real Supabase test accounts; expired/invalid token and recovery tests |
 | Profiles | Profile read/update, avatar upload, account deletion request and privacy controls | Existing user records remain intact; owner/user isolation |
 | Catalogue | Extend the initial published-track query to artists, releases, genre filters, pagination and robust retry | Live PostgREST data; no demo catalogue |
-| Playback | Move the current in-Activity ExoPlayer to one MediaSessionService; add queue, seek, repeat, shuffle, autoplay, headset/Bluetooth controls, background/resume and notification | Physical-device audio tests, interruption and process recreation |
+| Playback | Add queue management, seek, repeat, shuffle, autoplay and polished Now Playing controls; verify system notification, Bluetooth/headset controls, background/resume and process recreation | Physical-device audio tests, interruption and process recreation |
 | Startup audio | Bundled short startup jingle, separate local player, no visible playback/status UI, never enters queue or ad rotation | Cold/warm launch tests; no splash blocking |
 | Promotions | Admin-managed audio campaigns, server-controlled scheduling/frequency and impressions; no listener ad-disable control | Campaign boundary and playback-order tests |
 | Video | Video catalogue, Media3 playback, orientation/fullscreen, retry and lifecycle handling | Real stored video playback and network interruption |
