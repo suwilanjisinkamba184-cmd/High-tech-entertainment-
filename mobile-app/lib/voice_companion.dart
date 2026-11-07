@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import 'playback_engine.dart';
@@ -44,6 +45,8 @@ class _VoiceCompanionPageState extends State<VoiceCompanionPage> {
       await _tts.setSpeechRate(0.48);
       await _tts.setVolume(1.0);
       final voices = await _tts.getVoices;
+      final preferences = await SharedPreferences.getInstance();
+      final savedVoice = preferences.getString('hte_voice_companion_voice');
       final offline = <Map<String, dynamic>>[];
       for (final raw in voices) {
         if (raw is! Map) continue;
@@ -86,7 +89,6 @@ class _VoiceCompanionPageState extends State<VoiceCompanionPage> {
                 : 'Offline voice services ready.')
             : 'Speech recognition is unavailable. Check microphone permission and Android speech services.';
       });
-      final savedVoice = _selectedVoiceKey;
       if (offline.isNotEmpty) {
         final voice = offline.firstWhere(
           (item) => _voiceKey(item) == savedVoice,
@@ -100,13 +102,15 @@ class _VoiceCompanionPageState extends State<VoiceCompanionPage> {
     }
   }
 
-  Future<void> _applyVoice(Map<String, dynamic> voice, {bool persist = true}) async {
+  Future<void> _applyVoice(Map<String, dynamic> voice) async {
     final name = voice['name']?.toString() ?? '';
     final locale = voice['locale']?.toString() ?? '';
     if (name.isEmpty || locale.isEmpty) return;
     await _tts.setVoice({'name': name, 'locale': locale});
     if (!mounted) return;
     setState(() => _selectedVoiceKey = _voiceKey(voice));
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString('hte_voice_companion_voice', _voiceKey(voice));
   }
 
   Future<void> _speak(String text) async {
@@ -214,9 +218,10 @@ class _VoiceCompanionPageState extends State<VoiceCompanionPage> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedVoice = _offlineVoices.where(
+    final selectedMatches = _offlineVoices.where(
       (voice) => _voiceKey(voice) == _selectedVoiceKey,
-    ).firstOrNull;
+    );
+    final selectedVoice = selectedMatches.isEmpty ? null : selectedMatches.first;
     return Scaffold(
       appBar: AppBar(title: const Text('High-Tech Voice Companion')),
       body: ListView(
