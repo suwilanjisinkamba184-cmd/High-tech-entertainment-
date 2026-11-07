@@ -21,6 +21,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.hightechentertainment.app.data.*
 import kotlinx.coroutines.launch
+import com.hightechentertainment.app.update.NativeUpdateManager
+import com.hightechentertainment.app.update.NativeUpdate
 
 private const val FounderUserId = "b268df9e-eff5-43b9-a38f-869b33add38b"
 
@@ -98,6 +100,9 @@ fun AdditionalFeatureScreen(
     var campaignEnds by remember { mutableStateOf("") }
     var campaignPriority by remember { mutableStateOf("0") }
     var campaigns by remember { mutableStateOf<List<SponsoredAudioAd>>(emptyList()) }
+    var availableUpdate by remember { mutableStateOf<NativeUpdate?>(null) }
+    var updateBusy by remember { mutableStateOf(false) }
+    val updateManager = remember(context) { NativeUpdateManager(context) }
     val isFounder = userId == FounderUserId
 
     fun refresh() {
@@ -206,6 +211,38 @@ fun AdditionalFeatureScreen(
                     ListItem(headlineContent = { Text(booking.type) },
                         supportingContent = { Text("${booking.requestedDate ?: "Date to be arranged"} • ${booking.status}") })
                 }
+            }
+            "App Updates" -> {
+                Text("Check GitHub for a signed High-Tech Entertainment Android release.")
+                Button(enabled = !updateBusy, onClick = {
+                    scope.launch {
+                        updateBusy = true
+                        updateManager.checkForUpdate().onSuccess { update ->
+                            availableUpdate = update
+                            message = if (update == null) "This installation is already up to date." else "Version ${update.versionName} is available."
+                        }.onFailure { message = it.message }
+                        updateBusy = false
+                    }
+                }, modifier = Modifier.fillMaxWidth()) { Text("Check for updates") }
+                availableUpdate?.let { update ->
+                    ElevatedCard(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text("High-Tech Entertainment ${update.versionName}", style = MaterialTheme.typography.titleLarge)
+                            Text("Build ${update.versionCode}")
+                            Text(update.releaseNotes)
+                            Button(enabled = !updateBusy, onClick = {
+                                scope.launch {
+                                    updateBusy = true
+                                    updateManager.downloadVerifyAndInstall(update)
+                                        .onSuccess { message = "Android package installer opened. Follow the system confirmation." }
+                                        .onFailure { message = it.message }
+                                    updateBusy = false
+                                }
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Verify and install update") }
+                        }
+                    }
+                }
+                Text("Updates are full signed APK installs. The app checks package identity, version, SHA-256 and signing certificate before opening Android's installer.")
             }
             "Profile" -> {
                 OutlinedTextField(profile.displayName, { profile = profile.copy(displayName = it) },
