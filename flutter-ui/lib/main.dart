@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:file_picker/file_picker.dart';
 
 const _gold = Color(0xFFD7A83E);
 const _black = Color(0xFF080808);
@@ -1568,50 +1567,20 @@ class _ProfilePanelState extends State<_ProfilePanel> {
   }
 
   Future<String?> _pickAndUploadFounderMedia(String kind) async {
-    final picked = await FilePicker.platform.pickFiles(
-      type: kind == 'Track' ? FileType.audio : FileType.video,
-      withData: kind == 'Track',
-    );
-    if (picked == null || picked.files.isEmpty) return null;
-    final file = picked.files.single;
-    final extension = (file.extension ?? '').toLowerCase();
-    final contentType = switch (extension) {
-      'mp3' => 'audio/mpeg',
-      'm4a' => 'audio/mp4',
-      'aac' => 'audio/aac',
-      'wav' => 'audio/wav',
-      'ogg' => 'audio/ogg',
-      'mp4' => 'video/mp4',
-      'webm' => 'video/webm',
-      'mov' => 'video/quicktime',
-      'm4v' => 'video/x-m4v',
-      _ => '',
-    };
-    if (contentType.isEmpty) {
-      _showFounderMessage('That file format is not supported.');
-      return null;
-    }
     try {
-      final response = kind == 'Track'
-          ? await _appChannel.invokeMapMethod<String, dynamic>('uploadAudio', {
-              'bytes': file.bytes,
-              'contentType': contentType,
-              'extension': extension,
-            })
-          : await _appChannel.invokeMapMethod<String, dynamic>('uploadVideo', {
-              'uri': file.path == null ? '' : Uri.file(file.path!).toString(),
-              'contentType': contentType,
-              'extension': extension,
-            });
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'pickAndUploadMedia', {'kind': kind == 'Track' ? 'audio' : 'video'});
       if (response?['success'] == true) {
         _showFounderMessage('Media uploaded securely.');
         return response?['url']?.toString();
       }
-      _showFounderMessage(response?['message']?.toString() ?? 'Upload failed.');
+      if (response?['cancelled'] != true) {
+        _showFounderMessage(response?['message']?.toString() ?? 'Upload failed.');
+      }
     } on PlatformException catch (error) {
       _showFounderMessage(error.message ?? 'Upload failed.');
     } on MissingPluginException {
-      _showFounderMessage('Media upload is unavailable in this build.');
+      _showFounderMessage('Media picker is unavailable in this build.');
     }
     return null;
   }
@@ -1622,33 +1591,19 @@ class _ProfilePanelState extends State<_ProfilePanel> {
   }
 
   Future<void> _pickAndUploadAvatar() async {
-    final picked = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
-    if (picked == null || picked.files.isEmpty) return;
-    final file = picked.files.single;
-    final extension = (file.extension ?? '').toLowerCase();
-    final contentType = switch (extension) {
-      'png' => 'image/png',
-      'webp' => 'image/webp',
-      'jpg' || 'jpeg' => 'image/jpeg',
-      _ => '',
-    };
-    if (contentType.isEmpty || file.bytes == null) {
-      _showFounderMessage('Choose a JPG, PNG or WebP image.');
-      return;
-    }
     try {
-      final response = await _appChannel.invokeMapMethod<String, dynamic>('uploadAvatar', {
-        'bytes': file.bytes,
-        'contentType': contentType,
-      });
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'pickAndUploadMedia', {'kind': 'image'});
       if (response?['success'] == true) {
         _avatarUrl = response?['url']?.toString() ?? '';
         _showFounderMessage('Profile picture uploaded. Save your profile to apply it.');
-      } else {
+      } else if (response?['cancelled'] != true) {
         _showFounderMessage(response?['message']?.toString() ?? 'Profile picture upload failed.');
       }
     } on PlatformException catch (error) {
       _showFounderMessage(error.message ?? 'Profile picture upload failed.');
+    } on MissingPluginException {
+      _showFounderMessage('Image picker is unavailable in this build.');
     }
   }
 
