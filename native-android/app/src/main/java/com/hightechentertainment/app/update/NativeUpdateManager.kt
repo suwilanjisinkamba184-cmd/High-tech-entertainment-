@@ -126,7 +126,7 @@ class NativeUpdateManager(private val context: Context) {
             check(update.versionCode > PackageInfoCompat.getLongVersionCode(installedInfo)) {
                 "This update is not newer than the installed version."
             }
-            withContext(Dispatchers.Main) {
+            val installAllowed = withContext(Dispatchers.Main) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
                     !context.packageManager.canRequestPackageInstalls()
                 ) {
@@ -134,10 +134,13 @@ class NativeUpdateManager(private val context: Context) {
                         Uri.parse("package:${context.packageName}"))
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     context.startActivity(settingsIntent)
-                    error("Allow High-Tech Entertainment to install updates, then return and tap Install update again.")
-                }
-                installWithPackageInstaller(apkFile, update.versionCode)
+                    false
+                } else true
             }
+            check(installAllowed) {
+                "Allow High-Tech Entertainment to install updates, then return and tap Install update again."
+            }
+            installWithPackageInstaller(apkFile, update.versionCode)
         }
     }
 
@@ -157,7 +160,7 @@ class NativeUpdateManager(private val context: Context) {
                 .setAction("com.hightechentertainment.app.UPDATE_INSTALL_STATUS")
                 .putExtra("update_version_code", versionCode)
             val flags = PendingIntent.FLAG_UPDATE_CURRENT or
-                if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0
+                (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
             val pendingIntent = PendingIntent.getActivity(context, sessionId, statusIntent, flags)
             session.commit(pendingIntent.intentSender)
         }
