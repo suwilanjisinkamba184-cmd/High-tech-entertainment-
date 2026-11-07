@@ -3,6 +3,8 @@ package com.hightechentertainment.app
 import android.view.ViewGroup
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -65,7 +67,7 @@ fun AdditionalFeatureScreen(
     }
     LaunchedEffect(destination, userId) { refresh() }
 
-    Column(Modifier.fillMaxSize().padding(18.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(destination, style = MaterialTheme.typography.headlineSmall)
             TextButton(onClick = { refresh() }, enabled = !busy) { Text("Refresh") }
@@ -75,15 +77,13 @@ fun AdditionalFeatureScreen(
         when (destination) {
             "Videos" -> {
                 if (videos.isEmpty() && !busy) Text("No published videos are available yet.")
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(videos, key = { it.id }) { video ->
-                        ElevatedCard(Modifier.fillMaxWidth().clickable { selectedVideo = video }) {
-                            Column(Modifier.padding(16.dp)) {
-                                Text(video.title, style = MaterialTheme.typography.titleMedium)
-                                Text(video.artist, style = MaterialTheme.typography.labelMedium)
-                                if (video.description.isNotBlank()) Text(video.description)
-                                Text("PLAY VIDEO", color = MaterialTheme.colorScheme.primary)
-                            }
+                videos.forEach { video ->
+                    ElevatedCard(Modifier.fillMaxWidth().padding(vertical = 5.dp).clickable { selectedVideo = video }) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(video.title, style = MaterialTheme.typography.titleMedium)
+                            Text(video.artist, style = MaterialTheme.typography.labelMedium)
+                            if (video.description.isNotBlank()) Text(video.description)
+                            Text("PLAY VIDEO", color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
