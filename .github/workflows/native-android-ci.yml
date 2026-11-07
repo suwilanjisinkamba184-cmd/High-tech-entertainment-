@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - "native-android/**"
+      - "flutter-ui/**"
       - ".github/workflows/native-android-ci.yml"
   push:
-    branches: [main]
+    branches: [main, "feature/**"]
     paths:
       - "native-android/**"
+      - "flutter-ui/**"
       - ".github/workflows/native-android-ci.yml"
   workflow_dispatch:
 
