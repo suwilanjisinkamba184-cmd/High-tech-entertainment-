@@ -1074,6 +1074,7 @@ class _LibraryPanel extends StatefulWidget {
 
 class _LibraryPanelState extends State<_LibraryPanel> {
   List<Map<String, dynamic>> _playlists = [];
+  List<String> _historyIds = [];
   bool _loadingPlaylists = true;
   String? _playlistError;
 
@@ -1081,6 +1082,16 @@ class _LibraryPanelState extends State<_LibraryPanel> {
   void initState() {
     super.initState();
     _loadPlaylists();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    try {
+      final ids = await _appChannel.invokeListMethod<String>('getListeningHistory') ?? [];
+      if (mounted) setState(() => _historyIds = ids);
+    } on PlatformException {
+      // History is optional; keep the rest of the library available.
+    }
   }
 
   Future<void> _loadPlaylists() async {
@@ -1196,6 +1207,7 @@ class _LibraryPanelState extends State<_LibraryPanel> {
       onRefresh: () async {
         await widget.onRefresh();
         await _loadPlaylists();
+        await _loadHistory();
       },
       child: ListView(
         padding: const EdgeInsets.all(16),
@@ -1296,6 +1308,24 @@ class _LibraryPanelState extends State<_LibraryPanel> {
                 ],
               ),
             )),
+          const Divider(height: 34, color: Colors.white12),
+          const Text('RECENTLY PLAYED', style: TextStyle(
+            color: _gold, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+          const SizedBox(height: 8),
+          if (_historyIds.isEmpty)
+            const Text('Tracks you play will appear here.', style: TextStyle(color: Colors.white60))
+          else
+            ..._historyIds.toSet().map((id) {
+              final track = widget.tracks.where((item) => item['id']?.toString() == id).firstOrNull;
+              if (track == null) return const SizedBox.shrink();
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.history, color: _gold),
+                title: Text(track['title']?.toString() ?? 'Untitled'),
+                subtitle: Text(track['artist']?.toString() ?? ''),
+                onTap: () => widget.onPlay(track),
+              );
+            }),
           const Divider(height: 34, color: Colors.white12),
           const Text('SAVED TRACKS', style: TextStyle(
             color: _gold, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
