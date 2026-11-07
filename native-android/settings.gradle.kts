@@ -1,13 +1,10 @@
 pluginManagement {
     repositories { google(); mavenCentral(); gradlePluginPortal() }
 }
-plugins {
-    // Kotlin Gradle Plugin 2.4.21 is the current stable release and is compatible with AGP 8.11.1.
-    id("org.jetbrains.kotlin.android") version "2.4.21" apply false
-}
 
-// AGP 8.11.1 + KGP 2.4.21 are within Kotlin's published compatibility range.
-// The generated Flutter module is included below and reads this root plugin version.
+// Keep AGP and KGP declarations in the root project plugins block so their
+// implementation classes share the project plugin classloader. Putting KGP
+// in the settings plugins block isolates it from AGP's BaseExtension API.
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     val storageUrl = System.getenv("FLUTTER_STORAGE_BASE_URL") ?: "https://storage.googleapis.com"
