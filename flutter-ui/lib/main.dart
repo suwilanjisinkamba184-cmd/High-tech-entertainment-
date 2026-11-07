@@ -2066,7 +2066,19 @@ class _ProfilePanelState extends State<_ProfilePanel> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(controller: title, decoration: const InputDecoration(labelText: 'Campaign title')),
-              TextField(controller: audioUrl, decoration: const InputDecoration(labelText: 'Secure audio URL')),
+              TextField(controller: audioUrl, readOnly: true,
+                decoration: const InputDecoration(labelText: 'Uploaded campaign audio URL')),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () async {
+                    final url = await _pickAndUploadFounderMedia('Track');
+                    if (url != null) audioUrl.text = url;
+                  },
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('UPLOAD CAMPAIGN AUDIO'),
+                ),
+              ),
               TextField(controller: startsAt, decoration: const InputDecoration(labelText: 'Start time (ISO 8601, optional)')),
               TextField(controller: endsAt, decoration: const InputDecoration(labelText: 'End time (ISO 8601, optional)')),
               TextField(controller: priority, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Priority (0–1000)')),
