@@ -16,9 +16,10 @@
 - Added an automatic session manager for persisted-session restoration, refresh-before-expiry scheduling and retry after transient refresh failures.
 - Connected the Activity to the session manager and encrypted session store. The native app now gates its listener interface behind an authenticated session, restores saved sessions on launch, and exposes sign-out.
 - Added a native email/password sign-in and sign-up screen plus password-reset request UI. These flows use the existing Supabase Auth REST endpoints and the publishable key only.
-- Authentication is partially integrated, not yet fully accepted: Google OAuth/PKCE browser callback handling, email-confirmation UX, password update, authenticated catalogue requests, account/profile UI and real-account/RLS isolation tests remain.
+- Supabase signup now handles email-confirmation-required responses without treating a missing immediate session as a server failure. Authentication is still partial: Google OAuth/PKCE browser callback handling, password update, authenticated catalogue requests, account/profile UI and real-account/RLS isolation tests remain.
 - Initial Media3 playback for HTTPS track URLs now runs in a dedicated `MediaSessionService`; the Activity connects through `MediaController`, no longer owns/releases the playback engine, and does not pause playback merely because the UI leaves the foreground.
-- Media3 manages audio focus and exposes the standard media-session surface for system/media controls. Device-level notification, Bluetooth/headset, process-recreation and Android-version behaviour still require physical-device acceptance testing.
+- Media3 manages audio focus and exposes the standard media-session surface for system/media controls. The catalogue selection now creates a queue of playable tracks, supports next/previous, repeat off/all/one, shuffle and seek scrubbing. Device-level notification, Bluetooth/headset, process-recreation and Android-version behaviour still require physical-device acceptance testing.
+- Added a native one-shot startup-jingle player that is separate from the Media3 queue and does not request audio focus. Gradle copies the existing `mobile-app/assets/high-tech-startup.mp3` into generated Android `res/raw` resources before `preBuild`; this must be confirmed in a successful APK build and tested on a device.
 - Native validation workflow pinned to the available Gradle 9.8.2 release; smoke-test assertion aligned with the current home-screen content.
 
 ## Remaining migration work — acceptance is feature-based
@@ -28,8 +29,8 @@
 | Identity | Email/password, Google OAuth callback handling, password reset/update, sign-out, session refresh and secure token persistence | Email/password UI and Activity-owned session manager integrated; Google OAuth/PKCE, email-confirmation UX, password update and real-account/RLS tests remain |
 | Profiles | Profile read/update, avatar upload, account deletion request and privacy controls | Existing user records remain intact; owner/user isolation |
 | Catalogue | Extend the initial published-track query to artists, releases, genre filters, pagination and robust retry | Live PostgREST data; no demo catalogue |
-| Playback | Add queue management, seek, repeat, shuffle, autoplay and polished Now Playing controls; verify system notification, Bluetooth/headset controls, background/resume and process recreation | Physical-device audio tests, interruption and process recreation |
-| Startup audio | Bundled short startup jingle, separate local player, no visible playback/status UI, never enters queue or ad rotation | Cold/warm launch tests; no splash blocking |
+| Playback | Queue, seek, repeat, shuffle and polished Now Playing controls; verify system notification, Bluetooth/headset controls, background/resume and process recreation | Queue/transport controls and seek UI implemented; autoplay, track metadata sync edge cases and physical-device audio tests remain |
+| Startup audio | Bundled short startup jingle, separate local player, no visible playback/status UI, never enters queue or ad rotation | Resource-generation and isolated player implementation added; APK resource inclusion and cold/warm launch tests remain |
 | Promotions | Admin-managed audio campaigns, server-controlled scheduling/frequency and impressions; no listener ad-disable control | Campaign boundary and playback-order tests |
 | Video | Video catalogue, Media3 playback, orientation/fullscreen, retry and lifecycle handling | Real stored video playback and network interruption |
 | Library | Favourites, personal playlists, listening history, continue listening and share links | Authenticated user-scoped persistence and RLS isolation |
