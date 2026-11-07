@@ -2,6 +2,7 @@ package com.hightechentertainment.app
 
 import android.content.ComponentName
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -29,14 +30,57 @@ class FlutterHostActivity : FlutterActivity() {
     private val appChannelName = "com.hightechentertainment.app/data"
     private val hteApplication: HteApplication
         get() = application as HteApplication
+    private val authRepository
+        get() = hteApplication.authRepository
+    private val sessionManager
+        get() = hteApplication.sessionManager
+    private var oauthInProgress = false
     private var playbackFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
     private val offlineDownloads by lazy { OfflineMusicDownloads(applicationContext) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        lifecycleScope.launch { hteApplication.sessionManager.restore() }
+        lifecycleScope.launch { sessionManager.restore() }
         connectToPlaybackService()
+        handleOAuthCallback(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleOAuthCallback(intent)
+    }
+
+    private fun startGoogleOAuth(): Boolean {
+        val redirectUri = "com.hightechentertainment.app://login-callback"
+        val authorizationUrl = authRepository.googleOAuthAuthorizationUrl(redirectUri) ?: return false
+        return runCatching {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(authorizationUrl)))
+            true
+        }.getOrDefault(false)
+    }
+
+    private fun handleOAuthCallback(callbackIntent: Intent?) {
+        val callback = callbackIntent?.data ?: return
+        if (callback.scheme != "com.hightechentertainment.app" || callback.host != "login-callback") return
+        val providerError = callback.getQueryParameter("error_description")
+            ?: callback.getQueryParameter("error")
+        if (!providerError.isNullOrBlank()) return
+        val code = callback.getQueryParameter("code")?.takeIf { it.isNotBlank() } ?: return
+        if (oauthInProgress) return
+        oauthInProgress = true
+        lifecycleScope.launch {
+            try {
+                when (val auth = authRepository.exchangeGoogleOAuthCode(code)) {
+                    is AuthResult.Success -> sessionManager.accept(auth.session)
+                    is AuthResult.Failure -> android.util.Log.w("HTE-OAuth", auth.message)
+                    is AuthResult.Notice -> android.util.Log.i("HTE-OAuth", auth.message)
+                }
+            } finally {
+                oauthInProgress = false
+            }
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -63,6 +107,13 @@ class FlutterHostActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, appChannelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "startGoogleOAuth" -> {
+                        val started = startGoogleOAuth()
+                        result.success(mapOf(
+                            "success" to started,
+                            "message" to if (started) null else "Google sign-in could not be started. Check the OAuth configuration and try again."
+                        ))
+                    }
                     "openVoiceCompanion" -> {
                         startActivity(Intent(this, MainActivity::class.java).apply {
                             putExtra(MainActivity.EXTRA_OPEN_VOICE_COMPANION, true)
