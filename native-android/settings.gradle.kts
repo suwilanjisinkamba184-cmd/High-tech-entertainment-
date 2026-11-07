@@ -2,13 +2,7 @@ pluginManagement {
     repositories { google(); mavenCentral(); gradlePluginPortal() }
 }
 
-// Kotlin 2.2.21 is required for full compatibility with AGP 8.11.1.
-// Kotlin 2.2.10 supports AGP only through 8.10.0 and fails during plugin
-// application with NoClassDefFoundError: com/android/build/gradle/api/BaseVariant.
-// Keep Gradle 8.14.3, JDK 17, and the Flutter-generated integration unchanged.
-plugins {
-    id("org.jetbrains.kotlin.android") version "2.2.21" apply false
-}
+// AGP 9.0.1 provides built-in Kotlin; do not apply the legacy Kotlin Android plugin.
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     val storageUrl = System.getenv("FLUTTER_STORAGE_BASE_URL") ?: "https://storage.googleapis.com"
