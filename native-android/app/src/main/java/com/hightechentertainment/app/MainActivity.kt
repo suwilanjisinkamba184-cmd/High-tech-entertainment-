@@ -49,6 +49,7 @@ import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.hightechentertainment.app.playback.PlaybackService
 import com.hightechentertainment.app.playback.StartupJingle
+import com.hightechentertainment.app.playback.OfflineMusicDownloads
 import com.hightechentertainment.app.data.NativeTrack
 import com.hightechentertainment.app.data.AuthResult
 import kotlinx.coroutines.launch
@@ -69,6 +70,7 @@ class MainActivity : ComponentActivity() {
     private val sessionManager
         get() = hteApplication.sessionManager
     private var controllerFuture: ListenableFuture<MediaController>? = null
+    private val offlineDownloads by lazy { OfflineMusicDownloads(applicationContext) }
     private var playbackPlayer by mutableStateOf<Player?>(null)
     private var playbackIsReady by mutableStateOf(false)
     private var playbackIsActive by mutableStateOf(false)
@@ -176,6 +178,10 @@ class MainActivity : ComponentActivity() {
                     userLibraryRepository = hteApplication.userLibraryRepository,
                     sponsoredAudioRepository = hteApplication.sponsoredAudioRepository,
                     userId = signedInSession.userId,
+                    onDownloadTrack = { track ->
+                        val id = offlineDownloads.enqueue(track)
+                        error = if (id == null) "This track has no secure downloadable audio file." else "Download queued. Android will notify you when it is ready offline."
+                    },
                     onToggleFavourite = { track ->
                         lifecycleScope.launch {
                             val isSaved = track.id in favouriteIds
@@ -214,7 +220,8 @@ class MainActivity : ComponentActivity() {
                                         add(MediaItem.Builder().setMediaId("hte-ad:${ad.id}").setUri(ad.audioUrl).build())
                                     }
                                     addAll(musicQueue.map { item ->
-                                        MediaItem.Builder().setMediaId(item.id).setUri(item.audioUrl!!).build()
+                                        val uri = offlineDownloads.localUri(item.id)?.toString() ?: item.audioUrl!!
+                                        MediaItem.Builder().setMediaId(item.id).setUri(uri).build()
                                     })
                                 }
                                 activePlayer.setMediaItems(queue, if (sponsoredAd != null) 0 else startIndex, C.TIME_UNSET)
@@ -397,6 +404,7 @@ private fun HighTechApp(
     sponsoredAudioRepository: com.hightechentertainment.app.data.SponsoredAudioRepository,
     userId: String?,
     onToggleFavourite: (NativeTrack) -> Unit,
+    onDownloadTrack: (NativeTrack) -> Unit,
     loading: Boolean,
     error: String?,
     currentTrack: NativeTrack?,
@@ -577,6 +585,7 @@ private fun HighTechApp(
                                 playing = playing && currentTrack?.id == track.id,
                                 isFavorite = track.id in favouriteIds,
                                 onFavourite = { onToggleFavourite(track) },
+                                onDownload = { onDownloadTrack(track) },
                                 onClick = { onPlay(track) }
                             )
                         }
@@ -593,6 +602,7 @@ private fun HighTechApp(
                                 playing = playing && currentTrack?.id == track.id,
                                 isFavorite = true,
                                 onFavourite = { onToggleFavourite(track) },
+                                onDownload = { onDownloadTrack(track) },
                                 onClick = { onPlay(track) }
                             )
                         }
@@ -680,6 +690,7 @@ private fun TrackRow(
     playing: Boolean,
     isFavorite: Boolean,
     onFavourite: () -> Unit,
+    onDownload: () -> Unit,
     onClick: () -> Unit
 ) {
     Card(
@@ -712,6 +723,9 @@ private fun TrackRow(
                     contentDescription = if (isFavorite) "Remove from favourites" else "Add to favourites",
                     tint = if (isFavorite) HteGold else HteMuted
                 )
+            }
+            IconButton(onClick = onDownload) {
+                Icon(Icons.Rounded.Download, contentDescription = "Download for offline listening", tint = HteMuted)
             }
             Text("PLAY", color = HteGold, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
