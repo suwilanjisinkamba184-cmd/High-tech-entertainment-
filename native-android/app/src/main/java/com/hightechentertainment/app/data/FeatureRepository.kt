@@ -304,6 +304,81 @@ class FeatureRepository(
         }
     }
 
+    suspend fun draftDetails(table: String, id: String): Result<Map<String, String>> = runCatching {
+        userId()
+        val columns = when (table) {
+            "tracks" -> "id,title,artist,genre,audio_url"
+            "artists" -> "id,name,bio"
+            "releases" -> "id,title,description"
+            "videos" -> "id,title,artist,description,video_url"
+            else -> error("Unsupported draft type.")
+        }
+        val response = client.get(table, mapOf("id" to "eq.$id", "is_published" to "eq.false", "limit" to "1"), columns)
+        check(response.isSuccessful) { "Could not load draft (HTTP ${response.statusCode})." }
+        val row = JSONArray(response.body).optJSONObject(0) ?: error("Draft not found or already published.")
+        buildMap {
+            for (key in columns.split(",").filter { it != "id" }) {
+                put(key, row.optString(key).takeUnless { it == "null" }.orEmpty())
+            }
+        }
+    }
+
+    suspend fun updateDraft(
+        table: String,
+        id: String,
+        title: String,
+        artist: String,
+        description: String,
+        mediaUrl: String,
+        genre: String
+    ): Result<Unit> = runCatching {
+        userId()
+        val body = JSONObject()
+        when (table) {
+            "tracks" -> {
+                require(title.isNotBlank() && artist.isNotBlank() && mediaUrl.startsWith("https://")) {
+                    "Track title, artist and secure audio URL are required."
+                }
+                body.put("title", title.trim()).put("artist", artist.trim())
+                    .put("genre", genre.trim()).put("audio_url", mediaUrl.trim())
+            }
+            "artists" -> {
+                require(title.isNotBlank()) { "Artist name is required." }
+                body.put("name", title.trim()).put("bio", description.trim())
+            }
+            "releases" -> {
+                require(title.isNotBlank()) { "Release title is required." }
+                body.put("title", title.trim()).put("description", description.trim())
+            }
+            "videos" -> {
+                require(title.isNotBlank() && mediaUrl.startsWith("https://")) {
+                    "Video title and secure video URL are required."
+                }
+                body.put("title", title.trim()).put("artist", artist.trim())
+                    .put("description", description.trim()).put("video_url", mediaUrl.trim())
+            }
+            else -> error("Unsupported draft type.")
+        }
+        val response = client.request(
+            "PATCH", "/rest/v1/$table",
+            mapOf("id" to "eq.$id", "is_published" to "eq.false"),
+            body.toString(), mapOf("Prefer" to "return=minimal")
+        )
+        check(response.isSuccessful) { "Could not update draft (HTTP ${response.statusCode})." }
+    }
+
+    suspend fun deleteDraft(table: String, id: String): Result<Unit> = runCatching {
+        userId()
+        require(table in setOf("tracks", "artists", "releases", "videos")) { "Unsupported draft type." }
+        val response = client.request(
+            "DELETE", "/rest/v1/$table",
+            mapOf("id" to "eq.$id", "is_published" to "eq.false"),
+            headers = mapOf("Prefer" to "return=representation")
+        )
+        check(response.isSuccessful) { "Could not delete draft (HTTP ${response.statusCode})." }
+        check(JSONArray(response.body).length() > 0) { "Draft not found, or it has already been published." }
+    }
+
     suspend fun setDraftPublished(table: String, id: String, published: Boolean): Result<Unit> = runCatching {
         userId()
         require(table in setOf("tracks", "artists", "releases", "videos"))
