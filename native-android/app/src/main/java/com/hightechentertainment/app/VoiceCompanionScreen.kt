@@ -53,7 +53,11 @@ fun VoiceCompanionScreen(
     onNavigate: (String) -> Unit,
     onSearch: (String) -> Unit,
     onPlayFavourites: () -> Unit,
-    isFounder: Boolean
+    isFounder: Boolean,
+    tokenRepository: VoiceSessionTokenRepository,
+    userId: String,
+    tracks: List<NativeTrack>,
+    favouriteIds: Set<String>
 ) {
     val context = LocalContext.current
     var status by remember { mutableStateOf("Checking on-device speech services…") }
@@ -194,6 +198,21 @@ fun VoiceCompanionScreen(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        OnlineVoiceCompanionPanel(
+            tokenRepository = tokenRepository,
+            userId = userId,
+            tracks = tracks,
+            favouriteIds = favouriteIds,
+            isFounder = isFounder,
+            onPause = onPause,
+            onResume = onResume,
+            onNext = onNext,
+            onPrevious = onPrevious,
+            onStop = onStop,
+            onNavigate = onNavigate,
+            onSearch = onSearch,
+            onPlayFavourites = onPlayFavourites
+        )
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF201A10)),
             shape = RoundedCornerShape(22.dp)
