@@ -23,6 +23,10 @@ Native Android application workstream using Kotlin, Jetpack Compose and AndroidX
 - Private Founder Studio entry, founder-only RLS-backed draft creation/publishing for tracks, artists, releases and videos, audio/video upload and sponsored-audio campaign scheduling.
 - Scheduled sponsored audio inserted before music, with ad impression records and no listener-side ad-disable switch.
 - GitHub signed-release update checker and installer that verifies package identity, higher version code, APK SHA-256 and signing certificate before Android's user-approved install flow.
+- Initial native Voice Companion screen with Android on-device speech recognition, local-only TTS voice selection, saved voice preference and offline playback/navigation/search commands.
+
+## Voice Companion scope
+The initial native voice increment is press-to-talk only. It uses Android's on-device SpeechRecognizer when the device reports that an offline recognizer is available, and lists only Text-to-Speech voices that do not require a network connection. The microphone permission is requested only when the user taps the voice button. No always-on wake word is enabled. Offline language-pack availability and the actual selected voice must be verified on the target device. Online ElevenLabs commands, website integration, news/release announcements, recommendations and proactive notification delivery remain future integration work.
 
 ## Supabase integration
 The existing production project already contained profiles, videos, user_favorites, playlists, playlist_tracks, listening_history, audio_ads and ad_impressions. The native implementation reuses those exact tables; it does not create parallel library tables.
