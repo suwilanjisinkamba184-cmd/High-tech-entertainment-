@@ -1403,6 +1403,42 @@ class _ProfilePanelState extends State<_ProfilePanel> {
     }
   }
 
+  Future<void> _changePassword() async {
+    final password = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Change password'),
+        content: TextField(
+          controller: password,
+          obscureText: true,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'New password (8+ characters)'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('UPDATE')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      if (password.text.length < 8) {
+        if (mounted) setState(() => _message = 'Use a password with at least 8 characters.');
+      } else {
+        try {
+          final response = await _appChannel.invokeMapMethod<String, dynamic>(
+            'updatePassword', {'password': password.text});
+          if (mounted) setState(() => _message = response?['success'] == true
+              ? 'Password updated successfully.'
+              : response?['message']?.toString() ?? 'Password update failed.');
+        } on PlatformException catch (error) {
+          if (mounted) setState(() => _message = error.message ?? 'Password update failed.');
+        }
+      }
+    }
+    password.dispose();
+  }
+
   Future<void> _submitBooking() async {
     setState(() { _saving = true; _message = null; });
     try {
@@ -1731,6 +1767,12 @@ class _ProfilePanelState extends State<_ProfilePanel> {
               FilledButton(onPressed: _saving ? null : _saveProfile,
                 style: FilledButton.styleFrom(backgroundColor: _gold, foregroundColor: _black),
                 child: const Text('SAVE PROFILE')),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _saving ? null : _changePassword,
+                icon: const Icon(Icons.lock_reset),
+                label: const Text('CHANGE PASSWORD'),
+              ),
             ],
           ),
         ),
