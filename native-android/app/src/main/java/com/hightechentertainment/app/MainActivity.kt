@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.VideoLibrary
@@ -40,6 +41,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
@@ -481,9 +483,20 @@ private fun HighTechApp(
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var moreExpanded by rememberSaveable { mutableStateOf(false) }
     var search by rememberSaveable { mutableStateOf("") }
+    val context = LocalContext.current
     val visibleTracks = tracks.filter {
         it.title.contains(search, true) || it.artist.contains(search, true) ||
             (it.genre?.contains(search, true) == true)
+    }
+    fun shareTrack(track: NativeTrack) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(
+                Intent.EXTRA_TEXT,
+                "Listen to ${track.title} by ${track.artist} on High-Tech Entertainment.\nhttps://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/"
+            )
+        }
+        context.startActivity(Intent.createChooser(shareIntent, "Share track"))
     }
 
     Scaffold(
@@ -668,6 +681,7 @@ private fun HighTechApp(
                                 isFavorite = track.id in favouriteIds,
                                 onFavourite = { onToggleFavourite(track) },
                                 onDownload = { onDownloadTrack(track) },
+                                onShare = { shareTrack(track) },
                                 onClick = { onPlay(track) }
                             )
                         }
@@ -813,6 +827,7 @@ private fun TrackRow(
     isFavorite: Boolean,
     onFavourite: () -> Unit,
     onDownload: () -> Unit,
+    onShare: () -> Unit,
     onClick: () -> Unit
 ) {
     Card(
@@ -843,6 +858,9 @@ private fun TrackRow(
                 Icon(if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                     contentDescription = if (isFavorite) "Remove from favourites" else "Add to favourites",
                     tint = if (isFavorite) HteGold else HteMuted)
+            }
+            IconButton(onClick = onShare) {
+                Icon(Icons.Rounded.Share, contentDescription = "Share track", tint = HteMuted)
             }
             IconButton(onClick = onDownload) {
                 Icon(Icons.Rounded.Download, contentDescription = "Download for offline listening", tint = HteMuted)
