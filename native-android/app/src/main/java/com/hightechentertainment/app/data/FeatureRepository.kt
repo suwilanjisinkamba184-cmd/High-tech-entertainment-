@@ -20,6 +20,15 @@ data class NativeArtist(
     val imageUrl: String?
 )
 
+data class NativeRelease(
+    val id: String,
+    val title: String,
+    val description: String,
+    val coverUrl: String?,
+    val releaseDate: String?,
+    val spotifyUrl: String?
+)
+
 data class NativeProfile(
     val displayName: String,
     val bio: String,
@@ -75,6 +84,32 @@ class FeatureRepository(
                     slug = row.optString("slug").takeIf { it.isNotBlank() && it != "null" },
                     bio = row.optString("bio").takeIf { it != "null" }.orEmpty(),
                     imageUrl = row.optString("image_url").takeIf { it.startsWith("https://") }
+                ))
+            }
+        }
+    }
+
+    suspend fun publishedReleases(): Result<List<NativeRelease>> = runCatching {
+        val response = client.get(
+            "releases",
+            mapOf("is_published" to "eq.true", "order" to "release_date.desc.nullslast,created_at.desc", "limit" to "100"),
+            "id,title,description,cover_url,release_date,spotify_url"
+        )
+        check(response.isSuccessful) { "Release catalogue unavailable (HTTP ${response.statusCode})." }
+        val rows = JSONArray(response.body)
+        buildList {
+            for (i in 0 until rows.length()) {
+                val row = rows.optJSONObject(i) ?: continue
+                val id = row.optString("id")
+                val title = row.optString("title").trim()
+                if (id.isBlank() || title.isBlank()) continue
+                add(NativeRelease(
+                    id = id,
+                    title = title,
+                    description = row.optString("description").takeUnless { it == "null" }.orEmpty(),
+                    coverUrl = row.optString("cover_url").takeIf { it.startsWith("https://") },
+                    releaseDate = row.optString("release_date").takeIf { it.isNotBlank() && it != "null" },
+                    spotifyUrl = row.optString("spotify_url").takeIf { it.startsWith("https://") }
                 ))
             }
         }
