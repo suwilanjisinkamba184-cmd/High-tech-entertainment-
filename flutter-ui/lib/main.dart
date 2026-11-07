@@ -1669,6 +1669,16 @@ class _ProfilePanelState extends State<_ProfilePanel> {
   String _avatarUrl = '';
   List<Map<String, dynamic>> _bookings = [];
   Map<String, dynamic>? _founder;
+  Map<String, dynamic> _preferences = {
+    'autoplay': true,
+    'shuffle': false,
+    'crossfadeSeconds': 0,
+    'audioQuality': 'high',
+    'wifiOnlyDownloads': true,
+    'releaseNotifications': true,
+    'artistNotifications': true,
+    'promotionalNotifications': false,
+  };
 
   @override
   void initState() {
@@ -1694,6 +1704,7 @@ class _ProfilePanelState extends State<_ProfilePanel> {
     try {
       final profile = await _appChannel.invokeMapMethod<String, dynamic>('getProfile');
       final bookings = await _appChannel.invokeListMethod<dynamic>('getMyBookings') ?? [];
+      final preferences = await _appChannel.invokeMapMethod<String, dynamic>('getAppPreferences');
       final founder = await _appChannel.invokeMapMethod<String, dynamic>('getFounderData');
       if (!mounted) return;
       _displayName.text = profile?['displayName']?.toString() ?? '';
@@ -1702,6 +1713,7 @@ class _ProfilePanelState extends State<_ProfilePanel> {
       _avatarUrl = profile?['avatarUrl']?.toString() ?? '';
       setState(() {
         _bookings = bookings.whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList();
+        if (preferences != null) _preferences = {..._preferences, ...preferences};
         _founder = founder?['authorized'] == true ? founder : null;
         _loading = false;
       });
@@ -1711,6 +1723,23 @@ class _ProfilePanelState extends State<_ProfilePanel> {
         _loading = false;
       });
     }
+  }
+
+  Future<void> _savePreferences() async {
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>(
+        'saveAppPreferences', _preferences);
+      if (result?['success'] != true && mounted) {
+        setState(() => _message = result?['message']?.toString() ?? 'Settings could not be saved.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Settings could not be saved.');
+    }
+  }
+
+  Future<void> _updatePreference(String key, dynamic value) async {
+    setState(() => _preferences[key] = value);
+    await _savePreferences();
   }
 
   Future<void> _saveProfile() async {
@@ -2303,6 +2332,77 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                 icon: const Icon(Icons.delete_outline),
                 label: const Text('REQUEST ACCOUNT DELETION'),
               ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        _PanelCard(
+          title: 'App preferences',
+          child: Column(
+            children: [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Autoplay next track'),
+                value: _preferences['autoplay'] == true,
+                activeThumbColor: _gold,
+                onChanged: (value) => _updatePreference('autoplay', value),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Shuffle playback'),
+                value: _preferences['shuffle'] == true,
+                activeThumbColor: _gold,
+                onChanged: (value) => _updatePreference('shuffle', value),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Wi-Fi only downloads'),
+                value: _preferences['wifiOnlyDownloads'] != false,
+                activeThumbColor: _gold,
+                onChanged: (value) => _updatePreference('wifiOnlyDownloads', value),
+              ),
+              const Divider(color: Colors.white12),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text('AUDIO QUALITY', style: TextStyle(
+                  color: _gold, fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 1.1)),
+              ),
+              DropdownButtonFormField<String>(
+                value: (_preferences['audioQuality'] ?? 'high').toString(),
+                items: const [
+                  DropdownMenuItem(value: 'data_saver', child: Text('Data saver')),
+                  DropdownMenuItem(value: 'normal', child: Text('Normal')),
+                  DropdownMenuItem(value: 'high', child: Text('High')),
+                ],
+                onChanged: (value) {
+                  if (value != null) _updatePreference('audioQuality', value);
+                },
+              ),
+              const Divider(color: Colors.white12),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('New release notifications'),
+                value: _preferences['releaseNotifications'] != false,
+                activeThumbColor: _gold,
+                onChanged: (value) => _updatePreference('releaseNotifications', value),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Artist notifications'),
+                value: _preferences['artistNotifications'] != false,
+                activeThumbColor: _gold,
+                onChanged: (value) => _updatePreference('artistNotifications', value),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Promotional notifications'),
+                value: _preferences['promotionalNotifications'] == true,
+                activeThumbColor: _gold,
+                onChanged: (value) => _updatePreference('promotionalNotifications', value),
+              ),
+              const SizedBox(height: 6),
+              const Text('Settings are saved to your account. Some playback and notification behaviours still require device-level integration.',
+                style: TextStyle(color: Colors.white54, fontSize: 11)),
             ],
           ),
         ),
