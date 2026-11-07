@@ -50,6 +50,9 @@ grant update on public.bookings to authenticated;
 -- Video catalogue, scheduled audio_ads and ad_impressions already have
 -- role-based policies and are intentionally not weakened by this migration.
 
+-- Add release description used by Founder Studio and the public release page.
+alter table public.releases add column if not exists description text not null default '';
+
 -- Public avatar delivery; uploads/updates/deletes remain restricted to each owner's UUID folder.
 update storage.buckets
 set public = true,
