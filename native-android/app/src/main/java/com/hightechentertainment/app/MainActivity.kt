@@ -32,7 +32,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.hightechentertainment.app.data.CatalogRepository
 import com.hightechentertainment.app.data.NativeTrack
@@ -46,17 +48,26 @@ private val HteMuted = Color(0xFFAAA39A)
 class MainActivity : ComponentActivity() {
     private val catalogRepository by lazy { CatalogRepository() }
     private var player: ExoPlayer? = null
+    private var playbackIsActive by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        player = ExoPlayer.Builder(this).build()
+        player = ExoPlayer.Builder(this).build().also { exoPlayer ->
+            // Delegate audio-focus handling to Media3 so playback ducks/pauses correctly.
+            exoPlayer.setAudioAttributes(AudioAttributes.DEFAULT, true)
+            exoPlayer.addListener(object : Player.Listener {
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    playbackIsActive = isPlaying
+                }
+            })
+        }
         setContent {
             HteTheme {
                 var tracks by remember { mutableStateOf<List<NativeTrack>>(emptyList()) }
                 var loading by remember { mutableStateOf(true) }
                 var error by remember { mutableStateOf<String?>(null) }
                 var currentTrack by remember { mutableStateOf<NativeTrack?>(null) }
-                var playing by remember { mutableStateOf(false) }
+                val playing = playbackIsActive
 
                 fun loadCatalog() {
                     loading = true
@@ -86,14 +97,12 @@ class MainActivity : ComponentActivity() {
                                 currentTrack = track
                             }
                             player?.play()
-                            playing = true
                         } else {
                             error = "This track does not have a playable audio file yet."
                         }
                     },
                     onPause = {
                         player?.pause()
-                        playing = false
                     }
                 )
             }
