@@ -355,13 +355,19 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  Future<void> _openNativeSignIn() async {
+  Future<void> _startGoogleSignIn() async {
+    setState(() => _busy = true);
     try {
-      await _startupChannel.invokeMethod<void>('openNativeApp');
-    } on PlatformException {
-      if (mounted) setState(() => _message = 'Native sign-in could not be opened.');
+      final response = await _appChannel.invokeMapMethod<String, dynamic>('startGoogleOAuth');
+      if (response?['success'] != true && mounted) {
+        setState(() => _message = response?['message']?.toString() ?? 'Google sign-in could not be started.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Google sign-in could not be started.');
     } on MissingPluginException {
-      if (mounted) setState(() => _message = 'Native sign-in is unavailable.');
+      if (mounted) setState(() => _message = 'Google sign-in is unavailable in this build.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -463,13 +469,13 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                   const Divider(height: 30, color: Colors.white24),
                   OutlinedButton.icon(
-                    onPressed: _busy ? null : _openNativeSignIn,
+                    onPressed: _busy ? null : _startGoogleSignIn,
                     icon: const Icon(Icons.login),
                     label: const Text('Continue with Google'),
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    'Google sign-in opens the existing secure native authentication flow.',
+                    'Google sign-in opens securely and returns to this Flutter app.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white38, fontSize: 11),
                   ),
