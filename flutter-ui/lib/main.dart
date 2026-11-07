@@ -576,6 +576,30 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
     }
   }
 
+  Future<void> _playVideo(Map<String, dynamic> video) async {
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'playVideo',
+        {
+          'videoId': video['id']?.toString() ?? '',
+          'videoUrl': video['videoUrl']?.toString() ?? '',
+          'title': video['title']?.toString() ?? '',
+        },
+      );
+      if (response?['success'] != true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response?['message']?.toString() ?? 'Video could not be opened.')),
+        );
+      }
+    } on PlatformException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message ?? 'Video could not be opened.')),
+        );
+      }
+    }
+  }
+
   Future<void> _downloadTrack(Map<String, dynamic> track) async {
     try {
       final response = await _appChannel.invokeMapMethod<String, dynamic>(
@@ -687,7 +711,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
                       onRefresh: _refresh,
                     ),
                     _ArtistList(artists: _artists),
-                    _VideoList(videos: _videos),
+                    _VideoList(videos: _videos, onPlay: _playVideo),
                     _MusicList(
                       tracks: _tracks.where((t) => _favourites.contains(t['id'])).toList(),
                       favourites: _favourites,
@@ -856,8 +880,9 @@ class _ArtistList extends StatelessWidget {
 }
 
 class _VideoList extends StatelessWidget {
-  const _VideoList({required this.videos});
+  const _VideoList({required this.videos, required this.onPlay});
   final List<Map<String, dynamic>> videos;
+  final Future<void> Function(Map<String, dynamic>) onPlay;
 
   @override
   Widget build(BuildContext context) {
@@ -882,9 +907,7 @@ class _VideoList extends StatelessWidget {
           title: Text(video['title']?.toString() ?? 'Video'),
           subtitle: Text(video['artist']?.toString() ?? 'High-Tech Entertainment'),
           trailing: const Icon(Icons.play_circle_outline, color: _gold),
-          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Video playback integration is the next native-service connection.')),
-          ),
+          onTap: () => onPlay(video),
         );
       },
     );
