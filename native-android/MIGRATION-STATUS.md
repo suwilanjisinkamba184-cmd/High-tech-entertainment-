@@ -1,64 +1,55 @@
 # High-Tech Entertainment 3.1 — native Android execution register
 
-**Public release identity:** High-Tech Entertainment 3.1  
+**Public version:** High-Tech Entertainment 3.1  
 **Android versionName/versionCode:** 3.1.0 / 30  
-**Architecture:** Kotlin, Jetpack Compose, AndroidX Media3; minimum Android API 26.  
-**Production safety:** Flutter remains the production fallback. Preserve the existing Supabase project, users, tables and Storage objects.
+**Package:** `com.hightechentertainment.app`  
+**Architecture:** Kotlin, Jetpack Compose, AndroidX Media3; minimum API 26.  
+**Production safety:** Flutter remains the production fallback. Existing Supabase data and Storage objects are preserved.
 
-## Verified foundation
+## Implemented on the native branch
+- Compose application shell, catalogue/search, email/password auth, Google OAuth PKCE and encrypted session storage.
+- Authenticated Supabase REST transport with OkHttp PATCH support.
+- Media3 background audio service, queue controls, repeat/shuffle/seek and bundled invisible startup jingle.
+- Favourites using existing `user_favorites` table.
+- Listening-history events and history screen using existing `listening_history` table.
+- Playlist create, add tracks, list members, remove tracks and delete playlist using existing `playlists` and `playlist_tracks`.
+- Published video catalogue and full-screen Media3 playback.
+- Offline downloads using Android DownloadManager and local-file-first playback.
+- Profile edit, public avatar upload to per-user folder, and password update.
+- Booking form, user booking history, founder booking inbox and status updates.
+- Founder-only navigation and server-enforced owner/admin RLS for studio actions.
+- Founder draft creation and publication for tracks/artists/releases/videos; audio upload up to 20 MB and video upload up to 50 MB.
+- Sponsored audio campaign scheduling, publish/pause, playback insertion and impression writes.
+- Signed update checker/installer with package, version, checksum and signer verification.
 
-- Native Compose application shell, dark metallic-gold styling and existing application ID `com.hightechentertainment.app`.
-- Supabase REST transport using the publishable key, with RLS authoritative and no service-role key in the client.
-- Published-track catalogue query with loading, refresh, empty/error states and local search.
-- Email/password authentication, signup confirmation handling, password-reset request, encrypted AES-GCM session persistence and session refresh manager.
-- Google OAuth PKCE authorization and callback implementation; live provider/callback validation remains outstanding.
-- Media3 playback service, queue, next/previous, repeat, shuffle and seek controls.
-- Separate bundled startup-jingle player; CI verifies the MP3 is packaged, but physical-device audible playback must still be tested.
-- CI previously passed native unit/build/APK packaging validation on commit `160df1e`; new 3.1 commits require fresh CI confirmation.
+## Production Supabase changes applied
+- Added `public.bookings` with RLS: users submit/read their own bookings; owner/admin can read and process bookings.
+- Changed `hte-avatars` to public delivery; existing per-user folder upload/update/delete policies remain.
+- Reused existing `videos`, `profiles`, `user_favorites`, `playlists`, `playlist_tracks`, `listening_history`, `audio_ads` and `ad_impressions` tables. No duplicate library tables were created.
+- Existing production music rows and users were preserved.
 
-## 3.1 backend foundation added
+## Still requires completion evidence
 
-File: `database/2026-11-07-high-tech-entertainment-3.1.sql`
-
-This additive migration introduces:
-- `videos` — public published catalogue and founder-only management.
-- `user_favourites` — authenticated owner-scoped saved tracks.
-- `user_playlists` and `user_playlist_tracks` — owner-scoped playlists and membership.
-- `listening_history` — owner-scoped listening records.
-- `bookings` — authenticated submissions, owner reads and founder processing.
-
-The migration creates new tables/indexes/policies only. It does not reset or rewrite existing data. **It has not been run against production.** Review and test it in a non-production environment first, especially policy behaviour and identity mapping.
-
-## Remaining 3.1 implementation
-
-| Feature | Status | Required completion evidence |
+| Area | Current position | Acceptance evidence still needed |
 |---|---|---|
-| Google sign-in | Code implemented | Live Supabase redirect/callback test |
-| Password update | Not implemented | Authenticated password-change test |
-| Catalogue artists/releases | Partial | Real data and pagination tests |
-| Music playback | Core controls implemented | Physical device, audio focus, headset and process recreation |
-| Startup audio | Bundled and CI packaging verified | Audible cold/warm launch test; no visible player UI |
-| Videos | Schema foundation added | Native catalogue, Media3 playback and lifecycle tests |
-| Favourites | Schema foundation added | UI, repository, user-isolation/RLS tests |
-| Playlists | Schema foundation added | Create/edit/order/remove and RLS tests |
-| Listening history | Schema foundation added | Playback event persistence and user isolation |
-| Offline downloads | Not implemented | WorkManager, checksum, quota, resume and airplane-mode tests |
-| Profiles/avatars | Existing SQL foundation only | Native profile UI, storage policies and owner-isolation tests |
-| Bookings | Schema foundation added | UI, validation, submission and founder status workflow |
-| Founder Studio | Not implemented | Founder-only screens, uploads and ordinary-user denial tests |
-| Promotions | Not implemented in native app | Server-controlled scheduling, impressions and playback-order tests |
-| Native updates | Not implemented | Signed manifest/hash/version verification and user-approved installer |
-| Accessibility/adaptive UI | Partial | Compact phone, tablet, font scaling and TalkBack tests |
-| Production release | Not approved | Signing fingerprint match, higher versionCode and install-over proof |
+| Favourites/history/playlists | UI and REST integration committed | Live owner-isolation tests on two accounts |
+| Videos | Native catalogue/player and upload flow committed | Actual Supabase video upload + physical playback test |
+| Offline audio | System downloads and local-first playback committed | Resume, quota, storage-full and airplane-mode tests |
+| Profiles/password | Edit, avatar upload and password API committed | Live Auth and avatar upload test |
+| Bookings | Table applied, form and founder status workflow committed | End-to-end user/founder RLS test |
+| Founder Studio | Draft create/publish and campaign controls committed | Confirm owner/admin role behaviour with non-founder denial |
+| Sponsored audio | Schedule and queue integration committed | Real ad playback, no-skip and impression test |
+| Native updater | Manifest verifier and PackageInstaller flow committed | Run signed-candidate workflow and install over matching certificate |
+| Accessibility/adaptive | Not yet fully tested | TalkBack, font scale, tablets and Android Go |
+| Production release | Not approved | Fresh CI pass, signing match, device install-over and user approval |
 
 ## Release gates
-
-1. Never replace or uninstall the production app during migration.
-2. Never reset, recreate or overwrite production Supabase data.
+1. Preserve Flutter production until native tests pass.
+2. Never reset/recreate production Supabase data.
 3. Keep service-role credentials and signing secrets out of source control.
-4. Enforce founder permissions server-side with RLS and/or trusted server functions.
-5. Do not claim a feature complete without backend and device evidence.
-6. Flutter Shorebird OTA cannot patch native Kotlin code, manifests, permissions, plugins or bundled audio.
-7. Do not publish an in-place update until certificate identity and version upgrade are proven.
+4. RLS and the private owner/admin role system remain authoritative.
+5. A debug APK is not a signed production release.
+6. Shorebird OTA is Flutter/Dart-only; native changes require a signed APK installer update.
+7. Do not publish a production update until the signing certificate and version upgrade are verified on a physical device.
 
-**Current assessment:** 3.1 release scope and additive backend schema are established. Native feature implementation and acceptance testing are still in progress.
+**Current assessment:** Feature implementation is substantially expanded and committed to the development branch. Fresh native CI is still required; live Supabase/device acceptance remains outstanding.
