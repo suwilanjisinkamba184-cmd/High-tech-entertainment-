@@ -23,10 +23,10 @@ Native Android application workstream using Kotlin, Jetpack Compose and AndroidX
 - Private Founder Studio entry, founder-only RLS-backed draft creation/publishing for tracks, artists, releases and videos, audio/video upload and sponsored-audio campaign scheduling.
 - Scheduled sponsored audio inserted before music, with ad impression records and no listener-side ad-disable switch.
 - GitHub signed-release update checker and installer that verifies package identity, higher version code, APK SHA-256 and signing certificate before Android's user-approved install flow.
-- Initial native Voice Companion screen with Android on-device speech recognition, local-only TTS voice selection, saved voice preference and offline playback/navigation/search commands.
+- Initial press-to-talk Voice Companion command shell with on-device speech recognition and playback/navigation/search commands. Android system Text-to-Speech has been removed from this screen; spoken responses are disabled until the dedicated online and offline speech providers are integrated and validated.
 
 ## Voice Companion scope
-The initial native voice increment is press-to-talk only. It uses Android's on-device SpeechRecognizer when the device reports that an offline recognizer is available, and lists only Text-to-Speech voices that do not require a network connection. The microphone permission is requested only when the user taps the voice button. No always-on wake word is enabled. Offline language-pack availability and the actual selected voice must be verified on the target device. Online ElevenLabs commands, website integration, news/release announcements, recommendations and proactive notification delivery remain future integration work.
+The current voice increment is press-to-talk only. It uses Android's on-device SpeechRecognizer when the device reports that an offline recognizer is available. Android system Text-to-Speech is not used; spoken responses are temporarily disabled pending integration of ElevenLabs online voice and a dedicated sherpa-onnx offline neural TTS engine. The microphone permission is requested only when the user taps the voice button. No always-on wake word is enabled. Offline language-pack availability and speech performance must be verified on the target device. Online agent sessions, authenticated command execution, website integration, verified news/release announcements, recommendations and proactive notification delivery remain future integration work.
 
 ## Supabase integration
 The existing production project already contained profiles, videos, user_favorites, playlists, playlist_tracks, listening_history, audio_ads and ad_impressions. The native implementation reuses those exact tables; it does not create parallel library tables.
@@ -61,3 +61,7 @@ GitHub Actions debug APKs are validation artifacts, not production releases. Cur
 - Native updates are full signed APK installs; Flutter Shorebird cannot patch Kotlin, manifests, permissions, plugins or bundled native resources.
 - APK install is blocked unless package ID, version code, APK hash and signer all match the manifest and the installed signer.
 - Production remains untouched until the user explicitly approves a verified release.
+
+
+## Voice Companion audit status (2026-11-07)
+See [`VOICE-COMPANION-AND-RELEASE-AUDIT.md`](VOICE-COMPANION-AND-RELEASE-AUDIT.md) for the verified CI failure, speech-engine decision, implemented corrections and remaining production acceptance gates.
