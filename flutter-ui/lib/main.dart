@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:video_player/video_player.dart';
 
 const _gold = Color(0xFFD7A83E);
 const _black = Color(0xFF080808);
