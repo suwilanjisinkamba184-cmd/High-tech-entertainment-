@@ -48,7 +48,9 @@ jobs:
           cache: true
       - name: Generate Flutter Android module integration
         working-directory: flutter-ui
-        run: flutter pub get
+        run: |
+          flutter clean
+          flutter pub get
       - name: Verify Flutter module bootstrap
         run: test -f flutter-ui/.android/include_flutter.groovy
       - name: Analyze Flutter application
