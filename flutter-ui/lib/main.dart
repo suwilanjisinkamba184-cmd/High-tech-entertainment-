@@ -1304,7 +1304,6 @@ class _MusicList extends StatelessWidget {
     required this.onPlay,
     required this.onDownload,
     required this.onRefresh,
-    this.emptyMessage = 'No published tracks are available yet.',
   });
 
   final List<Map<String, dynamic>> tracks;
@@ -1313,7 +1312,6 @@ class _MusicList extends StatelessWidget {
   final Future<void> Function(Map<String, dynamic>) onPlay;
   final Future<void> Function(Map<String, dynamic>) onDownload;
   final Future<void> Function() onRefresh;
-  final String emptyMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -1326,7 +1324,7 @@ class _MusicList extends StatelessWidget {
             const SizedBox(height: 110),
             Icon(Icons.library_music_outlined, size: 56, color: _gold.withValues(alpha: 0.7)),
             const SizedBox(height: 16),
-            Center(child: Text(emptyMessage, style: const TextStyle(color: Colors.white60))),
+            const Center(child: Text('No published tracks are available yet.', style: TextStyle(color: Colors.white60))),
           ],
         ),
       );
