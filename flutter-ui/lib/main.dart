@@ -1649,6 +1649,14 @@ class _ReleaseList extends StatelessWidget {
               if ((release['releaseDate']?.toString() ?? '').isNotEmpty) release['releaseDate'].toString(),
               if ((release['description']?.toString() ?? '').isNotEmpty) release['description'].toString(),
             ].join(' • '), maxLines: 3, overflow: TextOverflow.ellipsis),
+            trailing: (release['spotifyUrl']?.toString() ?? '').startsWith('https://open.spotify.com/')
+                ? IconButton(
+                    tooltip: 'Open on Spotify',
+                    icon: const Icon(Icons.open_in_new, color: _gold),
+                    onPressed: () => _appChannel.invokeMethod<void>(
+                      'openSpotifyLink', {'url': release['spotifyUrl']}),
+                  )
+                : null,
           ),
         );
       },
