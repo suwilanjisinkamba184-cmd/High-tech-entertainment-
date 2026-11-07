@@ -54,6 +54,8 @@ for page in root.rglob("*.html"):
         target = value.split("?", 1)[0].split("#", 1)[0]
         if not target:
             continue
+        if target.startswith("/High-tech-entertainment-/"):
+            target = target[len("/High-tech-entertainment-/"):]
         resolved = (page.parent / target.lstrip("/") if not target.startswith("/") else root / target.lstrip("/")).resolve()
         if target.startswith("../"):
             resolved = (page.parent / target).resolve()
@@ -72,6 +74,8 @@ for stylesheet in root.rglob("*.css"):
         if re.match(r"^(?:https?:|data:|#|//)", value, flags=re.I):
             continue
         target = value.split("?", 1)[0].split("#", 1)[0]
+        if target.startswith("/High-tech-entertainment-/"):
+            target = target[len("/High-tech-entertainment-/"):]
         resolved = (stylesheet.parent / target.lstrip("/") if not target.startswith("/") else root / target.lstrip("/")).resolve()
         try:
             resolved.relative_to(root.resolve())
