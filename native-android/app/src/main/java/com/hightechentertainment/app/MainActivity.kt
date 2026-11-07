@@ -174,6 +174,7 @@ class MainActivity : ComponentActivity() {
                     favouriteIds = favouriteIds,
                     featureRepository = hteApplication.featureRepository,
                     userLibraryRepository = hteApplication.userLibraryRepository,
+                    sponsoredAudioRepository = hteApplication.sponsoredAudioRepository,
                     userId = signedInSession.userId,
                     onToggleFavourite = { track ->
                         lifecycleScope.launch {
@@ -205,17 +206,21 @@ class MainActivity : ComponentActivity() {
                                 error = "The audio player is still connecting. Please try again."
                             startIndex < 0 ->
                                 error = "This track does not have a playable audio file yet."
-                            else -> {
-                                val queue = playableTracks.map { item ->
-                                    MediaItem.Builder()
-                                        .setMediaId(item.id)
-                                        .setUri(item.audioUrl!!)
-                                        .build()
+                            else -> lifecycleScope.launch {
+                                val sponsoredAd = hteApplication.sponsoredAudioRepository.nextActiveAd().getOrNull()
+                                val musicQueue = if (sponsoredAd != null) playableTracks.drop(startIndex) else playableTracks
+                                val queue = buildList {
+                                    sponsoredAd?.let { ad ->
+                                        add(MediaItem.Builder().setMediaId("hte-ad:${ad.id}").setUri(ad.audioUrl).build())
+                                    }
+                                    addAll(musicQueue.map { item ->
+                                        MediaItem.Builder().setMediaId(item.id).setUri(item.audioUrl!!).build()
+                                    })
                                 }
-                                activePlayer.setMediaItems(queue, startIndex, C.TIME_UNSET)
+                                activePlayer.setMediaItems(queue, if (sponsoredAd != null) 0 else startIndex, C.TIME_UNSET)
                                 activePlayer.shuffleModeEnabled = shuffleEnabled
                                 activePlayer.repeatMode = repeatMode
-                                currentTrackState = track
+                                currentTrackState = if (sponsoredAd == null) track else null
                                 activePlayer.prepare()
                                 activePlayer.play()
                             }
@@ -324,11 +329,16 @@ class MainActivity : ComponentActivity() {
                         }
 
                         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                            currentTrackState = mediaItem?.mediaId?.let { id ->
-                                knownTracks.firstOrNull { it.id == id }
-                            }
-                            mediaItem?.mediaId?.let { trackId ->
-                                lifecycleScope.launch { hteApplication.userLibraryRepository.recordListening(trackId) }
+                            val mediaId = mediaItem?.mediaId
+                            if (mediaId?.startsWith("hte-ad:") == true) {
+                                currentTrackState = null
+                                val adId = mediaId.removePrefix("hte-ad:")
+                                lifecycleScope.launch { hteApplication.sponsoredAudioRepository.recordImpression(adId) }
+                            } else {
+                                currentTrackState = mediaId?.let { id -> knownTracks.firstOrNull { it.id == id } }
+                                mediaId?.let { trackId ->
+                                    lifecycleScope.launch { hteApplication.userLibraryRepository.recordListening(trackId) }
+                                }
                             }
                         }
                     })
@@ -384,6 +394,7 @@ private fun HighTechApp(
     favouriteIds: Set<String>,
     featureRepository: com.hightechentertainment.app.data.FeatureRepository,
     userLibraryRepository: com.hightechentertainment.app.data.UserLibraryRepository,
+    sponsoredAudioRepository: com.hightechentertainment.app.data.SponsoredAudioRepository,
     userId: String?,
     onToggleFavourite: (NativeTrack) -> Unit,
     loading: Boolean,
@@ -601,6 +612,7 @@ private fun HighTechApp(
                                 tracks = tracks,
                                 features = featureRepository,
                                 library = userLibraryRepository,
+                                sponsoredAudio = sponsoredAudioRepository,
                                 userId = userId,
                                 onPlayTrack = onPlay
                             )
