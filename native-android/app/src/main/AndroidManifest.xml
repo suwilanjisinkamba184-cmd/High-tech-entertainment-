@@ -45,9 +45,5 @@
                 <data android:scheme="com.hightechentertainment.app" android:host="login-callback" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".NativeVideoActivity"
-            android:exported="false"
-            android:screenOrientation="unspecified" />
     </application>
 </manifest>
