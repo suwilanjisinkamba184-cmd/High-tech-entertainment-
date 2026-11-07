@@ -95,7 +95,7 @@ class SecureSessionStore(context: Context) {
 
     @Synchronized
     fun clear() {
-        preferences.edit().remove(SESSION_KEY).commit()
+        preferences.edit().remove(SESSION_KEY).remove(OAUTH_VERIFIER_KEY).commit()
     }
 
     private fun getOrCreateKey(): SecretKey {
