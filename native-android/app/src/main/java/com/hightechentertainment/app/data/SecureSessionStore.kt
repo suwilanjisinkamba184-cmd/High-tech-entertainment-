@@ -42,7 +42,8 @@ class SecureSessionStore(context: Context) {
     }
 
     @Synchronized
-    fun read(): NativeSession? = runCatching {
+    fun read(): NativeSession? {
+        return runCatching {
         val payload = preferences.getString(SESSION_KEY, null) ?: return null
         val parts = payload.split(":", limit = 2)
         require(parts.size == 2)
@@ -58,9 +59,10 @@ class SecureSessionStore(context: Context) {
             userId = json.getString("user"),
             email = json.optString("email").takeIf { it.isNotBlank() && it != "null" }
         )
-    }.getOrElse {
-        clear()
-        null
+        }.getOrElse {
+            clear()
+            null
+        }
     }
 
     @Synchronized
