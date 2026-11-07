@@ -20,6 +20,7 @@ body{background:radial-gradient(ellipse at 82% -8%,rgba(217,185,110,.11),transpa
 .navlinks a{padding:10px 0;color:#c7c4bd;transition:color .18s ease}
 .navlinks a:hover,.navlinks a:focus-visible{color:var(--hte-2026-gold-light)}
 .nav-actions{gap:10px}
+.nav-toggle{display:none;align-items:center;gap:8px}
 .btn{min-height:46px;padding:11px 18px;border-radius:999px;border:1px solid rgba(219,190,126,.28);background:linear-gradient(145deg,#202226,#131518);color:var(--hte-2026-ink);font-size:.76rem;letter-spacing:.045em;box-shadow:0 8px 24px #0003}
 .btn.gold{background:linear-gradient(115deg,#f1dda7,#c79d51);border-color:#e9d094;color:#17130b;box-shadow:0 9px 28px rgba(217,185,110,.17)}
 .btn.ghost{background:rgba(255,255,255,.035);border-color:rgba(219,190,126,.3)}
