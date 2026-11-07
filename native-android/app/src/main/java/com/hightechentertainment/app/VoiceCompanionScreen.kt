@@ -1,7 +1,6 @@
 package com.hightechentertainment.app
 
 import android.Manifest
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -9,8 +8,6 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import android.speech.tts.TextToSpeech
-import android.speech.tts.Voice
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -52,9 +49,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import java.util.Locale
 
-private const val VOICE_PREFS = "hte_voice_companion"
-private const val VOICE_KEY = "offline_tts_voice"
-
 @Composable
 fun VoiceCompanionScreen(
     onPause: () -> Unit,
@@ -71,12 +65,7 @@ fun VoiceCompanionScreen(
     var status by remember { mutableStateOf("Checking on-device speech services…") }
     var transcript by remember { mutableStateOf("") }
     var listening by remember { mutableStateOf(false) }
-    var ttsReady by remember { mutableStateOf(false) }
-    var selectedVoiceName by remember { mutableStateOf("") }
-    var availableOfflineVoices by remember { mutableStateOf<List<Voice>>(emptyList()) }
-    var voiceMenuOpen by remember { mutableStateOf(false) }
     var recognizer by remember { mutableStateOf<SpeechRecognizer?>(null) }
-    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
 
     val onDeviceRecognitionAvailable = remember {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
@@ -97,56 +86,19 @@ fun VoiceCompanionScreen(
     }
 
     DisposableEffect(context) {
-        val engine = TextToSpeech(context) { result ->
-            if (result == TextToSpeech.SUCCESS) {
-                val localVoices = engineVoices(tts)
-                availableOfflineVoices = localVoices
-                val saved = context.getSharedPreferences(VOICE_PREFS, Context.MODE_PRIVATE)
-                    .getString(VOICE_KEY, null)
-                val selected = localVoices.firstOrNull {
-                    "${it.name}|${it.locale.toLanguageTag()}" == saved
-                } ?: localVoices.firstOrNull()
-                if (selected != null) {
-                    tts?.voice = selected
-                    selectedVoiceName = selected.name
-                    context.getSharedPreferences(VOICE_PREFS, Context.MODE_PRIVATE)
-                        .edit().putString(VOICE_KEY, "${selected.name}|${selected.locale.toLanguageTag()}").apply()
-                }
-                ttsReady = true
-            } else {
-                status = "Android text-to-speech could not initialise."
-            }
-        }
-        tts = engine
         onDispose {
             recognizer?.cancel()
             recognizer?.destroy()
             recognizer = null
-            engine.stop()
-            engine.shutdown()
-            tts = null
         }
     }
 
-    LaunchedEffect(onDeviceRecognitionAvailable, ttsReady) {
-        status = when {
-            !onDeviceRecognitionAvailable -> "This device does not currently report an on-device speech recognizer. Install an offline speech language pack or use online voice recognition."
-            !ttsReady -> "On-device recognition is available. Loading local speech voices…"
-            availableOfflineVoices.isEmpty() -> "On-device recognition is available, but no offline speaking voice is installed. Install an offline voice in Android Text-to-speech settings."
-            else -> "Offline voice services are ready. Your speech stays on this device in offline mode."
+    LaunchedEffect(onDeviceRecognitionAvailable) {
+        status = if (onDeviceRecognitionAvailable) {
+            "Offline speech recognition is available. Spoken replies are disabled until the dedicated High-Tech voice engines are installed."
+        } else {
+            "This device does not currently report an on-device speech recognizer. Install an offline speech language pack or use the online voice service when it is enabled."
         }
-    }
-
-    fun speakOffline(message: String) {
-        val engine = tts ?: return
-        val voice = availableOfflineVoices.firstOrNull { it.name == selectedVoiceName }
-            ?: availableOfflineVoices.firstOrNull()
-        if (voice == null) {
-            status = "Install an offline Android speaking voice before using spoken responses."
-            return
-        }
-        engine.voice = voice
-        engine.speak(message, TextToSpeech.QUEUE_FLUSH, null, "hte-voice-response")
     }
 
     fun executeCommand(raw: String) {
@@ -185,7 +137,6 @@ fun VoiceCompanionScreen(
             else -> "I heard $raw. That command is not available offline yet."
         }
         status = response
-        speakOffline(response)
     }
 
     fun startOnDeviceListening() {
@@ -282,33 +233,12 @@ fun VoiceCompanionScreen(
         }
 
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF151515))) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Offline speaking voice", color = Color.White, style = MaterialTheme.typography.titleMedium)
-                if (availableOfflineVoices.isEmpty()) {
-                    Text("No offline TTS voices were found. Install a voice with no network requirement in Android Settings → Text-to-speech output.", color = Color.LightGray)
-                } else {
-                    OutlinedButton(onClick = { voiceMenuOpen = true }) {
-                        Text(if (selectedVoiceName.isBlank()) "Select offline voice" else selectedVoiceName)
-                    }
-                    DropdownMenu(expanded = voiceMenuOpen, onDismissRequest = { voiceMenuOpen = false }) {
-                        availableOfflineVoices.forEach { voice ->
-                            DropdownMenuItem(
-                                text = { Text("${voice.name} · ${voice.locale.displayName}") },
-                                onClick = {
-                                    selectedVoiceName = voice.name
-                                    tts?.voice = voice
-                                    context.getSharedPreferences(VOICE_PREFS, Context.MODE_PRIVATE)
-                                        .edit().putString(VOICE_KEY, "${voice.name}|${voice.locale.toLanguageTag()}").apply()
-                                    voiceMenuOpen = false
-                                }
-                            )
-                        }
-                    }
-                    FilledTonalButton(onClick = { speakOffline("Hello. This is your High-Tech Entertainment offline voice companion.") }) {
-                        Icon(Icons.Rounded.PlayArrow, contentDescription = null)
-                        Text("  Test selected voice")
-                    }
-                }
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Dedicated AI speech output", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Android system Text-to-Speech is not used. Online ElevenLabs speech and offline sherpa-onnx speech are being integrated as separate providers. Spoken replies remain disabled until those providers pass validation.",
+                    color = Color.LightGray
+                )
             }
         }
 
@@ -319,12 +249,10 @@ fun VoiceCompanionScreen(
             }
         }
         Text(
-            "Offline recognition requires an installed Android on-device speech language pack. The selected TTS voice is stored on this device. This screen uses press-to-talk only; it does not continuously listen in the background.",
+            "Offline recognition requires an installed on-device speech language pack. Android system Text-to-Speech is disabled. This screen uses press-to-talk only; it does not continuously listen in the background.",
             color = Color.Gray,
             style = MaterialTheme.typography.bodySmall
         )
     }
 }
 
-private fun engineVoices(engine: TextToSpeech?): List<Voice> =
-    engine?.voices?.filter { voice -> !voice.isNetworkConnectionRequired }?.sortedBy { it.name } ?: emptyList()
