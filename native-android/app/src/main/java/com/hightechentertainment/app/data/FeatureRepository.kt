@@ -29,6 +29,8 @@ data class NativeBooking(
     val status: String
 )
 
+data class NativeDraftItem(val table: String, val id: String, val title: String)
+
 data class FounderOverview(
     val tracks: Int,
     val artists: Int,
@@ -173,6 +175,37 @@ class FeatureRepository(
         val response = client.post("releases", JSONObject().put("title", title.trim())
             .put("description", description.trim()).put("is_published", false).toString(), "return=minimal")
         check(response.isSuccessful) { "Could not create release (HTTP ${response.statusCode})." }
+    }
+
+    suspend fun founderDrafts(): Result<List<NativeDraftItem>> = runCatching {
+        userId()
+        val sources = listOf(
+            Triple("tracks", "title", "Track"),
+            Triple("artists", "name", "Artist"),
+            Triple("releases", "title", "Release"),
+            Triple("videos", "title", "Video")
+        )
+        buildList {
+            for ((table, titleColumn, _) in sources) {
+                val response = client.get(table,
+                    mapOf("is_published" to "eq.false", "order" to "created_at.desc", "limit" to "100"),
+                    "id,$titleColumn")
+                check(response.isSuccessful) { "Could not load $table drafts (HTTP ${response.statusCode})." }
+                val rows = JSONArray(response.body)
+                for (i in 0 until rows.length()) {
+                    val row = rows.optJSONObject(i) ?: continue
+                    add(NativeDraftItem(table, row.optString("id"), row.optString(titleColumn)))
+                }
+            }
+        }
+    }
+
+    suspend fun setDraftPublished(table: String, id: String, published: Boolean): Result<Unit> = runCatching {
+        userId()
+        require(table in setOf("tracks", "artists", "releases", "videos"))
+        val response = client.request("PATCH", "/rest/v1/$table", mapOf("id" to "eq.$id"),
+            JSONObject().put("is_published", published).toString(), mapOf("Prefer" to "return=minimal"))
+        check(response.isSuccessful) { "Could not update $table publication status (HTTP ${response.statusCode})." }
     }
 
     suspend fun founderOverview(): Result<FounderOverview> = runCatching {
