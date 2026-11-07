@@ -88,7 +88,20 @@ jobs:
             unzip -l "$APK" | grep 'res/raw/' || true
             exit 1
           fi
-          echo "PASS: startup MP3 is packaged inside the native APK."
+          echo "PASS: startup MP3 is packaged inside the APK."
+
+          # Guard against accidentally publishing the legacy native shell again.
+          if ! unzip -l "$APK" | grep -Fq 'assets/flutter_assets/assets/high-tech-logo.svg'; then
+            echo "::error::Flutter logo asset is missing; this APK does not contain the expected Flutter presentation bundle."
+            exit 1
+          fi
+          BADGING="$("$SDK_ROOT/build-tools/36.0.0/aapt" dump badging "$APK")"
+          printf '%s\\n' "$BADGING" | grep -F "launchable-activity: name='com.hightechentertainment.app.FlutterHostActivity'" >/dev/null || {
+            echo "::error::FlutterHostActivity is not the APK's launcher activity."
+            printf '%s\\n' "$BADGING" | grep 'launchable-activity:' || true
+            exit 1
+          }
+          echo "PASS: Flutter UI asset is bundled and FlutterHostActivity is the launcher."
       - name: Upload validation APK and test reports
         if: always()
         uses: actions/upload-artifact@v7
