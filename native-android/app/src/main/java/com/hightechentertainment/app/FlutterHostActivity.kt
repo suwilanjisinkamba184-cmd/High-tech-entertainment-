@@ -457,6 +457,33 @@ class FlutterHostActivity : FlutterActivity() {
                         ).onSuccess { result.success(mapOf("success" to true)) }
                             .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
                     }
+                    "updateCampaign" -> lifecycleScope.launch {
+                        val authorized = hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)
+                        if (!authorized) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                        } else {
+                            hteApplication.sponsoredAudioRepository.updateCampaign(
+                                call.argument<String>("id").orEmpty(),
+                                call.argument<String>("title").orEmpty(),
+                                call.argument<String>("audioUrl").orEmpty(),
+                                call.argument<String>("startsAt"),
+                                call.argument<String>("endsAt"),
+                                call.argument<Int>("priority") ?: 0
+                            ).onSuccess { result.success(mapOf("success" to true)) }
+                                .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                        }
+                    }
+                    "deleteCampaign" -> lifecycleScope.launch {
+                        val authorized = hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)
+                        if (!authorized) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                        } else {
+                            hteApplication.sponsoredAudioRepository.deleteCampaign(
+                                call.argument<String>("id").orEmpty()
+                            ).onSuccess { result.success(mapOf("success" to true)) }
+                                .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                        }
+                    }
                     "createCampaign" -> lifecycleScope.launch {
                         hteApplication.sponsoredAudioRepository.createCampaign(
                             call.argument<String>("title").orEmpty(),
