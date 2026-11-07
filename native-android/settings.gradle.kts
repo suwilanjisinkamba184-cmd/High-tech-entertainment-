@@ -1,13 +1,10 @@
 pluginManagement {
     repositories { google(); mavenCentral(); gradlePluginPortal() }
 }
-plugins {
-    // Flutter 3.47 requires KGP >= 2.2.20. Keep built-in Kotlin disabled on AGP 8.
-    id("org.jetbrains.kotlin.android") version "2.2.21" apply false
-}
 
-// AGP 8.11.1 + KGP 2.2.21 is a supported pairing. The generated Flutter module
-// is included below and reads the same root plugin version during configuration.
+// Keep AGP and KGP declarations in the root project plugins block so their
+// implementation classes share the project plugin classloader. Putting KGP
+// in the settings plugins block isolates it from AGP's BaseExtension API.
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     val storageUrl = System.getenv("FLUTTER_STORAGE_BASE_URL") ?: "https://storage.googleapis.com"
