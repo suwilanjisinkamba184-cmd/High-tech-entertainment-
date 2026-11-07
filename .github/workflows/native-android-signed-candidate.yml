@@ -77,7 +77,7 @@ jobs:
           test -x "$SDK_ROOT/build-tools/36.0.0/aapt"
       - name: Build native release APK
         working-directory: native-android
-        run: gradle --no-daemon :app:clean :app:testDebugUnitTest :app:assembleRelease
+        run: gradle --no-daemon --stacktrace :app:clean :app:testDebugUnitTest :app:assembleRelease
       - name: Verify APK identity, align, sign and verify certificate
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
