@@ -73,6 +73,21 @@ class FeatureRepository(
             row?.optString("phone").orEmpty(), row?.optString("avatar_url").orEmpty())
     }
 
+    suspend fun uploadAvatar(bytes: ByteArray, contentType: String): Result<String> = runCatching {
+        val id = userId()
+        require(bytes.isNotEmpty() && bytes.size <= 5 * 1024 * 1024) { "Choose an image smaller than 5 MB." }
+        require(contentType in setOf("image/jpeg", "image/png", "image/webp")) { "Use a JPG, PNG or WebP image." }
+        val extension = when (contentType) {
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            else -> "jpg"
+        }
+        val path = "$id/avatar-${System.currentTimeMillis()}.$extension"
+        val response = client.uploadStorageObject("hte-avatars", path, bytes, contentType)
+        check(response.isSuccessful) { "Avatar upload failed (HTTP ${response.statusCode})." }
+        client.publicStorageUrl("hte-avatars", path)
+    }
+
     suspend fun saveProfile(profile: NativeProfile): Result<Unit> = runCatching {
         val id = userId()
         val body = JSONObject().put("id", id)
