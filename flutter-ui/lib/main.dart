@@ -529,6 +529,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
   List<Map<String, dynamic>> _releases = [];
   List<Map<String, dynamic>> _videos = [];
   Set<String> _favourites = {};
+  Set<String> _followedArtists = {};
   Map<String, dynamic>? _nowPlayingTrack;
   bool _isPlaying = false;
   String _searchQuery = '';
@@ -609,6 +610,8 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
       final videos = await _loadList('getVideos');
       final favourites =
           await _appChannel.invokeListMethod<String>('getFavourites') ?? [];
+      final followedArtists =
+          await _appChannel.invokeListMethod<String>('getFollowedArtists') ?? [];
       if (!mounted) return;
       setState(() {
         _tracks = tracks;
@@ -616,6 +619,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
         _releases = releases;
         _videos = videos;
         _favourites = favourites.toSet();
+        _followedArtists = followedArtists.toSet();
         _error = tracksResponse?['error']?.toString();
         _loading = false;
       });
@@ -748,6 +752,29 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
     }
   }
 
+  Future<void> _toggleArtistFollow(String artistId) async {
+    final follow = !_followedArtists.contains(artistId);
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'setArtistFollow', {'artistId': artistId, 'follow': follow});
+      if (response?['success'] == true && mounted) {
+        setState(() {
+          if (follow) {
+            _followedArtists.add(artistId);
+          } else {
+            _followedArtists.remove(artistId);
+          }
+        });
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response?['message']?.toString() ?? 'Could not update artist follow.')));
+      }
+    } on PlatformException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message ?? 'Could not update artist follow.')));
+    }
+  }
+
   Future<void> _signOut() async {
     try {
       await _appChannel.invokeMethod<void>('signOut');
@@ -758,6 +785,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
           _releases = [];
           _videos = [];
           _favourites = {};
+          _followedArtists = {};
           _tab = 0;
         });
         Navigator.of(context).pushAndRemoveUntil(
@@ -818,6 +846,8 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
                               ('${track['title'] ?? ''} ${track['artist'] ?? ''} ${track['genre'] ?? ''}')
                                   .toLowerCase().contains(_searchQuery.toLowerCase())).toList(),
                       artists: _artists,
+                      followedArtists: _followedArtists,
+                      onArtistFollow: _toggleArtistFollow,
                       releases: _releases,
                       videos: _videos,
                       favourites: _favourites,
@@ -1448,8 +1478,14 @@ class _MusicList extends StatelessWidget {
 }
 
 class _ArtistList extends StatelessWidget {
-  const _ArtistList({required this.artists});
+  const _ArtistList({
+    required this.artists,
+    required this.followedArtists,
+    required this.onFollow,
+  });
   final List<Map<String, dynamic>> artists;
+  final Set<String> followedArtists;
+  final Future<void> Function(String) onFollow;
 
   @override
   Widget build(BuildContext context) {
@@ -1473,6 +1509,14 @@ class _ArtistList extends StatelessWidget {
           ),
           title: Text(artist['name']?.toString() ?? 'Artist'),
           subtitle: Text(artist['bio']?.toString() ?? '', maxLines: 2, overflow: TextOverflow.ellipsis),
+          trailing: IconButton(
+            tooltip: followedArtists.contains(artist['id']?.toString()) ? 'Unfollow artist' : 'Follow artist',
+            onPressed: () => onFollow(artist['id']?.toString() ?? ''),
+            icon: Icon(
+              followedArtists.contains(artist['id']?.toString()) ? Icons.person_remove_alt_1 : Icons.person_add_alt_1,
+              color: _gold,
+            ),
+          ),
         );
       },
     );
@@ -1483,6 +1527,8 @@ class _DiscoverPanel extends StatelessWidget {
   const _DiscoverPanel({
     required this.tracks,
     required this.artists,
+    required this.followedArtists,
+    required this.onArtistFollow,
     required this.releases,
     required this.videos,
     required this.favourites,
@@ -1495,6 +1541,8 @@ class _DiscoverPanel extends StatelessWidget {
 
   final List<Map<String, dynamic>> tracks;
   final List<Map<String, dynamic>> artists;
+  final Set<String> followedArtists;
+  final Future<void> Function(String) onArtistFollow;
   final List<Map<String, dynamic>> releases;
   final List<Map<String, dynamic>> videos;
   final Set<String> favourites;
@@ -1531,7 +1579,7 @@ class _DiscoverPanel extends StatelessWidget {
                   onDownload: onDownload,
                   onRefresh: onRefresh,
                 ),
-                _ArtistList(artists: artists),
+                _ArtistList(artists: artists, followedArtists: followedArtists, onFollow: onArtistFollow),
                 _ReleaseList(releases: releases),
                 _VideoList(videos: videos, onPlay: onPlayVideo),
               ],
