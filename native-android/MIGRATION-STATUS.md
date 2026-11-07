@@ -1,54 +1,64 @@
-# Native Android migration — execution register
+# High-Tech Entertainment 3.1 — native Android execution register
 
-**Target:** High-Tech Entertainment 3.0, Kotlin + Jetpack Compose, Android 8.0+ (API 26).
-**Production safety:** keep the existing Flutter app, Supabase project, database, Storage objects, users and current release untouched until native acceptance gates pass.
+**Public release identity:** High-Tech Entertainment 3.1  
+**Android versionName/versionCode:** 3.1.0 / 30  
+**Architecture:** Kotlin, Jetpack Compose, AndroidX Media3; minimum Android API 26.  
+**Production safety:** Flutter remains the production fallback. Preserve the existing Supabase project, users, tables and Storage objects.
 
-## Implemented in the native branch
+## Verified foundation
 
-- Kotlin/Compose application shell and dark metallic-gold theme.
-- Existing Android application ID retained: `com.hightechentertainment.app`.
-- API 26 minimum SDK and API 36 target.
-- Media3 dependencies and callback deep-link declaration.
-- Supabase PostgREST transport using the existing project URL and publishable key; bounded connect/read timeouts, IO dispatcher, safe relative resource paths and generic response handling. No service-role credential is included and RLS remains authoritative.
-- Published-track catalogue query against the existing `tracks` table, with loading, refresh, empty/error states and local title/artist/genre search.
-- Initial Supabase Auth REST repository for email/password sign-in, sign-up, refresh-token exchange, sign-out and password-reset request.
-- Encrypted session persistence using AES-GCM with a non-exportable Android Keystore key; corrupt/unreadable session data is discarded rather than exposed.
-- Added an automatic session manager for persisted-session restoration, refresh-before-expiry scheduling and retry after transient refresh failures.
-- Connected the Activity to the session manager and encrypted session store. The native app now gates its listener interface behind an authenticated session, restores saved sessions on launch, and exposes sign-out.
-- Added a native email/password sign-in and sign-up screen plus password-reset request UI. These flows use the existing Supabase Auth REST endpoints and the publishable key only.
-- Supabase signup now handles email-confirmation-required responses without treating a missing immediate session as a server failure. Authentication is still partial: Google OAuth/PKCE browser callback handling, password update, authenticated catalogue requests, account/profile UI and real-account/RLS isolation tests remain.
-- Initial Media3 playback for HTTPS track URLs now runs in a dedicated `MediaSessionService`; the Activity connects through `MediaController`, no longer owns/releases the playback engine, and does not pause playback merely because the UI leaves the foreground.
-- Media3 manages audio focus and exposes the standard media-session surface for system/media controls. The catalogue selection now creates a queue of playable tracks, supports next/previous, repeat off/all/one, shuffle and seek scrubbing. Device-level notification, Bluetooth/headset, process-recreation and Android-version behaviour still require physical-device acceptance testing.
-- Added a native one-shot startup-jingle player that is separate from the Media3 queue and does not request audio focus. Gradle copies the existing `mobile-app/assets/high-tech-startup.mp3` into generated Android `res/raw` resources before `preBuild`; this must be confirmed in a successful APK build and tested on a device.
-- Native validation workflow pinned to the available Gradle 9.8.2 release; smoke-test assertion aligned with the current home-screen content.
+- Native Compose application shell, dark metallic-gold styling and existing application ID `com.hightechentertainment.app`.
+- Supabase REST transport using the publishable key, with RLS authoritative and no service-role key in the client.
+- Published-track catalogue query with loading, refresh, empty/error states and local search.
+- Email/password authentication, signup confirmation handling, password-reset request, encrypted AES-GCM session persistence and session refresh manager.
+- Google OAuth PKCE authorization and callback implementation; live provider/callback validation remains outstanding.
+- Media3 playback service, queue, next/previous, repeat, shuffle and seek controls.
+- Separate bundled startup-jingle player; CI verifies the MP3 is packaged, but physical-device audible playback must still be tested.
+- CI previously passed native unit/build/APK packaging validation on commit `160df1e`; new 3.1 commits require fresh CI confirmation.
 
-## Remaining migration work — acceptance is feature-based
+## 3.1 backend foundation added
 
-| Area | Required native implementation | Acceptance evidence |
+File: `database/2026-11-07-high-tech-entertainment-3.1.sql`
+
+This additive migration introduces:
+- `videos` — public published catalogue and founder-only management.
+- `user_favourites` — authenticated owner-scoped saved tracks.
+- `user_playlists` and `user_playlist_tracks` — owner-scoped playlists and membership.
+- `listening_history` — owner-scoped listening records.
+- `bookings` — authenticated submissions, owner reads and founder processing.
+
+The migration creates new tables/indexes/policies only. It does not reset or rewrite existing data. **It has not been run against production.** Review and test it in a non-production environment first, especially policy behaviour and identity mapping.
+
+## Remaining 3.1 implementation
+
+| Feature | Status | Required completion evidence |
 |---|---|---|
-| Identity | Email/password, Google OAuth callback handling, password reset/update, sign-out, session refresh and secure token persistence | Email/password UI and Activity-owned session manager integrated; Google OAuth/PKCE, email-confirmation UX, password update and real-account/RLS tests remain |
-| Profiles | Profile read/update, avatar upload, account deletion request and privacy controls | Existing user records remain intact; owner/user isolation |
-| Catalogue | Extend the initial published-track query to artists, releases, genre filters, pagination and robust retry | Live PostgREST data; no demo catalogue |
-| Playback | Queue, seek, repeat, shuffle and polished Now Playing controls; verify system notification, Bluetooth/headset controls, background/resume and process recreation | Queue/transport controls and seek UI implemented; autoplay, track metadata sync edge cases and physical-device audio tests remain |
-| Startup audio | Bundled short startup jingle, separate local player, no visible playback/status UI, never enters queue or ad rotation | Resource-generation and isolated player implementation added; APK resource inclusion and cold/warm launch tests remain |
-| Promotions | Admin-managed audio campaigns, server-controlled scheduling/frequency and impressions; no listener ad-disable control | Campaign boundary and playback-order tests |
-| Video | Video catalogue, Media3 playback, orientation/fullscreen, retry and lifecycle handling | Real stored video playback and network interruption |
-| Library | Favourites, personal playlists, listening history, continue listening and share links | Authenticated user-scoped persistence and RLS isolation |
-| Downloads | WorkManager downloads, progress, cancellation, checksum, storage quota, offline metadata and deletion | Airplane-mode playback and interrupted-download recovery |
-| Founder Studio | Founder-only dashboard, catalogue CRUD, uploads, video management, enquiries/bookings and campaign management | RLS/server authorization tests using founder and ordinary accounts |
-| Bookings | Form validation, booking submission, status, confirmation and notification integration | End-to-end booking with rate-limit/replay protection |
-| Updates | Signed manifest verification, APK hash verification, version/downgrade checks and Android user-approved installer | Tamper, wrong-hash, downgrade, offline and installer-denial tests |
-| UX/accessibility | Adaptive navigation, compact phones, tablets/foldables, landscape, font scaling, TalkBack, keyboard and reduced motion | Compose UI tests and device matrix |
-| Reliability | Lifecycle-safe state, bounded diagnostics with redaction, offline errors, retry, crash-free startup and process recreation | Unit/instrumentation tests and low-RAM device runs |
-| Release | Production keystore identity comparison, signed APK/AAB, versionCode upgrade, install-over and data-preservation proof | Verified certificate fingerprints and physical-device upgrade report |
+| Google sign-in | Code implemented | Live Supabase redirect/callback test |
+| Password update | Not implemented | Authenticated password-change test |
+| Catalogue artists/releases | Partial | Real data and pagination tests |
+| Music playback | Core controls implemented | Physical device, audio focus, headset and process recreation |
+| Startup audio | Bundled and CI packaging verified | Audible cold/warm launch test; no visible player UI |
+| Videos | Schema foundation added | Native catalogue, Media3 playback and lifecycle tests |
+| Favourites | Schema foundation added | UI, repository, user-isolation/RLS tests |
+| Playlists | Schema foundation added | Create/edit/order/remove and RLS tests |
+| Listening history | Schema foundation added | Playback event persistence and user isolation |
+| Offline downloads | Not implemented | WorkManager, checksum, quota, resume and airplane-mode tests |
+| Profiles/avatars | Existing SQL foundation only | Native profile UI, storage policies and owner-isolation tests |
+| Bookings | Schema foundation added | UI, validation, submission and founder status workflow |
+| Founder Studio | Not implemented | Founder-only screens, uploads and ordinary-user denial tests |
+| Promotions | Not implemented in native app | Server-controlled scheduling, impressions and playback-order tests |
+| Native updates | Not implemented | Signed manifest/hash/version verification and user-approved installer |
+| Accessibility/adaptive UI | Partial | Compact phone, tablet, font scaling and TalkBack tests |
+| Production release | Not approved | Signing fingerprint match, higher versionCode and install-over proof |
 
-## Critical release gates
+## Release gates
 
-1. Do not replace or uninstall the production Flutter app during migration.
-2. Do not reset, clone over, or recreate production Supabase data.
-3. Keep service-role and secret keys server-side only.
-4. Do not publish a native APK as an update until its signing certificate matches the installed production app and its versionCode is higher.
-5. Do not call a feature migrated until its live backend and device tests pass.
-6. Flutter Shorebird OTA does not update native Kotlin code, manifest entries, permissions, plugins or bundled audio; those require a signed APK release.
+1. Never replace or uninstall the production app during migration.
+2. Never reset, recreate or overwrite production Supabase data.
+3. Keep service-role credentials and signing secrets out of source control.
+4. Enforce founder permissions server-side with RLS and/or trusted server functions.
+5. Do not claim a feature complete without backend and device evidence.
+6. Flutter Shorebird OTA cannot patch native Kotlin code, manifests, permissions, plugins or bundled audio.
+7. Do not publish an in-place update until certificate identity and version upgrade are proven.
 
-The current branch is a foundation plus transport layer, not a completed migration or a production-ready release.
+**Current assessment:** 3.1 release scope and additive backend schema are established. Native feature implementation and acceptance testing are still in progress.
