@@ -13,6 +13,7 @@ data class NativeSession(
 sealed interface AuthResult {
     data class Success(val session: NativeSession) : AuthResult
     data class Failure(val message: String, val statusCode: Int? = null) : AuthResult
+    data class Notice(val message: String) : AuthResult
 }
 
 /**
@@ -86,7 +87,7 @@ class AuthRepository(
                 body = JSONObject().put("email", email.trim()).toString()
             )
             if (response.isSuccessful) {
-                AuthResult.Failure("If the account exists, password-reset instructions will be sent.")
+                AuthResult.Notice("If the account exists, password-reset instructions will be sent.")
             } else {
                 AuthResult.Failure("Password reset could not be requested. Please try again.", response.statusCode)
             }
