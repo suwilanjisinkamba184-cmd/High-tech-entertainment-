@@ -24,8 +24,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: hte-native-signed-candidate
-  cancel-in-progress: false
+  group: hte-native-signed-candidate-${{ github.sha }}
+  cancel-in-progress: true
 
 jobs:
   signed-candidate:
