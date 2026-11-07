@@ -1728,6 +1728,27 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                 icon: const Icon(Icons.lock_reset),
                 label: const Text('CHANGE PASSWORD'),
               ),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (dialogContext) => AlertDialog(
+                      title: const Text('Request account deletion'),
+                      content: const Text('This opens the official High-Tech Entertainment deletion request page. You will be asked to verify ownership of your account.'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
+                        FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('CONTINUE')),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    await _appChannel.invokeMethod<void>('openAccountDeletion');
+                  }
+                },
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('REQUEST ACCOUNT DELETION'),
+              ),
             ],
           ),
         ),
