@@ -27,7 +27,7 @@ Not yet migrated:
 
 ## Build
 
-Requires JDK 17, stable Android SDK 36 and Gradle 9.8. Compose BOM 2026.04.01 (Compose 1.11) is pinned to avoid the API 37 requirement introduced by Compose 1.12. The project uses Android Gradle Plugin 9 built-in Kotlin support; do not add the legacy `org.jetbrains.kotlin.android` plugin or `android.kotlinOptions` block. The Compose compiler plugin remains explicitly applied.
+Requires JDK 17, stable Android SDK 36 and Gradle 9.8.2. Compose BOM 2026.04.01 (Compose 1.11) is pinned to avoid the API 37 requirement introduced by Compose 1.12. The project uses Android Gradle Plugin 9 built-in Kotlin support; do not add the legacy `org.jetbrains.kotlin.android` plugin or `android.kotlinOptions` block. The Compose compiler plugin remains explicitly applied.
 
 ```bash
 gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
