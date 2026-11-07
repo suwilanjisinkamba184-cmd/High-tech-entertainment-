@@ -25,7 +25,8 @@ private const val FounderUserId = "b268df9e-eff5-43b9-a38f-869b33add38b"
 @Composable
 fun AdditionalFeatureScreen(
     destination: String, tracks: List<NativeTrack>, features: FeatureRepository,
-    library: UserLibraryRepository, userId: String?, onPlayTrack: (NativeTrack) -> Unit
+    library: UserLibraryRepository, sponsoredAudio: com.hightechentertainment.app.data.SponsoredAudioRepository,
+    userId: String?, onPlayTrack: (NativeTrack) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     var message by remember(destination) { mutableStateOf<String?>(null) }
@@ -54,6 +55,12 @@ fun AdditionalFeatureScreen(
     var newArtistBio by remember { mutableStateOf("") }
     var newReleaseTitle by remember { mutableStateOf("") }
     var newReleaseDescription by remember { mutableStateOf("") }
+    var campaignTitle by remember { mutableStateOf("") }
+    var campaignUrl by remember { mutableStateOf("") }
+    var campaignStarts by remember { mutableStateOf("") }
+    var campaignEnds by remember { mutableStateOf("") }
+    var campaignPriority by remember { mutableStateOf("0") }
+    var campaigns by remember { mutableStateOf<List<SponsoredAudioAd>>(emptyList()) }
     val isFounder = userId == FounderUserId
 
     fun refresh() {
@@ -71,6 +78,7 @@ fun AdditionalFeatureScreen(
                 "Founder Studio" -> if (isFounder) {
                     features.founderOverview().onSuccess { overview = it }.onFailure { message = it.message }
                     features.founderBookings().onSuccess { bookings = it }.onFailure { message = it.message }
+                    sponsoredAudio.campaigns().onSuccess { campaigns = it }.onFailure { message = it.message }
                 } else message = "Founder access is restricted to the authorized account."
             }
             busy = false
@@ -240,6 +248,41 @@ fun AdditionalFeatureScreen(
                         }
                     }) { Text("Create release") }
                     Text("Catalogue uploads are created as drafts. Audio/video file upload and publication controls still need their secure storage workflow.", style = MaterialTheme.typography.bodySmall)
+                    HorizontalDivider(Modifier.padding(vertical = 12.dp))
+                    Text("SPONSORED AUDIO CAMPAIGNS", style = MaterialTheme.typography.titleMedium)
+                    OutlinedTextField(campaignTitle, { campaignTitle = it }, Modifier.fillMaxWidth(), label = { Text("Campaign title") })
+                    OutlinedTextField(campaignUrl, { campaignUrl = it }, Modifier.fillMaxWidth(), label = { Text("HTTPS audio advert URL") })
+                    OutlinedTextField(campaignStarts, { campaignStarts = it }, Modifier.fillMaxWidth(), label = { Text("Starts at ISO-8601 (optional)") })
+                    OutlinedTextField(campaignEnds, { campaignEnds = it }, Modifier.fillMaxWidth(), label = { Text("Ends at ISO-8601 (optional)") })
+                    OutlinedTextField(campaignPriority, { campaignPriority = it.filter(Char::isDigit).take(4) }, Modifier.fillMaxWidth(), label = { Text("Priority 0-1000") })
+                    Button(enabled = !busy, onClick = {
+                        scope.launch {
+                            busy = true
+                            sponsoredAudio.createCampaign(campaignTitle, campaignUrl,
+                                campaignStarts.takeIf { it.isNotBlank() }, campaignEnds.takeIf { it.isNotBlank() },
+                                campaignPriority.toIntOrNull() ?: 0)
+                                .onSuccess {
+                                    message = "Campaign saved as draft. Publish it below when ready."
+                                    campaigns = sponsoredAudio.campaigns().getOrDefault(emptyList())
+                                }.onFailure { message = it.message }
+                            busy = false
+                        }
+                    }) { Text("Create campaign draft") }
+                    campaigns.forEach { campaign ->
+                        ListItem(headlineContent = { Text(campaign.title) },
+                            supportingContent = { Text("Priority ${campaign.priority} • ${if (campaign.isPublished) "Published" else "Draft"}") },
+                            trailingContent = {
+                                TextButton(onClick = {
+                                    scope.launch {
+                                        sponsoredAudio.setCampaignPublished(campaign.id, !campaign.isPublished)
+                                            .onSuccess { message = if (campaign.isPublished) "Campaign paused." else "Campaign published." }
+                                            .onFailure { message = it.message }
+                                        campaigns = sponsoredAudio.campaigns().getOrDefault(emptyList())
+                                    }
+                                }) { Text(if (campaign.isPublished) "Pause" else "Publish") }
+                            })
+                    }
+                    Text("Scheduled campaigns play before music only while published and within their start/end window. Impressions are recorded against the signed-in listener.", style = MaterialTheme.typography.bodySmall)
                     Text("BOOKING INBOX", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 14.dp))
                     bookings.forEach { booking ->
                         ElevatedCard(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
