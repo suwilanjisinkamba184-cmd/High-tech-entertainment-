@@ -1,4 +1,5 @@
 plugins {
-    // Use AGP 8.10.1 to avoid the BaseVariant API linkage failure seen with 8.11.1.
-    id("com.android.application") version "8.10.1" apply false
+    // Flutter 3.47.9 enforces AGP 8.11.1 as its minimum supported version.
+    // Keep Kotlin Gradle Plugin 2.2.21 in settings.gradle.kts for Flutter compatibility.
+    id("com.android.application") version "8.11.1" apply false
 }
