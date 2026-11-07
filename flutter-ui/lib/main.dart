@@ -1212,6 +1212,20 @@ class _LibraryPanelState extends State<_LibraryPanel> {
       'getPlaylistTracks', {'playlistId': playlistId}) ?? <dynamic>[];
   }
 
+  Future<void> _removeTrack(String playlistId, String trackId) async {
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>(
+        'removeTrackFromPlaylist', {'playlistId': playlistId, 'trackId': trackId});
+      if (result?['success'] == true) {
+        if (mounted) setState(() {});
+      } else {
+        _showMessage(result?['message']?.toString() ?? 'Could not remove track.');
+      }
+    } on PlatformException catch (error) {
+      _showMessage(error.message ?? 'Could not remove track.');
+    }
+  }
+
   Future<void> _deletePlaylist(String id) async {
     try {
       final result = await _appChannel.invokeMapMethod<String, dynamic>('deletePlaylist', {'playlistId': id});
@@ -1326,10 +1340,21 @@ class _LibraryPanelState extends State<_LibraryPanel> {
                         children: rows.map((track) => ListTile(
                           title: Text(track['title']?.toString() ?? 'Untitled'),
                           subtitle: Text(track['artist']?.toString() ?? ''),
-                          trailing: IconButton(
-                            tooltip: 'Play track',
-                            icon: const Icon(Icons.play_arrow, color: _gold),
-                            onPressed: () => widget.onPlay(track),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: 'Play track',
+                                icon: const Icon(Icons.play_arrow, color: _gold),
+                                onPressed: () => widget.onPlay(track),
+                              ),
+                              IconButton(
+                                tooltip: 'Remove from playlist',
+                                icon: const Icon(Icons.remove_circle_outline, color: Colors.white54),
+                                onPressed: () => _removeTrack(
+                                  playlist['id'].toString(), track['id'].toString()),
+                              ),
+                            ],
                           ),
                         )).toList(),
                       );
