@@ -75,6 +75,7 @@ class MainActivity : ComponentActivity() {
     private var playbackPlayer by mutableStateOf<Player?>(null)
     private var playbackIsReady by mutableStateOf(false)
     private var playbackIsActive by mutableStateOf(false)
+    private var sponsoredAudioPlaying by mutableStateOf(false)
     private var shuffleEnabled by mutableStateOf(false)
     private var repeatMode by mutableIntStateOf(Player.REPEAT_MODE_OFF)
     private var knownTracks: List<NativeTrack> = emptyList()
@@ -178,6 +179,7 @@ class MainActivity : ComponentActivity() {
                     featureRepository = hteApplication.featureRepository,
                     userLibraryRepository = hteApplication.userLibraryRepository,
                     sponsoredAudioRepository = hteApplication.sponsoredAudioRepository,
+                    sponsoredAudioPlaying = sponsoredAudioPlaying,
                     userId = signedInSession.userId,
                     onDownloadTrack = { track ->
                         val id = offlineDownloads.enqueue(track)
@@ -229,6 +231,7 @@ class MainActivity : ComponentActivity() {
                                 activePlayer.shuffleModeEnabled = if (sponsoredAd == null) shuffleEnabled else false
                                 activePlayer.repeatMode = if (sponsoredAd == null) repeatMode else Player.REPEAT_MODE_OFF
                                 currentTrackState = if (sponsoredAd == null) track else null
+                                sponsoredAudioPlaying = sponsoredAd != null
                                 activePlayer.prepare()
                                 activePlayer.play()
                             }
@@ -339,10 +342,12 @@ class MainActivity : ComponentActivity() {
                         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                             val mediaId = mediaItem?.mediaId
                             if (mediaId?.startsWith("hte-ad:") == true) {
+                                sponsoredAudioPlaying = true
                                 currentTrackState = null
                                 val adId = mediaId.removePrefix("hte-ad:")
                                 lifecycleScope.launch { hteApplication.sponsoredAudioRepository.recordImpression(adId) }
                             } else {
+                                sponsoredAudioPlaying = false
                                 controller.shuffleModeEnabled = shuffleEnabled
                                 controller.repeatMode = repeatMode
                                 currentTrackState = mediaId?.let { id -> knownTracks.firstOrNull { it.id == id } }
@@ -405,6 +410,7 @@ private fun HighTechApp(
     featureRepository: com.hightechentertainment.app.data.FeatureRepository,
     userLibraryRepository: com.hightechentertainment.app.data.UserLibraryRepository,
     sponsoredAudioRepository: com.hightechentertainment.app.data.SponsoredAudioRepository,
+    sponsoredAudioPlaying: Boolean,
     userId: String?,
     onToggleFavourite: (NativeTrack) -> Unit,
     onDownloadTrack: (NativeTrack) -> Unit,
@@ -637,7 +643,7 @@ private fun HighTechApp(
                 }
             }
 
-            if (currentTrack != null) {
+            if (currentTrack != null || sponsoredAudioPlaying) {
                 Column(
                     Modifier.fillMaxWidth().background(Color(0xFF201A10)).padding(horizontal = 16.dp, vertical = 6.dp)
                 ) {
@@ -657,10 +663,10 @@ private fun HighTechApp(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                     Column(Modifier.weight(1f)) {
-                        Text(currentTrack.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(currentTrack.artist, color = HteMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(if (sponsoredAudioPlaying) "Sponsored audio" else currentTrack?.title.orEmpty(), color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(if (sponsoredAudioPlaying) "Advertisement" else currentTrack?.artist.orEmpty(), color = HteMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    IconButton(onClick = onPrevious) {
+                    if (!sponsoredAudioPlaying) IconButton(onClick = onPrevious) {
                         Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous track", tint = HteMuted)
                     }
                     IconButton(onClick = { if (playing) onPause() else onResume() }) {
@@ -670,14 +676,16 @@ private fun HighTechApp(
                             tint = HteGold
                         )
                     }
-                    IconButton(onClick = onNext) {
-                        Icon(Icons.Rounded.SkipNext, contentDescription = "Next track", tint = HteMuted)
-                    }
-                    IconButton(onClick = onToggleShuffle) {
-                        Icon(Icons.Rounded.Shuffle, contentDescription = "Toggle shuffle", tint = if (shuffleEnabled) HteGold else HteMuted)
-                    }
-                    IconButton(onClick = onToggleRepeat) {
-                        Icon(Icons.Rounded.Repeat, contentDescription = "Cycle repeat mode", tint = if (repeatMode == Player.REPEAT_MODE_OFF) HteMuted else HteGold)
+                    if (!sponsoredAudioPlaying) {
+                        IconButton(onClick = onNext) {
+                            Icon(Icons.Rounded.SkipNext, contentDescription = "Next track", tint = HteMuted)
+                        }
+                        IconButton(onClick = onToggleShuffle) {
+                            Icon(Icons.Rounded.Shuffle, contentDescription = "Toggle shuffle", tint = if (shuffleEnabled) HteGold else HteMuted)
+                        }
+                        IconButton(onClick = onToggleRepeat) {
+                            Icon(Icons.Rounded.Repeat, contentDescription = "Cycle repeat mode", tint = if (repeatMode == Player.REPEAT_MODE_OFF) HteMuted else HteGold)
+                        }
                     }
                     }
                 }
