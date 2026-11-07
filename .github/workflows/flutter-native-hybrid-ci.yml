@@ -7,7 +7,7 @@ on:
       - "flutter-ui/**"
       - ".github/workflows/flutter-native-hybrid-ci.yml"
   push:
-    branches: [main]
+    branches: [main, "feature/**"]
     paths:
       - "flutter-ui/**"
       - ".github/workflows/flutter-native-hybrid-ci.yml"
