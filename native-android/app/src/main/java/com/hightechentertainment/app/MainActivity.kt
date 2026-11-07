@@ -20,6 +20,10 @@ import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material3.*
@@ -73,6 +77,7 @@ class MainActivity : ComponentActivity() {
     private var shuffleEnabled by mutableStateOf(false)
     private var repeatMode by mutableIntStateOf(Player.REPEAT_MODE_OFF)
     private var knownTracks: List<NativeTrack> = emptyList()
+    private var currentTrackState by mutableStateOf<NativeTrack?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -130,7 +135,7 @@ class MainActivity : ComponentActivity() {
                 var tracks by remember { mutableStateOf<List<NativeTrack>>(emptyList()) }
                 var loading by remember { mutableStateOf(true) }
                 var error by remember { mutableStateOf<String?>(null) }
-                var currentTrack by remember { mutableStateOf<NativeTrack?>(null) }
+                val currentTrack = currentTrackState
                 val playing = playbackIsActive
 
                 fun loadCatalog() {
@@ -172,7 +177,7 @@ class MainActivity : ComponentActivity() {
                                 activePlayer.setMediaItems(queue, startIndex, C.TIME_UNSET)
                                 activePlayer.shuffleModeEnabled = shuffleEnabled
                                 activePlayer.repeatMode = repeatMode
-                                currentTrack = track
+                                currentTrackState = track
                                 activePlayer.prepare()
                                 activePlayer.play()
                             }
@@ -219,7 +224,7 @@ class MainActivity : ComponentActivity() {
                         }
 
                         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                            currentTrack = mediaItem?.mediaId?.let { id ->
+                            currentTrackState = mediaItem?.mediaId?.let { id ->
                                 knownTracks.firstOrNull { it.id == id }
                             }
                         }
