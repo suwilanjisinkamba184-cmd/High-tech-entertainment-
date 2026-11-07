@@ -57,6 +57,7 @@ Migrate the complete Android application experience to Flutter while retaining K
 - Voice Companion now has a Flutter screen; Kotlin hosts the existing ElevenLabs conversation SDK, microphone permission, audio ducking and playback/navigation/catalogue client tools behind the Flutter method channel.
 - Playlist CRUD/add-track bridge and Flutter playlist/library interface have just been added; these require CI and device verification.
 - Founder Studio now uses the Android document picker and bounded Supabase Storage uploads for audio/video, with profile image upload for signed-in users.
+- Media selection is implemented in the Kotlin host through Android's document picker rather than a Flutter picker plugin, avoiding a known Flutter add-to-app plugin-loader/AGP incompatibility and keeping file transfer bounded for low-memory devices.
 - Flutter password reset, password update, avatar upload and account-deletion request entry points have been added. Full edit/delete lifecycle for catalogue drafts and campaigns, complete settings/privacy screens and physical verification remain incomplete.
 - AI token endpoint previously logged a missing server configuration error. The actual ElevenLabs API key must be configured as a Supabase Edge Function secret and tested without exposing it to the client.
 
