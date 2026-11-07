@@ -573,6 +573,28 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
     });
   }
 
+  Future<void> _showSearch() async {
+    final controller = TextEditingController(text: _searchQuery);
+    final query = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Search music'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Track, artist or genre'),
+          onSubmitted: (value) => Navigator.pop(dialogContext, value),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, ''), child: const Text('CLEAR')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, controller.text), child: const Text('SEARCH')),
+        ],
+      ),
+    );
+    if (query != null && mounted) setState(() => _searchQuery = query.trim());
+    controller.dispose();
+  }
+
   Future<void> _refresh() async {
     setState(() {
       _loading = true;
@@ -767,6 +789,12 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
       appBar: AppBar(
         title: Text(titles[_tab], style: const TextStyle(fontWeight: FontWeight.w800)),
         actions: [
+          if (_tab == 0)
+            IconButton(
+              tooltip: 'Search music',
+              onPressed: _showSearch,
+              icon: const Icon(Icons.search_rounded),
+            ),
           IconButton(
             tooltip: 'Open AI Voice Companion',
             onPressed: _openVoiceCompanion,
