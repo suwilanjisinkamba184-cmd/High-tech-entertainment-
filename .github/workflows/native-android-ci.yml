@@ -67,11 +67,11 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "9.8.2"
+          gradle-version: "8.13"
       - name: Verify Gradle version
         run: |
           gradle --version
-          gradle --version | grep -q "Gradle 9.8.2"
+          gradle --version | grep -q "Gradle 8.13"
       - name: Run unit tests and build debug APK
         working-directory: native-android
         run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
