@@ -86,11 +86,16 @@ class AuthSessionManager(
             is AuthResult.Failure -> {
                 // A transient network failure must not erase a still-valid refresh token.
                 val stillStored = store.read()
-                if (stillStored == null || stillStored.expiresAtEpochSeconds <= nowSeconds()) {
+                val refreshTokenRejected = result.statusCode in setOf(400, 401, 403)
+                if (stillStored == null || refreshTokenRejected) {
+                    // Access-token expiry alone does not invalidate the refresh token.
+                    // Only a definitive auth rejection should clear persisted credentials.
                     store.clear()
                     mutableSession.value = null
                     mutableStatus.value = "signed_out"
                 } else {
+                    // Preserve the refresh token through offline, rate-limit and 5xx failures,
+                    // even when the short-lived access token has expired.
                     mutableSession.value = stillStored
                     mutableStatus.value = "refresh_retry"
                     scheduleRetry()
