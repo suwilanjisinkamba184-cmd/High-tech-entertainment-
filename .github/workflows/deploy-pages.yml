@@ -36,7 +36,7 @@ jobs:
           test -s assets/booking-confirmation.aac
           test -s account/index.html
           test -s admin/index.html
-          grep -q 'id="artists"' website/src/pages/index.astro
+          grep -q 'id="artists"' website/src/components/PublicCatalogue.tsx
           grep -q "from('artists')" website/src/components/PublicCatalogue.tsx
           grep -q "from('tracks')" website/src/components/PublicCatalogue.tsx
           grep -q "from('releases')" website/src/components/PublicCatalogue.tsx
