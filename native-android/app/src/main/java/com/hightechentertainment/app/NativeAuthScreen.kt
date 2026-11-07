@@ -20,7 +20,8 @@ internal fun NativeAuthScreen(
     message: String?,
     onSignIn: (String, String) -> Unit,
     onSignUp: (String, String) -> Unit,
-    onReset: (String) -> Unit
+    onReset: (String) -> Unit,
+    onGoogleSignIn: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -101,6 +102,15 @@ internal fun NativeAuthScreen(
                         color = Color(0xFF080808),
                         fontWeight = FontWeight.Bold
                     )
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onGoogleSignIn,
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    enabled = !busy,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                ) {
+                    Text("CONTINUE WITH GOOGLE", fontWeight = FontWeight.Bold)
                 }
                 TextButton(
                     onClick = { createAccount = !createAccount },
