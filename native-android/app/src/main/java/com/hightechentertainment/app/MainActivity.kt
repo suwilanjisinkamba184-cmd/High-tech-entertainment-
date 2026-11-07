@@ -55,6 +55,7 @@ import com.hightechentertainment.app.playback.PlaybackService
 import com.hightechentertainment.app.playback.StartupJingle
 import com.hightechentertainment.app.playback.OfflineMusicDownloads
 import com.hightechentertainment.app.data.NativeTrack
+import com.hightechentertainment.app.data.NativeArtist
 import com.hightechentertainment.app.data.AuthResult
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -490,6 +491,20 @@ private fun HighTechApp(
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var moreExpanded by rememberSaveable { mutableStateOf(false) }
     var search by rememberSaveable { mutableStateOf("") }
+    var artists by remember { mutableStateOf<List<NativeArtist>>(emptyList()) }
+    var artistsLoading by remember { mutableStateOf(false) }
+    var artistsError by remember { mutableStateOf<String?>(null) }
+    var artistRefreshKey by remember { mutableIntStateOf(0) }
+    LaunchedEffect(selectedTab, artistRefreshKey) {
+        if (selectedTab == 11) {
+            artistsLoading = true
+            artistsError = null
+            featureRepository.publishedArtists()
+                .onSuccess { artists = it }
+                .onFailure { artistsError = it.message ?: "Could not load artists." }
+            artistsLoading = false
+        }
+    }
     val context = LocalContext.current
     val visibleTracks = tracks.filter {
         it.title.contains(search, true) || it.artist.contains(search, true) ||
@@ -559,6 +574,7 @@ private fun HighTechApp(
                             TextButton(onClick = { moreExpanded = true }) { Text("MENU", color = HteGold, fontWeight = FontWeight.Bold, fontSize = 11.sp) }
                             DropdownMenu(expanded = moreExpanded, onDismissRequest = { moreExpanded = false }) {
                                 buildList {
+                                    add("Artists" to 11)
                                     add("Downloads" to 5)
                                     add("Bookings" to 6)
                                     add("Profile & account" to 7)
@@ -590,6 +606,7 @@ private fun HighTechApp(
                                 8 -> "Founder Studio"
                                 9 -> "App updates"
                                 10 -> "Voice Companion"
+                                11 -> "Artists"
                                 else -> "Music. Beats. Production. Beyond."
                             },
                             style = MaterialTheme.typography.headlineMedium,
@@ -711,6 +728,52 @@ private fun HighTechApp(
                             )
                         }
                     }
+                } else if (selectedTab == 11) {
+                    when {
+                        artistsLoading && artists.isEmpty() -> item {
+                            Box(Modifier.fillMaxWidth().padding(28.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = HteGold)
+                            }
+                        }
+                        artistsError != null && artists.isEmpty() -> item {
+                            StatusCard(artistsError ?: "Could not load artists.", "Retry") { artistRefreshKey++ }
+                        }
+                        artists.isEmpty() -> item {
+                            StatusCard("No published artist profiles are available yet.", "Refresh") { artistRefreshKey++ }
+                        }
+                        else -> items(artists, key = { "artist-${it.id}" }) { artist ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(containerColor = HteSurface)
+                            ) {
+                                Row(
+                                    Modifier.fillMaxWidth().padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        Modifier.size(58.dp).background(
+                                            Brush.linearGradient(listOf(Color(0xFF49351A), Color(0xFF201A10))),
+                                            CircleShape
+                                        ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(artist.name.take(1).uppercase(), color = HteGold,
+                                            fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                                    }
+                                    Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                                        Text(artist.name, color = Color.White, fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.titleMedium)
+                                        Text(
+                                            artist.bio.ifBlank { "High-Tech Entertainment artist" },
+                                            color = HteMuted, fontSize = 13.sp, maxLines = 3,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 } else {
                     item {
                         Box(Modifier.fillParentMaxSize()) {
@@ -733,6 +796,7 @@ private fun HighTechApp(
                                             "Profile" -> 7
                                             "App Updates" -> 9
                                             "Voice Companion" -> 10
+                                            "Artists" -> 11
                                             "Founder Studio" -> if (isFounderAccount) 8 else selectedTab
                                             else -> selectedTab
                                         }
