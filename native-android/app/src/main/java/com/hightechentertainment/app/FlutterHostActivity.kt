@@ -117,10 +117,6 @@ class FlutterHostActivity : FlutterActivity() {
                         StartupJingle.stopForSplash()
                         result.success(true)
                     }
-                    "openNativeApp" -> {
-                        startActivity(Intent(this, MainActivity::class.java))
-                        result.success(true)
-                    }
                     else -> result.notImplemented()
                 }
             }
@@ -149,12 +145,6 @@ class FlutterHostActivity : FlutterActivity() {
                     "startVoiceSession" -> startVoiceSession(result)
                     "endVoiceSession" -> endVoiceSession(result)
                     "setVoiceMuted" -> setVoiceMuted(call.argument<Boolean>("muted") ?: false, result)
-                    "openVoiceCompanion" -> {
-                        startActivity(Intent(this, MainActivity::class.java).apply {
-                            putExtra(MainActivity.EXTRA_OPEN_VOICE_COMPANION, true)
-                        })
-                        result.success(true)
-                    }
                     "getSession" -> result.success(sessionMap())
                     "getPlaybackState" -> result.success(playbackState())
                     "playVideo" -> {
