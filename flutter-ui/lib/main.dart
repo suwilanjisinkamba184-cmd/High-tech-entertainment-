@@ -480,6 +480,8 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
   List<Map<String, dynamic>> _artists = [];
   List<Map<String, dynamic>> _videos = [];
   Set<String> _favourites = {};
+  Map<String, dynamic>? _nowPlayingTrack;
+  bool _isPlaying = false;
 
   @override
   void initState() {
@@ -532,6 +534,67 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
         _error = 'The app data bridge is not available in this build.';
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _playTrack(Map<String, dynamic> track) async {
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'playTrack',
+        {'trackId': track['id']?.toString() ?? ''},
+      );
+      if (response?['success'] == true && mounted) {
+        setState(() {
+          _nowPlayingTrack = track;
+          _isPlaying = true;
+        });
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response?['message']?.toString() ?? 'Playback could not start.')),
+        );
+      }
+    } on PlatformException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message ?? 'Playback could not start.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _togglePlayback() async {
+    final method = _isPlaying ? 'pausePlayback' : 'resumePlayback';
+    try {
+      await _appChannel.invokeMapMethod<String, dynamic>(method);
+      if (mounted) setState(() => _isPlaying = !_isPlaying);
+    } on PlatformException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message ?? 'Player control failed.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _downloadTrack(Map<String, dynamic> track) async {
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'downloadTrack',
+        {'trackId': track['id']?.toString() ?? ''},
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response?['success'] == true
+              ? 'Download added to Android download manager.'
+              : 'This track is not available for download.')),
+        );
+      }
+    } on PlatformException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message ?? 'Download could not start.')),
+        );
+      }
     }
   }
 
@@ -614,6 +677,8 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
                       tracks: _tracks,
                       favourites: _favourites,
                       onFavourite: _toggleFavourite,
+                      onPlay: _playTrack,
+                      onDownload: _downloadTrack,
                       onRefresh: _refresh,
                     ),
                     _ArtistList(artists: _artists),
@@ -622,13 +687,27 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
                       tracks: _tracks.where((t) => _favourites.contains(t['id'])).toList(),
                       favourites: _favourites,
                       onFavourite: _toggleFavourite,
+                      onPlay: _playTrack,
+                      onDownload: _downloadTrack,
                       onRefresh: _refresh,
                       emptyMessage: 'Your saved tracks will appear here.',
                     ),
                     _ProfilePanel(onSignOut: _signOut),
                   ],
                 ),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_nowPlayingTrack != null)
+            _NowPlayingBar(
+              track: _nowPlayingTrack!,
+              playing: _isPlaying,
+              onToggle: _togglePlayback,
+              onNext: () async {
+                await _appChannel.invokeMethod<void>('nextTrack');
+              },
+            ),
+          NavigationBar(
         backgroundColor: _surface,
         indicatorColor: _gold.withValues(alpha: 0.18),
         selectedIndex: _tab,
@@ -640,6 +719,8 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
           NavigationDestination(icon: Icon(Icons.favorite_border), selectedIcon: Icon(Icons.favorite), label: 'Library'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
         ],
+          ),
+        ],
       ),
     );
   }
@@ -650,6 +731,8 @@ class _MusicList extends StatelessWidget {
     required this.tracks,
     required this.favourites,
     required this.onFavourite,
+    required this.onPlay,
+    required this.onDownload,
     required this.onRefresh,
     this.emptyMessage = 'No published tracks are available yet.',
   });
@@ -657,6 +740,8 @@ class _MusicList extends StatelessWidget {
   final List<Map<String, dynamic>> tracks;
   final Set<String> favourites;
   final Future<void> Function(String) onFavourite;
+  final Future<void> Function(Map<String, dynamic>) onPlay;
+  final Future<void> Function(Map<String, dynamic>) onDownload;
   final Future<void> Function() onRefresh;
   final String emptyMessage;
 
@@ -700,17 +785,25 @@ class _MusicList extends StatelessWidget {
               track['artist']?.toString() ?? 'High-Tech Entertainment',
               if ((track['genre']?.toString() ?? '').isNotEmpty) track['genre'].toString(),
             ].join(' • '), maxLines: 1, overflow: TextOverflow.ellipsis),
-            trailing: IconButton(
-              tooltip: favourites.contains(id) ? 'Remove from favourites' : 'Add to favourites',
-              onPressed: id.isEmpty ? null : () => onFavourite(id),
-              icon: Icon(
-                favourites.contains(id) ? Icons.favorite : Icons.favorite_border,
-                color: favourites.contains(id) ? _gold : Colors.white70,
-              ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: 'Download track',
+                  onPressed: id.isEmpty ? null : () => onDownload(track),
+                  icon: const Icon(Icons.download_outlined, color: Colors.white70),
+                ),
+                IconButton(
+                  tooltip: favourites.contains(id) ? 'Remove from favourites' : 'Add to favourites',
+                  onPressed: id.isEmpty ? null : () => onFavourite(id),
+                  icon: Icon(
+                    favourites.contains(id) ? Icons.favorite : Icons.favorite_border,
+                    color: favourites.contains(id) ? _gold : Colors.white70,
+                  ),
+                ),
+              ],
             ),
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Playback controls are being connected to the native Media3 player.')),
-            ),
+            onTap: () => onPlay(track),
           );
         },
       ),
@@ -798,6 +891,58 @@ class _VideoList extends StatelessWidget {
         color: _surface,
         child: const Icon(Icons.play_circle_outline, color: _gold),
       );
+}
+
+class _NowPlayingBar extends StatelessWidget {
+  const _NowPlayingBar({
+    required this.track,
+    required this.playing,
+    required this.onToggle,
+    required this.onNext,
+  });
+
+  final Map<String, dynamic> track;
+  final bool playing;
+  final Future<void> Function() onToggle;
+  final Future<void> Function() onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF211A10),
+      padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
+      child: Row(
+        children: [
+          const Icon(Icons.graphic_eq, color: _gold),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(track['title']?.toString() ?? 'Now playing',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(track['artist']?.toString() ?? 'High-Tech Entertainment',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white60, fontSize: 11)),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: playing ? 'Pause' : 'Resume',
+            onPressed: onToggle,
+            icon: Icon(playing ? Icons.pause_rounded : Icons.play_arrow_rounded, color: _gold),
+          ),
+          IconButton(
+            tooltip: 'Next track',
+            onPressed: onNext,
+            icon: const Icon(Icons.skip_next_rounded, color: _gold),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ProfilePanel extends StatelessWidget {
