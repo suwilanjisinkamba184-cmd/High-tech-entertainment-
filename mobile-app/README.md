@@ -28,6 +28,15 @@ The official Android client is a native Flutter application. The canonical publi
 - Role-checked user directory and aggregate listening/advertising analytics.
 - Private on-device diagnostics with explicit redacted report export.
 
+
+### Voice Companion (initial offline Android increment)
+
+- The Voice Companion is available from Android Settings and uses press-to-talk; it does not keep the microphone open in the background.
+- Offline speech recognition is requested explicitly on-device and requires a compatible offline language pack installed in Android's speech services.
+- Offline speech output uses Android Text-to-Speech voices that report no network requirement. The selected voice is saved locally on the device.
+- The first increment supports basic playback commands (pause, resume, next, previous and stop). Website commands, online assistant intelligence, news/release announcements, proactive recommendations, and wake-word activation are not included in this increment.
+- Voice recognition and spoken responses are not sent to the High-Tech Entertainment backend by this offline command screen. Microphone access is requested only when the user taps Press to speak.
+
 ## Performance and reliability
 
 - App tabs are mounted on first visit rather than all loading their catalogues at startup, reducing initial network and memory pressure on low-RAM Android devices.
