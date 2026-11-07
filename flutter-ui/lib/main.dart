@@ -2465,47 +2465,8 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                 activeThumbColor: _gold,
                 onChanged: (value) => _updatePreference('wifiOnlyDownloads', value),
               ),
-              const Divider(color: Colors.white12),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text('AUDIO QUALITY', style: TextStyle(
-                  color: _gold, fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 1.1)),
-              ),
-              DropdownButtonFormField<String>(
-                value: (_preferences['audioQuality'] ?? 'high').toString(),
-                items: const [
-                  DropdownMenuItem(value: 'data_saver', child: Text('Data saver')),
-                  DropdownMenuItem(value: 'normal', child: Text('Normal')),
-                  DropdownMenuItem(value: 'high', child: Text('High')),
-                ],
-                onChanged: (value) {
-                  if (value != null) _updatePreference('audioQuality', value);
-                },
-              ),
-              const Divider(color: Colors.white12),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('New release notifications'),
-                value: _preferences['releaseNotifications'] != false,
-                activeThumbColor: _gold,
-                onChanged: (value) => _updatePreference('releaseNotifications', value),
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Artist notifications'),
-                value: _preferences['artistNotifications'] != false,
-                activeThumbColor: _gold,
-                onChanged: (value) => _updatePreference('artistNotifications', value),
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Promotional notifications'),
-                value: _preferences['promotionalNotifications'] == true,
-                activeThumbColor: _gold,
-                onChanged: (value) => _updatePreference('promotionalNotifications', value),
-              ),
               const SizedBox(height: 6),
-              const Text('Settings are saved to your account. Some playback and notification behaviours still require device-level integration.',
+              const Text('Autoplay, shuffle and Wi-Fi-only download rules are applied by the Android playback and download services.',
                 style: TextStyle(color: Colors.white54, fontSize: 11)),
             ],
           ),
