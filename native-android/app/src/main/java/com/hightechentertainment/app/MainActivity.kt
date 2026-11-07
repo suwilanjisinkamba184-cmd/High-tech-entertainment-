@@ -58,6 +58,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 private val HteBlack = Color(0xFF080808)
 private val HteSurface = Color(0xFF151515)
@@ -78,6 +79,8 @@ class MainActivity : ComponentActivity() {
     private var repeatMode by mutableIntStateOf(Player.REPEAT_MODE_OFF)
     private var knownTracks: List<NativeTrack> = emptyList()
     private var currentTrackState by mutableStateOf<NativeTrack?>(null)
+    private var playbackPositionMs by mutableLongStateOf(0L)
+    private var playbackDurationMs by mutableLongStateOf(0L)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -137,6 +140,14 @@ class MainActivity : ComponentActivity() {
                 var error by remember { mutableStateOf<String?>(null) }
                 val currentTrack = currentTrackState
                 val playing = playbackIsActive
+                LaunchedEffect(playing, currentTrack?.id) {
+                    while (playing) {
+                        val player = playbackPlayer
+                        playbackPositionMs = player?.currentPosition?.coerceAtLeast(0L) ?: 0L
+                        playbackDurationMs = player?.duration?.takeIf { it > 0L } ?: 0L
+                        delay(500L)
+                    }
+                }
 
                 fun loadCatalog() {
                     loading = true
@@ -200,6 +211,9 @@ class MainActivity : ComponentActivity() {
                     },
                     shuffleEnabled = shuffleEnabled,
                     repeatMode = repeatMode,
+                    positionMs = playbackPositionMs,
+                    durationMs = playbackDurationMs,
+                    onSeek = { position -> playbackPlayer?.seekTo(position) },
                     onSignOut = {
                         lifecycleScope.launch { sessionManager.signOut() }
                     }
@@ -292,6 +306,9 @@ private fun HighTechApp(
     onToggleRepeat: () -> Unit,
     shuffleEnabled: Boolean,
     repeatMode: Int,
+    positionMs: Long,
+    durationMs: Long,
+    onSeek: (Long) -> Unit,
     onSignOut: () -> Unit
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -461,10 +478,24 @@ private fun HighTechApp(
             }
 
             if (currentTrack != null) {
-                Row(
-                    Modifier.fillMaxWidth().background(Color(0xFF201A10)).padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    Modifier.fillMaxWidth().background(Color(0xFF201A10)).padding(horizontal = 16.dp, vertical = 6.dp)
                 ) {
+                    var seekPreview by remember(currentTrack.id) { mutableFloatStateOf(0f) }
+                    val progress = if (durationMs > 0L) (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
+                    Slider(
+                        value = seekPreview.takeIf { it > 0f } ?: progress,
+                        onValueChange = { seekPreview = it },
+                        onValueChangeFinished = {
+                            if (durationMs > 0L) onSeek((seekPreview * durationMs).toLong())
+                            seekPreview = 0f
+                        },
+                        enabled = durationMs > 0L
+                    )
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                     Column(Modifier.weight(1f)) {
                         Text(currentTrack.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(currentTrack.artist, color = HteMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
