@@ -5,7 +5,7 @@ plugins {
 
 val startupJingleResDir = layout.buildDirectory.dir("generated/res/startupJingle")
 
-val prepareStartupJingle by tasks.registering(Copy::class) {
+val prepareStartupJingle = tasks.register<Copy>("prepareStartupJingle") {
     from(rootProject.file("../mobile-app/assets/high-tech-startup.mp3"))
     into(startupJingleResDir.map { it.dir("raw") })
     rename { "high_tech_startup.mp3" }
@@ -24,7 +24,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    sourceSets.getByName("main").res.srcDir(startupJingleResDir)
+    sourceSets.getByName("main").res.srcDir(startupJingleResDir.get().asFile)
 
     buildFeatures {
         compose = true
