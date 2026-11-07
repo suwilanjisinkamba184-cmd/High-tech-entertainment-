@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LibraryMusic
@@ -135,6 +136,7 @@ class MainActivity : ComponentActivity() {
                     )
                 } else {
                 var tracks by remember { mutableStateOf<List<NativeTrack>>(emptyList()) }
+                var favouriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
                 var loading by remember { mutableStateOf(true) }
                 var error by remember { mutableStateOf<String?>(null) }
                 val currentTrack = currentTrackState
@@ -162,9 +164,29 @@ class MainActivity : ComponentActivity() {
                         loading = false
                     }
                 }
-                LaunchedEffect(Unit) { loadCatalog() }
+                LaunchedEffect(Unit) {
+                    loadCatalog()
+                    hteApplication.userLibraryRepository.favouriteTrackIds()
+                        .onSuccess { favouriteIds = it.toSet() }
+                }
 
                 HighTechApp(
+                    favouriteIds = favouriteIds,
+                    onToggleFavourite = { track ->
+                        lifecycleScope.launch {
+                            val isSaved = track.id in favouriteIds
+                            val result = if (isSaved) {
+                                hteApplication.userLibraryRepository.removeFavourite(track.id)
+                            } else {
+                                hteApplication.userLibraryRepository.addFavourite(track.id)
+                            }
+                            if (result.successful) {
+                                favouriteIds = if (isSaved) favouriteIds - track.id else favouriteIds + track.id
+                            } else {
+                                error = result.message ?: "Could not update favourites."
+                            }
+                        }
+                    },
                     tracks = tracks,
                     loading = loading,
                     error = error,
@@ -191,6 +213,9 @@ class MainActivity : ComponentActivity() {
                                 activePlayer.shuffleModeEnabled = shuffleEnabled
                                 activePlayer.repeatMode = repeatMode
                                 currentTrackState = track
+                                lifecycleScope.launch {
+                                    hteApplication.userLibraryRepository.recordListening(track.id)
+                                }
                                 activePlayer.prepare()
                                 activePlayer.play()
                             }
@@ -353,6 +378,8 @@ private val destinations = listOf(
 @Composable
 private fun HighTechApp(
     tracks: List<NativeTrack>,
+    favouriteIds: Set<String>,
+    onToggleFavourite: (NativeTrack) -> Unit,
     loading: Boolean,
     error: String?,
     currentTrack: NativeTrack?,
@@ -516,6 +543,24 @@ private fun HighTechApp(
                                 track = track,
                                 isCurrent = currentTrack?.id == track.id,
                                 playing = playing && currentTrack?.id == track.id,
+                                isFavorite = track.id in favouriteIds,
+                                onFavourite = { onToggleFavourite(track) },
+                                onClick = { onPlay(track) }
+                            )
+                        }
+                    }
+                } else if (selectedTab == 4) {
+                    val savedTracks = tracks.filter { it.id in favouriteIds }
+                    if (savedTracks.isEmpty()) {
+                        item { StatusCard("Your favourites will appear here when you save a track.", "Refresh", onRefresh) }
+                    } else {
+                        items(savedTracks, key = { "favourite-${it.id}" }) { track ->
+                            TrackRow(
+                                track = track,
+                                isCurrent = currentTrack?.id == track.id,
+                                playing = playing && currentTrack?.id == track.id,
+                                isFavorite = true,
+                                onFavourite = { onToggleFavourite(track) },
                                 onClick = { onPlay(track) }
                             )
                         }
@@ -524,9 +569,9 @@ private fun HighTechApp(
                     item {
                         StatusCard(
                             when (selectedTab) {
-                                2 -> "Video catalogue is the next native feature being connected."
-                                3 -> "Sign in to sync your listening library across devices."
-                                else -> "Your saved favourites will appear here after account sync is enabled."
+                                2 -> "Video catalogue and full-screen playback are not connected yet."
+                                3 -> "Playlist management and full listening history are still being implemented."
+                                else -> "This section is not available yet."
                             },
                             "Refresh catalogue",
                             onRefresh
@@ -592,6 +637,8 @@ private fun TrackRow(
     track: NativeTrack,
     isCurrent: Boolean,
     playing: Boolean,
+    isFavorite: Boolean,
+    onFavourite: () -> Unit,
     onClick: () -> Unit
 ) {
     Card(
@@ -617,6 +664,13 @@ private fun TrackRow(
                 Text(track.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(track.artist, color = HteMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 track.genre?.let { Text(it, color = HteGold, fontSize = 10.sp) }
+            }
+            IconButton(onClick = onFavourite) {
+                Icon(
+                    if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                    contentDescription = if (isFavorite) "Remove from favourites" else "Add to favourites",
+                    tint = if (isFavorite) HteGold else HteMuted
+                )
             }
             Text("PLAY", color = HteGold, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
