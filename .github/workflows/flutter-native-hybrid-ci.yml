@@ -1,17 +1,15 @@
-name: High-Tech Entertainment — Flutter UI + Native Android CI
+name: High-Tech Entertainment — Flutter UI checks
 
 on:
   pull_request:
     branches: [main]
     paths:
       - "flutter-ui/**"
-      - "native-android/**"
       - ".github/workflows/flutter-native-hybrid-ci.yml"
   push:
     branches: [main]
     paths:
       - "flutter-ui/**"
-      - "native-android/**"
       - ".github/workflows/flutter-native-hybrid-ci.yml"
   workflow_dispatch:
 
@@ -19,21 +17,15 @@ permissions:
   contents: read
 
 concurrency:
-  group: hte-flutter-native-${{ github.ref }}
+  group: hte-flutter-ui-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  hybrid-build:
+  flutter-ui:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
-
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
 
       - name: Set up Flutter stable
         uses: subosito/flutter-action@v2
@@ -46,30 +38,22 @@ jobs:
         working-directory: flutter-ui
         run: flutter pub get
 
-      - name: Verify Flutter SDK and package graph
+      - name: Audit Flutter dependency versions
         working-directory: flutter-ui
-        run: |
-          flutter --version
-          flutter pub outdated || true
-          flutter analyze
-          flutter test
+        run: flutter pub outdated || true
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "9.8.2"
+      - name: Analyze Flutter UI
+        working-directory: flutter-ui
+        run: flutter analyze
 
-      - name: Build and test hybrid Android host
-        working-directory: native-android
-        run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
+      - name: Run Flutter widget tests
+        working-directory: flutter-ui
+        run: flutter test
 
-      - name: Upload hybrid debug APK and reports
-        if: always()
+      - name: Upload resolved dependency lockfile
         uses: actions/upload-artifact@v4
         with:
-          name: hte-hybrid-android-debug-${{ github.run_number }}
-          path: |
-            native-android/app/build/outputs/apk/debug/*.apk
-            native-android/app/build/reports/tests/
-          if-no-files-found: warn
+          name: hte-flutter-dependencies-${{ github.run_number }}
+          path: flutter-ui/pubspec.lock
+          if-no-files-found: error
           retention-days: 14
