@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.C
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
@@ -69,6 +70,9 @@ class MainActivity : ComponentActivity() {
     private var playbackPlayer by mutableStateOf<Player?>(null)
     private var playbackIsReady by mutableStateOf(false)
     private var playbackIsActive by mutableStateOf(false)
+    private var shuffleEnabled by mutableStateOf(false)
+    private var repeatMode by mutableIntStateOf(Player.REPEAT_MODE_OFF)
+    private var knownTracks: List<NativeTrack> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -135,6 +139,7 @@ class MainActivity : ComponentActivity() {
                     lifecycleScope.launch {
                         val result = catalogRepository.publishedTracks()
                         tracks = result.items
+                        knownTracks = result.items
                         error = result.error
                         loading = false
                     }
@@ -150,25 +155,46 @@ class MainActivity : ComponentActivity() {
                     onRefresh = { loadCatalog() },
                     onPlay = { track ->
                         val activePlayer = playbackPlayer
-                        val url = track.audioUrl
+                        val playableTracks = tracks.filter { !it.audioUrl.isNullOrBlank() }
+                        val startIndex = playableTracks.indexOfFirst { it.id == track.id }
                         when {
                             !playbackIsReady || activePlayer == null ->
                                 error = "The audio player is still connecting. Please try again."
-                            url == null ->
+                            startIndex < 0 ->
                                 error = "This track does not have a playable audio file yet."
                             else -> {
-                                if (currentTrack?.id != track.id) {
-                                    activePlayer.setMediaItem(MediaItem.fromUri(url))
-                                    activePlayer.prepare()
-                                    currentTrack = track
+                                val queue = playableTracks.map { item ->
+                                    MediaItem.Builder()
+                                        .setMediaId(item.id)
+                                        .setUri(item.audioUrl!!)
+                                        .build()
                                 }
+                                activePlayer.setMediaItems(queue, startIndex, C.TIME_UNSET)
+                                activePlayer.shuffleModeEnabled = shuffleEnabled
+                                activePlayer.repeatMode = repeatMode
+                                currentTrack = track
+                                activePlayer.prepare()
                                 activePlayer.play()
                             }
                         }
                     },
-                    onPause = {
-                        playbackPlayer?.pause()
+                    onPause = { playbackPlayer?.pause() },
+                    onNext = { playbackPlayer?.seekToNextMediaItem() },
+                    onPrevious = { playbackPlayer?.seekToPreviousMediaItem() },
+                    onToggleShuffle = {
+                        shuffleEnabled = !shuffleEnabled
+                        playbackPlayer?.shuffleModeEnabled = shuffleEnabled
                     },
+                    onToggleRepeat = {
+                        repeatMode = when (repeatMode) {
+                            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                            else -> Player.REPEAT_MODE_OFF
+                        }
+                        playbackPlayer?.repeatMode = repeatMode
+                    },
+                    shuffleEnabled = shuffleEnabled,
+                    repeatMode = repeatMode,
                     onSignOut = {
                         lifecycleScope.launch { sessionManager.signOut() }
                     }
@@ -190,6 +216,12 @@ class MainActivity : ComponentActivity() {
                     controller.addListener(object : Player.Listener {
                         override fun onIsPlayingChanged(isPlaying: Boolean) {
                             playbackIsActive = isPlaying
+                        }
+
+                        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                            currentTrack = mediaItem?.mediaId?.let { id ->
+                                knownTracks.firstOrNull { it.id == id }
+                            }
                         }
                     })
                 }
@@ -249,6 +281,12 @@ private fun HighTechApp(
     onRefresh: () -> Unit,
     onPlay: (NativeTrack) -> Unit,
     onPause: () -> Unit,
+    onNext: () -> Unit,
+    onPrevious: () -> Unit,
+    onToggleShuffle: () -> Unit,
+    onToggleRepeat: () -> Unit,
+    shuffleEnabled: Boolean,
+    repeatMode: Int,
     onSignOut: () -> Unit
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -426,12 +464,24 @@ private fun HighTechApp(
                         Text(currentTrack.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(currentTrack.artist, color = HteMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
+                    IconButton(onClick = onPrevious) {
+                        Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous track", tint = HteMuted)
+                    }
                     IconButton(onClick = { if (playing) onPause() else onPlay(currentTrack) }) {
                         Icon(
                             if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                             contentDescription = if (playing) "Pause" else "Play",
                             tint = HteGold
                         )
+                    }
+                    IconButton(onClick = onNext) {
+                        Icon(Icons.Rounded.SkipNext, contentDescription = "Next track", tint = HteMuted)
+                    }
+                    IconButton(onClick = onToggleShuffle) {
+                        Icon(Icons.Rounded.Shuffle, contentDescription = "Toggle shuffle", tint = if (shuffleEnabled) HteGold else HteMuted)
+                    }
+                    IconButton(onClick = onToggleRepeat) {
+                        Icon(Icons.Rounded.Repeat, contentDescription = "Cycle repeat mode", tint = if (repeatMode == Player.REPEAT_MODE_OFF) HteMuted else HteGold)
                     }
                 }
             }
