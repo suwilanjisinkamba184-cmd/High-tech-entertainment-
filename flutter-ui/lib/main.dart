@@ -102,29 +102,46 @@ class _StartupExperienceState extends State<StartupExperience>
   }
 
   Future<void> _startExperience() async {
-    // Native Kotlin owns the sound. The visual timer begins on the same
-    // launch frame; a missing bridge must never block the app from opening.
+    // Start the visual clock before crossing the platform channel. A slow or
+    // stalled native bridge must never extend the splash beyond 15 seconds.
+    _progress.forward();
+    _timer = Timer(_duration, _finishExperience);
+
     try {
       await _startupChannel.invokeMethod<void>('playStartup');
     } on PlatformException {
-      // Native audio is optional during module-only previews and CI tests.
+      // Audio is optional in module previews; the splash deadline is not.
     } on MissingPluginException {
-      // The host bridge is wired in the native integration phase.
+      // Native audio is unavailable in a standalone Flutter preview.
     }
 
-    if (!mounted) return;
-    _progress.forward();
-    _timer = Timer(_duration, () {
-      _startupChannel.invokeMethod<void>('stopStartup');
-      if (!mounted) return;
-      setState(() => _finished = true);
-    });
+    // Do not restart or extend the deadline if the native call returns late.
+    if (!mounted || _finished) return;
+  }
+
+  void _finishExperience() {
+    if (!mounted || _finished) return;
+    _finished = true;
+    _timer?.cancel();
+    _progress.value = 1.0;
+    unawaited(_stopStartup());
+    setState(() {});
+  }
+
+  Future<void> _stopStartup() async {
+    try {
+      await _startupChannel.invokeMethod<void>('stopStartup');
+    } on PlatformException {
+      // The UI must still complete if native audio has already stopped.
+    } on MissingPluginException {
+      // Expected in standalone Flutter widget previews.
+    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    _startupChannel.invokeMethod<void>('stopStartup');
+    unawaited(_stopStartup());
     _motion.dispose();
     _progress.dispose();
     super.dispose();
