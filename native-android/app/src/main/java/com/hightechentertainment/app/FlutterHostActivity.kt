@@ -281,6 +281,16 @@ class FlutterHostActivity : FlutterActivity() {
                         ).onSuccess { result.success(mapOf("success" to true)) }
                             .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
                     }
+                    "createCampaign" -> lifecycleScope.launch {
+                        hteApplication.sponsoredAudioRepository.createCampaign(
+                            call.argument<String>("title").orEmpty(),
+                            call.argument<String>("audioUrl").orEmpty(),
+                            call.argument<String>("startsAt"),
+                            call.argument<String>("endsAt"),
+                            call.argument<Int>("priority") ?: 0
+                        ).onSuccess { result.success(mapOf("success" to true)) }
+                            .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                    }
                     "setCampaignPublished" -> lifecycleScope.launch {
                         hteApplication.sponsoredAudioRepository.setCampaignPublished(
                             call.argument<String>("id").orEmpty(),
