@@ -135,6 +135,15 @@ class FlutterHostActivity : FlutterActivity() {
                             "message" to if (started) null else "Google sign-in could not be started. Check the OAuth configuration and try again."
                         ))
                     }
+                    "shareApp" -> {
+                        val share = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT,
+                                "Discover music, artists and original productions with High-Tech Entertainment: https://high-techmedia.netlify.app")
+                        }
+                        startActivity(Intent.createChooser(share, "Share High-Tech Entertainment"))
+                        result.success(true)
+                    }
                     "openAccountDeletion" -> {
                         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(
                             "https://high-techmedia.netlify.app/account-deletion.html"
