@@ -28,10 +28,6 @@ See `docs/FULL-APP-MIGRATION-3.1.md` for the feature-parity checklist and releas
 - If the bundled cue is shorter than 15 seconds, Kotlin loops it until the 15-second boundary. If another app is already playing music, the startup cue does not interrupt it.
 - The splash is not allowed to report fake network or account setup completion; its status text is brand/experience progress only.
 
-## Migration status
-
-The Flutter module is now included as a source Gradle subproject in the Kotlin host, and `FlutterHostActivity` is the launcher. The Flutter home currently provides the first visual shell and a temporary handoff to the existing native app. This is an incremental migration: the complete listener and Founder Studio workflows still need to be ported to Flutter and connected to the existing native service APIs before a production release.
-
 ## Build
 
 Use Flutter stable 3.47.9 (Dart 3.13.x), Java 17, and the Android SDK configured by the native host CI. Do not use beta/main for production. Generated `.android/` contents are created by Flutter and must not be committed.
