@@ -647,7 +647,7 @@ private fun HighTechApp(
                 Column(
                     Modifier.fillMaxWidth().background(Color(0xFF201A10)).padding(horizontal = 16.dp, vertical = 6.dp)
                 ) {
-                    var seekPreview by remember(currentTrack.id) { mutableStateOf<Float?>(null) }
+                    var seekPreview by remember(currentTrack?.id, sponsoredAudioPlaying) { mutableStateOf<Float?>(null) }
                     val progress = if (durationMs > 0L) (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
                     Slider(
                         value = seekPreview ?: progress,
