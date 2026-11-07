@@ -1,0 +1,59 @@
+name: High-Tech Entertainment — Flutter UI checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "flutter-ui/**"
+      - ".github/workflows/flutter-native-hybrid-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "flutter-ui/**"
+      - ".github/workflows/flutter-native-hybrid-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hte-flutter-ui-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flutter-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.9"
+          channel: stable
+          cache: true
+
+      - name: Resolve Flutter dependencies
+        working-directory: flutter-ui
+        run: flutter pub get
+
+      - name: Audit Flutter dependency versions
+        working-directory: flutter-ui
+        run: flutter pub outdated || true
+
+      - name: Analyze Flutter UI
+        working-directory: flutter-ui
+        run: flutter analyze
+
+      - name: Run Flutter widget tests
+        working-directory: flutter-ui
+        run: flutter test
+
+      - name: Upload resolved dependency lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: hte-flutter-dependencies-${{ github.run_number }}
+          path: flutter-ui/pubspec.lock
+          if-no-files-found: error
+          retention-days: 14
