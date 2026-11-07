@@ -263,6 +263,37 @@ class FlutterHostActivity : FlutterActivity() {
                             }
                             .onFailure { result.error("VIDEOS_ERROR", it.message, null) }
                     }
+                    "getAppPreferences" -> lifecycleScope.launch {
+                        hteApplication.featureRepository.getAppPreferences()
+                            .onSuccess { prefs ->
+                                result.success(mapOf(
+                                    "autoplay" to prefs.autoplay,
+                                    "shuffle" to prefs.shuffle,
+                                    "crossfadeSeconds" to prefs.crossfadeSeconds,
+                                    "audioQuality" to prefs.audioQuality,
+                                    "wifiOnlyDownloads" to prefs.wifiOnlyDownloads,
+                                    "releaseNotifications" to prefs.releaseNotifications,
+                                    "artistNotifications" to prefs.artistNotifications,
+                                    "promotionalNotifications" to prefs.promotionalNotifications
+                                ))
+                            }
+                            .onFailure { result.error("PREFERENCES_ERROR", it.message, null) }
+                    }
+                    "saveAppPreferences" -> lifecycleScope.launch {
+                        val prefs = com.hightechentertainment.app.data.NativeAppPreferences(
+                            autoplay = call.argument<Boolean>("autoplay") ?: true,
+                            shuffle = call.argument<Boolean>("shuffle") ?: false,
+                            crossfadeSeconds = call.argument<Int>("crossfadeSeconds") ?: 0,
+                            audioQuality = call.argument<String>("audioQuality") ?: "high",
+                            wifiOnlyDownloads = call.argument<Boolean>("wifiOnlyDownloads") ?: true,
+                            releaseNotifications = call.argument<Boolean>("releaseNotifications") ?: true,
+                            artistNotifications = call.argument<Boolean>("artistNotifications") ?: true,
+                            promotionalNotifications = call.argument<Boolean>("promotionalNotifications") ?: false
+                        )
+                        hteApplication.featureRepository.saveAppPreferences(prefs)
+                            .onSuccess { result.success(mapOf("success" to true)) }
+                            .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                    }
                     "getProfile" -> lifecycleScope.launch {
                         hteApplication.featureRepository.getProfile()
                             .onSuccess { profile ->
