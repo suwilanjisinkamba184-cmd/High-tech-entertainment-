@@ -13,7 +13,8 @@
 - Published-track catalogue query against the existing `tracks` table, with loading, refresh, empty/error states and local title/artist/genre search.
 - Initial Supabase Auth REST repository for email/password sign-in, sign-up, refresh-token exchange, sign-out and password-reset request.
 - Encrypted session persistence using AES-GCM with a non-exportable Android Keystore key; corrupt/unreadable session data is discarded rather than exposed.
-- Authentication remains a repository foundation only: the sign-in UI, callback lifecycle, Google identity provider integration, session-aware repository wiring, refresh scheduling and end-to-end RLS tests are not yet complete.
+- Added an automatic session manager for persisted-session restoration, refresh-before-expiry scheduling and retry after transient refresh failures. This manager is not yet connected to the Activity/UI.
+- Authentication remains incomplete: the sign-in/sign-up UI, Activity callback lifecycle, Google identity provider integration, session-aware catalogue wiring and end-to-end RLS tests are not yet complete. The refresh manager exists but is not yet owned by the Activity.
 - Initial Media3 playback for HTTPS track URLs now runs in a dedicated `MediaSessionService`; the Activity connects through `MediaController`, no longer owns/releases the playback engine, and does not pause playback merely because the UI leaves the foreground.
 - Media3 manages audio focus and exposes the standard media-session surface for system/media controls. Device-level notification, Bluetooth/headset, process-recreation and Android-version behaviour still require physical-device acceptance testing.
 - Native validation workflow pinned to the available Gradle 9.8.2 release; smoke-test assertion aligned with the current home-screen content.
@@ -22,7 +23,7 @@
 
 | Area | Required native implementation | Acceptance evidence |
 |---|---|---|
-| Identity | Email/password, Google native sign-in, callback handling, password reset/update, sign-out, session refresh and secure token persistence | Repository primitives and encrypted token storage added; UI wiring, Google sign-in, password update, automatic refresh and real-account tests remain |
+| Identity | Email/password, Google native sign-in, callback handling, password reset/update, sign-out, session refresh and secure token persistence | Repository primitives, encrypted token storage and refresh-manager implementation added; UI wiring, Google sign-in callback/provider setup, password update and real-account tests remain |
 | Profiles | Profile read/update, avatar upload, account deletion request and privacy controls | Existing user records remain intact; owner/user isolation |
 | Catalogue | Extend the initial published-track query to artists, releases, genre filters, pagination and robust retry | Live PostgREST data; no demo catalogue |
 | Playback | Add queue management, seek, repeat, shuffle, autoplay and polished Now Playing controls; verify system notification, Bluetooth/headset controls, background/resume and process recreation | Physical-device audio tests, interruption and process recreation |
