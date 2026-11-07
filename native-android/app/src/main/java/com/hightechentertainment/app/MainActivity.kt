@@ -181,6 +181,7 @@ class MainActivity : ComponentActivity() {
                 HighTechApp(
                     favouriteIds = favouriteIds,
                     featureRepository = hteApplication.featureRepository,
+                    voiceTokenRepository = hteApplication.voiceSessionTokenRepository,
                     userLibraryRepository = hteApplication.userLibraryRepository,
                     sponsoredAudioRepository = hteApplication.sponsoredAudioRepository,
                     downloads = offlineDownloads,
@@ -447,6 +448,7 @@ private fun HighTechApp(
     tracks: List<NativeTrack>,
     favouriteIds: Set<String>,
     featureRepository: com.hightechentertainment.app.data.FeatureRepository,
+    voiceTokenRepository: com.hightechentertainment.app.data.VoiceSessionTokenRepository,
     userLibraryRepository: com.hightechentertainment.app.data.UserLibraryRepository,
     sponsoredAudioRepository: com.hightechentertainment.app.data.SponsoredAudioRepository,
     downloads: OfflineMusicDownloads,
@@ -701,10 +703,14 @@ private fun HighTechApp(
                                         selectedTab = when (destination) {
                                             "Home" -> 0
                                             "Discover" -> 1
+                                            "Videos" -> 2
                                             "Library" -> 3
+                                            "Favourites" -> 4
                                             "Downloads" -> 5
                                             "Bookings" -> 6
                                             "Profile" -> 7
+                                            "App Updates" -> 9
+                                            "Voice Companion" -> 10
                                             "Founder Studio" -> if (isFounderAccount) 8 else selectedTab
                                             else -> selectedTab
                                         }
@@ -714,7 +720,11 @@ private fun HighTechApp(
                                         selectedTab = 1
                                     },
                                     onPlayFavourites = onPlayFavourites,
-                                    isFounder = isFounderAccount
+                                    isFounder = isFounderAccount,
+                                    tokenRepository = voiceTokenRepository,
+                                    userId = userId.orEmpty(),
+                                    tracks = tracks,
+                                    favouriteIds = favouriteIds
                                 )
                             } else AdditionalFeatureScreen(
                                 destination = when (selectedTab) {
