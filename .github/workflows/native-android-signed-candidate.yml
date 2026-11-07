@@ -2,7 +2,7 @@ name: High-Tech Entertainment — Native Android Signed Candidate
 
 on:
   push:
-    branches: ["feature/**"]
+    branches: ["feature/**", "maintenance/**"]
     paths:
       - "flutter-ui/**"
       - "native-android/**"
