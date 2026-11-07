@@ -96,9 +96,9 @@ fun VoiceCompanionScreen(
 
     LaunchedEffect(onDeviceRecognitionAvailable) {
         status = if (onDeviceRecognitionAvailable) {
-            "Offline speech recognition is available. Spoken replies are disabled until the dedicated High-Tech voice engines are installed."
+            "Offline speech recognition is available. For spoken conversations, connect to the live ElevenLabs Voice Companion above; offline neural speech is still pending."
         } else {
-            "This device does not currently report an on-device speech recognizer. Install an offline speech language pack or use the online voice service when it is enabled."
+            "This device does not currently report an on-device speech recognizer. Use the live ElevenLabs Voice Companion when you have an internet connection."
         }
     }
 
@@ -250,9 +250,9 @@ fun VoiceCompanionScreen(
 
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF151515))) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Dedicated AI speech output", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                Text("Voice output providers", color = Color.White, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Android system Text-to-Speech is not used. Online ElevenLabs speech and offline sherpa-onnx speech are being integrated as separate providers. Spoken replies remain disabled until those providers pass validation.",
+                    "Live ElevenLabs voice sessions are now integrated. Offline sherpa-onnx neural speech remains a separate pending provider. Android and Google Text-to-Speech are not used as a fallback.",
                     color = Color.LightGray
                 )
             }
