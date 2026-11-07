@@ -1316,8 +1316,9 @@ class _LibraryPanelState extends State<_LibraryPanel> {
             const Text('Tracks you play will appear here.', style: TextStyle(color: Colors.white60))
           else
             ..._historyIds.toSet().map((id) {
-              final track = widget.tracks.where((item) => item['id']?.toString() == id).firstOrNull;
-              if (track == null) return const SizedBox.shrink();
+              final matches = widget.tracks.where((item) => item['id']?.toString() == id).toList();
+              if (matches.isEmpty) return const SizedBox.shrink();
+              final track = matches.first;
               return ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.history, color: _gold),
