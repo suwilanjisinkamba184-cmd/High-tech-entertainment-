@@ -1,5 +1,6 @@
 import 'dart:async';
 
+// Full Flutter presentation entry point for High-Tech Entertainment Android 3.1.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
