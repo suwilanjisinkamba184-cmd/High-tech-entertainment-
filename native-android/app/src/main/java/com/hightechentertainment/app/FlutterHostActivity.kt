@@ -322,6 +322,10 @@ class FlutterHostActivity : FlutterActivity() {
                         }
                     }
                     "updateBookingStatus" -> lifecycleScope.launch {
+                        if (!hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                            return@launch
+                        }
                         hteApplication.featureRepository.updateBookingStatus(
                             call.argument<String>("id").orEmpty(),
                             call.argument<String>("status").orEmpty()
@@ -370,6 +374,10 @@ class FlutterHostActivity : FlutterActivity() {
                         }
                     }
                     "setDraftPublished" -> lifecycleScope.launch {
+                        if (!hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                            return@launch
+                        }
                         val table = call.argument<String>("table").orEmpty()
                         if (table !in setOf("tracks", "artists", "releases", "videos")) {
                             result.success(mapOf("success" to false, "message" to "Unsupported content type."))
@@ -419,6 +427,10 @@ class FlutterHostActivity : FlutterActivity() {
                             .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
                     }
                     "createTrack" -> lifecycleScope.launch {
+                        if (!hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                            return@launch
+                        }
                         hteApplication.featureRepository.createTrack(
                             call.argument<String>("title").orEmpty(),
                             call.argument<String>("artist").orEmpty(),
@@ -428,6 +440,10 @@ class FlutterHostActivity : FlutterActivity() {
                             .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
                     }
                     "createArtist" -> lifecycleScope.launch {
+                        if (!hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                            return@launch
+                        }
                         hteApplication.featureRepository.createArtist(
                             call.argument<String>("name").orEmpty(),
                             call.argument<String>("bio").orEmpty()
@@ -435,6 +451,10 @@ class FlutterHostActivity : FlutterActivity() {
                             .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
                     }
                     "createRelease" -> lifecycleScope.launch {
+                        if (!hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                            return@launch
+                        }
                         hteApplication.featureRepository.createRelease(
                             call.argument<String>("title").orEmpty(),
                             call.argument<String>("description").orEmpty()
@@ -442,6 +462,10 @@ class FlutterHostActivity : FlutterActivity() {
                             .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
                     }
                     "createVideo" -> lifecycleScope.launch {
+                        if (!hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                            return@launch
+                        }
                         hteApplication.featureRepository.createVideo(
                             call.argument<String>("title").orEmpty(),
                             call.argument<String>("videoUrl").orEmpty(),
@@ -451,6 +475,10 @@ class FlutterHostActivity : FlutterActivity() {
                             .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
                     }
                     "publishVideo" -> lifecycleScope.launch {
+                        if (!hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                            return@launch
+                        }
                         hteApplication.featureRepository.publishVideo(
                             call.argument<String>("id").orEmpty(),
                             call.argument<Boolean>("published") ?: false
@@ -485,6 +513,10 @@ class FlutterHostActivity : FlutterActivity() {
                         }
                     }
                     "createCampaign" -> lifecycleScope.launch {
+                        if (!hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                            return@launch
+                        }
                         hteApplication.sponsoredAudioRepository.createCampaign(
                             call.argument<String>("title").orEmpty(),
                             call.argument<String>("audioUrl").orEmpty(),
@@ -495,6 +527,10 @@ class FlutterHostActivity : FlutterActivity() {
                             .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
                     }
                     "setCampaignPublished" -> lifecycleScope.launch {
+                        if (!hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                            return@launch
+                        }
                         hteApplication.sponsoredAudioRepository.setCampaignPublished(
                             call.argument<String>("id").orEmpty(),
                             call.argument<Boolean>("published") ?: false
