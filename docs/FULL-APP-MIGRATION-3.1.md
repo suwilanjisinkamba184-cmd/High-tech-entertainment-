@@ -55,6 +55,7 @@ Migrate the complete Android application experience to Flutter while retaining K
 - Splash, sign-in/sign-up, catalogue screens, profile/booking, basic Founder Studio and sponsored campaign management are present.
 - Google OAuth now starts from the Flutter experience and its deep-link callback is handled by the Flutter host Activity; the legacy Compose sign-in screen is no longer required for this flow.
 - Voice Companion now has a Flutter screen; Kotlin hosts the existing ElevenLabs conversation SDK, microphone permission, audio ducking and playback/navigation/catalogue client tools behind the Flutter method channel.
+- The legacy Compose MainActivity and Compose screens/tests have been removed from this branch, the old activity is no longer declared in the manifest, and Compose Gradle plugins/dependencies have been removed. Native Kotlin remains for platform services and the Media3 video surface.
 - Playlist CRUD/add-track bridge and Flutter playlist/library interface have just been added; these require CI and device verification.
 - Founder Studio uses the Android document picker and bounded Supabase Storage uploads for audio/video and release artwork; profile image upload is available for signed-in users.
 - Media selection is implemented in the Kotlin host through Android's document picker rather than a Flutter picker plugin, avoiding a known Flutter add-to-app plugin-loader/AGP incompatibility and keeping file transfer bounded for low-memory devices.
