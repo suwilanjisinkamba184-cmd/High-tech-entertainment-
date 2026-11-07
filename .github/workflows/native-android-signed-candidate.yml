@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "native-android/**"
+      - "flutter-ui/**"
       - ".github/workflows/native-android-signed-candidate.yml"
   workflow_dispatch:
     inputs:
@@ -33,6 +34,17 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - name: Set up Flutter stable for embedded UI module
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.9"
+          channel: stable
+          cache: true
+      - name: Generate Flutter Android module integration
+        working-directory: flutter-ui
+        run: flutter pub get
+      - name: Verify Flutter module bootstrap
+        run: test -f flutter-ui/.android/include_flutter.groovy
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
