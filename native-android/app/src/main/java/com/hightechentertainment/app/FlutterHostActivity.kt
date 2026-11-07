@@ -137,6 +137,15 @@ class FlutterHostActivity : FlutterActivity() {
                             "message" to if (started) null else "Google sign-in could not be started. Check the OAuth configuration and try again."
                         ))
                     }
+                    "openSpotifyLink" -> {
+                        val uri = Uri.parse(call.argument<String>("url").orEmpty())
+                        if (uri.scheme == "https" && uri.host == "open.spotify.com") {
+                            startActivity(Intent(Intent.ACTION_VIEW, uri))
+                            result.success(true)
+                        } else {
+                            result.success(false)
+                        }
+                    }
                     "shareApp" -> {
                         val share = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
