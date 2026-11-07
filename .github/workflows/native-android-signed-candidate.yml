@@ -110,6 +110,19 @@ jobs:
             exit 1
           }
 
+          # Release acceptance must prove that this is the Flutter app, not
+          # merely a correctly signed legacy native shell.
+          printf '%s\n' "$BADGING" | grep -F "launchable-activity: name='com.hightechentertainment.app.FlutterHostActivity'" >/dev/null || {
+            echo "::error::FlutterHostActivity is not the release APK launcher."
+            printf '%s\n' "$BADGING" | grep 'launchable-activity:' || true
+            exit 1
+          }
+          if ! unzip -l "$APK" | grep -Fq 'assets/flutter_assets/assets/high-tech-logo.svg'; then
+            echo "::error::Flutter UI logo asset is missing from the release APK."
+            exit 1
+          fi
+          echo "PASS: release APK contains the Flutter UI and launches FlutterHostActivity."
+
           mkdir -p "$RUNNER_TEMP/signing"
           trap 'rm -rf "$RUNNER_TEMP/signing"' EXIT
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/signing/upload.p12"
