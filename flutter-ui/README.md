@@ -16,7 +16,7 @@ This branch is the full Flutter app migration for Android 3.1. Flutter is the ta
 
 Implemented in the current branch: branded startup, Flutter email/password and Google OAuth flows, session restoration, listener catalogue screens, profile and booking UI, basic Founder Studio, sponsored-audio campaign controls, playlist/library UI, native document picker and bounded media/avatar upload bridges, plus a Flutter Voice Companion screen backed by the existing ElevenLabs Android SDK.
 
-Still incomplete or awaiting verification: full settings/privacy and account deletion processing, complete Founder Studio draft/campaign edit/delete workflows, live ElevenLabs token configuration and conversation test, automated upload tests, Android 8+/Android Go physical testing and full release acceptance.
+Still incomplete or awaiting verification: full settings/privacy views and the account-deletion processing backend, live ElevenLabs token configuration and conversation test, CI validation of the latest bridge changes, automated upload tests, Android 8+/Android Go physical testing and full release acceptance.
 
 See `docs/FULL-APP-MIGRATION-3.1.md` for the feature-parity checklist and release gates. Do not merge or publish until those gates pass.
 
