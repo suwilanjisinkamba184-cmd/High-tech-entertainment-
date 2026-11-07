@@ -115,6 +115,26 @@ fun AdditionalFeatureScreen(
     var newReleaseDescription by remember { mutableStateOf("") }
     var campaignTitle by remember { mutableStateOf("") }
     var campaignUrl by remember { mutableStateOf("") }
+    val campaignAudioPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) scope.launch {
+            busy = true
+            val mime = context.contentResolver.getType(uri) ?: "audio/mpeg"
+            val bytes = runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+            val extension = when (mime) {
+                "audio/mp4" -> "m4a"
+                "audio/aac" -> "aac"
+                "audio/wav", "audio/x-wav" -> "wav"
+                "audio/ogg" -> "ogg"
+                else -> "mp3"
+            }
+            if (bytes == null) message = "Could not read the selected campaign audio."
+            else features.uploadAudio(bytes, mime, extension).onSuccess {
+                campaignUrl = it
+                message = "Campaign audio uploaded."
+            }.onFailure { message = it.message }
+            busy = false
+        }
+    }
     var campaignStarts by remember { mutableStateOf("") }
     var campaignEnds by remember { mutableStateOf("") }
     var campaignPriority by remember { mutableStateOf("0") }
@@ -446,7 +466,7 @@ fun AdditionalFeatureScreen(
                     Text("SPONSORED AUDIO CAMPAIGNS", style = MaterialTheme.typography.titleMedium)
                     OutlinedTextField(campaignTitle, { campaignTitle = it }, Modifier.fillMaxWidth(), label = { Text("Campaign title") })
                     OutlinedTextField(campaignUrl, { campaignUrl = it }, Modifier.fillMaxWidth(), label = { Text("HTTPS audio advert URL") })
-                    OutlinedButton(onClick = { audioPicker.launch("audio/*") }, enabled = !busy,
+                    OutlinedButton(onClick = { campaignAudioPicker.launch("audio/*") }, enabled = !busy,
                         modifier = Modifier.fillMaxWidth()) { Text("Choose and upload campaign audio") }
                     OutlinedTextField(campaignStarts, { campaignStarts = it }, Modifier.fillMaxWidth(), label = { Text("Starts at ISO-8601 (optional)") })
                     OutlinedTextField(campaignEnds, { campaignEnds = it }, Modifier.fillMaxWidth(), label = { Text("Ends at ISO-8601 (optional)") })
