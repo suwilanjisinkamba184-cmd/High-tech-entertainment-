@@ -3,8 +3,10 @@ package com.hightechentertainment.app
 import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.os.Bundle
 import androidx.core.content.ContextCompat
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -35,6 +37,13 @@ class FlutterHostActivity : FlutterActivity() {
     private val sessionManager
         get() = hteApplication.sessionManager
     private var oauthInProgress = false
+    private var pendingMediaPickerResult: MethodChannel.Result? = null
+    private var pendingMediaPickerKind: String? = null
+    private val mediaPickerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { activityResult ->
+        completeMediaPicker(activityResult.resultCode, activityResult.data?.data)
+    }
     private var playbackFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
     private val offlineDownloads by lazy { OfflineMusicDownloads(applicationContext) }
@@ -107,6 +116,9 @@ class FlutterHostActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, appChannelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "pickAndUploadMedia" -> launchMediaPicker(
+                        call.argument<String>("kind").orEmpty(), result
+                    )
                     "startGoogleOAuth" -> {
                         val started = startGoogleOAuth()
                         result.success(mapOf(
@@ -460,6 +472,99 @@ class FlutterHostActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    private fun launchMediaPicker(kind: String, result: MethodChannel.Result) {
+        if (kind !in setOf("audio", "video", "image")) {
+            result.success(mapOf("success" to false, "message" to "Unsupported media type."))
+            return
+        }
+        if (pendingMediaPickerResult != null) {
+            result.success(mapOf("success" to false, "message" to "A media picker is already open."))
+            return
+        }
+        pendingMediaPickerKind = kind
+        pendingMediaPickerResult = result
+        val mimeType = when (kind) {
+            "audio" -> "audio/*"
+            "video" -> "video/*"
+            else -> "image/*"
+        }
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = mimeType
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        runCatching { mediaPickerLauncher.launch(intent) }.onFailure { error ->
+            pendingMediaPickerKind = null
+            pendingMediaPickerResult = null
+            result.success(mapOf("success" to false, "message" to (error.message ?: "Could not open media picker.")))
+        }
+    }
+
+    private fun completeMediaPicker(resultCode: Int, uri: Uri?) {
+        val result = pendingMediaPickerResult ?: return
+        val kind = pendingMediaPickerKind
+        pendingMediaPickerResult = null
+        pendingMediaPickerKind = null
+        if (resultCode != RESULT_OK || uri == null) {
+            result.success(mapOf("success" to false, "cancelled" to true))
+            return
+        }
+        lifecycleScope.launch {
+            try {
+                val mimeType = contentResolver.getType(uri).orEmpty()
+                val displayName = contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                    ?.use { cursor ->
+                        if (cursor.moveToFirst()) cursor.getString(0) else null
+                    }.orEmpty()
+                val extension = displayName.substringAfterLast('.', "").lowercase().ifBlank {
+                    when (mimeType) {
+                        "audio/mpeg" -> "mp3"
+                        "audio/mp4" -> "m4a"
+                        "audio/aac" -> "aac"
+                        "audio/wav", "audio/x-wav" -> "wav"
+                        "audio/ogg" -> "ogg"
+                        "video/mp4" -> "mp4"
+                        "video/webm" -> "webm"
+                        "video/quicktime" -> "mov"
+                        "video/x-m4v" -> "m4v"
+                        "image/png" -> "png"
+                        "image/webp" -> "webp"
+                        "image/jpeg" -> "jpg"
+                        else -> ""
+                    }
+                }
+                val upload = when (kind) {
+                    "audio" -> {
+                        if (!hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                            return@launch
+                        }
+                        hteApplication.featureRepository.uploadAudio(applicationContext, uri, mimeType, extension)
+                    }
+                    "video" -> {
+                        if (!hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                            return@launch
+                        }
+                        hteApplication.featureRepository.uploadVideo(applicationContext, uri, mimeType, extension)
+                    }
+                    "image" -> hteApplication.featureRepository.uploadAvatar(applicationContext, uri, mimeType, extension)
+                    else -> {
+                        result.success(mapOf("success" to false, "message" to "Unsupported media type."))
+                        return@launch
+                    }
+                }
+                upload.onSuccess { url ->
+                    result.success(mapOf("success" to true, "url" to url))
+                }.onFailure { error ->
+                    result.success(mapOf("success" to false, "message" to (error.message ?: "Upload failed.")))
+                }
+            } catch (error: Exception) {
+                result.success(mapOf("success" to false, "message" to (error.message ?: "Upload failed.")))
+            }
+        }
     }
 
     private fun connectToPlaybackService() {
