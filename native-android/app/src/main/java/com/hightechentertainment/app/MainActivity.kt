@@ -492,6 +492,7 @@ private fun HighTechApp(
                                 buildList {
                                     add("Bookings" to 5)
                                     add("Profile" to 6)
+                                    add("App updates" to 8)
                                     if (userId == "b268df9e-eff5-43b9-a38f-869b33add38b") add("Founder Studio" to 7)
                                 }.forEach { (label, index) ->
                                     DropdownMenuItem(text = { Text(label) }, onClick = {
@@ -514,6 +515,7 @@ private fun HighTechApp(
                                 5 -> "Your bookings"
                                 6 -> "Your profile"
                                 7 -> "Founder Studio"
+                                8 -> "App updates"
                                 else -> "Music. Beats. Production. Beyond."
                             },
                             style = MaterialTheme.typography.headlineMedium,
@@ -632,6 +634,7 @@ private fun HighTechApp(
                                     5 -> "Bookings"
                                     6 -> "Profile"
                                     7 -> "Founder Studio"
+                                    8 -> "App Updates"
                                     else -> "Library"
                                 },
                                 tracks = tracks,
