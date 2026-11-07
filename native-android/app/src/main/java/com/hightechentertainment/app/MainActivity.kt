@@ -88,6 +88,11 @@ class MainActivity : ComponentActivity() {
     private var pendingAuthMessage by mutableStateOf<String?>(null)
     private var oauthInProgress by mutableStateOf(false)
 
+    private fun setVoiceDucking(active: Boolean) {
+        // Keep music audible under the assistant, then restore full level on listening/disconnect.
+        playbackPlayer?.volume = if (active) 0.25f else 1f
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         connectToPlaybackService()
@@ -297,6 +302,7 @@ class MainActivity : ComponentActivity() {
                     positionMs = playbackPositionMs,
                     durationMs = playbackDurationMs,
                     onSeek = { position -> playbackPlayer?.seekTo(position) },
+                    onVoiceAudioActive = { active -> setVoiceDucking(active) },
                     onSignOut = {
                         lifecycleScope.launch { sessionManager.signOut() }
                     }
@@ -478,6 +484,7 @@ private fun HighTechApp(
     positionMs: Long,
     durationMs: Long,
     onSeek: (Long) -> Unit,
+    onVoiceAudioActive: (Boolean) -> Unit,
     onSignOut: () -> Unit
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -735,6 +742,7 @@ private fun HighTechApp(
                                         selectedTab = 1
                                     },
                                     onPlayFavourites = onPlayFavourites,
+                                    onVoiceAudioActive = onVoiceAudioActive,
                                     isFounder = isFounderAccount,
                                     tokenRepository = voiceTokenRepository,
                                     userId = userId.orEmpty(),
