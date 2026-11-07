@@ -2082,6 +2082,12 @@ class _ProfilePanelState extends State<_ProfilePanel> {
           ),
         ],
         const SizedBox(height: 20),
+        OutlinedButton.icon(
+          onPressed: () => _appChannel.invokeMethod<void>('shareApp'),
+          icon: const Icon(Icons.share_outlined),
+          label: const Text('SHARE HIGH-TECH ENTERTAINMENT'),
+        ),
+        const SizedBox(height: 8),
         OutlinedButton.icon(onPressed: widget.onSignOut, icon: const Icon(Icons.logout), label: const Text('SIGN OUT')),
         const SizedBox(height: 20),
       ],
