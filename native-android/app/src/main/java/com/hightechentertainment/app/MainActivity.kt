@@ -139,6 +139,7 @@ class MainActivity : ComponentActivity() {
                         onGoogleSignIn = { startGoogleOAuth() }
                     )
                 } else {
+                val activeSession = requireNotNull(signedInSession)
                 var tracks by remember { mutableStateOf<List<NativeTrack>>(emptyList()) }
                 var favouriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
                 var founderAccess by remember { mutableStateOf(false) }
@@ -169,7 +170,7 @@ class MainActivity : ComponentActivity() {
                         loading = false
                     }
                 }
-                LaunchedEffect(signedInSession.userId) {
+                LaunchedEffect(activeSession.userId) {
                     loadCatalog()
                     hteApplication.userLibraryRepository.favouriteTrackIds()
                         .onSuccess { favouriteIds = it.toSet() }
@@ -183,7 +184,7 @@ class MainActivity : ComponentActivity() {
                     sponsoredAudioRepository = hteApplication.sponsoredAudioRepository,
                     sponsoredAudioPlaying = sponsoredAudioPlaying,
                     isFounderAccount = founderAccess,
-                    userId = signedInSession.userId,
+                    userId = activeSession.userId,
                     onDownloadTrack = { track ->
                         val id = offlineDownloads.enqueue(track)
                         error = if (id == null) "This track has no secure downloadable audio file." else "Download queued. Android will notify you when it is ready offline."
