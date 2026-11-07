@@ -597,6 +597,21 @@ class FlutterHostActivity : FlutterActivity() {
                         }
                         result.success(mapOf("success" to operation.successful, "message" to operation.message))
                     }
+                    "getFollowedArtists" -> lifecycleScope.launch {
+                        hteApplication.userLibraryRepository.followedArtistIds()
+                            .onSuccess { result.success(it) }
+                            .onFailure { result.error("ARTIST_FOLLOWS_ERROR", it.message, null) }
+                    }
+                    "setArtistFollow" -> lifecycleScope.launch {
+                        val artistId = call.argument<String>("artistId").orEmpty()
+                        val follow = call.argument<Boolean>("follow") ?: false
+                        val operation = if (follow) {
+                            hteApplication.userLibraryRepository.followArtist(artistId)
+                        } else {
+                            hteApplication.userLibraryRepository.unfollowArtist(artistId)
+                        }
+                        result.success(mapOf("success" to operation.successful, "message" to operation.message))
+                    }
                     "getListeningHistory" -> lifecycleScope.launch {
                         hteApplication.userLibraryRepository.listeningHistory()
                             .onSuccess { result.success(it) }
