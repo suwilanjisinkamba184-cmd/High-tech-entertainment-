@@ -1,5 +1,5 @@
 plugins {
-    // Keep the Android Gradle Plugin on the stable 8.10 line for legacy
-    // Android Gradle APIs still used by the Kotlin/Flutter plugin toolchain.
-    id("com.android.application") version "8.10.1" apply false
+    // Flutter 3.47.9 requires AGP 8.11.1 or newer. Keep to 8.11.1
+    // rather than 8.13.x, which caused legacy AGP API linkage errors.
+    id("com.android.application") version "8.11.1" apply false
 }
