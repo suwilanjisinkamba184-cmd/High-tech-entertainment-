@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.Pause
@@ -487,13 +488,17 @@ private fun HighTechApp(
         containerColor = HteBlack,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            NavigationBar(containerColor = HteSurface) {
+            NavigationBar(containerColor = Color(0xFF101114), contentColor = HteGold, tonalElevation = 12.dp) {
                 destinations.forEachIndexed { index, destination ->
                     NavigationBarItem(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
                         icon = { Icon(destination.icon, contentDescription = destination.label) },
-                        label = { Text(destination.label, maxLines = 1) }
+                        label = { Text(destination.label, maxLines = 1, fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = HteBlack, selectedTextColor = HteGold, indicatorColor = HteGold,
+                            unselectedIconColor = HteMuted, unselectedTextColor = HteMuted
+                        )
                     )
                 }
             }
@@ -507,39 +512,42 @@ private fun HighTechApp(
             ) {
                 item {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 22.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 18.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
-                            modifier = Modifier.size(42.dp).background(
-                                Brush.linearGradient(listOf(Color(0xFFFFE6A1), HteGold, Color(0xFF80500B))),
-                                CircleShape
+                            modifier = Modifier.size(46.dp).background(
+                                Brush.linearGradient(listOf(Color(0xFFFFE9B0), HteGold, Color(0xFF795018))),
+                                RoundedCornerShape(15.dp)
                             ),
                             contentAlignment = Alignment.Center
-                        ) { Text("HT", color = HteBlack, fontWeight = FontWeight.Black) }
+                        ) { Text("HT", color = HteBlack, fontWeight = FontWeight.Black, fontSize = 17.sp) }
                         Column(Modifier.padding(start = 12.dp)) {
-                            Text("HIGH-TECH", color = Color.White, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
-                            Text("ENTERTAINMENT", color = HteGold, fontSize = 10.sp, letterSpacing = 2.sp)
+                            Text("HIGH-TECH", color = Color.White, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.2.sp)
+                            Text("ENTERTAINMENT", color = HteGold, fontSize = 9.sp, letterSpacing = 2.4.sp)
                         }
                         Spacer(Modifier.weight(1f))
-                        TextButton(onClick = onSignOut) { Text("SIGN OUT", color = HteGold, fontSize = 10.sp) }
+                        Surface(color = Color(0xFF201B12), shape = RoundedCornerShape(50)) {
+                            Text("3.1", Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = HteGold, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
                         IconButton(onClick = onRefresh, enabled = !loading) {
                             Icon(Icons.Rounded.Refresh, contentDescription = "Refresh catalogue", tint = HteGold)
                         }
                         Box {
-                            TextButton(onClick = { moreExpanded = true }) { Text("MORE", color = HteGold) }
+                            TextButton(onClick = { moreExpanded = true }) { Text("MENU", color = HteGold, fontWeight = FontWeight.Bold, fontSize = 11.sp) }
                             DropdownMenu(expanded = moreExpanded, onDismissRequest = { moreExpanded = false }) {
                                 buildList {
                                     add("Downloads" to 5)
                                     add("Bookings" to 6)
-                                    add("Profile" to 7)
+                                    add("Profile & account" to 7)
                                     add("App updates" to 9)
                                     add("Voice Companion" to 10)
                                     if (isFounderAccount) add("Founder Studio" to 8)
+                                    add("Sign out" to -1)
                                 }.forEach { (label, index) ->
                                     DropdownMenuItem(text = { Text(label) }, onClick = {
-                                        selectedTab = index
                                         moreExpanded = false
+                                        if (index == -1) onSignOut() else selectedTab = index
                                     })
                                 }
                             }
@@ -579,14 +587,25 @@ private fun HighTechApp(
                         ) {
                             Column(
                                 modifier = Modifier.background(
-                                    Brush.linearGradient(listOf(Color(0xFF342713), Color(0xFF19130B), HteSurface))
-                                ).padding(22.dp)
+                                    Brush.linearGradient(listOf(Color(0xFF49351A), Color(0xFF211A10), Color(0xFF151515)))
+                                ).padding(24.dp)
                             ) {
-                                Text("HIGH-TECH ENTERTAINMENT", color = HteGold, fontSize = 11.sp, letterSpacing = 1.5.sp)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(color = Color(0x33E4B653), shape = RoundedCornerShape(50)) {
+                                        Text("THE HIGH-TECH EXPERIENCE", Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                                            color = HteGold, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                                    }
+                                    Spacer(Modifier.weight(1f))
+                                    Icon(Icons.Rounded.GraphicEq, contentDescription = null, tint = HteGold)
+                                }
+                                Spacer(Modifier.height(18.dp))
+                                Text("Music without\nboundaries.", color = Color.White, fontSize = 34.sp, lineHeight = 38.sp, fontWeight = FontWeight.ExtraBold)
                                 Spacer(Modifier.height(10.dp))
-                                Text("Your sound.\nYour world.", color = Color.White, fontSize = 32.sp, lineHeight = 37.sp, fontWeight = FontWeight.ExtraBold)
-                                Spacer(Modifier.height(10.dp))
-                                Text("Discover published music from the High-Tech family.", color = HteMuted)
+                                Text("Discover the latest sounds, build your library and experience the High-Tech family.",
+                                    color = Color(0xFFD0C7B8), style = MaterialTheme.typography.bodyMedium)
+                                Spacer(Modifier.height(20.dp))
+                                Text("MUSIC. BEATS. PRODUCTION. BEYOND.", color = HteGold, fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold, letterSpacing = .8.sp)
                             }
                         }
                     }
@@ -788,39 +807,36 @@ private fun TrackRow(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = if (isCurrent) Color(0xFF2A2112) else HteSurface)
+        shape = RoundedCornerShape(20.dp),
+        border = if (isCurrent) androidx.compose.foundation.BorderStroke(1.dp, HteGold.copy(alpha = .55f)) else null,
+        colors = CardDefaults.cardColors(containerColor = if (isCurrent) Color(0xFF211B10) else HteSurface)
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(52.dp).background(Color(0xFF2A2112), RoundedCornerShape(12.dp)),
+                Modifier.size(56.dp).background(
+                    Brush.linearGradient(listOf(Color(0xFF4B371A), Color(0xFF201A11))), RoundedCornerShape(15.dp)
+                ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                    contentDescription = null,
-                    tint = HteGold
+                    contentDescription = if (playing) "Pause ${track.title}" else "Play ${track.title}",
+                    tint = HteGold, modifier = Modifier.size(28.dp)
                 )
             }
-            Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
-                Text(track.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Column(Modifier.weight(1f).padding(horizontal = 13.dp)) {
+                Text(track.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(track.artist, color = HteMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                track.genre?.let { Text(it, color = HteGold, fontSize = 10.sp) }
+                track.genre?.let { Text(it.uppercase(), color = HteGold, fontSize = 9.sp, letterSpacing = .8.sp, fontWeight = FontWeight.Bold) }
             }
             IconButton(onClick = onFavourite) {
-                Icon(
-                    if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                Icon(if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                     contentDescription = if (isFavorite) "Remove from favourites" else "Add to favourites",
-                    tint = if (isFavorite) HteGold else HteMuted
-                )
+                    tint = if (isFavorite) HteGold else HteMuted)
             }
             IconButton(onClick = onDownload) {
                 Icon(Icons.Rounded.Download, contentDescription = "Download for offline listening", tint = HteMuted)
             }
-            Text("PLAY", color = HteGold, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
