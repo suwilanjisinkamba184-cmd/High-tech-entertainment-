@@ -2036,11 +2036,28 @@ class _ProfilePanelState extends State<_ProfilePanel> {
     }
   }
 
+  Future<String?> _pickAndUploadArtwork() async {
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'pickAndUploadMedia', {'kind': 'artwork'});
+      if (response?['success'] == true) return response?['url']?.toString();
+      if (response?['cancelled'] != true) {
+        _showFounderMessage(response?['message']?.toString() ?? 'Artwork upload failed.');
+      }
+    } on PlatformException catch (error) {
+      _showFounderMessage(error.message ?? 'Artwork upload failed.');
+    }
+    return null;
+  }
+
   Future<void> _createContent(String kind) async {
     final title = TextEditingController();
     final secondary = TextEditingController();
     final details = TextEditingController();
     final genre = TextEditingController();
+    final coverUrl = TextEditingController();
+    final releaseDate = TextEditingController();
+    final spotifyUrl = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -2074,6 +2091,25 @@ class _ProfilePanelState extends State<_ProfilePanel> {
               if (kind == 'Artist' || kind == 'Release')
                 TextField(controller: details, decoration: InputDecoration(
                   labelText: kind == 'Artist' ? 'Biography' : 'Description')),
+              if (kind == 'Release') ...[
+                TextField(controller: coverUrl, readOnly: true,
+                  decoration: const InputDecoration(labelText: 'Release artwork URL')),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      final url = await _pickAndUploadArtwork();
+                      if (url != null) coverUrl.text = url;
+                    },
+                    icon: const Icon(Icons.image_outlined),
+                    label: const Text('UPLOAD RELEASE ARTWORK'),
+                  ),
+                ),
+                TextField(controller: releaseDate,
+                  decoration: const InputDecoration(labelText: 'Release date (YYYY-MM-DD)')),
+                TextField(controller: spotifyUrl,
+                  decoration: const InputDecoration(labelText: 'Spotify release URL (optional)')),
+              ],
             ],
           ),
         ),
@@ -2085,6 +2121,7 @@ class _ProfilePanelState extends State<_ProfilePanel> {
     );
     if (confirmed != true) {
       title.dispose(); secondary.dispose(); details.dispose(); genre.dispose();
+      coverUrl.dispose(); releaseDate.dispose(); spotifyUrl.dispose();
       return;
     }
     final method = switch (kind) {
@@ -2096,7 +2133,7 @@ class _ProfilePanelState extends State<_ProfilePanel> {
     final Map<String, dynamic> args = switch (kind) {
       'Track' => {'title': title.text, 'artist': secondary.text, 'audioUrl': details.text, 'genre': genre.text},
       'Artist' => {'name': title.text, 'bio': details.text},
-      'Release' => {'title': title.text, 'description': details.text},
+      'Release' => {'title': title.text, 'description': details.text, 'coverUrl': coverUrl.text, 'releaseDate': releaseDate.text, 'spotifyUrl': spotifyUrl.text},
       _ => {'title': title.text, 'artist': secondary.text, 'videoUrl': details.text, 'description': ''},
     };
     try {
@@ -2111,6 +2148,7 @@ class _ProfilePanelState extends State<_ProfilePanel> {
       if (mounted) setState(() => _message = error.message ?? 'Could not save draft.');
     } finally {
       title.dispose(); secondary.dispose(); details.dispose(); genre.dispose();
+      coverUrl.dispose(); releaseDate.dispose(); spotifyUrl.dispose();
     }
   }
 
