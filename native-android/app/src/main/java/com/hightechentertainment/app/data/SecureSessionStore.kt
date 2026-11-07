@@ -66,6 +66,34 @@ class SecureSessionStore(context: Context) {
     }
 
     @Synchronized
+    fun writeOAuthVerifier(verifier: String) {
+        require(verifier.isNotBlank())
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
+        val encrypted = cipher.doFinal(verifier.toByteArray(Charsets.UTF_8))
+        val payload = Base64.encodeToString(cipher.iv, Base64.NO_WRAP) + ":" +
+            Base64.encodeToString(encrypted, Base64.NO_WRAP)
+        check(preferences.edit().putString(OAUTH_VERIFIER_KEY, payload).commit()) {
+            "Unable to persist the secure OAuth verifier."
+        }
+    }
+
+    @Synchronized
+    fun consumeOAuthVerifier(): String? {
+        val payload = preferences.getString(OAUTH_VERIFIER_KEY, null) ?: return null
+        preferences.edit().remove(OAUTH_VERIFIER_KEY).commit()
+        return runCatching {
+            val parts = payload.split(":", limit = 2)
+            require(parts.size == 2)
+            val iv = Base64.decode(parts[0], Base64.NO_WRAP)
+            val ciphertext = Base64.decode(parts[1], Base64.NO_WRAP)
+            val cipher = Cipher.getInstance(TRANSFORMATION)
+            cipher.init(Cipher.DECRYPT_MODE, getOrCreateKey(), GCMParameterSpec(128, iv))
+            String(cipher.doFinal(ciphertext), Charsets.UTF_8)
+        }.getOrNull()
+    }
+
+    @Synchronized
     fun clear() {
         preferences.edit().remove(SESSION_KEY).commit()
     }
@@ -91,6 +119,7 @@ class SecureSessionStore(context: Context) {
         const val ANDROID_KEY_STORE = "AndroidKeyStore"
         const val KEY_ALIAS = "com.hightechentertainment.app.session.v1"
         const val SESSION_KEY = "encrypted_session"
+        const val OAUTH_VERIFIER_KEY = "encrypted_oauth_pkce_verifier"
         const val TRANSFORMATION = "AES/GCM/NoPadding"
     }
 }
