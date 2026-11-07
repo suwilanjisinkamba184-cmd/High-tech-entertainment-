@@ -8,7 +8,7 @@ on:
       - "flutter-ui/**"
       - ".github/workflows/native-android-ci.yml"
   push:
-    branches: [main, "feature/**"]
+    branches: [main, "feature/**", "maintenance/**"]
     paths:
       - "native-android/**"
       - "flutter-ui/**"
