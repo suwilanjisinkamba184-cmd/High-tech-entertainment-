@@ -277,9 +277,9 @@ jobs:
                   <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
               </queries>
               """
-              text = text.replace("<application", queries + "\\n    <application", 1)
+              text = text.replace("<application", queries + "\n    <application", 1)
           if 'android.hardware.microphone' not in text:
-              text = text.replace("<application", '<uses-feature android:name="android.hardware.microphone" android:required="false" />\\n    <application', 1)
+              text = text.replace("<application", '<uses-feature android:name="android.hardware.microphone" android:required="false" />\n    <application', 1)
           manifest.write_text(text)
           gradle_files = [Path("android/app/build.gradle"), Path("android/app/build.gradle.kts")]
           found = False
@@ -428,7 +428,7 @@ jobs:
         working-directory: ${{ runner.temp }}/hte_app
         run: |
           for asset in assets/high-tech-startup.mp3 assets/AUD-20261103-WA0002.mp3 assets/high-tech-logo.svg; do
-            test -s "$asset" || { echo "::error::Required High-Tech asset is missing: $asset"; find assets -maxdepth 1 -type f -printf "%f %s bytes\\n"; exit 1; }
+            test -s "$asset" || { echo "::error::Required High-Tech asset is missing: $asset"; find assets -maxdepth 1 -type f -printf "%f %s bytes\n"; exit 1; }
             echo "PASS: $asset ($(stat -c%s "$asset") bytes)."
           done
       - name: Verify startup MP3 decodes successfully
