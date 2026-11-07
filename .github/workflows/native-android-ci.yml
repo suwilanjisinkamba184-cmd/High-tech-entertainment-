@@ -31,6 +31,22 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - name: Set up Flutter stable for the embedded presentation module
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.9"
+          channel: stable
+          cache: true
+      - name: Generate Flutter add-to-app bootstrap when the module is present
+        shell: bash
+        run: |
+          if [ -f flutter-ui/pubspec.yaml ]; then
+            cd flutter-ui
+            flutter --version
+            flutter pub get
+          else
+            echo "Flutter module is not part of this revision; building native baseline."
+          fi
       - name: Verify or install stable Android SDK 36
         shell: bash
         run: |
