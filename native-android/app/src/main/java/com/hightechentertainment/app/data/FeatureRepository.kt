@@ -141,6 +141,44 @@ class FeatureRepository(
         client.publicStorageUrl("hte-audio", path)
     }
 
+    suspend fun uploadAudio(
+        context: android.content.Context,
+        uri: android.net.Uri,
+        contentType: String,
+        extension: String
+    ): Result<String> = runCatching {
+        userId()
+        require(contentType in setOf("audio/mpeg", "audio/mp4", "audio/aac", "audio/wav", "audio/x-wav", "audio/ogg")) {
+            "Choose an MP3, M4A, AAC, WAV or OGG audio file."
+        }
+        val safeExtension = extension.lowercase().filter(Char::isLetterOrDigit).take(5).ifBlank { "mp3" }
+        val path = "founder/${System.currentTimeMillis()}.$safeExtension"
+        val response = client.uploadStorageUri(
+            context, "hte-audio", path, uri, contentType, 20L * 1024L * 1024L
+        )
+        check(response.isSuccessful) { "Audio upload failed (HTTP ${response.statusCode})." }
+        client.publicStorageUrl("hte-audio", path)
+    }
+
+    suspend fun uploadAvatar(
+        context: android.content.Context,
+        uri: android.net.Uri,
+        contentType: String,
+        extension: String
+    ): Result<String> = runCatching {
+        val id = userId()
+        require(contentType in setOf("image/jpeg", "image/png", "image/webp")) {
+            "Use a JPG, PNG or WebP image."
+        }
+        val safeExtension = extension.lowercase().filter(Char::isLetterOrDigit).take(5).ifBlank { "jpg" }
+        val path = "$id/avatar-${System.currentTimeMillis()}.$safeExtension"
+        val response = client.uploadStorageUri(
+            context, "hte-avatars", path, uri, contentType, 5L * 1024L * 1024L
+        )
+        check(response.isSuccessful) { "Profile picture upload failed (HTTP ${response.statusCode})." }
+        client.publicStorageUrl("hte-avatars", path)
+    }
+
     suspend fun uploadAvatar(bytes: ByteArray, contentType: String): Result<String> = runCatching {
         val id = userId()
         require(bytes.isNotEmpty() && bytes.size <= 5 * 1024 * 1024) { "Choose an image smaller than 5 MB." }
