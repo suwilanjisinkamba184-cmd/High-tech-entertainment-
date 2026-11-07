@@ -639,7 +639,12 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
           _tab = 0;
         });
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => AuthScreen(onAuthenticated: () async {\n            if (!mounted) return;\n            Navigator.of(context).pushReplacement(\n              MaterialPageRoute(builder: (_) => const ListenerHomeScreen()),\n            );\n          })),
+          MaterialPageRoute(builder: (_) => AuthScreen(onAuthenticated: () async {
+            if (!mounted) return;
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const ListenerHomeScreen()),
+            );
+          })),
           (_) => false,
         );
       }
