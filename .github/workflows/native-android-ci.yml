@@ -58,6 +58,7 @@ jobs:
         working-directory: native-android
         run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
       - name: Verify startup MP3 is packaged in the native APK
+        working-directory: native-android
         shell: bash
         run: |
           set -euo pipefail
