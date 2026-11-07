@@ -242,6 +242,43 @@ class FlutterHostActivity : FlutterActivity() {
                                 .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
                         }
                     }
+                    "uploadAudio" -> lifecycleScope.launch {
+                        val authorized = hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)
+                        if (!authorized) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                        } else {
+                            val bytes = call.argument<ByteArray>("bytes") ?: ByteArray(0)
+                            hteApplication.featureRepository.uploadAudio(
+                                bytes,
+                                call.argument<String>("contentType").orEmpty(),
+                                call.argument<String>("extension").orEmpty()
+                            ).onSuccess { url -> result.success(mapOf("success" to true, "url" to url)) }
+                                .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                        }
+                    }
+                    "uploadVideo" -> lifecycleScope.launch {
+                        val authorized = hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)
+                        if (!authorized) {
+                            result.success(mapOf("success" to false, "message" to "Founder Studio access is required."))
+                        } else {
+                            val uri = android.net.Uri.parse(call.argument<String>("uri").orEmpty())
+                            hteApplication.featureRepository.uploadVideo(
+                                applicationContext,
+                                uri,
+                                call.argument<String>("contentType").orEmpty(),
+                                call.argument<String>("extension").orEmpty()
+                            ).onSuccess { url -> result.success(mapOf("success" to true, "url" to url)) }
+                                .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                        }
+                    }
+                    "uploadAvatar" -> lifecycleScope.launch {
+                        val bytes = call.argument<ByteArray>("bytes") ?: ByteArray(0)
+                        hteApplication.featureRepository.uploadAvatar(
+                            bytes,
+                            call.argument<String>("contentType").orEmpty()
+                        ).onSuccess { url -> result.success(mapOf("success" to true, "url" to url)) }
+                            .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                    }
                     "createTrack" -> lifecycleScope.launch {
                         hteApplication.featureRepository.createTrack(
                             call.argument<String>("title").orEmpty(),
