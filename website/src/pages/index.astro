@@ -1,0 +1,53 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PublicCatalogue from '../components/PublicCatalogue';
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+---
+<SiteLayout>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="High-Tech Entertainment home"><img src={`${base}high-tech-logo.svg`} alt="" /><span>HIGH-TECH <small>ENTERTAINMENT</small></span></a>
+    <nav class="main-nav" aria-label="Main navigation">
+      <a href="#music">Music</a><a href="#artists">Artists</a><a href="#releases">Releases</a><a href="#videos">Videos</a><a href="#services">Studio</a>
+    </nav>
+    <div class="header-actions"><a class="account-link" href={`${base}account/`}>My account</a><a class="button button-gold header-cta" href="#music">Explore sound</a></div>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu">Menu</button>
+  </header>
+  <nav id="mobile-menu" class="mobile-menu" aria-label="Mobile navigation">
+    <a href="#music">Music</a><a href="#artists">Artists</a><a href="#releases">Releases</a><a href="#videos">Videos</a><a href="#services">Studio & booking</a><a href={`${base}account/`}>My account</a>
+  </nav>
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy"><span class="eyebrow"><span class="live-dot"></span> INDEPENDENT SOUND. GLOBAL AMBITION.</span>
+        <h1>Made to move.<br /><em>Built to last.</em></h1>
+        <p>Discover the voices, records and creative energy shaping the next wave of African sound. This is High-Tech Entertainment.</p>
+        <div class="hero-actions"><a class="button button-gold" href="#music">Discover the music <span>↗</span></a><a class="button button-outline" href="#services">Work with our studio</a></div>
+        <div class="hero-meta"><span>EST. 2020</span><span class="meta-line"></span><span>MUSIC · PRODUCTION · CULTURE</span></div>
+      </div>
+      <div class="hero-visual" aria-label="High-Tech Entertainment identity artwork">
+        <div class="visual-ring ring-one"></div><div class="visual-ring ring-two"></div>
+        <img src={`${base}high-tech-logo.svg`} alt="High-Tech Entertainment crest" />
+        <div class="visual-caption"><span>HTE / 031</span><span>QUALITY SOUND. GLOBAL VIBES.</span></div>
+      </div>
+      <div class="hero-bottom"><span>SCROLL TO EXPLORE</span><span class="scroll-line"></span><span>01 / 05</span></div>
+    </section>
+    <section class="intro-strip"><span>THE HOME OF</span><strong>NEW SOUND</strong><i>✳</i><strong>NEW VOICES</strong><i>✳</i><strong>NEW POSSIBILITIES</strong></section>
+    <PublicCatalogue client:load />
+    <section class="studio-section" id="services">
+      <div class="studio-image"><div class="studio-mark">HT<span>E</span></div><span class="studio-image-caption">FROM THE FIRST IDEA TO THE FINAL MASTER.</span></div>
+      <div class="studio-copy"><span class="eyebrow">THE HTE CREATIVE STUDIO</span><h2>Your sound.<br /><em>Our craft.</em></h2><p>From original beats to recording, mixing, mastering and artist promotion, we help ambitious ideas become finished records.</p>
+        <div class="service-list"><div><span>01</span><strong>Beat production</strong><small>Original instrumentals built around your vision.</small></div><div><span>02</span><strong>Recording & engineering</strong><small>Studio sessions and vocal production.</small></div><div><span>03</span><strong>Mixing & mastering</strong><small>Clarity, impact and release-ready sound.</small></div><div><span>04</span><strong>Artist development</strong><small>Creative direction, content and promotion.</small></div></div>
+        <a class="button button-gold" href={`${base}account/`}>Sign in to get started <span>↗</span></a>
+      </div>
+    </section>
+    <section class="app-promo" id="download-app"><div><span class="eyebrow">THE MUSIC GOES WITH YOU</span><h2>HTE in your<br /><em>pocket.</em></h2><p>Take the official High-Tech Entertainment Android experience wherever you go. Open the official GitHub release page to get the latest published APK and installation details.</p><a class="button button-gold" href="https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest" target="_blank" rel="noreferrer">Get official Android app <span>↓</span></a></div><div class="phone-art"><div class="phone-frame"><div class="phone-speaker"></div><img src={`${base}high-tech-logo.svg`} alt="HTE app icon" /><strong>HIGH-TECH</strong><small>ENTERTAINMENT</small><span>MUSIC. BEATS. PRODUCTION.</span></div><span class="phone-orbit"></span></div></section>
+    <section class="booking-strip"><div><span class="eyebrow">HAVE A PROJECT IN MIND?</span><h2>Let's make something <em>that matters.</em></h2></div><a class="button button-gold" href={`${base}account/`}>Connect with HTE <span>↗</span></a></section>
+  </main>
+  <footer class="site-footer"><a class="brand" href="#top"><img src={`${base}high-tech-logo.svg`} alt="" /><span>HIGH-TECH <small>ENTERTAINMENT</small></span></a><p>Music. Beats. Production. Beyond.</p><div class="footer-links"><a href={`${base}account/`}>Account</a><a href={`${base}privacy-policy.html`}>Privacy</a><a href={`${base}terms-of-service.html`}>Terms</a><a href="mailto:suwilanjisinkamba184@gmail.com">Contact</a></div><small>© {new Date().getFullYear()} High-Tech Entertainment. All rights reserved.</small></footer>
+  <script is:inline define:vars={{base}}>
+    const toggle=document.querySelector('.menu-toggle'), menu=document.querySelector('#mobile-menu');
+    toggle?.addEventListener('click',()=>{const open=toggle.getAttribute('aria-expanded')!=='true';toggle.setAttribute('aria-expanded',String(open));menu?.classList.toggle('is-open',open);toggle.textContent=open?'Close':'Menu';});
+    menu?.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{menu.classList.remove('is-open');toggle?.setAttribute('aria-expanded','false');toggle.textContent='Menu';}));
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'){menu?.classList.remove('is-open');toggle?.setAttribute('aria-expanded','false');toggle.textContent='Menu';}});
+  </script>
+  <script is:inline src={`${base}supabase-config.js`}></script>
+</SiteLayout>

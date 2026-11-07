@@ -10,13 +10,13 @@ High-Tech Entertainment is a focused music and artist platform for discovering r
 - **Founder Studio:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/admin/
 - **Account:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account/
 
-GitHub Pages is the official and canonical public website host. The `.github/workflows/publish-github-pages.yml` workflow builds `dist/` with `scripts/build-website.sh` and deploys it to GitHub Pages on pushes to `main`. Supabase provides authentication, database, media storage and serverless functions.
+GitHub Pages is the official and canonical public website host. The `.github/workflows/publish-github-pages.yml` workflow installs Node.js, builds the Astro site in `website/`, assembles shared account and Founder Studio routes into `dist/` with `scripts/build-website.sh`, and deploys it to GitHub Pages on pushes to `main`. Supabase provides authentication, database, media storage and serverless functions.
 
 ## Project components
 
 | Component | Location | Purpose |
 |---|---|---|
-| Public website | Repository root | Music catalogue, artists, releases, videos, player and contact/booking |
+| Public website | `website/` | Astro + React + TypeScript + Tailwind public music experience |
 | Founder Studio | `admin/` | Administrative tools for managing platform content and enquiries |
 | Account pages | `account/` | User account and profile experience |
 | Flutter application | `mobile-app/` | Android and Windows application source |

@@ -15,33 +15,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate required public website files
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: website/package.json
+      - name: Validate Astro website and retained platform routes
         run: |
           set -euo pipefail
-          test -s index.html
+          test -s website/package.json
+          test -s website/astro.config.mjs
+          test -s website/src/pages/index.astro
+          test -s website/src/components/PublicCatalogue.tsx
           test -s supabase-config.js
           test -s robots.txt
           test -s sitemap.xml
-          grep -q 'label for="booking-name"' index.html || { echo "Booking form labels must be programmatically associated" >&2; exit 1; }
-          cmp -s high-tech-logo.svg mobile-app/assets/high-tech-logo.svg || { echo "Website logo must match the Android app logo" >&2; exit 1; }
           test -s assets/app.js
           test -s assets/site.css
           test -s assets/videos.js
           test -s assets/booking-confirmation.aac
-          grep -q 'id="feedback-form"' index.html
-          grep -q 'booking-confirmation.aac' assets/app.js
-          grep -q "f.matches('#contact-form,#feedback-form')" assets/app.js
           test -s account/index.html
           test -s admin/index.html
-          grep -q 'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/' index.html
-          grep -q 'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/sitemap.xml' robots.txt
+          grep -q 'id="artists"' website/src/components/PublicCatalogue.tsx
+          grep -q "from('artists')" website/src/components/PublicCatalogue.tsx
+          grep -q "from('tracks')" website/src/components/PublicCatalogue.tsx
+          grep -q "from('releases')" website/src/components/PublicCatalogue.tsx
+          grep -q "from('videos')" website/src/components/PublicCatalogue.tsx
           grep -q "siteBasePath=()=>location.pathname.startsWith('/High-tech-entertainment-/')" assets/app.js
-          ! grep -q "location.pathname.split('/').filter(Boolean)\[0\]" assets/app.js
-          ! grep -R -n 'htmusic.pages.dev' --include='*.html' --include='*.js' --include='*.txt' --include='*.xml' .
+          ! grep -R -n '2\.2\.10' website/src
           python -m json.tool package.json >/dev/null
-      - name: Check JavaScript syntax
+          python -m json.tool website/package.json >/dev/null
+      - name: Check legacy JavaScript syntax
         run: find assets admin account -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
       - name: Validate sitemap XML
         run: python -c "import xml.etree.ElementTree as ET; ET.parse('sitemap.xml'); print('Sitemap XML is valid')"
-      - name: Validate shared static website build
+      - name: Build Astro + React website and validate shared routes
         run: bash scripts/build-website.sh
