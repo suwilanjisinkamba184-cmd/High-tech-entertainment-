@@ -656,7 +656,7 @@ private fun HighTechApp(
                             seekPreview?.let { if (durationMs > 0L) onSeek((it * durationMs).toLong()) }
                             seekPreview = null
                         },
-                        enabled = durationMs > 0L
+                        enabled = durationMs > 0L && !sponsoredAudioPlaying
                     )
                     Row(
                         Modifier.fillMaxWidth(),
