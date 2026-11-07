@@ -970,6 +970,7 @@ class _ProfilePanelState extends State<_ProfilePanel> {
   bool _loading = true;
   bool _saving = false;
   String? _message;
+  String _avatarUrl = '';
   List<Map<String, dynamic>> _bookings = [];
   Map<String, dynamic>? _founder;
 
@@ -1002,6 +1003,7 @@ class _ProfilePanelState extends State<_ProfilePanel> {
       _displayName.text = profile?['displayName']?.toString() ?? '';
       _bio.text = profile?['bio']?.toString() ?? '';
       _phone.text = profile?['phone']?.toString() ?? '';
+      _avatarUrl = profile?['avatarUrl']?.toString() ?? '';
       setState(() {
         _bookings = bookings.whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList();
         _founder = founder?['authorized'] == true ? founder : null;
@@ -1022,7 +1024,7 @@ class _ProfilePanelState extends State<_ProfilePanel> {
         'displayName': _displayName.text,
         'bio': _bio.text,
         'phone': _phone.text,
-        'avatarUrl': '',
+        'avatarUrl': _avatarUrl,
       });
       if (mounted) setState(() => _message = result?['success'] == true
           ? 'Profile saved.'
