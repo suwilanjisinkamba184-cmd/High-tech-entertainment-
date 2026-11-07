@@ -66,3 +66,16 @@ for select to anon, authenticated
 using (bucket_id = 'hte-avatars');
 
 -- Existing per-user INSERT/UPDATE/DELETE policies remain in place.
+
+-- Expose only a boolean role check to the authenticated client; never expose owner UUIDs.
+create or replace function public.is_hte_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select private.hte_has_role(array['owner','admin']);
+$$;
+revoke all on function public.is_hte_admin() from public, anon;
+grant execute on function public.is_hte_admin() to authenticated;
