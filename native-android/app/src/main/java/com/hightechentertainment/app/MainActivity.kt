@@ -519,6 +519,7 @@ private fun HighTechApp(
                     IconButton(onClick = onToggleRepeat) {
                         Icon(Icons.Rounded.Repeat, contentDescription = "Cycle repeat mode", tint = if (repeatMode == Player.REPEAT_MODE_OFF) HteMuted else HteGold)
                     }
+                    }
                 }
             }
         }
