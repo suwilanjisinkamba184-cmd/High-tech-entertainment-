@@ -42,6 +42,15 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.hightechentertainment.app.playback.PlaybackService
 import com.hightechentertainment.app.data.CatalogRepository
 import com.hightechentertainment.app.data.NativeTrack
+import com.hightechentertainment.app.data.AuthRepository
+import com.hightechentertainment.app.data.AuthSessionManager
+import com.hightechentertainment.app.data.AuthResult
+import com.hightechentertainment.app.data.SecureSessionStore
+import com.hightechentertainment.app.data.SupabaseRestClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 private val HteBlack = Color(0xFF080808)
@@ -51,6 +60,10 @@ private val HteMuted = Color(0xFFAAA39A)
 
 class MainActivity : ComponentActivity() {
     private val catalogRepository by lazy { CatalogRepository() }
+    private val authStore by lazy { SecureSessionStore(applicationContext) }
+    private val authRepository by lazy { AuthRepository(SupabaseRestClient(), authStore) }
+    private val sessionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val sessionManager by lazy { AuthSessionManager(authRepository, authStore, sessionScope) }
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var playbackPlayer by mutableStateOf<Player?>(null)
     private var playbackIsReady by mutableStateOf(false)
@@ -61,6 +74,53 @@ class MainActivity : ComponentActivity() {
         connectToPlaybackService()
         setContent {
             HteTheme {
+                val signedInSession by sessionManager.session.collectAsState()
+                val authStatus by sessionManager.status.collectAsState()
+                var authBusy by remember { mutableStateOf(false) }
+                var authMessage by remember { mutableStateOf<String?>(null) }
+                LaunchedEffect(Unit) { sessionManager.restore() }
+                if (signedInSession == null) {
+                    NativeAuthScreen(
+                        busy = authBusy || authStatus == "restoring",
+                        message = authMessage,
+                        onSignIn = { email, password ->
+                            authBusy = true
+                            authMessage = null
+                            lifecycleScope.launch {
+                                when (val result = authRepository.signInWithPassword(email, password)) {
+                                    is AuthResult.Success -> sessionManager.accept(result.session)
+                                    is AuthResult.Failure -> authMessage = result.message
+                                    is AuthResult.Notice -> authMessage = result.message
+                                }
+                                authBusy = false
+                            }
+                        },
+                        onSignUp = { email, password ->
+                            authBusy = true
+                            authMessage = null
+                            lifecycleScope.launch {
+                                when (val result = authRepository.signUp(email, password)) {
+                                    is AuthResult.Success -> sessionManager.accept(result.session)
+                                    is AuthResult.Failure -> authMessage = result.message
+                                    is AuthResult.Notice -> authMessage = result.message
+                                }
+                                authBusy = false
+                            }
+                        },
+                        onReset = { email ->
+                            authBusy = true
+                            authMessage = null
+                            lifecycleScope.launch {
+                                when (val result = authRepository.requestPasswordReset(email)) {
+                                    is AuthResult.Success -> authMessage = "Password reset requested."
+                                    is AuthResult.Failure -> authMessage = result.message
+                                    is AuthResult.Notice -> authMessage = result.message
+                                }
+                                authBusy = false
+                            }
+                        }
+                    )
+                } else {
                 var tracks by remember { mutableStateOf<List<NativeTrack>>(emptyList()) }
                 var loading by remember { mutableStateOf(true) }
                 var error by remember { mutableStateOf<String?>(null) }
@@ -106,8 +166,12 @@ class MainActivity : ComponentActivity() {
                     },
                     onPause = {
                         playbackPlayer?.pause()
+                    },
+                    onSignOut = {
+                        lifecycleScope.launch { sessionManager.signOut() }
                     }
                 )
+                }
             }
         }
     }
@@ -135,6 +199,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        sessionScope.cancel()
         controllerFuture?.let { MediaController.releaseFuture(it) }
         controllerFuture = null
         playbackPlayer = null
@@ -181,7 +246,8 @@ private fun HighTechApp(
     playing: Boolean,
     onRefresh: () -> Unit,
     onPlay: (NativeTrack) -> Unit,
-    onPause: () -> Unit
+    onPause: () -> Unit,
+    onSignOut: () -> Unit
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var search by rememberSaveable { mutableStateOf("") }
@@ -229,6 +295,7 @@ private fun HighTechApp(
                             Text("ENTERTAINMENT", color = HteGold, fontSize = 10.sp, letterSpacing = 2.sp)
                         }
                         Spacer(Modifier.weight(1f))
+                        TextButton(onClick = onSignOut) { Text("SIGN OUT", color = HteGold, fontSize = 10.sp) }
                         IconButton(onClick = onRefresh, enabled = !loading) {
                             Icon(Icons.Rounded.Refresh, contentDescription = "Refresh catalogue", tint = HteGold)
                         }
