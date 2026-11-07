@@ -26,7 +26,7 @@ class UserLibraryRepository(
     suspend fun favouriteTrackIds(): Result<List<String>> = runCatching {
         val userId = requireUser()
         val response = client.get(
-            table = "user_favourites",
+            table = "user_favorites",
             query = mapOf("user_id" to "eq.$userId", "order" to "created_at.desc", "limit" to "500"),
             select = "track_id"
         )
@@ -46,7 +46,7 @@ class UserLibraryRepository(
             val userId = requireUser()
             client.request(
                 method = "POST",
-                path = "/rest/v1/user_favourites",
+                path = "/rest/v1/user_favorites",
                 query = mapOf("on_conflict" to "user_id,track_id"),
                 body = JSONObject().put("user_id", userId).put("track_id", trackId).toString(),
                 headers = mapOf("Prefer" to "resolution=merge-duplicates,return=minimal")
@@ -60,7 +60,7 @@ class UserLibraryRepository(
             val userId = requireUser()
             client.request(
                 method = "DELETE",
-                path = "/rest/v1/user_favourites",
+                path = "/rest/v1/user_favorites",
                 query = mapOf("user_id" to "eq.$userId", "track_id" to "eq.$trackId")
             )
         }
@@ -76,7 +76,6 @@ class UserLibraryRepository(
                 body = JSONObject()
                     .put("user_id", userId)
                     .put("track_id", trackId)
-                    .put("progress_seconds", progressSeconds.coerceAtLeast(0))
                     .toString(),
                 headers = mapOf("Prefer" to "return=minimal")
             )
@@ -107,7 +106,7 @@ class UserLibraryRepository(
     suspend fun playlists(): Result<List<NativePlaylist>> = runCatching {
         val userId = requireUser()
         val response = client.get(
-            table = "user_playlists",
+            table = "playlists",
             query = mapOf("user_id" to "eq.$userId", "order" to "updated_at.desc", "limit" to "100"),
             select = "id,name,description"
         )
@@ -128,7 +127,7 @@ class UserLibraryRepository(
         val userId = requireUser()
         val response = client.request(
             method = "POST",
-            path = "/rest/v1/user_playlists",
+            path = "/rest/v1/playlists",
             body = JSONObject().put("user_id", userId)
                 .put("name", cleanName)
                 .put("description", description.trim().take(500))
@@ -147,7 +146,7 @@ class UserLibraryRepository(
             requireUser()
             client.request(
                 method = "POST",
-                path = "/rest/v1/user_playlist_tracks",
+                path = "/rest/v1/playlist_tracks",
                 query = mapOf("on_conflict" to "playlist_id,track_id"),
                 body = JSONObject().put("playlist_id", playlistId)
                     .put("track_id", trackId)
