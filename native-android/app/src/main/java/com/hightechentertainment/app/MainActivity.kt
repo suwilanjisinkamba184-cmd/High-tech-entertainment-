@@ -65,6 +65,10 @@ private val HteGold = Color(0xFFD7A83E)
 private val HteMuted = Color(0xFFAAA39A)
 
 class MainActivity : ComponentActivity() {
+    companion object {
+        const val EXTRA_OPEN_VOICE_COMPANION = "com.hightechentertainment.app.OPEN_VOICE_COMPANION"
+    }
+
     private val hteApplication: HteApplication
         get() = application as HteApplication
     private val catalogRepository
@@ -185,6 +189,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 HighTechApp(
+                    initialTab = if (intent.getBooleanExtra(EXTRA_OPEN_VOICE_COMPANION, false)) 10 else 0,
                     favouriteIds = favouriteIds,
                     featureRepository = hteApplication.featureRepository,
                     voiceTokenRepository = hteApplication.voiceSessionTokenRepository,
@@ -452,6 +457,7 @@ private val destinations = listOf(
 
 @Composable
 private fun HighTechApp(
+    initialTab: Int = 0,
     tracks: List<NativeTrack>,
     favouriteIds: Set<String>,
     featureRepository: com.hightechentertainment.app.data.FeatureRepository,
@@ -486,7 +492,7 @@ private fun HighTechApp(
     onVoiceAudioActive: (Boolean) -> Unit,
     onSignOut: () -> Unit
 ) {
-    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    var selectedTab by rememberSaveable { mutableIntStateOf(initialTab.coerceIn(0, 11)) }
     var moreExpanded by rememberSaveable { mutableStateOf(false) }
     var search by rememberSaveable { mutableStateOf("") }
     var artists by remember { mutableStateOf<List<NativeArtist>>(emptyList()) }
