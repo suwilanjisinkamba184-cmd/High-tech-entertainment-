@@ -1,5 +1,6 @@
 package com.hightechentertainment.app.data
 
+import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -37,16 +38,25 @@ class CatalogRepository(
             val tracks = buildList {
                 for (index in 0 until json.length()) {
                     val item = json.optJSONObject(index) ?: continue
-                    val title = item.optString("title").takeIf { it.isNotBlank() } ?: continue
+                    val id = item.optString("id").takeIf { it.isNotBlank() && it != "null" } ?: continue
+                    val title = item.optString("title").takeIf { it.isNotBlank() && it != "null" } ?: continue
+                    val artist = item.optString("artist")
+                        .takeIf { it.isNotBlank() && it != "null" } ?: "High-Tech Entertainment"
+                    fun secureUrl(field: String): String? {
+                        val raw = item.optString(field).takeIf { it.isNotBlank() && it != "null" } ?: return null
+                        val parsed = runCatching { Uri.parse(raw) }.getOrNull() ?: return null
+                        return raw.takeIf { parsed.scheme == "https" && !parsed.host.isNullOrBlank() }
+                    }
                     add(
                         NativeTrack(
-                            id = item.optString("id"),
+                            id = id,
                             title = title,
-                            artist = item.optString("artist", "High-Tech Entertainment"),
-                            audioUrl = item.optString("audio_url").takeIf { it.startsWith("https://") },
-                            coverUrl = item.optString("cover_url").takeIf { it.startsWith("https://") },
+                            artist = artist,
+                            audioUrl = secureUrl("audio_url"),
+                            coverUrl = secureUrl("cover_url"),
                             genre = item.optString("genre").takeIf { it.isNotBlank() && it != "null" },
-                            durationSeconds = if (item.isNull("duration_seconds")) null else item.optInt("duration_seconds")
+                            durationSeconds = if (item.isNull("duration_seconds")) null
+                                else item.optInt("duration_seconds").takeIf { it > 0 }
                         )
                     )
                 }
