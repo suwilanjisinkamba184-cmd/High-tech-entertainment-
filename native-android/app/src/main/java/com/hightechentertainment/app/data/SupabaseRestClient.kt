@@ -11,7 +11,7 @@ import java.net.URLEncoder
  * Small dependency-free PostgREST/Auth transport used while feature repositories are migrated.
  * This class deliberately does not make authorization decisions: RLS remains authoritative.
  */
-internal class SupabaseRestClient(
+class SupabaseRestClient(
     private val baseUrl: String = SupabaseConfig.BASE_URL,
     private val publishableKey: String = SupabaseConfig.PUBLISHABLE_KEY,
     private val accessToken: () -> String? = { null },
