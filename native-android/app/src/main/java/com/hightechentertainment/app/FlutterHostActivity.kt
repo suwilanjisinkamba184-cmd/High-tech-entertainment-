@@ -65,6 +65,19 @@ class FlutterHostActivity : FlutterActivity() {
                 when (call.method) {
                     "getSession" -> result.success(sessionMap())
                     "getPlaybackState" -> result.success(playbackState())
+                    "playVideo" -> {
+                        val videoUrl = call.argument<String>("videoUrl").orEmpty()
+                        if (!videoUrl.startsWith("https://") || android.net.Uri.parse(videoUrl).host.isNullOrBlank()) {
+                            result.success(mapOf("success" to false, "message" to "Only secure video URLs are supported."))
+                        } else {
+                            startActivity(Intent(this, NativeVideoActivity::class.java).apply {
+                                putExtra(NativeVideoActivity.EXTRA_VIDEO_ID, call.argument<String>("videoId").orEmpty())
+                                putExtra(NativeVideoActivity.EXTRA_VIDEO_URL, videoUrl)
+                                putExtra(NativeVideoActivity.EXTRA_VIDEO_TITLE, call.argument<String>("title").orEmpty())
+                            })
+                            result.success(mapOf("success" to true))
+                        }
+                    }
                     "playTrack" -> playTrack(call.argument<String>("trackId").orEmpty(), result)
                     "pausePlayback" -> {
                         mediaController?.pause()
