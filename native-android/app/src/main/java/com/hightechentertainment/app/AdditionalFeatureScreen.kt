@@ -59,6 +59,8 @@ fun AdditionalFeatureScreen(
     var bookingType by remember { mutableStateOf("Music production") }
     var bookingDate by remember { mutableStateOf("") }
     var bookingMessage by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var newVideoTitle by remember { mutableStateOf("") }
     var newVideoUrl by remember { mutableStateOf("") }
     var newVideoDescription by remember { mutableStateOf("") }
@@ -224,6 +226,24 @@ fun AdditionalFeatureScreen(
                         busy = false
                     }
                 }, modifier = Modifier.fillMaxWidth()) { Text("Save profile") }
+                HorizontalDivider(Modifier.padding(vertical = 12.dp))
+                Text("CHANGE PASSWORD", style = MaterialTheme.typography.titleMedium)
+                OutlinedTextField(newPassword, { newPassword = it }, Modifier.fillMaxWidth(),
+                    label = { Text("New password") }, singleLine = true)
+                OutlinedTextField(confirmPassword, { confirmPassword = it }, Modifier.fillMaxWidth(),
+                    label = { Text("Confirm new password") }, singleLine = true)
+                Button(enabled = !busy && newPassword.length >= 8 && newPassword == confirmPassword,
+                    onClick = {
+                        scope.launch {
+                            busy = true
+                            features.updatePassword(newPassword).onSuccess {
+                                message = "Password updated successfully."
+                                newPassword = ""
+                                confirmPassword = ""
+                            }.onFailure { message = it.message }
+                            busy = false
+                        }
+                    }, modifier = Modifier.fillMaxWidth()) { Text("Update password") }
                 Text("Avatar files are public for profile display; each account can upload only into its own protected folder.")
             }
             "Founder Studio" -> {
