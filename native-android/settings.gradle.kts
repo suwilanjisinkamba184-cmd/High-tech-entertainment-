@@ -2,11 +2,11 @@ pluginManagement {
     repositories { google(); mavenCentral(); gradlePluginPortal() }
 }
 
-// Flutter 3.47.9 requires Kotlin Gradle Plugin 2.2.20 or newer.
-// Pin the compatible KGP version at the host build level so the generated
-// Flutter Android module cannot fall back to the older 2.2.10 template default.
+// Keep AGP and KGP on a mutually supported toolchain. KGP 2.3.0 supports
+// Gradle 8.14.3 and AGP 8.13.0, avoiding the legacy BaseVariant linkage
+// failure observed with the previous 2.2.20 / 8.11.1 pairing.
 plugins {
-    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
+    id("org.jetbrains.kotlin.android") version "2.3.0" apply false
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
