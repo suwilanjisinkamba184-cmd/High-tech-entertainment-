@@ -157,6 +157,34 @@ class UserLibraryRepository(
         }
     }
 
+    suspend fun playlistTrackIds(playlistId: String): Result<List<String>> = runCatching {
+        requireUser()
+        val response = client.get("playlist_tracks",
+            mapOf("playlist_id" to "eq.$playlistId", "order" to "position.asc", "limit" to "500"),
+            "track_id")
+        check(response.isSuccessful) { "Could not load playlist tracks (HTTP ${response.statusCode})." }
+        val rows = JSONArray(response.body)
+        buildList {
+            for (i in 0 until rows.length()) {
+                rows.optJSONObject(i)?.optString("track_id")
+                    ?.takeIf { it.isNotBlank() && it != "null" }?.let(::add)
+            }
+        }
+    }
+
+    suspend fun removeTrackFromPlaylist(playlistId: String, trackId: String): LibraryOperationResult =
+        request {
+            requireUser()
+            client.request("DELETE", "/rest/v1/playlist_tracks",
+                mapOf("playlist_id" to "eq.$playlistId", "track_id" to "eq.$trackId"))
+        }
+
+    suspend fun removePlaylist(playlistId: String): LibraryOperationResult = request {
+        val userId = requireUser()
+        client.request("DELETE", "/rest/v1/playlists",
+            mapOf("id" to "eq.$playlistId", "user_id" to "eq.$userId"))
+    }
+
     suspend fun submitBooking(
         name: String,
         email: String,
