@@ -5,7 +5,11 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.BufferedSink
+import android.content.Context
+import android.net.Uri
 import java.io.IOException
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
@@ -87,6 +91,51 @@ class SupabaseRestClient(
             .header("Content-Type", contentType)
             .header("x-upsert", "false")
             .post(bytes.toRequestBody(contentType.toMediaType()))
+            .build()
+        http.newCall(request).execute().use { response ->
+            Response(response.code, response.body?.string().orEmpty())
+        }
+    }
+
+    suspend fun uploadStorageUri(
+        context: Context,
+        bucket: String,
+        objectPath: String,
+        uri: Uri,
+        contentType: String,
+        maxBytes: Long
+    ): Response = withContext(Dispatchers.IO) {
+        require(segment(bucket) == bucket)
+        require(objectPath.isNotBlank() && !objectPath.startsWith("/") && !objectPath.contains(".."))
+        require(contentType.startsWith("video/"))
+        val descriptor = context.contentResolver.openAssetFileDescriptor(uri, "r")
+        val length = descriptor?.use { it.length } ?: -1L
+        require(length <= 0L || length <= maxBytes) { "Selected video exceeds the upload size limit." }
+        val encodedPath = objectPath.split("/").joinToString("/") { encode(it).replace("+", "%20") }
+        val requestBody = object : RequestBody() {
+            override fun contentType() = contentType.toMediaType()
+            override fun contentLength() = length
+            override fun writeTo(sink: BufferedSink) {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    val buffer = ByteArray(64 * 1024)
+                    var total = 0L
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        total += count
+                        require(total <= maxBytes) { "Selected video exceeds the upload size limit." }
+                        sink.write(buffer, 0, count)
+                    }
+                } ?: error("Could not read the selected video file.")
+            }
+        }
+        val request = Request.Builder()
+            .url(baseUrl.trimEnd('/') + "/storage/v1/object/$bucket/$encodedPath")
+            .header("apikey", publishableKey)
+            .header("Authorization", "Bearer ${accessToken()?.takeIf { it.isNotBlank() } ?: publishableKey}")
+            .header("Content-Type", contentType)
+            .header("x-upsert", "false")
+            .post(requestBody)
             .build()
         http.newCall(request).execute().use { response ->
             Response(response.code, response.body?.string().orEmpty())
