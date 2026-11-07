@@ -44,7 +44,9 @@ class AuthSessionManager(
         } else {
             mutableStatus.value = "authenticated"
         }
-        scheduleRefresh()
+        if (mutableStatus.value != "refresh_retry" && mutableSession.value != null) {
+            scheduleRefresh()
+        }
     }
 
     fun accept(session: NativeSession) {
@@ -71,7 +73,7 @@ class AuthSessionManager(
             delay(waitSeconds * 1_000L)
             if (!isActive) return@launch
             applyRefresh(repository.refreshSession())
-            if (mutableSession.value != null) scheduleRefresh()
+            if (mutableSession.value != null && mutableStatus.value != "refresh_retry") scheduleRefresh()
         }
     }
 
@@ -104,7 +106,7 @@ class AuthSessionManager(
             delay(RETRY_DELAY_SECONDS * 1_000L)
             if (isActive) {
                 applyRefresh(repository.refreshSession())
-                if (mutableSession.value != null) scheduleRefresh()
+                if (mutableSession.value != null && mutableStatus.value != "refresh_retry") scheduleRefresh()
             }
         }
     }
