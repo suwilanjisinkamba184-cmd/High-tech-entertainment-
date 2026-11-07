@@ -45,6 +45,12 @@ jobs:
         run: flutter pub get
       - name: Verify Flutter module bootstrap
         run: test -f flutter-ui/.android/include_flutter.groovy
+      - name: Analyze Flutter application
+        working-directory: flutter-ui
+        run: flutter analyze
+      - name: Run Flutter widget and integration tests
+        working-directory: flutter-ui
+        run: flutter test
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
