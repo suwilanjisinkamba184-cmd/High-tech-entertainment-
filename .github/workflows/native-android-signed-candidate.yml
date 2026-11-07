@@ -115,7 +115,7 @@ jobs:
             exit 1
           }
           PRODUCTION_VERIFY="$("$SDK_BUILD_TOOLS/apksigner" verify --verbose --print-certs "$PRODUCTION_APK")"
-          PRODUCTION_CERT_SHA256="$(printf '%s\\n' "$PRODUCTION_VERIFY" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print $2; exit}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          PRODUCTION_CERT_SHA256="$(printf '%s\n' "$PRODUCTION_VERIFY" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print $2; exit}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
           if [ "$CERT_SHA256" != "$PRODUCTION_CERT_SHA256" ]; then
             echo "::error::Native candidate signer differs from the latest production APK. Install-over compatibility is not established."
             exit 1
