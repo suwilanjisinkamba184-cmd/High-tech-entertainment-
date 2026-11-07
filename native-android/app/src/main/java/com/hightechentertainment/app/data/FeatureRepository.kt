@@ -12,6 +12,14 @@ data class NativeVideo(
     val artist: String
 )
 
+data class NativeArtist(
+    val id: String,
+    val name: String,
+    val slug: String?,
+    val bio: String,
+    val imageUrl: String?
+)
+
 data class NativeProfile(
     val displayName: String,
     val bio: String,
@@ -46,6 +54,31 @@ class FeatureRepository(
 ) {
     private fun userId(): String = currentUserId()?.takeIf(String::isNotBlank)
         ?: error("Sign in to continue.")
+
+    suspend fun publishedArtists(): Result<List<NativeArtist>> = runCatching {
+        val response = client.get(
+            "artists",
+            mapOf("is_published" to "eq.true", "order" to "name.asc", "limit" to "100"),
+            "id,name,slug,bio,image_url"
+        )
+        check(response.isSuccessful) { "Artist catalogue unavailable (HTTP ${response.statusCode})." }
+        val rows = JSONArray(response.body)
+        buildList {
+            for (i in 0 until rows.length()) {
+                val row = rows.optJSONObject(i) ?: continue
+                val id = row.optString("id")
+                val name = row.optString("name").trim()
+                if (id.isBlank() || name.isBlank()) continue
+                add(NativeArtist(
+                    id = id,
+                    name = name,
+                    slug = row.optString("slug").takeIf { it.isNotBlank() && it != "null" },
+                    bio = row.optString("bio").takeIf { it != "null" }.orEmpty(),
+                    imageUrl = row.optString("image_url").takeIf { it.startsWith("https://") }
+                ))
+            }
+        }
+    }
 
     suspend fun publishedVideos(): Result<List<NativeVideo>> = runCatching {
         val response = client.get("videos", mapOf("is_published" to "eq.true", "order" to "created_at.desc", "limit" to "100"),
