@@ -853,6 +853,14 @@ class FlutterHostActivity : FlutterActivity() {
                             if (action == "play_favourites" && favourites.isEmpty()) {
                                 return ClientToolResult.failure("There are no saved favourites to play yet.")
                             }
+                            // Do not bypass sponsored playback when campaign lookup fails.
+                            val sponsoredAd = if (action == "play_favourites") {
+                                hteApplication.sponsoredAudioRepository.nextActiveAd().getOrElse {
+                                    return ClientToolResult.failure(
+                                        "Sponsored audio availability could not be verified. Please retry playback."
+                                    )
+                                }
+                            } else null
                             withContext(Dispatchers.Main.immediate) {
                                 when (action) {
                                     "pause" -> mediaController?.pause()
@@ -862,9 +870,8 @@ class FlutterHostActivity : FlutterActivity() {
                                     "stop" -> mediaController?.stop()
                                     "play_favourites" -> lifecycleScope.launch {
                                         val selected = catalogue.filter { it.id in favourites && !it.audioUrl.isNullOrBlank() }
-                                        val ad = hteApplication.sponsoredAudioRepository.nextActiveAd().getOrNull()
                                         val queue = buildList {
-                                            ad?.let { add(MediaItem.Builder().setMediaId("hte-ad:${it.id}").setUri(it.audioUrl).build()) }
+                                            sponsoredAd?.let { add(MediaItem.Builder().setMediaId("hte-ad:${it.id}").setUri(it.audioUrl).build()) }
                                             selected.forEach { track ->
                                                 add(MediaItem.Builder().setMediaId(track.id).setUri(
                                                     offlineDownloads.localUri(track.id)?.toString() ?: track.audioUrl!!
@@ -1023,7 +1030,15 @@ class FlutterHostActivity : FlutterActivity() {
             val preferences = hteApplication.featureRepository.getAppPreferences().getOrDefault(
                 com.hightechentertainment.app.data.NativeAppPreferences()
             )
-            val sponsoredAd = hteApplication.sponsoredAudioRepository.nextActiveAd().getOrNull()
+            // Fail closed: never start ordinary tracks when an active sponsored
+            // campaign may exist but its server-side state could not be verified.
+            val sponsoredAd = hteApplication.sponsoredAudioRepository.nextActiveAd().getOrElse {
+                result.success(mapOf(
+                    "success" to false,
+                    "message" to "Sponsored audio availability could not be verified. Playback is paused; please retry."
+                ))
+                return@launch
+            }
             val remainingTracks = if (preferences.autoplay) {
                 playableTracks.drop(startIndex)
             } else {
