@@ -305,10 +305,7 @@ fun AdditionalFeatureScreen(
                                                 val result = library.removeTrackFromPlaylist(playlist.id, track.id)
                                                 if (result.successful) {
                                                     val remaining = currentOrder.filterNot { it == track.id }
-                                                    val reordered = library.reorderPlaylist(playlist.id, remaining)
-                                                    if (reordered.successful) {
-                                                        playlistTrackIdsById = playlistTrackIdsById + (playlist.id to remaining)
-                                                    } else message = reordered.message
+                                                    playlistTrackIdsById = playlistTrackIdsById + (playlist.id to remaining)
                                                 } else message = result.message
                                             }
                                         }) { Text("REMOVE") }
