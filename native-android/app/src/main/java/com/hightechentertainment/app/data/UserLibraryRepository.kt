@@ -179,6 +179,30 @@ class UserLibraryRepository(
                 mapOf("playlist_id" to "eq.$playlistId", "track_id" to "eq.$trackId"))
         }
 
+    /** Atomically rewrites playlist positions using one PostgREST upsert request. */
+    suspend fun reorderPlaylist(playlistId: String, orderedTrackIds: List<String>): LibraryOperationResult {
+        if (playlistId.isBlank() || orderedTrackIds.any(String::isBlank) ||
+            orderedTrackIds.distinct().size != orderedTrackIds.size
+        ) return LibraryOperationResult(false, "The playlist order is invalid.")
+        return request {
+            requireUser()
+            val rows = JSONArray()
+            orderedTrackIds.forEachIndexed { index, trackId ->
+                rows.put(JSONObject()
+                    .put("playlist_id", playlistId)
+                    .put("track_id", trackId)
+                    .put("position", index))
+            }
+            client.request(
+                method = "POST",
+                path = "/rest/v1/playlist_tracks",
+                query = mapOf("on_conflict" to "playlist_id,track_id"),
+                body = rows.toString(),
+                headers = mapOf("Prefer" to "resolution=merge-duplicates,return=minimal")
+            )
+        }
+    }
+
     suspend fun removePlaylist(playlistId: String): LibraryOperationResult = request {
         val userId = requireUser()
         client.request("DELETE", "/rest/v1/playlists",
