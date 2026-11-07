@@ -58,7 +58,10 @@ Migrate the complete Android application experience to Flutter while retaining K
 - Playlist CRUD/add-track bridge and Flutter playlist/library interface have just been added; these require CI and device verification.
 - Founder Studio now uses the Android document picker and bounded Supabase Storage uploads for audio/video, with profile image upload for signed-in users.
 - Media selection is implemented in the Kotlin host through Android's document picker rather than a Flutter picker plugin, avoiding a known Flutter add-to-app plugin-loader/AGP incompatibility and keeping file transfer bounded for low-memory devices.
-- Flutter password reset, password update, avatar upload and account-deletion request entry points have been added. Full edit/delete lifecycle for catalogue drafts and campaigns, complete settings/privacy screens and physical verification remain incomplete.
+- Flutter password reset, password update, avatar upload, account-deletion request and app sharing are connected.
+- Founder Studio now supports editing and deleting unpublished drafts, with publication-state checks, and editing/deleting unpublished sponsored-audio campaigns. Published campaigns must be unpublished before editing or deletion.
+- All Founder Studio mutation bridge calls now check founder access, while Supabase RLS remains the final authority.
+- Remaining settings/privacy work includes a fuller privacy/terms view and any account-deletion backend processing beyond the existing verified request workflow.
 - AI token endpoint previously logged a missing server configuration error. The actual ElevenLabs API key must be configured as a Supabase Edge Function secret and tested without exposing it to the client.
 
 ## Release acceptance gates
