@@ -7,13 +7,19 @@ This directory is the Flutter UI module embedded into the existing Kotlin Androi
 - Flutter owns presentation, navigation, responsive layouts, and UI animation.
 - The Kotlin host remains the Android application host and owns Android lifecycle, authentication/session integration, Media3 audio/video playback, background playback, downloads, notifications, and permission handling.
 - Supabase remains the existing backend. Do not create a second production database or duplicate playback engine.
-- Native-to-Flutter calls use typed, versioned platform-channel contracts. The startup audio method channel is scaffolded as `com.hightechentertainment.app/startup`.
+- Native-to-Flutter calls currently use the startup bridge `com.hightechentertainment.app/startup`. Expand this into a versioned, typed Pigeon API as feature migration proceeds.
 
-## Startup acceptance requirement
+## Priority One: synchronized 15-second startup
 
-The branded startup sequence is exactly 15 seconds. Native Kotlin starts the existing bundled startup sound when the Flutter splash becomes visible. Flutter runs the matching 15-second animation/progress timeline. The host must stop/release the startup player at the 15-second boundary and cancel safely on lifecycle interruption. The startup sound must never enter Media3's music queue or sponsored-audio rotation.
+- The Flutter splash begins its 15-second animation/progress timeline when it requests native startup playback.
+- Kotlin plays the existing bundled startup MP3 in a dedicated MediaPlayer, outside the Media3 music queue and sponsored-audio rotation.
+- Kotlin has an independent 15-second stop/release guard; Flutter also sends `stopStartup` at the visual boundary and when its splash widget is disposed.
+- If the bundled cue is shorter than 15 seconds, Kotlin loops it until the 15-second boundary. If another app is already playing music, the startup cue does not interrupt it.
+- The splash is not allowed to report fake network or account setup completion; its status text is brand/experience progress only.
 
-The current Dart screen contains the synchronized 15-second visual timeline and calls the native startup bridge. The Kotlin bridge and FlutterView host wiring are the next integration step; until that is complete, the sound call is intentionally safe to no-op in Flutter preview.
+## Migration status
+
+The Flutter module is now included as a source Gradle subproject in the Kotlin host, and `FlutterHostActivity` is the launcher. The Flutter home currently provides the first visual shell and a temporary handoff to the existing native app. This is an incremental migration: the complete listener and Founder Studio workflows still need to be ported to Flutter and connected to the existing native service APIs before a production release.
 
 ## Build
 
@@ -23,7 +29,6 @@ Run from this directory:
 
 ```sh
 flutter pub get
+flutter analyze
 flutter test
 ```
-
-The Android host imports this module using Flutter's source-subproject add-to-app integration.
