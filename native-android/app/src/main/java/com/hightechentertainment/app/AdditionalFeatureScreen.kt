@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -361,9 +362,9 @@ fun AdditionalFeatureScreen(
                 HorizontalDivider(Modifier.padding(vertical = 12.dp))
                 Text("CHANGE PASSWORD", style = MaterialTheme.typography.titleMedium)
                 OutlinedTextField(newPassword, { newPassword = it }, Modifier.fillMaxWidth(),
-                    label = { Text("New password") }, singleLine = true)
+                    label = { Text("New password") }, singleLine = true, visualTransformation = PasswordVisualTransformation())
                 OutlinedTextField(confirmPassword, { confirmPassword = it }, Modifier.fillMaxWidth(),
-                    label = { Text("Confirm new password") }, singleLine = true)
+                    label = { Text("Confirm new password") }, singleLine = true, visualTransformation = PasswordVisualTransformation())
                 Button(enabled = !busy && newPassword.length >= 8 && newPassword == confirmPassword,
                     onClick = {
                         scope.launch {
