@@ -597,6 +597,11 @@ class FlutterHostActivity : FlutterActivity() {
                         }
                         result.success(mapOf("success" to operation.successful, "message" to operation.message))
                     }
+                    "getListeningHistory" -> lifecycleScope.launch {
+                        hteApplication.userLibraryRepository.listeningHistory()
+                            .onSuccess { result.success(it) }
+                            .onFailure { result.error("HISTORY_ERROR", it.message, null) }
+                    }
                     "getPlaylists" -> lifecycleScope.launch {
                         hteApplication.userLibraryRepository.playlists()
                             .onSuccess { rows ->
@@ -985,6 +990,7 @@ class FlutterHostActivity : FlutterActivity() {
             controller.setMediaItems(queue, 0, C.TIME_UNSET)
             controller.prepare()
             controller.play()
+            hteApplication.userLibraryRepository.recordListening(trackId)
             result.success(mapOf("success" to true, "playback" to playbackState()))
         }
     }
