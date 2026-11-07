@@ -62,8 +62,10 @@ class NativeUpdateManager(private val context: Context) {
                 val assets = release.optJSONArray("assets") ?: continue
                 val manifestAsset = (0 until assets.length()).mapNotNull { assets.optJSONObject(it) }
                     .firstOrNull { it.optString("name") == "manifest.json" } ?: continue
+                val manifestUrl = manifestAsset.optString("browser_download_url")
+                if (!manifestUrl.startsWith("https://github.com/")) continue
                 val manifestRequest = Request.Builder()
-                    .url(manifestAsset.optString("browser_download_url"))
+                    .url(manifestUrl)
                     .header("User-Agent", "High-Tech-Entertainment-Android")
                     .build()
                 val manifestResponse = http.newCall(manifestRequest).execute()
@@ -88,7 +90,8 @@ class NativeUpdateManager(private val context: Context) {
                     releaseNotes = release.optString("body"),
                     apkDownloadUrl = apkAsset.optString("browser_download_url")
                 )
-                if (candidate.sha256.matches(Regex("[0-9a-f]{64}")) &&
+                if (candidate.apkDownloadUrl.startsWith("https://github.com/") &&
+                    candidate.sha256.matches(Regex("[0-9a-f]{64}")) &&
                     candidate.certificateSha256.matches(Regex("[0-9a-f]{64}")) &&
                     (best == null || candidate.versionCode > best!!.versionCode)
                 ) best = candidate
@@ -176,11 +179,12 @@ class NativeUpdateManager(private val context: Context) {
         if (Build.VERSION.SDK_INT >= 28) PackageManager.GET_SIGNING_CERTIFICATES
         else PackageManager.GET_SIGNATURES
 
+    @Suppress("DEPRECATION")
     private fun certificateSha256(info: PackageInfo): String {
         val signatures = if (Build.VERSION.SDK_INT >= 28) {
             info.signingInfo?.apkContentsSigners
         } else {
-            @Suppress("DEPRECATION") info.signatures
+            info.signatures
         }
         val signer = signatures?.firstOrNull() ?: error("APK signing certificate was unavailable.")
         return MessageDigest.getInstance("SHA-256").digest(signer.toByteArray())
