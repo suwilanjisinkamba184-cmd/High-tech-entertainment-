@@ -1,4 +1,4 @@
-// Full-release repair: 2.2.10 SU+27 includes the updated compiled icon asset.
+// Full-release repair: 2.2.10 SU+28 includes responsive phone/tablet layouts.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -23,6 +23,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'playback_engine.dart';
 import 'video_player_page.dart';
+import 'responsive_layout.dart';
 import 'local_files_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -406,6 +407,22 @@ class HteApp extends StatelessWidget {
     builder: (context, mode, child) => MaterialApp(
     title: 'High-Tech Entertainment',
     debugShowCheckedModeBanner: false,
+    // Keep phone layouts edge-to-edge while preventing tablet/foldable
+    // layouts from stretching content across excessively wide screens.
+    builder: (context, child) => LayoutBuilder(
+      builder: (context, constraints) => Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: HteResponsiveLayout.contentMaxWidth),
+          child: SizedBox(
+            width: constraints.maxWidth > HteResponsiveLayout.contentMaxWidth
+                ? HteResponsiveLayout.contentMaxWidth
+                : constraints.maxWidth,
+            height: constraints.maxHeight,
+            child: child ?? const SizedBox.shrink(),
+          ),
+        ),
+      ),
+    ),
     themeMode: mode,
     theme: ThemeData.from(
       colorScheme: ColorScheme.fromSeed(
@@ -719,6 +736,9 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     if (_ready) return const AuthGate();
+    final screen = MediaQuery.sizeOf(context);
+    final compact = HteResponsiveLayout.isCompact(screen);
+    final logoSize = HteResponsiveLayout.splashLogoSize(screen);
     return Scaffold(
       backgroundColor: const Color(0xFF080808),
       bottomNavigationBar: SafeArea(
@@ -739,7 +759,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
       body: SafeArea(
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.all(28),
+            padding: EdgeInsets.all(compact ? 16 : 28),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -750,8 +770,8 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                     return Transform.scale(
                       scale: 0.96 + (pulse * 0.045),
                       child: Container(
-                        width: 224,
-                        height: 224,
+                        width: logoSize,
+                        height: logoSize,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
@@ -769,8 +789,8 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                             Transform.rotate(
                               angle: _ringAnimation.value * 6.283185307179586,
                               child: Container(
-                                width: 218,
-                                height: 218,
+                                width: logoSize - 6,
+                                height: logoSize - 6,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   border: Border.all(color: const Color(0xFFD9B96E).withValues(alpha: 0.72), width: 1.6),
@@ -783,8 +803,8 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                               angle: -_ringAnimation.value * 6.283185307179586,
                               child: SvgPicture.asset(
                                 'assets/high-tech-logo.svg',
-                                width: 184,
-                                height: 184,
+                                width: logoSize - 40,
+                                height: logoSize - 40,
                                 semanticsLabel: 'High-Tech Entertainment app logo',
                               ),
                             ),
@@ -794,8 +814,8 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                     );
                   },
                 ),
-                const SizedBox(height: 26),
-                const SizedBox(height: 24),
+                SizedBox(height: compact ? 12 : 26),
+                SizedBox(height: compact ? 12 : 24),
                 const Text(
                   'HIGH-TECH',
                   style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900, letterSpacing: 4),
@@ -805,7 +825,7 @@ class _StartupGateState extends State<StartupGate> with SingleTickerProviderStat
                   'ENTERTAINMENT',
                   style: TextStyle(color: Color(0xFFD4AF37), fontSize: 12, letterSpacing: 5),
                 ),
-                const SizedBox(height: 26),
+                SizedBox(height: compact ? 14 : 26),
                 if (_starting) ...[
                   const SizedBox(height: 2),
                   Text(
@@ -1658,11 +1678,19 @@ class HteNeoHero extends StatelessWidget {
                 const Icon(Icons.auto_awesome, color: Color(0xFFE6C77D), size: 19),
               ]),
               const SizedBox(height: 30),
-              const Text('ENTER A NEW\nFREQUENCY.',
-                style: TextStyle(
-                  fontSize: 36, height: 1.02, fontWeight: FontWeight.w900,
-                  letterSpacing: -1.5, color: Color(0xFFF6F4ED),
-                )),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final titleSize = HteResponsiveLayout.heroTitleSize(
+                    constraints.maxWidth,
+                  );
+                  return Text('ENTER A NEW\nFREQUENCY.',
+                    style: TextStyle(
+                      fontSize: titleSize, height: 1.02,
+                      fontWeight: FontWeight.w900, letterSpacing: -1.2,
+                      color: const Color(0xFFF6F4ED),
+                    ));
+                },
+              ),
               const SizedBox(height: 12),
               const SizedBox(
                 width: 265,
