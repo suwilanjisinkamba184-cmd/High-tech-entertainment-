@@ -73,7 +73,7 @@ jobs:
           from pathlib import Path
           gradle = Path("native-android/app/build.gradle.kts").read_text()
           name = re.search(r'versionName\s*=\s*"([^"]+)"', gradle).group(1)
-          code = re.search(r'versionCode\s*=\s*(\\d+)', gradle).group(1)
+          code = re.search(r'versionCode\s*=\s*(\d+)', gradle).group(1)
           print(name, code)
           PY
           )"
