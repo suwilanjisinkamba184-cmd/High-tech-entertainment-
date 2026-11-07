@@ -6,7 +6,6 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.os.Bundle
 import androidx.core.content.ContextCompat
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -28,6 +27,10 @@ import kotlinx.coroutines.launch
  * Supabase repositories; it does not create a second backend or auth store.
  */
 class FlutterHostActivity : FlutterActivity() {
+    companion object {
+        private const val REQUEST_MEDIA_PICKER = 4812
+    }
+
     private val startupChannelName = "com.hightechentertainment.app/startup"
     private val appChannelName = "com.hightechentertainment.app/data"
     private val hteApplication: HteApplication
@@ -39,11 +42,6 @@ class FlutterHostActivity : FlutterActivity() {
     private var oauthInProgress = false
     private var pendingMediaPickerResult: MethodChannel.Result? = null
     private var pendingMediaPickerKind: String? = null
-    private val mediaPickerLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { activityResult ->
-        completeMediaPicker(activityResult.resultCode, activityResult.data?.data)
-    }
     private var playbackFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
     private val offlineDownloads by lazy { OfflineMusicDownloads(applicationContext) }
@@ -480,6 +478,14 @@ class FlutterHostActivity : FlutterActivity() {
             }
     }
 
+    @Deprecated("Android document picker compatibility callback")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_MEDIA_PICKER) {
+            completeMediaPicker(resultCode, data?.data)
+        }
+    }
+
     private fun launchMediaPicker(kind: String, result: MethodChannel.Result) {
         if (kind !in setOf("audio", "video", "image")) {
             result.success(mapOf("success" to false, "message" to "Unsupported media type."))
@@ -501,7 +507,7 @@ class FlutterHostActivity : FlutterActivity() {
             type = mimeType
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        runCatching { mediaPickerLauncher.launch(intent) }.onFailure { error ->
+        runCatching { startActivityForResult(intent, REQUEST_MEDIA_PICKER) }.onFailure { error ->
             pendingMediaPickerKind = null
             pendingMediaPickerResult = null
             result.success(mapOf("success" to false, "message" to (error.message ?: "Could not open media picker.")))
