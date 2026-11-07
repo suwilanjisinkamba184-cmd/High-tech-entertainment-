@@ -72,9 +72,9 @@ create or replace function public.is_hte_admin()
 returns boolean
 language sql
 stable
-security definer
+security invoker
 set search_path = ''
-as $$
+as $
   select private.hte_has_role(array['owner','admin']);
 $$;
 revoke all on function public.is_hte_admin() from public, anon;
