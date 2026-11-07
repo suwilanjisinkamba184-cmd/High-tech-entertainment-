@@ -4,6 +4,7 @@ import android.app.Application
 import com.hightechentertainment.app.data.AuthRepository
 import com.hightechentertainment.app.data.AuthSessionManager
 import com.hightechentertainment.app.data.CatalogRepository
+import com.hightechentertainment.app.data.FeatureRepository
 import com.hightechentertainment.app.data.SecureSessionStore
 import com.hightechentertainment.app.data.UserLibraryRepository
 import com.hightechentertainment.app.data.SupabaseRestClient
@@ -25,6 +26,7 @@ class HteApplication : Application() {
         SupabaseRestClient(accessToken = { sessionManager.session.value?.accessToken })
     }
     val catalogRepository by lazy { CatalogRepository(authenticatedRestClient) }
+    val featureRepository by lazy { FeatureRepository(authenticatedRestClient) { sessionManager.session.value?.userId } }
     val userLibraryRepository by lazy {
         UserLibraryRepository(authenticatedRestClient) { sessionManager.session.value?.userId }
     }
