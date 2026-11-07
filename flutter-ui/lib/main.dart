@@ -217,9 +217,9 @@ class _StartupExperienceState extends State<StartupExperience>
 
   String _startupStatus(double progress) {
     if (progress < 0.25) return 'PREPARING YOUR EXPERIENCE';
-    if (progress < 0.55) return 'CONNECTING YOUR STUDIO';
+    if (progress < 0.55) return 'LOADING THE STUDIO';
     if (progress < 0.82) return 'TUNING THE EXPERIENCE';
-    return 'READY TO PLAY';
+    return 'ALMOST READY';
   }
 }
 
