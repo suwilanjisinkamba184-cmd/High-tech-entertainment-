@@ -526,6 +526,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
   String? _error;
   List<Map<String, dynamic>> _tracks = [];
   List<Map<String, dynamic>> _artists = [];
+  List<Map<String, dynamic>> _releases = [];
   List<Map<String, dynamic>> _videos = [];
   Set<String> _favourites = {};
   Map<String, dynamic>? _nowPlayingTrack;
@@ -547,7 +548,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
   }
 
   Future<void> _openVoiceCompanion() async {
-    if (mounted) setState(() => _tab = 5);
+    if (mounted) setState(() => _tab = 6);
   }
 
   void _navigateFromVoice(String destination) {
@@ -555,10 +556,11 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
     final nextTab = switch (key) {
       'music' || 'home' => 0,
       'artists' => 1,
-      'videos' => 2,
-      'library' || 'favourites' || 'favorites' => 3,
-      'profile' || 'account' || 'founder studio' => 4,
-      'voice' || 'voice companion' => 5,
+      'releases' || 'albums' => 2,
+      'videos' => 3,
+      'library' || 'favourites' || 'favorites' => 4,
+      'profile' || 'account' || 'founder studio' => 5,
+      'voice' || 'voice companion' => 6,
       _ => 0,
     };
     if (mounted) setState(() => _tab = nextTab);
@@ -584,6 +586,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
           .map((row) => Map<String, dynamic>.from(row))
           .toList();
       final artists = await _loadList('getArtists');
+      final releases = await _loadList('getReleases');
       final videos = await _loadList('getVideos');
       final favourites =
           await _appChannel.invokeListMethod<String>('getFavourites') ?? [];
@@ -591,6 +594,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
       setState(() {
         _tracks = tracks;
         _artists = artists;
+        _releases = releases;
         _videos = videos;
         _favourites = favourites.toSet();
         _error = tracksResponse?['error']?.toString();
@@ -732,6 +736,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
         setState(() {
           _tracks = [];
           _artists = [];
+          _releases = [];
           _videos = [];
           _favourites = {};
           _tab = 0;
@@ -757,7 +762,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final titles = ['Music', 'Artists', 'Videos', 'Your Library', 'Profile', 'Voice Companion'];
+    final titles = ['Music', 'Artists', 'Releases', 'Videos', 'Your Library', 'Profile', 'Voice Companion'];
     return Scaffold(
       appBar: AppBar(
         title: Text(titles[_tab], style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -776,7 +781,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: _gold))
-          : _error != null && _tracks.isEmpty && _artists.isEmpty && _videos.isEmpty
+          : _error != null && _tracks.isEmpty && _artists.isEmpty && _releases.isEmpty && _videos.isEmpty
               ? _ErrorState(message: _error!, onRetry: _refresh)
               : IndexedStack(
                   index: _tab,
@@ -794,6 +799,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
                       onRefresh: _refresh,
                     ),
                     _ArtistList(artists: _artists),
+                    _ReleaseList(releases: _releases),
                     _VideoList(videos: _videos, onPlay: _playVideo),
                     _LibraryPanel(
                       tracks: _tracks,
@@ -830,6 +836,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.music_note_outlined), selectedIcon: Icon(Icons.music_note), label: 'Music'),
           NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people), label: 'Artists'),
+          NavigationDestination(icon: Icon(Icons.album_outlined), selectedIcon: Icon(Icons.album), label: 'Releases'),
           NavigationDestination(icon: Icon(Icons.video_library_outlined), selectedIcon: Icon(Icons.video_library), label: 'Videos'),
           NavigationDestination(icon: Icon(Icons.favorite_border), selectedIcon: Icon(Icons.favorite), label: 'Library'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
@@ -1412,6 +1419,46 @@ class _ArtistList extends StatelessWidget {
           ),
           title: Text(artist['name']?.toString() ?? 'Artist'),
           subtitle: Text(artist['bio']?.toString() ?? '', maxLines: 2, overflow: TextOverflow.ellipsis),
+        );
+      },
+    );
+  }
+}
+
+class _ReleaseList extends StatelessWidget {
+  const _ReleaseList({required this.releases});
+  final List<Map<String, dynamic>> releases;
+
+  @override
+  Widget build(BuildContext context) {
+    if (releases.isEmpty) {
+      return const Center(child: Text('No published releases yet.', style: TextStyle(color: Colors.white60)));
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: releases.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final release = releases[index];
+        final cover = release['coverUrl']?.toString();
+        return Card(
+          color: _surface,
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(10),
+            leading: cover != null && cover.startsWith('https://')
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(cover, width: 62, height: 62, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.album, color: _gold, size: 42)),
+                  )
+                : const Icon(Icons.album, color: _gold, size: 42),
+            title: Text(release['title']?.toString() ?? 'Untitled release',
+              style: const TextStyle(fontWeight: FontWeight.w800)),
+            subtitle: Text([
+              if ((release['releaseDate']?.toString() ?? '').isNotEmpty) release['releaseDate'].toString(),
+              if ((release['description']?.toString() ?? '').isNotEmpty) release['description'].toString(),
+            ].join(' • '), maxLines: 3, overflow: TextOverflow.ellipsis),
+          ),
         );
       },
     );
