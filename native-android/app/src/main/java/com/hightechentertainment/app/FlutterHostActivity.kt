@@ -160,6 +160,19 @@ class FlutterHostActivity : FlutterActivity() {
                     }
                     "signIn" -> authenticate(call.argument<String>("email"), call.argument<String>("password"), result, false)
                     "signUp" -> authenticate(call.argument<String>("email"), call.argument<String>("password"), result, true)
+                    "requestPasswordReset" -> lifecycleScope.launch {
+                        when (val auth = authRepository.requestPasswordReset(call.argument<String>("email").orEmpty())) {
+                            is AuthResult.Success -> result.success(mapOf("success" to true, "message" to "Password reset requested."))
+                            is AuthResult.Notice -> result.success(mapOf("success" to true, "message" to auth.message))
+                            is AuthResult.Failure -> result.success(mapOf("success" to false, "message" to auth.message))
+                        }
+                    }
+                    "updatePassword" -> lifecycleScope.launch {
+                        hteApplication.featureRepository.updatePassword(
+                            call.argument<String>("password").orEmpty()
+                        ).onSuccess { result.success(mapOf("success" to true)) }
+                            .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                    }
                     "signOut" -> lifecycleScope.launch {
                         hteApplication.sessionManager.signOut()
                         result.success(mapOf("success" to true, "session" to null))
