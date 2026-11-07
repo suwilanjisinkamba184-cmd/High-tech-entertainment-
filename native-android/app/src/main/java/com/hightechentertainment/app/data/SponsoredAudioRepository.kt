@@ -58,7 +58,7 @@ class SponsoredAudioRepository(
 
     suspend fun campaigns(): Result<List<SponsoredAudioAd>> = runCatching {
         val response = client.get("audio_ads", mapOf("order" to "created_at.desc", "limit" to "100"),
-            "id,title,audio_url,starts_at,ends_at,priority")
+            "id,title,audio_url,starts_at,ends_at,priority,is_published")
         check(response.isSuccessful) { "Could not load campaigns (HTTP ${response.statusCode})." }
         val rows = JSONArray(response.body)
         buildList {
@@ -66,7 +66,7 @@ class SponsoredAudioRepository(
                 val row = rows.optJSONObject(i) ?: continue
                 add(SponsoredAudioAd(row.optString("id"), row.optString("title"), row.optString("audio_url"),
                     row.optString("starts_at").takeIf { it.isNotBlank() && it != "null" },
-                    row.optString("ends_at").takeIf { it.isNotBlank() && it != "null" }, row.optInt("priority")))
+                    row.optString("ends_at").takeIf { it.isNotBlank() && it != "null" }, row.optInt("priority"), row.optBoolean("is_published")))
             }
         }
     }
