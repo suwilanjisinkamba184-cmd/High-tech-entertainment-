@@ -23,11 +23,12 @@ void main() {
   testWidgets('ends splash and stops audio at 15s even if native start hangs',
       (tester) async {
     var stopCalls = 0;
+    final nativeStart = Completer<void>();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_startupChannel, (call) async {
       if (call.method == 'playStartup') {
-        // Simulate a platform bridge that never responds within the splash.
-        await Future<void>.delayed(const Duration(seconds: 30));
+        // Simulate a platform bridge that never responds during the splash.
+        await nativeStart.future;
         return true;
       }
       if (call.method == 'stopStartup') {
