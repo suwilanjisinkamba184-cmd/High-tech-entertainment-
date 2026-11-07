@@ -361,11 +361,44 @@ class FeatureRepository(
         check(response.isSuccessful) { "Could not create artist (HTTP ${response.statusCode})." }
     }
 
-    suspend fun createRelease(title: String, description: String): Result<Unit> = runCatching {
+    suspend fun uploadArtwork(
+        context: android.content.Context,
+        uri: android.net.Uri,
+        contentType: String,
+        extension: String
+    ): Result<String> = runCatching {
+        userId()
+        require(contentType in setOf("image/jpeg", "image/png", "image/webp", "image/avif")) {
+            "Choose a JPG, PNG, WebP or AVIF image."
+        }
+        val safeExtension = extension.lowercase().filter(Char::isLetterOrDigit).take(5).ifBlank { "jpg" }
+        val path = "releases/${System.currentTimeMillis()}.$safeExtension"
+        val response = client.uploadStorageUri(
+            context, "hte-artwork", path, uri, contentType, 20L * 1024L * 1024L
+        )
+        check(response.isSuccessful) { "Artwork upload failed (HTTP ${response.statusCode})." }
+        client.publicStorageUrl("hte-artwork", path)
+    }
+
+    suspend fun createRelease(
+        title: String,
+        description: String,
+        coverUrl: String = "",
+        releaseDate: String = "",
+        spotifyUrl: String = ""
+    ): Result<Unit> = runCatching {
         userId()
         require(title.isNotBlank()) { "Release title is required." }
-        val response = client.post("releases", JSONObject().put("title", title.trim())
-            .put("description", description.trim()).put("is_published", false).toString(), "return=minimal")
+        require(coverUrl.isBlank() || coverUrl.startsWith("https://")) { "Artwork URL must use HTTPS." }
+        require(spotifyUrl.isBlank() || spotifyUrl.startsWith("https://open.spotify.com/")) {
+            "Enter a valid Spotify release URL."
+        }
+        val body = JSONObject().put("title", title.trim())
+            .put("description", description.trim()).put("is_published", false)
+        coverUrl.takeIf(String::isNotBlank)?.let { body.put("cover_url", it) }
+        releaseDate.takeIf(String::isNotBlank)?.let { body.put("release_date", it) }
+        spotifyUrl.takeIf(String::isNotBlank)?.let { body.put("spotify_url", it) }
+        val response = client.post("releases", body.toString(), "return=minimal")
         check(response.isSuccessful) { "Could not create release (HTTP ${response.statusCode})." }
     }
 
