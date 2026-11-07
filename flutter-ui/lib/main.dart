@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:file_picker/file_picker.dart';
 
 const _gold = Color(0xFFD7A83E);
 const _black = Color(0xFF080808);
@@ -1499,6 +1500,91 @@ class _ProfilePanelState extends State<_ProfilePanel> {
     }
   }
 
+  Future<String?> _pickAndUploadFounderMedia(String kind) async {
+    final picked = await FilePicker.platform.pickFiles(
+      type: kind == 'Track' ? FileType.audio : FileType.video,
+      withData: kind == 'Track',
+    );
+    if (picked == null || picked.files.isEmpty) return null;
+    final file = picked.files.single;
+    final extension = (file.extension ?? '').toLowerCase();
+    final contentType = switch (extension) {
+      'mp3' => 'audio/mpeg',
+      'm4a' => 'audio/mp4',
+      'aac' => 'audio/aac',
+      'wav' => 'audio/wav',
+      'ogg' => 'audio/ogg',
+      'mp4' => 'video/mp4',
+      'webm' => 'video/webm',
+      'mov' => 'video/quicktime',
+      'm4v' => 'video/x-m4v',
+      _ => '',
+    };
+    if (contentType.isEmpty) {
+      _showFounderMessage('That file format is not supported.');
+      return null;
+    }
+    try {
+      final response = kind == 'Track'
+          ? await _appChannel.invokeMapMethod<String, dynamic>('uploadAudio', {
+              'bytes': file.bytes,
+              'contentType': contentType,
+              'extension': extension,
+            })
+          : await _appChannel.invokeMapMethod<String, dynamic>('uploadVideo', {
+              'uri': file.path == null ? '' : Uri.file(file.path!).toString(),
+              'contentType': contentType,
+              'extension': extension,
+            });
+      if (response?['success'] == true) {
+        _showFounderMessage('Media uploaded securely.');
+        return response?['url']?.toString();
+      }
+      _showFounderMessage(response?['message']?.toString() ?? 'Upload failed.');
+    } on PlatformException catch (error) {
+      _showFounderMessage(error.message ?? 'Upload failed.');
+    } on MissingPluginException {
+      _showFounderMessage('Media upload is unavailable in this build.');
+    }
+    return null;
+  }
+
+  void _showFounderMessage(String message) {
+    if (!mounted) return;
+    setState(() => _message = message);
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    final picked = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+    if (picked == null || picked.files.isEmpty) return;
+    final file = picked.files.single;
+    final extension = (file.extension ?? '').toLowerCase();
+    final contentType = switch (extension) {
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      'jpg' || 'jpeg' => 'image/jpeg',
+      _ => '',
+    };
+    if (contentType.isEmpty || file.bytes == null) {
+      _showFounderMessage('Choose a JPG, PNG or WebP image.');
+      return;
+    }
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>('uploadAvatar', {
+        'bytes': file.bytes,
+        'contentType': contentType,
+      });
+      if (response?['success'] == true) {
+        _avatarUrl = response?['url']?.toString() ?? '';
+        _showFounderMessage('Profile picture uploaded. Save your profile to apply it.');
+      } else {
+        _showFounderMessage(response?['message']?.toString() ?? 'Profile picture upload failed.');
+      }
+    } on PlatformException catch (error) {
+      _showFounderMessage(error.message ?? 'Profile picture upload failed.');
+    }
+  }
+
   Future<void> _createContent(String kind) async {
     final title = TextEditingController();
     final secondary = TextEditingController();
@@ -1517,9 +1603,21 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                 labelText: kind == 'Artist' ? 'Artist name' : 'Title')),
               if (kind == 'Track' || kind == 'Video')
                 TextField(controller: secondary, decoration: const InputDecoration(labelText: 'Artist')),
-              if (kind == 'Track' || kind == 'Video')
-                TextField(controller: details, decoration: InputDecoration(
-                  labelText: kind == 'Track' ? 'Secure audio URL' : 'Secure video URL')),
+              if (kind == 'Track' || kind == 'Video') ...[
+                TextField(controller: details, readOnly: true, decoration: InputDecoration(
+                  labelText: kind == 'Track' ? 'Uploaded audio URL' : 'Uploaded video URL')),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      final url = await _pickAndUploadFounderMedia(kind);
+                      if (url != null) details.text = url;
+                    },
+                    icon: const Icon(Icons.upload_file),
+                    label: Text(kind == 'Track' ? 'CHOOSE AND UPLOAD AUDIO' : 'CHOOSE AND UPLOAD VIDEO'),
+                  ),
+                ),
+              ],
               if (kind == 'Track')
                 TextField(controller: genre, decoration: const InputDecoration(labelText: 'Genre')),
               if (kind == 'Artist' || kind == 'Release')
@@ -1589,6 +1687,15 @@ class _ProfilePanelState extends State<_ProfilePanel> {
               TextField(controller: _displayName, decoration: const InputDecoration(labelText: 'Display name')),
               TextField(controller: _bio, decoration: const InputDecoration(labelText: 'Bio'), maxLines: 3),
               TextField(controller: _phone, decoration: const InputDecoration(labelText: 'Phone number'), keyboardType: TextInputType.phone),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: _pickAndUploadAvatar,
+                  icon: const Icon(Icons.add_a_photo_outlined),
+                  label: const Text('UPLOAD PROFILE PHOTO'),
+                ),
+              ),
               const SizedBox(height: 14),
               FilledButton(onPressed: _saving ? null : _saveProfile,
                 style: FilledButton.styleFrom(backgroundColor: _gold, foregroundColor: _black),
