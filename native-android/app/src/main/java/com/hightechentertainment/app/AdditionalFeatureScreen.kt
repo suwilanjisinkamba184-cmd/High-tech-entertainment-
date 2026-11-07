@@ -22,6 +22,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.hightechentertainment.app.data.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.hightechentertainment.app.update.NativeUpdateManager
 import com.hightechentertainment.app.update.NativeUpdate
 
@@ -47,7 +49,7 @@ fun AdditionalFeatureScreen(
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) scope.launch {
             val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
-            val bytes = runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+            val bytes = withContext(Dispatchers.IO) { runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull() }
             if (bytes == null) message = "Could not read the selected image."
             else features.uploadAvatar(bytes, mime).onSuccess {
                 profile = profile.copy(avatarUrl = it)
