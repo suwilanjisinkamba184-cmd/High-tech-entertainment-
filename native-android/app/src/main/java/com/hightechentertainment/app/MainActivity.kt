@@ -34,7 +34,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
-import androidx.media3.common.AudioAttributes
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
@@ -54,6 +53,7 @@ class MainActivity : ComponentActivity() {
     private val catalogRepository by lazy { CatalogRepository() }
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var playbackPlayer by mutableStateOf<Player?>(null)
+    private var playbackIsReady by mutableStateOf(false)
     private var playbackIsActive by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,16 +87,21 @@ class MainActivity : ComponentActivity() {
                     playing = playing,
                     onRefresh = { loadCatalog() },
                     onPlay = { track ->
+                        val activePlayer = playbackPlayer
                         val url = track.audioUrl
-                        if (url != null) {
-                            if (currentTrack?.id != track.id) {
-                                playbackPlayer?.setMediaItem(MediaItem.fromUri(url))
-                                playbackPlayer?.prepare()
-                                currentTrack = track
+                        when {
+                            !playbackIsReady || activePlayer == null ->
+                                error = "The audio player is still connecting. Please try again."
+                            url == null ->
+                                error = "This track does not have a playable audio file yet."
+                            else -> {
+                                if (currentTrack?.id != track.id) {
+                                    activePlayer.setMediaItem(MediaItem.fromUri(url))
+                                    activePlayer.prepare()
+                                    currentTrack = track
+                                }
+                                activePlayer.play()
                             }
-                            playbackPlayer?.play()
-                        } else {
-                            error = "This track does not have a playable audio file yet."
                         }
                     },
                     onPause = {
@@ -115,6 +120,7 @@ class MainActivity : ComponentActivity() {
             runCatching { future.get() }
                 .onSuccess { controller ->
                     playbackPlayer = controller
+                    playbackIsReady = true
                     controller.addListener(object : Player.Listener {
                         override fun onIsPlayingChanged(isPlaying: Boolean) {
                             playbackIsActive = isPlaying
@@ -122,6 +128,7 @@ class MainActivity : ComponentActivity() {
                     })
                 }
                 .onFailure {
+                    playbackIsReady = false
                     playbackIsActive = false
                 }
         }, ContextCompat.getMainExecutor(this))
@@ -131,6 +138,7 @@ class MainActivity : ComponentActivity() {
         controllerFuture?.let { MediaController.releaseFuture(it) }
         controllerFuture = null
         playbackPlayer = null
+        playbackIsReady = false
         super.onDestroy()
     }
 }
