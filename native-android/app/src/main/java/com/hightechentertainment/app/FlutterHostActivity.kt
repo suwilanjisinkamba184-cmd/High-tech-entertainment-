@@ -135,6 +135,140 @@ class FlutterHostActivity : FlutterActivity() {
                             }
                             .onFailure { result.error("VIDEOS_ERROR", it.message, null) }
                     }
+                    "getProfile" -> lifecycleScope.launch {
+                        hteApplication.featureRepository.getProfile()
+                            .onSuccess { profile ->
+                                result.success(mapOf(
+                                    "displayName" to profile.displayName,
+                                    "bio" to profile.bio,
+                                    "phone" to profile.phone,
+                                    "avatarUrl" to profile.avatarUrl
+                                ))
+                            }
+                            .onFailure { result.error("PROFILE_ERROR", it.message, null) }
+                    }
+                    "saveProfile" -> lifecycleScope.launch {
+                        val profile = com.hightechentertainment.app.data.NativeProfile(
+                            displayName = call.argument<String>("displayName").orEmpty(),
+                            bio = call.argument<String>("bio").orEmpty(),
+                            phone = call.argument<String>("phone").orEmpty(),
+                            avatarUrl = call.argument<String>("avatarUrl").orEmpty()
+                        )
+                        hteApplication.featureRepository.saveProfile(profile)
+                            .onSuccess { result.success(mapOf("success" to true)) }
+                            .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                    }
+                    "submitBooking" -> lifecycleScope.launch {
+                        val operation = hteApplication.userLibraryRepository.submitBooking(
+                            call.argument<String>("name").orEmpty(),
+                            call.argument<String>("email").orEmpty(),
+                            call.argument<String>("bookingType").orEmpty(),
+                            call.argument<String>("requestedDate"),
+                            call.argument<String>("message").orEmpty()
+                        )
+                        result.success(mapOf("success" to operation.successful, "message" to operation.message))
+                    }
+                    "getMyBookings" -> lifecycleScope.launch {
+                        hteApplication.featureRepository.myBookings()
+                            .onSuccess { bookings ->
+                                result.success(bookings.map { booking ->
+                                    mapOf("id" to booking.id, "name" to booking.name, "email" to booking.email,
+                                        "type" to booking.type, "requestedDate" to booking.requestedDate,
+                                        "message" to booking.message, "status" to booking.status)
+                                })
+                            }
+                            .onFailure { result.error("BOOKINGS_ERROR", it.message, null) }
+                    }
+                    "getFounderData" -> lifecycleScope.launch {
+                        val access = hteApplication.featureRepository.hasFounderAccess().getOrDefault(false)
+                        if (!access) {
+                            result.success(mapOf("authorized" to false))
+                        } else {
+                            val overview = hteApplication.featureRepository.founderOverview().getOrNull()
+                            val drafts = hteApplication.featureRepository.founderDrafts().getOrNull().orEmpty()
+                            val bookings = hteApplication.featureRepository.founderBookings().getOrNull().orEmpty()
+                            val campaigns = hteApplication.sponsoredAudioRepository.campaigns().getOrNull().orEmpty()
+                            result.success(mapOf(
+                                "authorized" to true,
+                                "overview" to overview?.let {
+                                    mapOf("tracks" to it.tracks, "artists" to it.artists, "releases" to it.releases,
+                                        "videos" to it.videos, "bookings" to it.bookings)
+                                },
+                                "drafts" to drafts.map { mapOf("table" to it.table, "id" to it.id, "title" to it.title) },
+                                "bookings" to bookings.map { mapOf("id" to it.id, "name" to it.name, "email" to it.email,
+                                    "type" to it.type, "requestedDate" to it.requestedDate,
+                                    "message" to it.message, "status" to it.status) },
+                                "campaigns" to campaigns.map { mapOf("id" to it.id, "title" to it.title,
+                                    "audioUrl" to it.audioUrl, "isPublished" to it.isPublished,
+                                    "startsAt" to it.startsAt, "endsAt" to it.endsAt, "priority" to it.priority) }
+                            ))
+                        }
+                    }
+                    "updateBookingStatus" -> lifecycleScope.launch {
+                        hteApplication.featureRepository.updateBookingStatus(
+                            call.argument<String>("id").orEmpty(),
+                            call.argument<String>("status").orEmpty()
+                        ).onSuccess { result.success(mapOf("success" to true)) }
+                            .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                    }
+                    "setDraftPublished" -> lifecycleScope.launch {
+                        val table = call.argument<String>("table").orEmpty()
+                        if (table !in setOf("tracks", "artists", "releases", "videos")) {
+                            result.success(mapOf("success" to false, "message" to "Unsupported content type."))
+                        } else {
+                            hteApplication.featureRepository.setDraftPublished(
+                                table, call.argument<String>("id").orEmpty(),
+                                call.argument<Boolean>("published") ?: false
+                            ).onSuccess { result.success(mapOf("success" to true)) }
+                                .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                        }
+                    }
+                    "createTrack" -> lifecycleScope.launch {
+                        hteApplication.featureRepository.createTrack(
+                            call.argument<String>("title").orEmpty(),
+                            call.argument<String>("artist").orEmpty(),
+                            call.argument<String>("audioUrl").orEmpty(),
+                            call.argument<String>("genre").orEmpty()
+                        ).onSuccess { result.success(mapOf("success" to true)) }
+                            .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                    }
+                    "createArtist" -> lifecycleScope.launch {
+                        hteApplication.featureRepository.createArtist(
+                            call.argument<String>("name").orEmpty(),
+                            call.argument<String>("bio").orEmpty()
+                        ).onSuccess { result.success(mapOf("success" to true)) }
+                            .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                    }
+                    "createRelease" -> lifecycleScope.launch {
+                        hteApplication.featureRepository.createRelease(
+                            call.argument<String>("title").orEmpty(),
+                            call.argument<String>("description").orEmpty()
+                        ).onSuccess { result.success(mapOf("success" to true)) }
+                            .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                    }
+                    "createVideo" -> lifecycleScope.launch {
+                        hteApplication.featureRepository.createVideo(
+                            call.argument<String>("title").orEmpty(),
+                            call.argument<String>("videoUrl").orEmpty(),
+                            call.argument<String>("description").orEmpty(),
+                            call.argument<String>("artist").orEmpty()
+                        ).onSuccess { result.success(mapOf("success" to true)) }
+                            .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                    }
+                    "publishVideo" -> lifecycleScope.launch {
+                        hteApplication.featureRepository.publishVideo(
+                            call.argument<String>("id").orEmpty(),
+                            call.argument<Boolean>("published") ?: false
+                        ).onSuccess { result.success(mapOf("success" to true)) }
+                            .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                    }
+                    "setCampaignPublished" -> lifecycleScope.launch {
+                        hteApplication.sponsoredAudioRepository.setCampaignPublished(
+                            call.argument<String>("id").orEmpty(),
+                            call.argument<Boolean>("published") ?: false
+                        ).onSuccess { result.success(mapOf("success" to true)) }
+                            .onFailure { result.success(mapOf("success" to false, "message" to it.message)) }
+                    }
                     "getFavourites" -> lifecycleScope.launch {
                         hteApplication.userLibraryRepository.favouriteTrackIds()
                             .onSuccess { result.success(it) }
