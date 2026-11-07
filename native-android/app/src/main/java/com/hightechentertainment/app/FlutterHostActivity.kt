@@ -126,6 +126,12 @@ class FlutterHostActivity : FlutterActivity() {
                             "message" to if (started) null else "Google sign-in could not be started. Check the OAuth configuration and try again."
                         ))
                     }
+                    "openAccountDeletion" -> {
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(
+                            "https://high-techmedia.netlify.app/account-deletion.html"
+                        )))
+                        result.success(true)
+                    }
                     "openVoiceCompanion" -> {
                         startActivity(Intent(this, MainActivity::class.java).apply {
                             putExtra(MainActivity.EXTRA_OPEN_VOICE_COMPANION, true)
