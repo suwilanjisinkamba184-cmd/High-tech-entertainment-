@@ -1,5 +1,8 @@
 plugins {
     id("com.android.application")
+    // Apply the Kotlin plugin in the Android application module. Declaring it
+    // apply-false in the root project only puts it on the plugin classpath.
+    id("org.jetbrains.kotlin.android")
 }
 
 val startupJingleResDir = layout.buildDirectory.dir("generated/res/startupJingle")
