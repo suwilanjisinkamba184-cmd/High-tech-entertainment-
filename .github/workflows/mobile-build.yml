@@ -9,12 +9,10 @@ on:
       - 'mobile-app/assets/**'
       - 'mobile-app/pubspec.yaml'
       - 'mobile-app/shorebird.yaml'
-      - '.github/workflows/mobile-build.yml'
   pull_request:
     branches: [main]
     paths:
       - 'mobile-app/**'
-      - '.github/workflows/mobile-build.yml'
   workflow_dispatch:
     inputs:
       operation:
