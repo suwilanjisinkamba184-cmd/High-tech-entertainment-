@@ -36,6 +36,17 @@ data class NativeProfile(
     val avatarUrl: String
 )
 
+data class NativeAppPreferences(
+    val autoplay: Boolean = true,
+    val shuffle: Boolean = false,
+    val crossfadeSeconds: Int = 0,
+    val audioQuality: String = "high",
+    val wifiOnlyDownloads: Boolean = true,
+    val releaseNotifications: Boolean = true,
+    val artistNotifications: Boolean = true,
+    val promotionalNotifications: Boolean = false
+)
+
 data class NativeBooking(
     val id: String,
     val name: String,
@@ -139,6 +150,48 @@ class FeatureRepository(
         val response = client.request("PUT", "/auth/v1/user",
             body = JSONObject().put("password", newPassword).toString())
         check(response.isSuccessful) { "Password update failed (HTTP ${response.statusCode})." }
+    }
+
+    suspend fun getAppPreferences(): Result<NativeAppPreferences> = runCatching {
+        val id = userId()
+        val response = client.get(
+            "app_preferences",
+            mapOf("user_id" to "eq.$id", "limit" to "1"),
+            "autoplay,shuffle,crossfade_seconds,audio_quality,wifi_only_downloads,release_notifications,artist_notifications,promotional_notifications"
+        )
+        check(response.isSuccessful) { "Could not load app settings (HTTP ${response.statusCode})." }
+        val row = JSONArray(response.body).optJSONObject(0) ?: return@runCatching NativeAppPreferences()
+        NativeAppPreferences(
+            autoplay = row.optBoolean("autoplay", true),
+            shuffle = row.optBoolean("shuffle", false),
+            crossfadeSeconds = row.optInt("crossfade_seconds", 0).coerceIn(0, 12),
+            audioQuality = row.optString("audio_quality", "high").takeIf { it in setOf("data_saver", "normal", "high") } ?: "high",
+            wifiOnlyDownloads = row.optBoolean("wifi_only_downloads", true),
+            releaseNotifications = row.optBoolean("release_notifications", true),
+            artistNotifications = row.optBoolean("artist_notifications", true),
+            promotionalNotifications = row.optBoolean("promotional_notifications", false)
+        )
+    }
+
+    suspend fun saveAppPreferences(preferences: NativeAppPreferences): Result<Unit> = runCatching {
+        val id = userId()
+        require(preferences.audioQuality in setOf("data_saver", "normal", "high"))
+        require(preferences.crossfadeSeconds in 0..12)
+        val body = JSONObject()
+            .put("user_id", id)
+            .put("autoplay", preferences.autoplay)
+            .put("shuffle", preferences.shuffle)
+            .put("crossfade_seconds", preferences.crossfadeSeconds)
+            .put("audio_quality", preferences.audioQuality)
+            .put("wifi_only_downloads", preferences.wifiOnlyDownloads)
+            .put("release_notifications", preferences.releaseNotifications)
+            .put("artist_notifications", preferences.artistNotifications)
+            .put("promotional_notifications", preferences.promotionalNotifications)
+        val response = client.request(
+            "POST", "/rest/v1/app_preferences", mapOf("on_conflict" to "user_id"),
+            body.toString(), mapOf("Prefer" to "resolution=merge-duplicates,return=minimal")
+        )
+        check(response.isSuccessful) { "Could not save app settings (HTTP ${response.statusCode})." }
     }
 
     suspend fun getProfile(): Result<NativeProfile> = runCatching {
