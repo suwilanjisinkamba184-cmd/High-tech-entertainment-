@@ -8,6 +8,7 @@ import com.hightechentertainment.app.data.FeatureRepository
 import com.hightechentertainment.app.data.SecureSessionStore
 import com.hightechentertainment.app.data.UserLibraryRepository
 import com.hightechentertainment.app.data.SupabaseRestClient
+import com.hightechentertainment.app.data.SponsoredAudioRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -27,6 +28,7 @@ class HteApplication : Application() {
     }
     val catalogRepository by lazy { CatalogRepository(authenticatedRestClient) }
     val featureRepository by lazy { FeatureRepository(authenticatedRestClient) { sessionManager.session.value?.userId } }
+    val sponsoredAudioRepository by lazy { SponsoredAudioRepository(authenticatedRestClient) { sessionManager.session.value?.userId } }
     val userLibraryRepository by lazy {
         UserLibraryRepository(authenticatedRestClient) { sessionManager.session.value?.userId }
     }
