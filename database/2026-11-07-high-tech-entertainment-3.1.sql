@@ -40,9 +40,8 @@ create policy "Admins process bookings" on public.bookings
   using (private.hte_has_role(array['owner','admin']))
   with check (private.hte_has_role(array['owner','admin']));
 
-revoke all on public.bookings from anon;
-grant select, insert on public.bookings to authenticated;
-grant update on public.bookings to authenticated;
+revoke all on public.bookings from anon, authenticated;
+grant select, insert, update on public.bookings to authenticated;
 
 -- Keep private library tables aligned with the live schema:
 -- user_favorites(user_id, track_id), playlists, playlist_tracks,
