@@ -80,7 +80,7 @@ jobs:
           read -r VERSION_NAME VERSION_CODE <<< "$VERSION_DATA"
           APK_NAME="High-Tech-Entertainment-native-v${VERSION_NAME}.apk"
           mv "$SIGNED_APK" "$RUNNER_TEMP/$APK_NAME"
-          printf '%s  %s\\n' "$APK_SHA256" "$APK_NAME" > "$RUNNER_TEMP/SHA256SUMS.txt"
+          printf '%s  %s\n' "$APK_SHA256" "$APK_NAME" > "$RUNNER_TEMP/SHA256SUMS.txt"
           export VERSION_NAME VERSION_CODE APK_NAME APK_SHA256 CERT_SHA256
           python3 - <<'PY'
           import json, os
