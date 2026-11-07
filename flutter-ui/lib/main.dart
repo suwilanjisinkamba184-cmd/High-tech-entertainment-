@@ -1122,6 +1122,77 @@ class _ProfilePanelState extends State<_ProfilePanel> {
     }
   }
 
+  Future<void> _createCampaign() async {
+    final title = TextEditingController();
+    final audioUrl = TextEditingController();
+    final startsAt = TextEditingController();
+    final endsAt = TextEditingController();
+    final priority = TextEditingController(text: '0');
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: _surface,
+        title: const Text('Create sponsored audio campaign'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: title, decoration: const InputDecoration(labelText: 'Campaign title')),
+              TextField(controller: audioUrl, decoration: const InputDecoration(labelText: 'Secure audio URL')),
+              TextField(controller: startsAt, decoration: const InputDecoration(labelText: 'Start time (ISO 8601, optional)')),
+              TextField(controller: endsAt, decoration: const InputDecoration(labelText: 'End time (ISO 8601, optional)')),
+              TextField(controller: priority, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Priority (0–1000)')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('SAVE CAMPAIGN')),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      title.dispose(); audioUrl.dispose(); startsAt.dispose(); endsAt.dispose(); priority.dispose();
+      return;
+    }
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>('createCampaign', {
+        'title': title.text.trim(),
+        'audioUrl': audioUrl.text.trim(),
+        'startsAt': startsAt.text.trim().isEmpty ? null : startsAt.text.trim(),
+        'endsAt': endsAt.text.trim().isEmpty ? null : endsAt.text.trim(),
+        'priority': int.tryParse(priority.text.trim()) ?? 0,
+      });
+      if (result?['success'] == true) {
+        if (mounted) setState(() => _message = 'Campaign saved as unpublished.');
+        await _load();
+      } else if (mounted) {
+        setState(() => _message = result?['message']?.toString() ?? 'Campaign could not be saved.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Campaign could not be saved.');
+    } finally {
+      title.dispose(); audioUrl.dispose(); startsAt.dispose(); endsAt.dispose(); priority.dispose();
+    }
+  }
+
+  Future<void> _setCampaignPublished(Map<String, dynamic> campaign, bool published) async {
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>('setCampaignPublished', {
+        'id': campaign['id'],
+        'published': published,
+      });
+      if (result?['success'] == true) {
+        if (mounted) setState(() => _message = published ? 'Campaign published.' : 'Campaign unpublished.');
+        await _load();
+      } else if (mounted) {
+        setState(() => _message = result?['message']?.toString() ?? 'Campaign update failed.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Campaign update failed.');
+    }
+  }
+
   Future<void> _updateBooking(Map<String, dynamic> booking, String status) async {
     try {
       final response = await _appChannel.invokeMapMethod<String, dynamic>('updateBookingStatus', {
@@ -1212,6 +1283,8 @@ class _ProfilePanelState extends State<_ProfilePanel> {
     final drafts = ((_founder?['drafts'] as List?) ?? [])
         .whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList();
     final founderBookings = ((_founder?['bookings'] as List?) ?? [])
+        .whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList();
+    final campaigns = ((_founder?['campaigns'] as List?) ?? [])
         .whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList();
     return ListView(
       padding: const EdgeInsets.all(18),
@@ -1307,6 +1380,41 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                       trailing: TextButton(onPressed: () => _setDraftPublished(draft), child: const Text('PUBLISH')),
                     )).toList(),
                   ),
+          ),
+          const SizedBox(height: 12),
+          _PanelCard(
+            title: 'Sponsored audio campaigns',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _createCampaign,
+                    icon: const Icon(Icons.campaign_outlined),
+                    label: const Text('NEW CAMPAIGN'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (campaigns.isEmpty)
+                  const Text('No campaigns found.', style: TextStyle(color: Colors.white60))
+                else
+                  ...campaigns.map((campaign) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(campaign['title']?.toString() ?? 'Untitled campaign'),
+                    subtitle: Text('Priority: ${campaign['priority'] ?? 0} • ${campaign['isPublished'] == true ? 'Published' : 'Draft'}'),
+                    trailing: PopupMenuButton<bool>(
+                      initialValue: campaign['isPublished'] == true,
+                      onSelected: (publish) => _setCampaignPublished(campaign, publish),
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(value: true, child: Text('Publish')),
+                        PopupMenuItem(value: false, child: Text('Unpublish')),
+                      ],
+                      child: Icon(campaign['isPublished'] == true ? Icons.public : Icons.public_off, color: _gold),
+                    ),
+                  )),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           _PanelCard(
