@@ -4,23 +4,29 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# Astro owns the public homepage. Shared account, Founder Studio, and legacy
+# Supabase modules are copied alongside it so their existing routes survive.
+mkdir -p website/public
+cp high-tech-logo.svg website/public/high-tech-logo.svg
+cp supabase-config.js website/public/supabase-config.js
+
+npm --prefix website install --no-audit --no-fund
+npm --prefix website run check
+npm --prefix website run build
+
 rm -rf dist
 mkdir -p dist
-
+cp -R website/dist/. dist/
 cp -R assets admin account dist/
-cp index.html app-download.html supabase-config.js robots.txt sitemap.xml account-deletion.html privacy-policy.html high-tech-logo.svg dist/
+cp app-download.html robots.txt sitemap.xml account-deletion.html privacy-policy.html high-tech-logo.svg dist/
 
-# Keep the Terms page as an explicit build input so the homepage footer link
-# can never point to a file omitted from the published dist directory.
-if [ ! -s "terms-of-service.html" ]; then
-  echo "Required source page is missing: terms-of-service.html" >&2
-  exit 1
-fi
-install -D -m 0644 "terms-of-service.html" "dist/terms-of-service.html"
-if [ ! -s "dist/terms-of-service.html" ]; then
-  echo "Failed to publish dist/terms-of-service.html" >&2
-  exit 1
-fi
+for file in terms-of-service.html; do
+  if [ ! -s "$file" ]; then
+    echo "Required source page is missing: $file" >&2
+    exit 1
+  fi
+  install -D -m 0644 "$file" "dist/$file"
+done
 
 for file in google31fdb4754075f7bd.html googled2aa97c2eb951371.html; do
   if [ -s "$file" ]; then cp "$file" dist/; fi
@@ -28,24 +34,21 @@ done
 
 touch dist/.nojekyll
 
-# Required output checks for the official GitHub Pages deployment.
-for file in index.html app-download.html robots.txt sitemap.xml supabase-config.js account-deletion.html privacy-policy.html terms-of-service.html admin/index.html account/index.html assets/site.css assets/app.js assets/videos.js assets/booking-confirmation.aac; do
+for file in index.html app-download.html robots.txt sitemap.xml supabase-config.js account-deletion.html privacy-policy.html terms-of-service.html admin/index.html account/index.html assets/site.css assets/app.js assets/videos.js assets/booking-confirmation.aac high-tech-logo.svg; do
   test -s "dist/$file" || { echo "Missing required build output: dist/$file" >&2; exit 1; }
 done
 
 python - <<'PY'
 from pathlib import Path
+import re
 import xml.etree.ElementTree as ET
 
 root = Path("dist")
 ET.parse(root / "sitemap.xml")
-
-# Verify that every local HTML/CSS asset reference resolves in the published tree.
-import re
 missing = []
 for page in root.rglob("*.html"):
-    text = page.read_text(encoding="utf-8")
-    for value in re.findall(r'''(?:href|src)=["']([^"'#]+)["']''', text, flags=re.I):
+    source = page.read_text(encoding="utf-8")
+    for value in re.findall(r'''(?:href|src)=["']([^"'#]+)["']''', source, flags=re.I):
         if re.match(r"^(?:https?:|mailto:|tel:|data:|javascript:|//)", value, flags=re.I):
             continue
         target = value.split("?", 1)[0].split("#", 1)[0]
@@ -63,8 +66,8 @@ for page in root.rglob("*.html"):
             missing.append(f"{page}: missing local reference: {value}")
 
 for stylesheet in root.rglob("*.css"):
-    text = stylesheet.read_text(encoding="utf-8")
-    for value in re.findall(r'''url\(\s*['"]?([^'")]+)['"]?\s*\)''', text, flags=re.I):
+    source = stylesheet.read_text(encoding="utf-8")
+    for value in re.findall(r'''url\(\s*['"]?([^'")]+)['"]?\s*\)''', source, flags=re.I):
         value = value.strip()
         if re.match(r"^(?:https?:|data:|#|//)", value, flags=re.I):
             continue
@@ -79,8 +82,8 @@ for stylesheet in root.rglob("*.css"):
             missing.append(f"{stylesheet}: missing CSS reference: {value}")
 
 if missing:
-    raise SystemExit("\n".join(missing))
-print("Sitemap XML, local HTML references, and CSS assets are valid.")
+    raise SystemExit("\\n".join(missing))
+print("Astro output, sitemap XML, local HTML references, and CSS assets are valid.")
 PY
 
-echo "Website build output prepared in dist/"
+echo "Astro + React website build output prepared in dist/"
