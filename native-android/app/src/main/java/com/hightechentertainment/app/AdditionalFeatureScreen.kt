@@ -27,13 +27,11 @@ import kotlinx.coroutines.withContext
 import com.hightechentertainment.app.update.NativeUpdateManager
 import com.hightechentertainment.app.update.NativeUpdate
 
-private const val FounderUserId = "b268df9e-eff5-43b9-a38f-869b33add38b"
-
 @Composable
 fun AdditionalFeatureScreen(
     destination: String, tracks: List<NativeTrack>, features: FeatureRepository,
     library: UserLibraryRepository, sponsoredAudio: com.hightechentertainment.app.data.SponsoredAudioRepository,
-    userId: String?, onPlayTrack: (NativeTrack) -> Unit
+    isFounder: Boolean, userId: String?, onPlayTrack: (NativeTrack) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -145,8 +143,6 @@ fun AdditionalFeatureScreen(
     var availableUpdate by remember { mutableStateOf<NativeUpdate?>(null) }
     var updateBusy by remember { mutableStateOf(false) }
     val updateManager = remember(context) { NativeUpdateManager(context) }
-    val isFounder = userId == FounderUserId
-
     fun refresh() {
         busy = true
         message = null
