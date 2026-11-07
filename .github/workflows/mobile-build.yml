@@ -423,14 +423,18 @@ jobs:
             echo "PASS: $asset ($(stat -c%s "$asset") bytes)."
           done
       - name: Verify startup MP3 decodes successfully
-        timeout-minutes: 4
+        timeout-minutes: 8
         working-directory: ${{ runner.temp }}/hte_app
         shell: bash
         run: |
+          # GitHub-hosted runners may not include ffmpeg. Package installation can
+          # exceed one minute on a cold runner, so allow bounded but realistic time.
           if ! command -v ffmpeg >/dev/null 2>&1; then
-            timeout 90s sudo apt-get update
-            timeout 60s sudo apt-get install --yes ffmpeg
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends ffmpeg
           fi
+          command -v ffprobe >/dev/null
+          command -v ffmpeg >/dev/null
           DURATION="$(timeout 20s ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 assets/high-tech-startup.mp3)"
           python3 - "$DURATION" <<'PY'
           import sys
