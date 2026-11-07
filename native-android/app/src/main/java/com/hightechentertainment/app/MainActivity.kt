@@ -331,7 +331,9 @@ class MainActivity : ComponentActivity() {
                     playbackIsActive = controller.isPlaying
                     shuffleEnabled = controller.shuffleModeEnabled
                     repeatMode = controller.repeatMode
-                    currentTrackState = controller.currentMediaItem?.mediaId?.let { id ->
+                    val activeMediaId = controller.currentMediaItem?.mediaId
+                    sponsoredAudioPlaying = activeMediaId?.startsWith("hte-ad:") == true
+                    currentTrackState = if (sponsoredAudioPlaying) null else activeMediaId?.let { id ->
                         knownTracks.firstOrNull { it.id == id }
                     }
                     controller.addListener(object : Player.Listener {
