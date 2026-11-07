@@ -14,6 +14,11 @@ class SponsoredPlaybackPolicyTest {
             Player.COMMAND_SEEK_TO_PREVIOUS,
             Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
             Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
+            Player.COMMAND_SEEK_TO_DEFAULT_POSITION,
+            Player.COMMAND_SEEK_TO_MEDIA_ITEM,
+            Player.COMMAND_SEEK_BACK,
+            Player.COMMAND_SEEK_FORWARD,
+            Player.COMMAND_SET_MEDIA_ITEM,
             Player.COMMAND_CHANGE_MEDIA_ITEMS
         )
 
