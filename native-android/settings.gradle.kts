@@ -2,8 +2,8 @@ pluginManagement {
     repositories { google(); mavenCentral(); gradlePluginPortal() }
 }
 plugins {
-    // Flutter 3.47 requires KGP >= 2.2.20. Keep built-in Kotlin disabled on AGP 8.
-    id("org.jetbrains.kotlin.android") version "2.2.21" apply false
+    // Kotlin Gradle Plugin 2.4.21 is the current stable release and is compatible with AGP 8.11.1.
+    id("org.jetbrains.kotlin.android") version "2.4.21" apply false
 }
 
 // AGP 8.11.1 + KGP 2.2.21 is a supported pairing. The generated Flutter module
