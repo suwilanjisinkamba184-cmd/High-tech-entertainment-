@@ -21,9 +21,11 @@ class HteApplication : Application() {
     val sessionStore by lazy { SecureSessionStore(applicationContext) }
     val authRepository by lazy { AuthRepository(SupabaseRestClient(), sessionStore) }
     val sessionManager by lazy { AuthSessionManager(authRepository, sessionStore, sessionScope) }
-    val catalogRepository by lazy {
-        CatalogRepository(
-            SupabaseRestClient(accessToken = { sessionManager.session.value?.accessToken })
-        )
+    private val authenticatedRestClient by lazy {
+        SupabaseRestClient(accessToken = { sessionManager.session.value?.accessToken })
+    }
+    val catalogRepository by lazy { CatalogRepository(authenticatedRestClient) }
+    val userLibraryRepository by lazy {
+        UserLibraryRepository(authenticatedRestClient) { sessionManager.session.value?.userId }
     }
 }
