@@ -1,6 +1,8 @@
 package com.hightechentertainment.app
 
 import android.view.ViewGroup
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -29,6 +31,18 @@ fun AdditionalFeatureScreen(
     userId: String?, onPlayTrack: (NativeTrack) -> Unit
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) scope.launch {
+            val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
+            val bytes = runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+            if (bytes == null) message = "Could not read the selected image."
+            else features.uploadAvatar(bytes, mime).onSuccess {
+                profile = profile.copy(avatarUrl = it)
+                message = "Avatar uploaded successfully."
+            }.onFailure { message = it.message }
+        }
+    }
     var message by remember(destination) { mutableStateOf<String?>(null) }
     var busy by remember(destination) { mutableStateOf(false) }
     var videos by remember { mutableStateOf<List<NativeVideo>>(emptyList()) }
@@ -177,7 +191,9 @@ fun AdditionalFeatureScreen(
                 OutlinedTextField(profile.phone, { profile = profile.copy(phone = it) },
                     Modifier.fillMaxWidth(), label = { Text("Phone") })
                 OutlinedTextField(profile.avatarUrl, { profile = profile.copy(avatarUrl = it) },
-                    Modifier.fillMaxWidth(), label = { Text("Avatar HTTPS URL") })
+                    Modifier.fillMaxWidth(), label = { Text("Avatar image URL") })
+                OutlinedButton(onClick = { avatarPicker.launch("image/*") }, enabled = !busy,
+                    modifier = Modifier.fillMaxWidth()) { Text("Choose and upload profile photo") }
                 Button(enabled = !busy, onClick = {
                     scope.launch {
                         busy = true
@@ -186,7 +202,7 @@ fun AdditionalFeatureScreen(
                         busy = false
                     }
                 }, modifier = Modifier.fillMaxWidth()) { Text("Save profile") }
-                Text("Device photo upload is not yet connected; this field accepts a secure HTTPS image URL.")
+                Text("Avatar files are public for profile display; each account can upload only into its own protected folder.")
             }
             "Founder Studio" -> {
                 if (!isFounder) Text("This private studio is available only to the authorized founder account.")
