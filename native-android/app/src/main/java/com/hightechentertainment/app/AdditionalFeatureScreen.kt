@@ -39,6 +39,8 @@ fun AdditionalFeatureScreen(
     var videos by remember { mutableStateOf<List<NativeVideo>>(emptyList()) }
     var history by remember { mutableStateOf<List<String>>(emptyList()) }
     var playlists by remember { mutableStateOf<List<NativePlaylist>>(emptyList()) }
+    var playlistTrackIdsById by remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
+    var expandedPlaylistId by remember { mutableStateOf<String?>(null) }
     var bookings by remember { mutableStateOf<List<NativeBooking>>(emptyList()) }
     var profile by remember { mutableStateOf(NativeProfile("", "", "", "")) }
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -130,7 +132,14 @@ fun AdditionalFeatureScreen(
                 "Videos" -> features.publishedVideos().onSuccess { videos = it }.onFailure { message = it.message }
                 "Library" -> {
                     library.listeningHistory().onSuccess { history = it }.onFailure { message = it.message }
-                    library.playlists().onSuccess { playlists = it }.onFailure { message = it.message }
+                    library.playlists().onSuccess { list ->
+                        playlists = list
+                        val memberships = mutableMapOf<String, List<String>>()
+                        list.forEach { playlist ->
+                            memberships[playlist.id] = library.playlistTrackIds(playlist.id).getOrDefault(emptyList())
+                        }
+                        playlistTrackIdsById = memberships
+                    }.onFailure { message = it.message }
                 }
                 "Bookings" -> features.myBookings().onSuccess { bookings = it }.onFailure { message = it.message }
                 "Profile" -> features.getProfile().onSuccess { profile = it }.onFailure { message = it.message }
@@ -193,15 +202,64 @@ fun AdditionalFeatureScreen(
                     }) { Text("Create") }
                 }
                 playlists.forEach { playlist ->
-                    ListItem(headlineContent = { Text(playlist.name) },
-                        supportingContent = { Text(playlist.description.ifBlank { "Personal playlist" }) })
-                    tracks.firstOrNull()?.let { firstTrack ->
-                        TextButton(onClick = {
-                            scope.launch {
-                                val result = library.addTrackToPlaylist(playlist.id, firstTrack.id)
-                                message = result.message ?: if (result.successful) "Added ${firstTrack.title} to ${playlist.name}." else "Could not add track."
+                    ListItem(
+                        headlineContent = { Text(playlist.name) },
+                        supportingContent = { Text("${playlistTrackIdsById[playlist.id].orEmpty().size} tracks • ${playlist.description.ifBlank { "Personal playlist" }}") },
+                        trailingContent = {
+                            Row {
+                                Box {
+                                    TextButton(onClick = { expandedPlaylistId = playlist.id }) { Text("ADD TRACK") }
+                                    DropdownMenu(
+                                        expanded = expandedPlaylistId == playlist.id,
+                                        onDismissRequest = { expandedPlaylistId = null }
+                                    ) {
+                                        tracks.forEach { track ->
+                                            DropdownMenuItem(text = { Text(track.title) }, onClick = {
+                                                scope.launch {
+                                                    val result = library.addTrackToPlaylist(playlist.id, track.id,
+                                                        playlistTrackIdsById[playlist.id].orEmpty().size)
+                                                    if (result.successful) {
+                                                        val updated = library.playlistTrackIds(playlist.id).getOrDefault(emptyList())
+                                                        playlistTrackIdsById = playlistTrackIdsById + (playlist.id to updated)
+                                                        message = "Added ${track.title} to ${playlist.name}."
+                                                    } else message = result.message
+                                                    expandedPlaylistId = null
+                                                }
+                                            })
+                                        }
+                                    }
+                                }
+                                TextButton(onClick = {
+                                    scope.launch {
+                                        val result = library.removePlaylist(playlist.id)
+                                        if (result.successful) {
+                                            playlists = playlists.filterNot { it.id == playlist.id }
+                                            playlistTrackIdsById = playlistTrackIdsById - playlist.id
+                                            message = "Playlist deleted."
+                                        } else message = result.message
+                                    }
+                                }) { Text("DELETE") }
                             }
-                        }) { Text("Add ${firstTrack.title}") }
+                        }
+                    )
+                    playlistTrackIdsById[playlist.id].orEmpty().forEach { trackId ->
+                        tracks.firstOrNull { it.id == trackId }?.let { track ->
+                            ListItem(
+                                headlineContent = { Text(track.title) },
+                                supportingContent = { Text(track.artist) },
+                                trailingContent = {
+                                    TextButton(onClick = {
+                                        scope.launch {
+                                            val result = library.removeTrackFromPlaylist(playlist.id, track.id)
+                                            if (result.successful) {
+                                                playlistTrackIdsById = playlistTrackIdsById +
+                                                    (playlist.id to playlistTrackIdsById[playlist.id].orEmpty().filterNot { it == track.id })
+                                            } else message = result.message
+                                        }
+                                    }) { Text("REMOVE") }
+                                }
+                            )
+                        }
                     }
                 }
             }
