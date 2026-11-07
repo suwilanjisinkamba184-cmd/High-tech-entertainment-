@@ -2,11 +2,11 @@ pluginManagement {
     repositories { google(); mavenCentral(); gradlePluginPortal() }
 }
 
-// Keep AGP and KGP on a mutually supported toolchain. KGP 2.3.0 supports
-// Gradle 8.14.3 and AGP 8.13.0, avoiding the legacy BaseVariant linkage
-// failure observed with the previous 2.2.20 / 8.11.1 pairing.
+// Kotlin 2.2.20 + AGP 8.10.1 is a conservative compatible toolchain for
+// Flutter add-to-app on Gradle 8.14.3. AGP 8.11+/KGP 2.3 produced missing
+// legacy Android Gradle API classes during plugin configuration.
 plugins {
-    id("org.jetbrains.kotlin.android") version "2.3.0" apply false
+    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
@@ -26,6 +26,6 @@ include(":app")
 // its plugin subprojects. The generated .android directory is not committed.
 val flutterInclude = settingsDir.parentFile.resolve("flutter-ui/.android/include_flutter.groovy")
 require(flutterInclude.isFile) {
-    "Flutter module bootstrap is missing. Run 'flutter pub get' in ../flutter-ui first."
+    "Flutter module bootstrap is missing. Run flutter pub get in ../flutter-ui first."
 }
 apply(from = flutterInclude)
