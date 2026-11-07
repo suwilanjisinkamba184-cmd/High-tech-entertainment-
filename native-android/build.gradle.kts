@@ -1,5 +1,5 @@
 plugins {
-    // Flutter 3.47.9 requires AGP 8.11.1 or newer. Keep to 8.11.1
-    // rather than 8.13.x, which caused legacy AGP API linkage errors.
-    id("com.android.application") version "8.11.1" apply false
+    // AGP 9 removes the legacy BaseVariant API that caused the Kotlin Android
+    // plugin to fail during configuration. Flutter 3.47 supports AGP 9 built-in Kotlin.
+    id("com.android.application") version "9.0.1" apply false
 }
