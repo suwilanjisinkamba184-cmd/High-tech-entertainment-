@@ -26,11 +26,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.hightechentertainment.app.update.NativeUpdateManager
 import com.hightechentertainment.app.update.NativeUpdate
+import com.hightechentertainment.app.playback.OfflineMusicDownloads
+import com.hightechentertainment.app.playback.OfflineDownload
+import com.hightechentertainment.app.playback.OfflineDownloadState
 
 @Composable
 fun AdditionalFeatureScreen(
     destination: String, tracks: List<NativeTrack>, features: FeatureRepository,
     library: UserLibraryRepository, sponsoredAudio: com.hightechentertainment.app.data.SponsoredAudioRepository,
+    downloads: OfflineMusicDownloads,
     isFounder: Boolean, userId: String?, onPlayTrack: (NativeTrack) -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -39,6 +43,7 @@ fun AdditionalFeatureScreen(
     var busy by remember(destination) { mutableStateOf(false) }
     var videos by remember { mutableStateOf<List<NativeVideo>>(emptyList()) }
     var history by remember { mutableStateOf<List<String>>(emptyList()) }
+    var offlineItems by remember { mutableStateOf<List<OfflineDownload>>(emptyList()) }
     var playlists by remember { mutableStateOf<List<NativePlaylist>>(emptyList()) }
     var playlistTrackIdsById by remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
     var expandedPlaylistId by remember { mutableStateOf<String?>(null) }
@@ -160,6 +165,7 @@ fun AdditionalFeatureScreen(
                         playlistTrackIdsById = memberships
                     }.onFailure { message = it.message }
                 }
+                "Downloads" -> offlineItems = downloads.downloads()
                 "Bookings" -> features.myBookings().onSuccess { bookings = it }.onFailure { message = it.message }
                 "Profile" -> features.getProfile().onSuccess { profile = it }.onFailure { message = it.message }
                 "Founder Studio" -> if (isFounder) {
@@ -281,6 +287,52 @@ fun AdditionalFeatureScreen(
                         }
                     }
                 }
+            }
+            "Downloads" -> {
+                Text("OFFLINE MUSIC", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "${offlineItems.size} downloads • ${downloads.downloadedBytes() / (1024L * 1024L)} MB stored",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (offlineItems.isEmpty()) {
+                    Text("Tracks you download for offline listening will appear here.")
+                }
+                offlineItems.forEach { item ->
+                    ElevatedCard(Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(14.dp)) {
+                            Text(item.title, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                when (item.state) {
+                                    OfflineDownloadState.PENDING -> "Waiting to download"
+                                    OfflineDownloadState.RUNNING -> "Downloading"
+                                    OfflineDownloadState.PAUSED -> "Paused by Android"
+                                    OfflineDownloadState.COMPLETE -> "Available offline"
+                                    OfflineDownloadState.FAILED -> "Download failed (reason ${item.reason})"
+                                    OfflineDownloadState.UNKNOWN -> "Download status unavailable"
+                                },
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            if (item.state == OfflineDownloadState.PENDING ||
+                                item.state == OfflineDownloadState.RUNNING ||
+                                item.state == OfflineDownloadState.PAUSED
+                            ) {
+                                LinearProgressIndicator(
+                                    progress = item.progressPercent / 100f,
+                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                                )
+                                Text("${item.progressPercent}% • ${item.bytesDownloaded / 1024L} KB / ${item.totalBytes.coerceAtLeast(0L) / 1024L} KB")
+                            }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                TextButton(onClick = {
+                                    downloads.remove(item.trackId)
+                                    offlineItems = downloads.downloads()
+                                    message = "Download removed from this device."
+                                }) { Text("REMOVE") }
+                            }
+                        }
+                    }
+                }
+                Text("Downloads are stored in app-private storage and can be removed here. Android manages transfer notifications and network retries.")
             }
             "Bookings" -> {
                 Text("REQUEST A BOOKING", style = MaterialTheme.typography.titleMedium)
