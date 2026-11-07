@@ -750,14 +750,13 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
                     ),
                     _ArtistList(artists: _artists),
                     _VideoList(videos: _videos, onPlay: _playVideo),
-                    _MusicList(
-                      tracks: _tracks.where((t) => _favourites.contains(t['id'])).toList(),
+                    _LibraryPanel(
+                      tracks: _tracks,
                       favourites: _favourites,
                       onFavourite: _toggleFavourite,
                       onPlay: _playTrack,
                       onDownload: _downloadTrack,
                       onRefresh: _refresh,
-                      emptyMessage: 'Your saved tracks will appear here.',
                     ),
                     _ProfilePanel(onSignOut: _signOut),
                   ],
@@ -787,6 +786,277 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
         ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LibraryPanel extends StatefulWidget {
+  const _LibraryPanel({
+    required this.tracks,
+    required this.favourites,
+    required this.onFavourite,
+    required this.onPlay,
+    required this.onDownload,
+    required this.onRefresh,
+  });
+
+  final List<Map<String, dynamic>> tracks;
+  final Set<String> favourites;
+  final Future<void> Function(String) onFavourite;
+  final Future<void> Function(Map<String, dynamic>) onPlay;
+  final Future<void> Function(Map<String, dynamic>) onDownload;
+  final Future<void> Function() onRefresh;
+
+  @override
+  State<_LibraryPanel> createState() => _LibraryPanelState();
+}
+
+class _LibraryPanelState extends State<_LibraryPanel> {
+  List<Map<String, dynamic>> _playlists = [];
+  bool _loadingPlaylists = true;
+  String? _playlistError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlaylists();
+  }
+
+  Future<void> _loadPlaylists() async {
+    setState(() {
+      _loadingPlaylists = true;
+      _playlistError = null;
+    });
+    try {
+      final rows = await _appChannel.invokeListMethod<dynamic>('getPlaylists');
+      if (!mounted) return;
+      setState(() {
+        _playlists = (rows ?? []).whereType<Map>()
+            .map((row) => Map<String, dynamic>.from(row)).toList();
+        _loadingPlaylists = false;
+      });
+    } on PlatformException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _playlistError = error.message ?? 'Could not load playlists.';
+        _loadingPlaylists = false;
+      });
+    } on MissingPluginException {
+      if (!mounted) return;
+      setState(() {
+        _playlistError = 'Playlist services are unavailable in this build.';
+        _loadingPlaylists = false;
+      });
+    }
+  }
+
+  Future<void> _createPlaylist() async {
+    final name = TextEditingController();
+    final description = TextEditingController();
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Create playlist'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: name, autofocus: true, maxLength: 80,
+              decoration: const InputDecoration(labelText: 'Playlist name')),
+            TextField(controller: description, maxLength: 500,
+              decoration: const InputDecoration(labelText: 'Description')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Create')),
+        ],
+      ),
+    );
+    if (accepted == true && name.text.trim().isNotEmpty) {
+      try {
+        final result = await _appChannel.invokeMapMethod<String, dynamic>('createPlaylist', {
+          'name': name.text.trim(),
+          'description': description.text.trim(),
+        });
+        if (result?['success'] == true) {
+          await _loadPlaylists();
+        } else {
+          _showMessage(result?['message']?.toString() ?? 'Playlist could not be created.');
+        }
+      } on PlatformException catch (error) {
+        _showMessage(error.message ?? 'Playlist could not be created.');
+      }
+    }
+    name.dispose();
+    description.dispose();
+  }
+
+  Future<void> _addTrack(String playlistId, Map<String, dynamic> track) async {
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>('addTrackToPlaylist', {
+        'playlistId': playlistId,
+        'trackId': track['id']?.toString() ?? '',
+      });
+      _showMessage(result?['success'] == true
+          ? 'Track added to playlist.'
+          : result?['message']?.toString() ?? 'Could not add track.');
+    } on PlatformException catch (error) {
+      _showMessage(error.message ?? 'Could not add track.');
+    }
+  }
+
+  Future<void> _deletePlaylist(String id) async {
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>('deletePlaylist', {'playlistId': id});
+      if (result?['success'] == true) {
+        await _loadPlaylists();
+      } else {
+        _showMessage(result?['message']?.toString() ?? 'Could not delete playlist.');
+      }
+    } on PlatformException catch (error) {
+      _showMessage(error.message ?? 'Could not delete playlist.');
+    }
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final favourites = widget.tracks.where((track) => widget.favourites.contains(track['id'])).toList();
+    return RefreshIndicator(
+      onRefresh: () async {
+        await widget.onRefresh();
+        await _loadPlaylists();
+      },
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Row(
+            children: [
+              const Expanded(child: Text('YOUR PLAYLISTS', style: TextStyle(
+                color: _gold, fontWeight: FontWeight.w800, letterSpacing: 1.2))),
+              FilledButton.icon(onPressed: _createPlaylist, icon: const Icon(Icons.add), label: const Text('Create')),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (_loadingPlaylists)
+            const Center(child: Padding(
+              padding: EdgeInsets.all(18),
+              child: CircularProgressIndicator(color: _gold),
+            ))
+          else if (_playlistError != null)
+            ListTile(
+              leading: const Icon(Icons.error_outline, color: _gold),
+              title: Text(_playlistError!),
+              trailing: IconButton(icon: const Icon(Icons.refresh), onPressed: _loadPlaylists),
+            )
+          else if (_playlists.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 18),
+              child: Text('Create a playlist to organise your favourite music.',
+                style: TextStyle(color: Colors.white60)),
+            )
+          else
+            ..._playlists.map((playlist) => Card(
+              color: _surface,
+              child: ExpansionTile(
+                leading: const Icon(Icons.queue_music_rounded, color: _gold),
+                title: Text(playlist['name']?.toString() ?? 'Playlist'),
+                subtitle: Text(playlist['description']?.toString() ?? ''),
+                trailing: PopupMenuButton<String>(
+                  onSelected: (action) {
+                    if (action == 'add') {
+                      showModalBottomSheet<void>(
+                        context: context,
+                        builder: (sheetContext) => SafeArea(
+                          child: ListView(
+                            shrinkWrap: true,
+                            children: [
+                              const ListTile(title: Text('Add a track')),
+                              ...widget.tracks.map((track) => ListTile(
+                                leading: const Icon(Icons.music_note, color: _gold),
+                                title: Text(track['title']?.toString() ?? 'Untitled'),
+                                subtitle: Text(track['artist']?.toString() ?? ''),
+                                onTap: () {
+                                  Navigator.pop(sheetContext);
+                                  _addTrack(playlist['id'].toString(), track);
+                                },
+                              )),
+                            ],
+                          ),
+                        ),
+                      );
+                    } else if (action == 'delete') {
+                      _deletePlaylist(playlist['id'].toString());
+                    }
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'add', child: Text('Add tracks')),
+                    PopupMenuItem(value: 'delete', child: Text('Delete playlist')),
+                  ],
+                ),
+                children: [
+                  FutureBuilder<List<dynamic>>(
+                    future: _appChannel.invokeListMethod<dynamic>(
+                      'getPlaylistTracks', {'playlistId': playlist['id'].toString()}),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: CircularProgressIndicator(color: _gold),
+                        );
+                      }
+                      final ids = (snapshot.data ?? []).map((id) => id.toString()).toSet();
+                      final rows = widget.tracks.where((track) => ids.contains(track['id']?.toString())).toList();
+                      if (rows.isEmpty) {
+                        return const ListTile(title: Text('No tracks in this playlist yet.',
+                          style: TextStyle(color: Colors.white54)));
+                      }
+                      return Column(
+                        children: rows.map((track) => ListTile(
+                          title: Text(track['title']?.toString() ?? 'Untitled'),
+                          subtitle: Text(track['artist']?.toString() ?? ''),
+                          trailing: IconButton(
+                            tooltip: 'Play track',
+                            icon: const Icon(Icons.play_arrow, color: _gold),
+                            onPressed: () => widget.onPlay(track),
+                          ),
+                        )).toList(),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            )),
+          const Divider(height: 34, color: Colors.white12),
+          const Text('SAVED TRACKS', style: TextStyle(
+            color: _gold, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+          const SizedBox(height: 8),
+          if (favourites.isEmpty)
+            const Text('Your saved tracks will appear here.', style: TextStyle(color: Colors.white60))
+          else
+            ...favourites.map((track) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.favorite, color: _gold),
+              title: Text(track['title']?.toString() ?? 'Untitled'),
+              subtitle: Text(track['artist']?.toString() ?? ''),
+              onTap: () => widget.onPlay(track),
+              trailing: PopupMenuButton<String>(
+                onSelected: (action) {
+                  if (action == 'remove') widget.onFavourite(track['id'].toString());
+                  if (action == 'download') widget.onDownload(track);
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'download', child: Text('Download')),
+                  PopupMenuItem(value: 'remove', child: Text('Remove from favourites')),
+                ],
+              ),
+            )),
         ],
       ),
     );
