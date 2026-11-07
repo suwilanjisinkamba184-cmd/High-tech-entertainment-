@@ -5,6 +5,7 @@ import com.hightechentertainment.app.data.AuthRepository
 import com.hightechentertainment.app.data.AuthSessionManager
 import com.hightechentertainment.app.data.CatalogRepository
 import com.hightechentertainment.app.data.SecureSessionStore
+import com.hightechentertainment.app.data.UserLibraryRepository
 import com.hightechentertainment.app.data.SupabaseRestClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
