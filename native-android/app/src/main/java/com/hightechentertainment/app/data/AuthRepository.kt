@@ -42,7 +42,8 @@ class AuthRepository(
         }
         return authenticate(
             path = "/auth/v1/signup",
-            body = JSONObject().put("email", email.trim()).put("password", password)
+            body = JSONObject().put("email", email.trim()).put("password", password),
+            allowConfirmationWithoutSession = true
         )
     }
 
@@ -99,7 +100,8 @@ class AuthRepository(
     private suspend fun authenticate(
         path: String,
         query: Map<String, String> = emptyMap(),
-        body: JSONObject
+        body: JSONObject,
+        allowConfirmationWithoutSession: Boolean = false
     ): AuthResult = try {
         val response = client.request(
             method = "POST",
@@ -122,7 +124,13 @@ class AuthRepository(
         val access = json.optString("access_token")
         val refresh = json.optString("refresh_token")
         val userId = user.optString("id")
-        if (access.isBlank() || refresh.isBlank() || userId.isBlank()) {
+        if (userId.isBlank()) {
+            return AuthResult.Failure("The authentication response did not include an account.")
+        }
+        if (access.isBlank() || refresh.isBlank()) {
+            if (allowConfirmationWithoutSession) {
+                return AuthResult.Notice("Account created. Check your email to confirm your address, then sign in.")
+            }
             return AuthResult.Failure("The authentication response was incomplete.")
         }
         val expiresAt = json.optLong("expires_at").takeIf { it > 0 }
