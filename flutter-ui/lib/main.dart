@@ -232,7 +232,8 @@ class AppRouterScreen extends StatefulWidget {
   State<AppRouterScreen> createState() => _AppRouterScreenState();
 }
 
-class _AppRouterScreenState extends State<AppRouterScreen> {
+class _AppRouterScreenState extends State<AppRouterScreen>
+    with WidgetsBindingObserver {
   bool _loading = true;
   bool _authenticated = false;
   String? _error;
@@ -240,7 +241,23 @@ class _AppRouterScreenState extends State<AppRouterScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadSession();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Google OAuth is completed by the existing native Activity. Refresh the
+    // shared Supabase session when Flutter becomes foreground again.
+    if (state == AppLifecycleState.resumed) {
+      _loadSession();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   Future<void> _loadSession() async {
