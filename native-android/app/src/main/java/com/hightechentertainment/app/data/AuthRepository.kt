@@ -1,5 +1,6 @@
 package com.hightechentertainment.app.data
 
+import kotlinx.coroutines.CancellationException
 import org.json.JSONObject
 
 data class NativeSession(
@@ -72,6 +73,8 @@ class AuthRepository(
             sessions.clear()
             if (response.statusCode in 200..299) AuthResult.Success(saved)
             else AuthResult.Failure("Sign-out could not be confirmed by the server.", response.statusCode)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (_: Exception) {
             // Clear local credentials even when offline; the server token will expire or be revoked separately.
             sessions.clear()
@@ -92,6 +95,8 @@ class AuthRepository(
             } else {
                 AuthResult.Failure("Password reset could not be requested. Please try again.", response.statusCode)
             }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (_: Exception) {
             AuthResult.Failure("Unable to reach account services. Check your connection and retry.")
         }
@@ -144,6 +149,8 @@ class AuthRepository(
         )
         sessions.write(session)
         AuthResult.Success(session)
+    } catch (cancelled: CancellationException) {
+        throw cancelled
     } catch (_: Exception) {
         AuthResult.Failure("Unable to reach account services. Check your connection and retry.")
     }
