@@ -43,6 +43,17 @@ fun AdditionalFeatureScreen(
     var bookingType by remember { mutableStateOf("Music production") }
     var bookingDate by remember { mutableStateOf("") }
     var bookingMessage by remember { mutableStateOf("") }
+    var newVideoTitle by remember { mutableStateOf("") }
+    var newVideoUrl by remember { mutableStateOf("") }
+    var newVideoDescription by remember { mutableStateOf("") }
+    var newTrackTitle by remember { mutableStateOf("") }
+    var newTrackArtist by remember { mutableStateOf("") }
+    var newTrackUrl by remember { mutableStateOf("") }
+    var newTrackGenre by remember { mutableStateOf("") }
+    var newArtistName by remember { mutableStateOf("") }
+    var newArtistBio by remember { mutableStateOf("") }
+    var newReleaseTitle by remember { mutableStateOf("") }
+    var newReleaseDescription by remember { mutableStateOf("") }
     val isFounder = userId == FounderUserId
 
     fun refresh() {
@@ -177,6 +188,58 @@ fun AdditionalFeatureScreen(
                         Text("Tracks: ${stats.tracks}   Artists: ${stats.artists}   Releases: ${stats.releases}")
                         Text("Videos: ${stats.videos}   Bookings: ${stats.bookings}")
                     }
+                    HorizontalDivider(Modifier.padding(vertical = 12.dp))
+                    Text("PUBLISH VIDEO", style = MaterialTheme.typography.titleMedium)
+                    OutlinedTextField(newVideoTitle, { newVideoTitle = it }, Modifier.fillMaxWidth(), label = { Text("Video title") })
+                    OutlinedTextField(newVideoUrl, { newVideoUrl = it }, Modifier.fillMaxWidth(), label = { Text("HTTPS video URL") })
+                    OutlinedTextField(newVideoDescription, { newVideoDescription = it }, Modifier.fillMaxWidth(), label = { Text("Description") })
+                    Button(enabled = !busy, onClick = {
+                        scope.launch {
+                            busy = true
+                            features.createVideo(newVideoTitle, newVideoUrl, newVideoDescription, "High-Tech Entertainment")
+                                .onSuccess { message = "Video saved as an unpublished draft. Review/publish it in the web admin." }
+                                .onFailure { message = it.message }
+                            busy = false
+                        }
+                    }) { Text("Save video draft") }
+                    HorizontalDivider(Modifier.padding(vertical = 12.dp))
+                    Text("ADD MUSIC TRACK", style = MaterialTheme.typography.titleMedium)
+                    OutlinedTextField(newTrackTitle, { newTrackTitle = it }, Modifier.fillMaxWidth(), label = { Text("Track title") })
+                    OutlinedTextField(newTrackArtist, { newTrackArtist = it }, Modifier.fillMaxWidth(), label = { Text("Artist") })
+                    OutlinedTextField(newTrackUrl, { newTrackUrl = it }, Modifier.fillMaxWidth(), label = { Text("HTTPS audio URL") })
+                    OutlinedTextField(newTrackGenre, { newTrackGenre = it }, Modifier.fillMaxWidth(), label = { Text("Genre") })
+                    Button(enabled = !busy, onClick = {
+                        scope.launch {
+                            busy = true
+                            features.createTrack(newTrackTitle, newTrackArtist, newTrackUrl, newTrackGenre)
+                                .onSuccess { message = "Track saved as an unpublished draft." }
+                                .onFailure { message = it.message }
+                            busy = false
+                        }
+                    }) { Text("Save track draft") }
+                    HorizontalDivider(Modifier.padding(vertical = 12.dp))
+                    Text("ADD ARTIST", style = MaterialTheme.typography.titleMedium)
+                    OutlinedTextField(newArtistName, { newArtistName = it }, Modifier.fillMaxWidth(), label = { Text("Artist name") })
+                    OutlinedTextField(newArtistBio, { newArtistBio = it }, Modifier.fillMaxWidth(), label = { Text("Artist bio") })
+                    Button(enabled = !busy, onClick = {
+                        scope.launch {
+                            busy = true
+                            features.createArtist(newArtistName, newArtistBio).onSuccess { message = "Artist draft created." }.onFailure { message = it.message }
+                            busy = false
+                        }
+                    }) { Text("Create artist") }
+                    HorizontalDivider(Modifier.padding(vertical = 12.dp))
+                    Text("ADD RELEASE", style = MaterialTheme.typography.titleMedium)
+                    OutlinedTextField(newReleaseTitle, { newReleaseTitle = it }, Modifier.fillMaxWidth(), label = { Text("Release title") })
+                    OutlinedTextField(newReleaseDescription, { newReleaseDescription = it }, Modifier.fillMaxWidth(), label = { Text("Description") })
+                    Button(enabled = !busy, onClick = {
+                        scope.launch {
+                            busy = true
+                            features.createRelease(newReleaseTitle, newReleaseDescription).onSuccess { message = "Release draft created." }.onFailure { message = it.message }
+                            busy = false
+                        }
+                    }) { Text("Create release") }
+                    Text("Catalogue uploads are created as drafts. Audio/video file upload and publication controls still need their secure storage workflow.", style = MaterialTheme.typography.bodySmall)
                     Text("BOOKING INBOX", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 14.dp))
                     bookings.forEach { booking ->
                         ElevatedCard(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
