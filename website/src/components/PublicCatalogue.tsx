@@ -103,7 +103,7 @@ function Spotify({url,title}:{url:string;title:string}) {
   const safe = safeHttps(url);
   if (!embed) return safe ? <a className="text-link" href={safe} target="_blank" rel="noopener noreferrer">Open on Spotify ↗</a> : <p className="muted small">Spotify link unavailable.</p>;
   const height = embed.includes('/track/') ? 152 : 352;
-  return <iframe title={'Listen to ' + title + ' on Spotify'} src={embed} width="100%" height={height} loading="lazy" allow="encrypted-media; clipboard-write; fullscreen; picture-in-picture" />;
+  return <div className="hte-spotify-shell"><iframe title={'Listen to ' + title + ' on Spotify'} src={embed} width="100%" height={height} loading="lazy" allow="encrypted-media; clipboard-write; fullscreen; picture-in-picture" /></div>;
 }
 
 function VideoPlayer({url,title,poster}:{url:string;title:string;poster?:string|null}) {
