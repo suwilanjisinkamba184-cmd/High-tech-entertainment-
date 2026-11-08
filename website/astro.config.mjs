@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   site: 'https://suwilanjisinkamba184-cmd.github.io',
-  base: '/High-tech-entertainment-',
+  base: process.env.CF_PAGES === '1' || process.env.NETLIFY === 'true' ? '/' : '/High-tech-entertainment-',
   output: 'static',
   integrations: [react()],
   vite: { plugins: [tailwindcss()] },
