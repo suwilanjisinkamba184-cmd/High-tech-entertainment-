@@ -35,8 +35,11 @@ done
 touch dist/.nojekyll
 
 for file in index.html app-download.html robots.txt sitemap.xml supabase-config.js account-deletion.html privacy-policy.html terms-of-service.html admin/index.html account/index.html assets/site.css assets/app.js assets/videos.js assets/booking-confirmation.aac high-tech-logo.svg; do
+  # Original artwork must be present in the actual published output.
+
   test -s "dist/$file" || { echo "Missing required build output: $file" >&2; exit 1; }
 done
+test -s dist/images/brand/high-tech-hero.svg || { echo "Missing published HTE hero artwork." >&2; exit 1; }
 
 # Catch "UI regenerated but nothing changed": the published artifact must
 # contain the Astro homepage, not the legacy root HTML.
