@@ -60,6 +60,6 @@
 .account-auth-links{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
 .account-auth-links .btn{font-size:.78rem}
 .account-password-form{display:grid;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid var(--account-line)}
-.account-password-form label{font-size:.82rem;color:var(--account-muted)}
-.account-password-form input{width:100%;max-width:420px;padding:11px 13px;border:1px solid var(--account-line);border-radius:10px;background:#090a0c;color:var(--account-ink)}
+.account-password-form label{font-size:.82rem;color:#a9a69f}
+.account-password-form input{width:100%;max-width:420px;padding:11px 13px;border:1px solid var(--account-line);border-radius:10px;background:#090a0c;color:#f5f2eb}
 @media(max-width:560px){.account-auth-links{display:grid;grid-template-columns:1fr}.account-auth-links .btn{width:100%}}
