@@ -100,6 +100,7 @@ export default function PublicCatalogue() {
   const [savedIds,setSavedIds] = useState<string[]>([]);
   const [savedReady,setSavedReady] = useState(false);
   const [userId,setUserId] = useState<string|null>(null);
+  const currentUserId = useRef<string|null>(null);
   const [syncNotice,setSyncNotice] = useState('');
   const recordedPlays = useRef(new Set<string>());
   const playHistoryIds = useRef(new Map<string,string>());
@@ -161,11 +162,11 @@ export default function PublicCatalogue() {
       try {
         const userKey = USER_SAVED_PREFIX + id + '.v1';
         const local = [...new Set([...readSavedIds(userKey),...readSavedIds(GUEST_SAVED_KEY)])];
-        if (active) setSavedIds(local);
+        if (active && currentUserId.current === id) setSavedIds(local);
         const {data:cloud,error} = await db.from('user_favorites').select('track_id');
         if (error) throw error;
         const merged = [...new Set([...(cloud || []).map((row:{track_id:string})=>row.track_id),...local])];
-        if (active) setSavedIds(merged);
+        if (active && currentUserId.current === id) setSavedIds(merged);
         if (local.length) {
           const {error:saveError} = await db.from('user_favorites').upsert(
             local.map(track_id=>({user_id:id,track_id})),
@@ -173,10 +174,12 @@ export default function PublicCatalogue() {
           );
           if (saveError) throw saveError;
         }
-        try {
-          localStorage.setItem(userKey,JSON.stringify(merged));
-          localStorage.removeItem(GUEST_SAVED_KEY);
-        } catch { /* Cloud favourites remain available even if local storage is disabled. */ }
+        if (currentUserId.current === id) {
+          try {
+            localStorage.setItem(userKey,JSON.stringify(merged));
+            localStorage.removeItem(GUEST_SAVED_KEY);
+          } catch { /* Cloud favourites remain available even if local storage is disabled. */ }
+        }
         if (active) setSyncNotice('');
       } catch (e) {
         console.error('HTE favourite sync failed',e);
@@ -186,12 +189,14 @@ export default function PublicCatalogue() {
 
     const {data:{subscription}} = db.auth.onAuthStateChange((_event,session) => {
       const id = session?.user?.id || null;
+      currentUserId.current = id;
       if (active) setUserId(id);
       if (id) void syncFavorites(id);
       else if (active) { setSavedIds(readSavedIds(GUEST_SAVED_KEY)); setSyncNotice(''); }
     });
     void db.auth.getSession().then(({data}) => {
       const id = data.session?.user?.id || null;
+      currentUserId.current = id;
       if (active) setUserId(id);
       if (id) void syncFavorites(id);
       else if (active) setSavedIds(readSavedIds(GUEST_SAVED_KEY));
@@ -246,9 +251,12 @@ export default function PublicCatalogue() {
         if (completedPending.current.delete(playKey)) {
           const {error:updateError} = await db.from('listening_history').update({completed:true}).eq('id',data.id).eq('user_id',userId);
           if (updateError) throw updateError;
+          recordedPlays.current.delete(playKey);
+          playHistoryIds.current.delete(playKey);
         }
       }
     } catch (e) {
+      completedPending.current.delete(playKey);
       recordedPlays.current.delete(playKey);
       console.error('HTE listening history could not be recorded',e);
     }
@@ -263,6 +271,8 @@ export default function PublicCatalogue() {
       const db = supabase();
       const {error} = await db.from('listening_history').update({completed:true}).eq('id',historyId).eq('user_id',userId);
       if (error) throw error;
+      recordedPlays.current.delete(playKey);
+      playHistoryIds.current.delete(playKey);
     } catch (e) { console.error('HTE listening completion could not be recorded',e); }
   };
 
