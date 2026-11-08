@@ -442,9 +442,9 @@ class HteApp extends StatelessWidget {
         onPrimary: const Color(0xFF17120A),
         secondary: const Color(0xFFC6CBD1),
         onSecondary: const Color(0xFF111317),
-        surface: const Color(0xFF111317),
-        surfaceContainer: const Color(0xFF171A1E),
-        surfaceContainerHigh: const Color(0xFF202329),
+        surface: const Color(0xFF111214),
+        surfaceContainer: const Color(0xFF191816),
+        surfaceContainerHigh: const Color(0xFF24211B),
         outline: const Color(0xFF514936),
       ),
       appBarTheme: const AppBarTheme(
@@ -1165,9 +1165,9 @@ class _MainScreenState extends State<MainScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xF2141B24), Color(0xFF080B10)],
+          colors: [Color(0xF2101113), Color(0xFF070809)],
         ),
-        border: Border(top: BorderSide(color: Color(0x33D7B66C), width: .8)),
+        border: Border(top: BorderSide(color: Color(0x55D7B66C), width: .8)),
         boxShadow: [BoxShadow(color: Color(0x66000000), blurRadius: 24, offset: Offset(0, -8))],
       ),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1309,7 +1309,7 @@ class Brand extends StatelessWidget {
         padding: const EdgeInsets.all(5),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: const SweepGradient(colors: [Color(0xFF7E5A26), Color(0xFFE8C878), Color(0xFF607D91), Color(0xFF7E5A26)]),
+          gradient: const SweepGradient(colors: [Color(0xFF7E5A26), Color(0xFFE8C878), Color(0xFFC6CBD1), Color(0xFF7E5A26)]),
           boxShadow: const [BoxShadow(color: Color(0x337E5A26), blurRadius: 18, spreadRadius: 1)],
         ),
         child: Container(
@@ -1330,9 +1330,9 @@ class Brand extends StatelessWidget {
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
         decoration: BoxDecoration(
-          color: const Color(0xFF13202A),
+          color: const Color(0xFF171512),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF344B5A)),
+          border: Border.all(color: const Color(0xFF51452E)),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.graphic_eq_rounded, color: Color(0xFFE2BC69), size: 13),
