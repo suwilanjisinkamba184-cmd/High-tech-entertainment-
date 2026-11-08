@@ -28,3 +28,5 @@ body{overflow-x:hidden}
 .btn:focus-visible,.hte-favourites-toggle:focus-visible,.music-card [data-track-fav]:focus-visible{outline:2px solid var(--gold2);outline-offset:3px}
 @media(max-width:680px){.catalog-tools{display:grid;grid-template-columns:1fr;padding:11px}.catalog-tools input,.catalog-tools select{width:100%;min-width:0}.hte-favourites-toggle{width:100%}.hte-backtop{right:12px;bottom:calc(14px + env(safe-area-inset-bottom))}.music-card [data-track-fav]{min-height:40px}}
 @media(prefers-reduced-motion:reduce){.reveal-ready main .section{opacity:1;transform:none;transition:none}.hte-backtop{transition:none}}
+
+.video-card .video-embed{display:block;width:100%;aspect-ratio:16/9;height:auto;min-height:190px;border:0;border-radius:12px;background:#08090b}.video-card video{display:block;width:100%;max-width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px}.video-external{display:flex;align-items:center;justify-content:center;min-height:180px;border:1px solid var(--line);border-radius:12px;color:var(--gold);text-decoration:underline;text-underline-offset:3px}
