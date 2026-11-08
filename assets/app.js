@@ -36,7 +36,7 @@ function releasePlayer(x){
 }
 function renderPublic(){
   const t=$('#public-tracks');
-  if(t)t.innerHTML=tracks.length?tracks.map(x=>'<article class="music-card"><div class="cover">'+cover(x.cover_url,x.title)+'</div><span class="pill">'+esc(x.genre||'Music')+'</span><h3>'+esc(x.title)+'</h3><div class="muted small">'+esc(x.artist||'High Tech Entertainment')+'</div>'+trackPlayer(x)+'</article>').join(''):'<div class="empty">New music is on the way. Check back soon.</div>';
+  if(t)t.innerHTML=tracks.length?tracks.map(x=>'<article class="music-card" data-track-id="'+esc(x.id)+'"><div class="cover">'+cover(x.cover_url,x.title)+'</div><span class="pill">'+esc(x.genre||'Music')+'</span><h3>'+esc(x.title)+'</h3><div class="muted small">'+esc(x.artist||'High Tech Entertainment')+'</div>'+trackPlayer(x)+'</article>').join(''):'<div class="empty">New music is on the way. Check back soon.</div>';
   const a=$('#public-artists');
   if(a)a.innerHTML=artists.length?artists.map(x=>'<article class="artist-card" style="padding:14px"><div class="cover">'+cover(x.image_url,x.name)+'</div><h3>'+esc(x.name)+'</h3><p class="muted small">'+esc(x.bio||'High Tech Entertainment artist')+'</p></article>').join(''):'<div class="empty">Artist profiles will appear here soon.</div>';
   const r=$('#public-releases');
