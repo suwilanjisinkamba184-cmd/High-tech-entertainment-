@@ -8,7 +8,8 @@ type Video = { id:string; title:string; artist?:string|null; description?:string
 type Data = { tracks:Track[]; artists:Artist[]; releases:Release[]; videos:Video[] };
 
 const empty:Data = { tracks:[], artists:[], releases:[], videos:[] };
-const SAVED_KEY = 'hte.savedTracks.v1';
+const GUEST_SAVED_KEY = 'hte.savedTracks.guest.v1';
+const USER_SAVED_PREFIX = 'hte.savedTracks.user.';
 let client:SupabaseClient|null = null;
 
 function supabase() {
@@ -57,9 +58,33 @@ function Spotify({url,title}:{url:string;title:string}) {
   return <iframe title={'Listen to ' + title + ' on Spotify'} src={embed} width="100%" height={height} loading="lazy" allow="encrypted-media; clipboard-write; fullscreen; picture-in-picture" />;
 }
 
-function readSavedIds() {
+function videoEmbed(value?:string|null) {
+  const safe = safeHttps(value);
+  if (!safe) return '';
   try {
-    const parsed:unknown = JSON.parse(localStorage.getItem(SAVED_KEY) || '[]');
+    const url = new URL(safe);
+    const host = url.hostname.replace(/^www\\./,'').toLowerCase();
+    if (host === 'youtu.be') {
+      const id = url.pathname.split('/').filter(Boolean)[0] || '';
+      return /^[A-Za-z0-9_-]{11}$/.test(id) ? 'https://www.youtube-nocookie.com/embed/' + id + '?rel=0' : '';
+    }
+    if (['youtube.com','m.youtube.com','music.youtube.com','youtube-nocookie.com'].includes(host)) {
+      const parts = url.pathname.split('/').filter(Boolean);
+      const id = url.searchParams.get('v') || (['embed','shorts','live'].includes(parts[0]) ? parts[1] : '');
+      return /^[A-Za-z0-9_-]{11}$/.test(id || '') ? 'https://www.youtube-nocookie.com/embed/' + id + '?rel=0' : '';
+    }
+    if (host === 'vimeo.com' || host === 'player.vimeo.com') {
+      const parts = url.pathname.split('/').filter(Boolean);
+      const id = [...parts].reverse().find(part=>/^\\d+$/.test(part)) || '';
+      return id ? 'https://player.vimeo.com/video/' + id : '';
+    }
+  } catch { return ''; }
+  return '';
+}
+
+function readSavedIds(key = GUEST_SAVED_KEY) {
+  try {
+    const parsed:unknown = JSON.parse(localStorage.getItem(key) || '[]');
     return Array.isArray(parsed) ? [...new Set(parsed.filter((id):id is string => typeof id === 'string'))] : [];
   } catch { return []; }
 }
@@ -87,10 +112,10 @@ export default function PublicCatalogue() {
 
   useEffect(() => {
     if (savedReady) {
-      try { localStorage.setItem(SAVED_KEY,JSON.stringify(savedIds)); }
+      try { localStorage.setItem(userId ? USER_SAVED_PREFIX + userId + '.v1' : GUEST_SAVED_KEY,JSON.stringify(savedIds)); }
       catch { setSyncNotice('This browser could not save favourites locally.'); }
     }
-  },[savedIds,savedReady]);
+  },[savedIds,savedReady,userId]);
 
   useEffect(() => {
     let active = true;
@@ -134,9 +159,11 @@ export default function PublicCatalogue() {
 
     const syncFavorites = async (id:string) => {
       try {
+        const userKey = USER_SAVED_PREFIX + id + '.v1';
+        const local = [...new Set([...readSavedIds(userKey),...readSavedIds(GUEST_SAVED_KEY)])];
+        if (active) setSavedIds(local);
         const {data:cloud,error} = await db.from('user_favorites').select('track_id');
         if (error) throw error;
-        const local = readSavedIds();
         const merged = [...new Set([...(cloud || []).map((row:{track_id:string})=>row.track_id),...local])];
         if (active) setSavedIds(merged);
         if (local.length) {
@@ -146,6 +173,10 @@ export default function PublicCatalogue() {
           );
           if (saveError) throw saveError;
         }
+        try {
+          localStorage.setItem(userKey,JSON.stringify(merged));
+          localStorage.removeItem(GUEST_SAVED_KEY);
+        } catch { /* Cloud favourites remain available even if local storage is disabled. */ }
         if (active) setSyncNotice('');
       } catch (e) {
         console.error('HTE favourite sync failed',e);
@@ -157,11 +188,13 @@ export default function PublicCatalogue() {
       const id = session?.user?.id || null;
       if (active) setUserId(id);
       if (id) void syncFavorites(id);
+      else if (active) { setSavedIds(readSavedIds(GUEST_SAVED_KEY)); setSyncNotice(''); }
     });
     void db.auth.getSession().then(({data}) => {
       const id = data.session?.user?.id || null;
       if (active) setUserId(id);
       if (id) void syncFavorites(id);
+      else if (active) setSavedIds(readSavedIds(GUEST_SAVED_KEY));
     }).catch(e => console.error('HTE auth state unavailable',e));
 
     return () => { active = false; subscription.unsubscribe(); };
@@ -200,29 +233,32 @@ export default function PublicCatalogue() {
   };
 
   const recordPlay = async (trackId:string) => {
-    if (!userId || recordedPlays.current.has(trackId)) return;
-    recordedPlays.current.add(trackId);
+    if (!userId) return;
+    const playKey = userId + ':' + trackId;
+    if (recordedPlays.current.has(playKey)) return;
+    recordedPlays.current.add(playKey);
     try {
       const db = supabase();
       const {data,error} = await db.from('listening_history').insert({user_id:userId,track_id:trackId}).select('id').single();
       if (error) throw error;
       if (data?.id) {
-        playHistoryIds.current.set(trackId,data.id);
-        if (completedPending.current.delete(trackId)) {
+        playHistoryIds.current.set(playKey,data.id);
+        if (completedPending.current.delete(playKey)) {
           const {error:updateError} = await db.from('listening_history').update({completed:true}).eq('id',data.id).eq('user_id',userId);
           if (updateError) throw updateError;
         }
       }
     } catch (e) {
-      recordedPlays.current.delete(trackId);
+      recordedPlays.current.delete(playKey);
       console.error('HTE listening history could not be recorded',e);
     }
   };
 
   const markCompleted = async (trackId:string) => {
     if (!userId) return;
-    const historyId = playHistoryIds.current.get(trackId);
-    if (!historyId) { completedPending.current.add(trackId); return; }
+    const playKey = userId + ':' + trackId;
+    const historyId = playHistoryIds.current.get(playKey);
+    if (!historyId) { completedPending.current.add(playKey); return; }
     try {
       const db = supabase();
       const {error} = await db.from('listening_history').update({completed:true}).eq('id',historyId).eq('user_id',userId);
@@ -268,7 +304,7 @@ export default function PublicCatalogue() {
       {data.releases.length ? <div className="card-grid release-grid">{data.releases.map(release=><article className="media-card" key={release.id}><Cover src={release.cover_url} alt={release.title + ' cover'} /><div className="card-copy"><h3>{release.title}</h3><p className="muted">{release.release_date||'Official release'}</p>{release.spotify_url&&<Spotify url={release.spotify_url} title={release.title}/>}</div></article>)}</div>:!loading && <p className="empty">{errors.includes('releases') ? 'Official releases could not be loaded. Retry above.' : 'Official releases will appear here soon.'}</p>}
     </section>
     <section className="catalogue-section" id="videos"><div className="section-heading"><div><span className="eyebrow">WATCH & EXPERIENCE</span><h2>Visual releases.</h2></div><span className="section-count">{data.videos.length} videos</span></div>
-      {data.videos.length ? <div className="card-grid video-grid">{data.videos.map(video=>{const videoUrl=safeHttps(video.video_url);const poster=safeHttps(video.thumbnail_url);return <article className="media-card" key={video.id}>{videoUrl ? <video controls preload="metadata" poster={poster || undefined} src={videoUrl} /> : <div className="empty">Video link unavailable.</div>}<div className="card-copy"><h3>{video.title}</h3><p className="muted">{[video.artist,video.description].filter(Boolean).join(' · ')}</p></div></article>})}</div>:!loading && <p className="empty">{errors.includes('videos') ? 'Official videos could not be loaded. Retry above.' : 'Official videos will appear here soon.'}</p>}
+      {data.videos.length ? <div className="card-grid video-grid">{data.videos.map(video=>{const videoUrl=safeHttps(video.video_url);const embed=videoEmbed(video.video_url);const poster=safeHttps(video.thumbnail_url);const direct=!!videoUrl && (new URL(videoUrl).pathname.includes('/storage/v1/object/') || /\\.(mp4|webm|mov|m4v)$/i.test(new URL(videoUrl).pathname));return <article className="media-card" key={video.id}>{embed ? <iframe className="video-embed" title={'Watch ' + video.title} src={embed} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : direct ? <video controls preload="metadata" poster={poster || undefined} src={videoUrl} /> : videoUrl ? <a className="text-link" href={videoUrl} target="_blank" rel="noopener noreferrer">Watch video ↗</a> : <div className="empty">Video link unavailable.</div>}<div className="card-copy"><h3>{video.title}</h3><p className="muted">{[video.artist,video.description].filter(Boolean).join(' · ')}</p></div></article>})}</div>:!loading && <p className="empty">{errors.includes('videos') ? 'Official videos could not be loaded. Retry above.' : 'Official videos will appear here soon.'}</p>}
     </section>
   </div>;
 }
