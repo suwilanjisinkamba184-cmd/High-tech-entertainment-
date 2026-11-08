@@ -1,0 +1,33 @@
+name: Validate website redesign
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'account/**'
+      - 'assets/**'
+      - 'scripts/build-website.sh'
+      - '.github/workflows/validate-website-pr.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/app.js
+          node --check assets/videos.js
+          node --check assets/experience.js
+      - name: Build and validate published website
+        run: bash scripts/build-website.sh
