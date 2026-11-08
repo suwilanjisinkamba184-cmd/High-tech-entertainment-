@@ -5,6 +5,7 @@ const allowedOrigins = new Set([
   "https://high-tech-entertainment.suwilanjisinkamba184.workers.dev",
   "https://suwilanjisinkamba184-cmd.github.io",
   "https://high-techmedia.netlify.app",
+  "https://website-redesign-mainline-20.high-tech-entertainment.pages.dev",
 ]);
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://high-tech-entertainment.suwilanjisinkamba184.workers.dev",
