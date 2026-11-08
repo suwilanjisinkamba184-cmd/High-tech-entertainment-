@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:video_player/video_player.dart';
+import 'studio_services_screen.dart';
 
 const _gold = Color(0xFFD7A83E);
 const _black = Color(0xFF080808);
@@ -611,7 +612,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
   }
 
   Future<void> _openVoiceCompanion() async {
-    if (mounted) setState(() => _tab = 3);
+    if (mounted) setState(() => _tab = 4);
   }
 
   void _navigateFromVoice(String destination) {
@@ -619,8 +620,9 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
     final nextTab = switch (key) {
       'music' || 'home' || 'artists' || 'releases' || 'albums' || 'videos' => 0,
       'library' || 'favourites' || 'favorites' => 1,
-      'profile' || 'account' || 'founder studio' => 2,
-      'voice' || 'voice companion' => 3,
+      'studio' || 'services' || 'booking' => 2,
+      'profile' || 'account' || 'founder studio' => 3,
+      'voice' || 'voice companion' => 4,
       _ => 0,
     };
     if (mounted) setState(() => _tab = nextTab);
@@ -765,11 +767,10 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
         {'trackId': track['id']?.toString() ?? ''},
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response?['success'] == true
-              ? 'Download added to Android download manager.'
-              : 'This track is not available for download.')),
-        );
+        final message = response?['success'] == true
+            ? 'Download added to Android download manager.'
+            : response?['message']?.toString() ?? 'This track is not available for download.';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
       }
     } on PlatformException catch (error) {
       if (mounted) {
@@ -866,7 +867,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final titles = ['Discover', 'Your Library', 'Profile', 'Voice Companion'];
+    final titles = ['Discover', 'Your Library', 'Studio', 'Profile', 'Voice Companion'];
     return Scaffold(
       appBar: AppBar(
         title: Text(titles[_tab], style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -922,6 +923,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
                       onDownload: _downloadTrack,
                       onRefresh: _refresh,
                     ),
+                    const StudioServicesScreen(),
                     _ProfilePanel(onSignOut: _signOut),
                     _VoiceCompanionPanel(
                       onNavigate: _navigateFromVoice,
@@ -949,6 +951,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore), label: 'Discover'),
           NavigationDestination(icon: Icon(Icons.favorite_border), selectedIcon: Icon(Icons.favorite), label: 'Library'),
+          NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome), label: 'Studio'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
           NavigationDestination(icon: Icon(Icons.graphic_eq_outlined), selectedIcon: Icon(Icons.graphic_eq), label: 'Voice'),
         ],
