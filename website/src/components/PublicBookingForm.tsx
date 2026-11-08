@@ -54,7 +54,15 @@ export default function PublicBookingForm() {
       }
     } catch (error) {
       console.error('HTE public booking submission failed',error);
-      setStatus({kind:'error',message:'We could not submit your request. Please try again or contact High-Tech Entertainment directly.'});
+      let message = 'We could not submit your request. Please try again or contact High-Tech Entertainment directly.';
+      const context = (error as {context?:Response})?.context;
+      if (context && typeof context.clone === 'function') {
+        const body = await context.clone().json().catch(() => null);
+        if (typeof body?.error === 'string' && body.error.trim()) message = body.error;
+      } else if (error instanceof Error && error.message && !error.message.includes('Edge Function returned')) {
+        message = error.message;
+      }
+      setStatus({kind:'error',message});
     } finally {
       setSubmitting(false);
     }
@@ -72,6 +80,6 @@ export default function PublicBookingForm() {
       <label className="booking-field-full">Project details<textarea name="details" required maxLength={4000} rows={5} placeholder="Tell us what you need, your project goals and any useful details…" /></label>
     </div>
     <div className="public-booking-actions"><button className="button button-gold" type="submit" disabled={submitting}>{submitting ? 'Sending request…' : 'Send booking request'} <span>↗</span></button><p className="booking-disclaimer">A request is not a confirmed appointment. Our team will contact you to discuss availability and next steps.</p></div>
-    <p className={'booking-status ' + (status?.kind || '')} role="status" aria-live="polite">{status?.message || ''}</p>
+    <p className={'booking-status ' + (status?.kind || '')} role={status?.kind === 'error' ? 'alert' : 'status'} aria-live={status?.kind === 'error' ? 'assertive' : 'polite'}>{status?.message || ''}</p>
   </form>;
 }
