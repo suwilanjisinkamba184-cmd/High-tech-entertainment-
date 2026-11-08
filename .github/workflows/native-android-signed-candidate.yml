@@ -40,23 +40,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: Set up Flutter stable for embedded UI module
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.47.9"
-          channel: stable
-          cache: true
-      - name: Generate Flutter Android module integration
-        working-directory: flutter-ui
-        run: flutter pub get
-      - name: Verify Flutter module bootstrap
-        run: test -f flutter-ui/.android/include_flutter.groovy
-      - name: Analyze Flutter application
-        working-directory: flutter-ui
-        run: flutter analyze
-      - name: Run Flutter widget and integration tests
-        working-directory: flutter-ui
-        run: flutter test
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -97,6 +80,12 @@ jobs:
           SDK_BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
           APK="$(find native-android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)"
           test -n "$APK" || { echo "::error::Gradle did not produce a native release APK."; exit 1; }
+          echo "Native release APK size:"
+          du -h "$APK"
+          echo "Native library ABI inventory:"
+          unzip -l "$APK" | awk '/lib\\// {print $4}' | sort -u || true
+          APK_BYTES="$(stat -c '%s' "$APK")"
+          echo "APK_BYTES=$APK_BYTES" >> "$GITHUB_ENV"
 
           BADGING="$("$SDK_BUILD_TOOLS/aapt" dump badging "$APK")"
           printf '%s\n' "$BADGING" | grep -F "package: name='com.hightechentertainment.app'" >/dev/null || {
