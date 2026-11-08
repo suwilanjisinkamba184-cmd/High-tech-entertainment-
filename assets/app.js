@@ -64,7 +64,15 @@ function tableRender(){let t=$('#admin-tracks');if(t)t.innerHTML=tracks.length?t
   if(!service||!details)throw Error('Choose a service and add project details.');
   if(form.dataset.publicBooking==='true'){
     const {data,error}=await db.functions.invoke('public-booking-request',{body:{name,email,phone,service,date,time,details,website:String(f.get('website')||''),started_at:Number(form.dataset.startedAt||0)}});
-    if(error)throw error;
+    if(error){
+      let message=error.message||'Your booking request could not be submitted.';
+      const context=error.context;
+      if(context&&typeof context.clone==='function'){
+        const body=await context.clone().json().catch(()=>null);
+        if(typeof body?.error==='string'&&body.error.trim())message=body.error;
+      }
+      throw Error(message);
+    }
     if(data?.saved!==true)throw Error(data?.error||'Your booking request could not be saved.');
     form.reset();
     return {saved:true,notified:data.email_sent===true,error:data.error||''};
