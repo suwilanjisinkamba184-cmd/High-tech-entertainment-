@@ -63,7 +63,7 @@ function videoEmbed(value?:string|null) {
   if (!safe) return '';
   try {
     const url = new URL(safe);
-    const host = url.hostname.replace(/^www\\./,'').toLowerCase();
+    const host = url.hostname.replace(/^www\./,'').toLowerCase();
     if (host === 'youtu.be') {
       const id = url.pathname.split('/').filter(Boolean)[0] || '';
       return /^[A-Za-z0-9_-]{11}$/.test(id) ? 'https://www.youtube-nocookie.com/embed/' + id + '?rel=0' : '';
@@ -75,7 +75,7 @@ function videoEmbed(value?:string|null) {
     }
     if (host === 'vimeo.com' || host === 'player.vimeo.com') {
       const parts = url.pathname.split('/').filter(Boolean);
-      const id = [...parts].reverse().find(part=>/^\\d+$/.test(part)) || '';
+      const id = [...parts].reverse().find(part=>/^\d+$/.test(part)) || '';
       return id ? 'https://player.vimeo.com/video/' + id : '';
     }
   } catch { return ''; }
@@ -314,7 +314,7 @@ export default function PublicCatalogue() {
       {data.releases.length ? <div className="card-grid release-grid">{data.releases.map(release=><article className="media-card" key={release.id}><Cover src={release.cover_url} alt={release.title + ' cover'} /><div className="card-copy"><h3>{release.title}</h3><p className="muted">{release.release_date||'Official release'}</p>{release.spotify_url&&<Spotify url={release.spotify_url} title={release.title}/>}</div></article>)}</div>:!loading && <p className="empty">{errors.includes('releases') ? 'Official releases could not be loaded. Retry above.' : 'Official releases will appear here soon.'}</p>}
     </section>
     <section className="catalogue-section" id="videos"><div className="section-heading"><div><span className="eyebrow">WATCH & EXPERIENCE</span><h2>Visual releases.</h2></div><span className="section-count">{data.videos.length} videos</span></div>
-      {data.videos.length ? <div className="card-grid video-grid">{data.videos.map(video=>{const videoUrl=safeHttps(video.video_url);const embed=videoEmbed(video.video_url);const poster=safeHttps(video.thumbnail_url);const direct=!!videoUrl && (new URL(videoUrl).pathname.includes('/storage/v1/object/') || /\\.(mp4|webm|mov|m4v)$/i.test(new URL(videoUrl).pathname));return <article className="media-card" key={video.id}>{embed ? <iframe className="video-embed" title={'Watch ' + video.title} src={embed} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : direct ? <video controls preload="metadata" poster={poster || undefined} src={videoUrl} /> : videoUrl ? <a className="text-link" href={videoUrl} target="_blank" rel="noopener noreferrer">Watch video ↗</a> : <div className="empty">Video link unavailable.</div>}<div className="card-copy"><h3>{video.title}</h3><p className="muted">{[video.artist,video.description].filter(Boolean).join(' · ')}</p></div></article>})}</div>:!loading && <p className="empty">{errors.includes('videos') ? 'Official videos could not be loaded. Retry above.' : 'Official videos will appear here soon.'}</p>}
+      {data.videos.length ? <div className="card-grid video-grid">{data.videos.map(video=>{const videoUrl=safeHttps(video.video_url);const embed=videoEmbed(video.video_url);const poster=safeHttps(video.thumbnail_url);const direct=!!videoUrl && (new URL(videoUrl).pathname.includes('/storage/v1/object/') || /\.(mp4|webm|mov|m4v)$/i.test(new URL(videoUrl).pathname));return <article className="media-card" key={video.id}>{embed ? <iframe className="video-embed" title={'Watch ' + video.title} src={embed} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : direct ? <video controls preload="metadata" poster={poster || undefined} src={videoUrl} /> : videoUrl ? <a className="text-link" href={videoUrl} target="_blank" rel="noopener noreferrer">Watch video ↗</a> : <div className="empty">Video link unavailable.</div>}<div className="card-copy"><h3>{video.title}</h3><p className="muted">{[video.artist,video.description].filter(Boolean).join(' · ')}</p></div></article>})}</div>:!loading && <p className="empty">{errors.includes('videos') ? 'Official videos could not be loaded. Retry above.' : 'Official videos will appear here soon.'}</p>}
     </section>
   </div>;
 }
