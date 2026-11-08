@@ -1,0 +1,12 @@
+/* HTE identity system — shared by the public site and member area. */
+:root{--hte-black:#070809;--hte-panel:#101214;--hte-gold:#d9b66c;--hte-gold-bright:#f4d995;--hte-silver:#c8cdd1;--hte-line:#3a3428}
+.brand{gap:12px;letter-spacing:.12em}
+.brand-logo{width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 0 12px #d9b66c26)}
+.brand-wordmark{display:block;color:#f4f1e9;font:900 1.05rem/1.05 Manrope,Arial,sans-serif;letter-spacing:.16em}
+.brand-wordmark small{display:block;margin-top:5px;color:var(--hte-silver);font-size:.55rem;letter-spacing:.19em;font-weight:700}
+.account-brand{display:flex;align-items:center;gap:12px}
+.account-brand img{width:48px;height:48px;object-fit:contain;filter:drop-shadow(0 0 10px #d9b66c26)}
+.account-brand span{display:block;color:#f4f1e9;font:900 1rem/1.05 Manrope,Arial,sans-serif;letter-spacing:.16em}
+.account-brand span small{display:block;margin-top:5px;color:var(--hte-silver);font-size:.55rem;letter-spacing:.14em;font-weight:700}
+.account-aside-brand img{width:min(100%,190px);height:auto;filter:drop-shadow(0 10px 24px #d9b66c20)}
+@media(max-width:600px){.brand-logo{width:45px;height:45px}.brand-wordmark{font-size:.92rem}.account-brand img{width:42px;height:42px}}

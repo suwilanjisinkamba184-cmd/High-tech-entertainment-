@@ -1,7 +1,7 @@
 name: high_tech_entertainment
 description: Official High-Tech Entertainment native app with startup audio recovery and enhanced startup experience.
 publish_to: 'none'
-version: 2.2.10+27
+version: 3.2.0+32
 
 environment:
   sdk: '>=3.11.0 <4.0.0'
