@@ -459,12 +459,12 @@ class HteApp extends StatelessWidget {
         displayColor: const Color(0xFFF8F5EC),
       ),
       cardTheme: CardThemeData(
-        color: const Color(0xFF111720),
+        color: const Color(0xFF111214),
         elevation: 0,
         margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
-          side: const BorderSide(color: Color(0xFF263442)),
+          side: const BorderSide(color: Color(0xFF3A3428)),
         ),
       ),
       listTileTheme: const ListTileThemeData(
@@ -1592,10 +1592,10 @@ class HteNeoHero extends StatelessWidget {
       gradient: const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFF18232D), Color(0xFF0C121A), Color(0xFF080B10)],
+        colors: [Color(0xFF17140F), Color(0xFF0D0E10), Color(0xFF070809)],
       ),
       boxShadow: const [
-        BoxShadow(color: Color(0x4439A7B8), blurRadius: 34, offset: Offset(12, -8)),
+        BoxShadow(color: Color(0x22D7B66C), blurRadius: 30, offset: Offset(12, -8)),
         BoxShadow(color: Color(0x553A2A10), blurRadius: 28, offset: Offset(0, 14)),
       ],
     ),
@@ -1652,7 +1652,7 @@ class HteNeoHero extends StatelessWidget {
                 width: 3, height: h,
                 margin: const EdgeInsets.symmetric(horizontal: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF64C6D2).withValues(alpha: .52),
+                  color: const Color(0xFFBFC6CB).withValues(alpha: .52),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -1667,15 +1667,15 @@ class HteNeoHero extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                   decoration: BoxDecoration(
-                    color: const Color(0x1A62C6D2),
+                    color: const Color(0x1AD7B66C),
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: const Color(0x555CC9D8)),
+                    border: Border.all(color: const Color(0x66D7B66C)),
                   ),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF7FE0C0), shape: BoxShape.circle)),
+                    Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFFE3BD70), shape: BoxShape.circle)),
                     SizedBox(width: 7),
-                    Text('HIGH-TECH · SOUND SYSTEM',
-                      style: TextStyle(color: Color(0xFFD2E0E5), fontSize: 8,
+                    Text('HTE · SOUND SYSTEM',
+                      style: TextStyle(color: Color(0xFFE9DDBF), fontSize: 8,
                         fontWeight: FontWeight.w800, letterSpacing: 1.05)),
                   ]),
                 ),
