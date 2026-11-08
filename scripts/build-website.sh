@@ -51,6 +51,7 @@ required_homepage_markers = (
     "Made to move.",
     "site-header",
     "high-tech-logo.svg",
+    "images/brand/high-tech-hero.svg",
     "supabase-config.js",
     "_astro/",
 )
