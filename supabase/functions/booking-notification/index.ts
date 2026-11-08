@@ -38,7 +38,6 @@ Deno.serve(async (req: Request) => {
   if (origin && !isAllowedOrigin(origin)) return response({ error: "Origin not allowed" }, 403, origin);
 
   const accessToken = req.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1] || "";
-  if (!accessToken) return response({ error: "A signed-in member session is required." }, 401, origin);
 
   const resendKey = Deno.env.get("RESEND_API_KEY");
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -64,8 +63,13 @@ Deno.serve(async (req: Request) => {
     if (!serviceKey) return response({ error: "Supabase server secret key is unavailable." }, 503, origin);
     const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
-    const { data: authData, error: authError } = await admin.auth.getUser(accessToken);
-    if (authError || !authData.user) return response({ error: "Your sign-in session is invalid. Sign in again." }, 401, origin);
+    // Member bookings require a valid user token. Guest bookings are accepted only
+    // for NULL user_id rows from an allowed website origin, with the same rate limits.
+    let authenticatedUserId: string | null = null;
+    if (accessToken) {
+      const { data: authData, error: authError } = await admin.auth.getUser(accessToken);
+      if (!authError && authData.user) authenticatedUserId = authData.user.id;
+    }
 
     // Rate-limit notifications by a one-way hash of the gateway-provided client IP.
     const clientIp = req.headers.get("cf-connecting-ip") ||
@@ -86,8 +90,15 @@ Deno.serve(async (req: Request) => {
       .eq("id", messageId)
       .maybeSingle();
     if (bookingError) throw bookingError;
-    if (!booking || booking.user_id !== authData.user.id || !String(booking.subject || "").startsWith("Booking request")) {
+    if (!booking || !String(booking.subject || "").startsWith("Booking request")) {
       return response({ error: "Booking request not found." }, 404, origin);
+    }
+    if (booking.user_id) {
+      if (!authenticatedUserId || booking.user_id !== authenticatedUserId) {
+        return response({ error: "Booking request not found." }, 404, origin);
+      }
+    } else if (!origin || !isAllowedOrigin(origin)) {
+      return response({ error: "Guest booking notifications are only accepted from the official website." }, 403, origin);
     }
     const createdAt = Date.parse(String(booking.created_at || ""));
     if (!Number.isFinite(createdAt) || Date.now() - createdAt > 30 * 60 * 1000 || createdAt > Date.now() + 60 * 1000) {
