@@ -1601,6 +1601,31 @@ class HteNeoHero extends StatelessWidget {
     ),
     child: Stack(
       children: [
+        Positioned.fill(
+          child: Opacity(
+            opacity: .24,
+            child: SvgPicture.asset(
+              'assets/high-tech-hero.svg',
+              fit: BoxFit.cover,
+              alignment: Alignment.centerRight,
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  Color(0xE6101217),
+                  Color(0xA6101217),
+                  Color(0x55101217),
+                ],
+              ),
+            ),
+          ),
+        ),
         Positioned(right: -82, top: -92, child: Container(
           width: 270, height: 270,
           decoration: BoxDecoration(
