@@ -89,3 +89,11 @@
 .public-feedback-intro>p{max-width:440px;color:#aaa69d;line-height:1.75}
 .public-feedback-form{min-width:0}
 @media(max-width:800px){.public-feedback-section{grid-template-columns:1fr;gap:22px}}
+
+/* Original High-Tech Entertainment artwork: responsive desktop and mobile hero. */
+.hero-visual{overflow:hidden;isolation:isolate;background:#08090b}
+.hero-visual>img.hero-artwork{position:absolute;inset:0;width:100%;height:100%;max-height:none;object-fit:cover;object-position:center;filter:none;z-index:0}
+.hero-visual:after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(90deg,#08090b25,transparent 48%,#08090b20),linear-gradient(0deg,#08090b88,transparent 30%)}
+.hero-visual .visual-caption{z-index:2;padding:10px 12px;background:#08090b99;border:1px solid #d7b66c40;border-radius:4px;backdrop-filter:blur(8px)}
+@media(max-width:800px){.hero{grid-template-columns:1fr;min-height:auto;padding-bottom:78px}.hero-visual{min-height:330px}.hero-bottom{left:22px}}
+@media(max-width:560px){.hero-visual{min-height:270px}.hero-visual .visual-caption{font-size:.48rem;left:12px;right:12px;bottom:12px}.hero-visual>img.hero-artwork{object-position:58% center}}
