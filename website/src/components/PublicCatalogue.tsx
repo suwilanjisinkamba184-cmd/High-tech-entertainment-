@@ -180,10 +180,10 @@ export default function PublicCatalogue() {
             localStorage.removeItem(GUEST_SAVED_KEY);
           } catch { /* Cloud favourites remain available even if local storage is disabled. */ }
         }
-        if (active) setSyncNotice('');
+        if (active && currentUserId.current === id) setSyncNotice('');
       } catch (e) {
         console.error('HTE favourite sync failed',e);
-        if (active) setSyncNotice('Your saved tracks remain on this device. Cloud sync is temporarily unavailable.');
+        if (active && currentUserId.current === id) setSyncNotice('Your saved tracks remain on this device. Cloud sync is temporarily unavailable.');
       }
     };
 
