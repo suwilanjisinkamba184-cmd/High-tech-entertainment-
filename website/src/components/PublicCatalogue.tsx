@@ -110,7 +110,7 @@ function VideoPlayer({url,title,poster}:{url:string;title:string;poster?:string|
   const safe = safeHttps(url);
   const embed = videoEmbed(url);
   const safePoster = safeHttps(poster);
-  const direct = !!safe && (new URL(safe).pathname.includes('/storage/v1/object/') || /\\.(mp4|webm|mov|m4v)$/i.test(new URL(safe).pathname));
+  const direct = !!safe && (new URL(safe).pathname.includes('/storage/v1/object/') || /\.(mp4|webm|mov|m4v)$/i.test(new URL(safe).pathname));
   const videoRef = useRef<HTMLVideoElement>(null);
   const [failed,setFailed] = useState(false);
   const [attempt,setAttempt] = useState(0);
