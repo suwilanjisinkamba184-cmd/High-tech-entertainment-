@@ -294,7 +294,7 @@ export default function PublicCatalogue() {
         const source = safeHttps(track.audio_url);
         const spotify = spotifyEmbed(track.audio_url);
         const isStorageAudio = !!source && new URL(source).pathname.includes('/storage/v1/object/');
-        const isAudioFile = !!source && (isStorageAudio || /\.(mp3|m4a|wav|aac|ogg|flac|opus)$/i.test(new URL(source).pathname));
+        const isAudioFile = !!source && (isStorageAudio || /\.(mp3|mp4|m4a|wav|aac|ogg|flac|opus|webm)$/i.test(new URL(source).pathname));
         const downloadUrl = source && isStorageAudio ? (()=>{const url=new URL(source);url.searchParams.set('download','1');return url.href})() : source;
         const saved = savedIds.includes(track.id);
         return <article className="media-card" key={track.id}>
