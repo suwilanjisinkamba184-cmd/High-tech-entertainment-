@@ -41,7 +41,7 @@ jobs:
           node --check assets/experience.js
       - name: Build and validate published website
         run: bash scripts/build-website.sh
-      - name: Validate root-hosted Cloudflare and Netlify asset base
+      - name: Validate Cloudflare Pages root asset base
         run: |
           CF_PAGES=1 npm --prefix website run build
           if grep -q '/High-tech-entertainment-/_astro/' website/dist/index.html; then
