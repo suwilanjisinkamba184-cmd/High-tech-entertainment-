@@ -25,3 +25,40 @@
 @media(max-width:390px){.catalogue-tools{grid-template-columns:1fr}.catalogue-search{grid-column:auto}}
 
 .media-card .video-embed{display:block;width:100%;aspect-ratio:16/9;height:auto;min-height:190px;border:0;border-radius:12px;background:#08090b}.media-card video{display:block;width:100%;max-width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px}
+
+/* Founder story and public booking conversion section */
+.about-section{max-width:1200px;margin:0 auto;padding:clamp(64px,9vw,116px) 24px}
+.about-heading{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:end}
+.about-heading h2{margin:16px 0 0;font-size:clamp(2.3rem,5vw,4.4rem);line-height:1.02;letter-spacing:-.05em}
+.about-heading h2 em{color:var(--gold);font-style:normal}
+.about-heading>p{max-width:580px;color:#aaa69d;line-height:1.8;font-size:.98rem}
+.genre-line{margin:28px 0 20px;color:#d9d1c1;font-size:.9rem;letter-spacing:.04em}
+.genre-line span{margin-right:12px;color:var(--gold);font-size:.68rem;letter-spacing:.18em;font-weight:800}
+.team-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:24px}
+.team-card{padding:22px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(145deg,#171819,#0d0e10)}
+.team-card>span{color:var(--gold);font-size:.62rem;letter-spacing:.16em;font-weight:800}
+.team-card h3{margin:14px 0 7px;font-size:1.08rem}
+.team-card p{margin:0;color:#99958c;font-size:.82rem;line-height:1.6}
+.booking-strip-actions{display:flex;gap:10px;flex-wrap:wrap}
+.public-booking-section{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:40px;align-items:start;max-width:1200px;margin:0 auto;padding:clamp(56px,8vw,100px) 24px}
+.public-booking-intro h2{margin:16px 0;font-size:clamp(2.2rem,4.5vw,3.8rem);line-height:1.05;letter-spacing:-.045em}
+.public-booking-intro h2 em{color:var(--gold);font-style:normal}
+.public-booking-intro>p{max-width:440px;color:#aaa69d;line-height:1.75}
+.member-note{margin-top:26px;font-size:.85rem}
+.member-note a{color:var(--gold);text-decoration:underline;text-underline-offset:3px}
+.public-booking-form{padding:clamp(18px,3vw,30px);border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,#151719,#0b0c0e)}
+.public-booking-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.public-booking-form label{display:grid;gap:8px;color:#d8d2c6;font-size:.78rem;font-weight:650}
+.public-booking-form input,.public-booking-form select,.public-booking-form textarea{width:100%;min-width:0;min-height:48px;padding:12px 13px;border:1px solid var(--line);border-radius:9px;background:#0b0c0e;color:#f5f2eb;font:inherit;font-size:.9rem}
+.public-booking-form textarea{min-height:130px;resize:vertical}
+.public-booking-form input:focus-visible,.public-booking-form select:focus-visible,.public-booking-form textarea:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-color:var(--gold)}
+.public-booking-form input::placeholder,.public-booking-form textarea::placeholder{color:#77736d}
+.public-booking-form .booking-field-full{grid-column:1/-1}
+.optional-label{color:#858078;font-size:.68rem;font-weight:400}
+.booking-honeypot{position:absolute!important;left:-10000px!important;width:1px!important;height:1px!important;overflow:hidden!important}
+.public-booking-actions{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:18px}
+.booking-disclaimer{max-width:320px;margin:0;color:#89857c;font-size:.72rem;line-height:1.5}
+.booking-status{min-height:1.4em;margin:14px 0 0;font-size:.83rem;line-height:1.6}
+.booking-status.success{color:#b6d9b5}.booking-status.error{color:#ffaaa4}.booking-status.info{color:#d7c18e}
+@media(max-width:800px){.about-heading,.public-booking-section{grid-template-columns:1fr;gap:22px}.team-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.team-grid,.public-booking-grid{grid-template-columns:1fr}.public-booking-form .booking-field-full{grid-column:auto}.booking-strip-actions{width:100%}.booking-strip-actions .button{flex:1;justify-content:center}}
