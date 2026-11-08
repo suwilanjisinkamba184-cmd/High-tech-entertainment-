@@ -45,7 +45,8 @@ function spotifyEmbed(value?:string|null) {
   } catch { return ''; }
 }
 
-const DEFAULT_COVER = `${import.meta.env.BASE_URL}images/brand/high-tech-hero.svg`;
+const DEFAULT_COVER_BASE = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const DEFAULT_COVER = `${DEFAULT_COVER_BASE}images/brand/high-tech-hero.svg`;
 
 function Cover({src,alt}:{src?:string|null;alt:string}) {
   const safe = safeHttps(src);
