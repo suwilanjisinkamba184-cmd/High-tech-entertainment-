@@ -11,20 +11,12 @@
     <stop offset="0" stop-color="#fff5c9"/><stop offset=".25" stop-color="#f5bd3e"/>
     <stop offset=".62" stop-color="#c17a0c"/><stop offset="1" stop-color="#ffe18a"/>
   </linearGradient>
-  <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
-    <feGaussianBlur stdDeviation="13" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-  </filter>
-  <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-    <feGaussianBlur in="SourceAlpha" stdDeviation="10" result="blur"/>
-    <feOffset dy="12" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".8"/></feComponentTransfer>
-    <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
-  </filter>
 </defs>
 <rect width="1024" height="1024" rx="150" fill="#050505"/>
-<circle cx="512" cy="512" r="426" fill="none" stroke="#9a650e" stroke-width="27" opacity=".5" filter="url(#glow)"/>
+<circle cx="512" cy="512" r="426" fill="none" stroke="#9a650e" stroke-width="27" opacity=".5"/>
 <circle cx="512" cy="512" r="426" fill="none" stroke="url(#gold)" stroke-width="19"/>
 <circle cx="512" cy="512" r="393" fill="none" stroke="#f8d778" stroke-width="5" opacity=".72"/>
-<g filter="url(#shadow)" fill="url(#face)" stroke="#8b570b" stroke-width="7" stroke-linejoin="bevel">
+<g fill="url(#face)" stroke="#8b570b" stroke-width="7" stroke-linejoin="bevel">
   <path d="M205 286h112v170h180V286h112v452H497V565H317v173H205z"/>
   <path d="M475 286h344v105H699v347H587V391H475z"/>
 </g>
