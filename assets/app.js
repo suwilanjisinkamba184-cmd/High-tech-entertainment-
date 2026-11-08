@@ -27,7 +27,7 @@ function trackPlayer(x){
   if(embed)return '<iframe title="Listen to '+esc(x.title)+' on Spotify" src="'+esc(embed)+'" width="100%" height="152" style="border:0" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe><a class="btn gold" style="width:100%;margin-top:8px" target="_blank" rel="noopener noreferrer" href="'+esc(spotifyLink(raw))+'">Open in Spotify ↗</a>';
   if(/spotify\.link|spotify\.com/i.test(raw))return '<a class="btn gold" style="width:100%;margin-top:8px" target="_blank" rel="noopener noreferrer" href="'+esc(spotifyLink(raw))+'">Listen on Spotify ↗</a>';
   if(safe){
-    const url=new URL(safe),path=url.pathname.toLowerCase(),storage=path.includes('/storage/v1/object/'),direct=storage||/\.(mp3|m4a|wav|aac|ogg|flac|opus|webm)$/i.test(path);
+    const url=new URL(safe),path=url.pathname.toLowerCase(),storage=path.includes('/storage/v1/object/'),direct=storage||/\.(mp3|mp4|m4a|wav|aac|ogg|flac|opus|webm)$/i.test(path);
     if(direct){
       const download=new URL(safe);
       if(storage)download.searchParams.set('download',(x.title||'high-tech-track').replace(/[^a-zA-Z0-9 _-]/g,''));
