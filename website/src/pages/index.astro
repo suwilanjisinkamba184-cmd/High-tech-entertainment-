@@ -1,25 +1,30 @@
 ---
 import SiteLayout from '../layouts/SiteLayout.astro';
 import PublicCatalogue from '../components/PublicCatalogue';
+import PublicBookingForm from '../components/PublicBookingForm';
+import PublicFeedbackForm from '../components/PublicFeedbackForm';
 const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const organizationSchema = { '@context':'https://schema.org', '@type':'Organization', name:'High-Tech Entertainment', alternateName:'Hi-Tech Studio', description:'Music production, recording, mixing, mastering, artist development, digital promotion and software development in Kitwe, Zambia.', founder:{ '@type':'Person', name:'L Junior ZM', alternateName:'L Junior Zambia' }, address:{ '@type':'PostalAddress', addressLocality:'Kitwe', addressCountry:'ZM' }, url:'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/', logo:'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/high-tech-logo.svg', sameAs:['https://open.spotify.com/artist/15MbaDwHuXAtvQCyscJA0H'] };
 ---
 <SiteLayout>
+  <a class="skip-link" href="#top">Skip to main content</a>
+  <script type="application/ld+json" set:html={JSON.stringify(organizationSchema)} />
   <header class="site-header">
     <a class="brand" href="#top" aria-label="High-Tech Entertainment home"><img src={`${base}high-tech-logo.svg`} alt="" /><span>HIGH-TECH <small>ENTERTAINMENT</small></span></a>
     <nav class="main-nav" aria-label="Main navigation">
-      <a href="#music">Music</a><a href="#artists">Artists</a><a href="#releases">Releases</a><a href="#videos">Videos</a><a href="#services">Studio</a>
+      <a href="#music">Music</a><a href="#artists">Artists</a><a href="#releases">Releases</a><a href="#videos">Videos</a><a href="#services">Studio</a><a href="#about">About</a><a href="#feedback">Feedback</a><a href="#booking">Book</a>
     </nav>
     <div class="header-actions"><a class="account-link" href={`${base}account/`}>My account</a><a class="button button-gold header-cta" href="#music">Explore sound</a></div>
     <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu">Menu</button>
   </header>
   <nav id="mobile-menu" class="mobile-menu" aria-label="Mobile navigation">
-    <a href="#music">Music</a><a href="#artists">Artists</a><a href="#releases">Releases</a><a href="#videos">Videos</a><a href="#services">Studio & booking</a><a href={`${base}account/`}>My account</a>
+    <a href="#music">Music</a><a href="#artists">Artists</a><a href="#releases">Releases</a><a href="#videos">Videos</a><a href="#services">Studio</a><a href="#about">About HTE</a><a href="#feedback">Feedback survey</a><a href="#booking">Book a service</a><a href={`${base}account/`}>My account</a>
   </nav>
   <main id="top">
     <section class="hero">
       <div class="hero-copy"><span class="eyebrow"><span class="live-dot"></span> INDEPENDENT SOUND. GLOBAL AMBITION.</span>
         <h1>Made to move.<br /><em>Built to last.</em></h1>
-        <p>Discover the voices, records and creative energy shaping the next wave of African sound. This is High-Tech Entertainment.</p>
+        <p>Based in Kitwe, Zambia, High-Tech Entertainment brings together music, creative services and technology for artists and ambitious projects.</p>
         <div class="hero-actions"><a class="button button-gold" href="#music">Discover the music <span>↗</span></a><a class="button button-outline" href="#services">Work with our studio</a></div>
         <div class="hero-meta"><span>EST. 2020</span><span class="meta-line"></span><span>MUSIC · PRODUCTION · CULTURE</span></div>
       </div>
@@ -28,19 +33,30 @@ const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL :
         <img src={`${base}high-tech-logo.svg`} alt="High-Tech Entertainment crest" />
         <div class="visual-caption"><span>HTE / 031</span><span>QUALITY SOUND. GLOBAL VIBES.</span></div>
       </div>
-      <div class="hero-bottom"><span>SCROLL TO EXPLORE</span><span class="scroll-line"></span><span>01 / 05</span></div>
+      <div class="hero-bottom"><span>SCROLL TO EXPLORE</span><span class="scroll-line"></span><span>01 / 08</span></div>
     </section>
     <section class="intro-strip"><span>THE HOME OF</span><strong>NEW SOUND</strong><i>✳</i><strong>NEW VOICES</strong><i>✳</i><strong>NEW POSSIBILITIES</strong></section>
     <PublicCatalogue client:load />
     <section class="studio-section" id="services">
       <div class="studio-image"><div class="studio-mark">HT<span>E</span></div><span class="studio-image-caption">FROM THE FIRST IDEA TO THE FINAL MASTER.</span></div>
       <div class="studio-copy"><span class="eyebrow">THE HTE CREATIVE STUDIO</span><h2>Your sound.<br /><em>Our craft.</em></h2><p>From original beats to recording, mixing, mastering and artist promotion, we help ambitious ideas become finished records.</p>
-        <div class="service-list"><div><span>01</span><strong>Beat production</strong><small>Original instrumentals built around your vision.</small></div><div><span>02</span><strong>Recording & engineering</strong><small>Studio sessions and vocal production.</small></div><div><span>03</span><strong>Mixing & mastering</strong><small>Clarity, impact and release-ready sound.</small></div><div><span>04</span><strong>Artist development</strong><small>Creative direction, content and promotion.</small></div></div>
-        <a class="button button-gold" href={`${base}account/`}>Sign in to get started <span>↗</span></a>
+        <div class="service-list"><div><span>01</span><strong>Beat production</strong><small>Original instrumentals built around your vision.</small></div><div><span>02</span><strong>Recording &amp; engineering</strong><small>Studio sessions and vocal production.</small></div><div><span>03</span><strong>Mixing &amp; mastering</strong><small>Clarity, impact and release-ready sound.</small></div><div><span>04</span><strong>Artist development</strong><small>Creative direction, content and promotion.</small></div><div><span>05</span><strong>Spotify &amp; digital promotion</strong><small>Campaign support for artists and releases.</small></div><div><span>06</span><strong>Software development</strong><small>Digital products and technology for creative businesses.</small></div><div><span>07</span><strong>Video &amp; content production</strong><small>Visual storytelling and digital content for releases and brands.</small></div></div>
+        <div class="studio-actions"><a class="button button-gold" href="#booking">Book a service <span>↗</span></a><a class="button button-outline" href={`${base}account/`}>Member account</a></div>
       </div>
     </section>
+    <section class="about-section" id="about">
+      <div class="about-heading"><div><span class="eyebrow">THE PEOPLE & PURPOSE</span><h2>Built on sound.<br /><em>Driven by ideas.</em></h2></div><p>Founded in 2020 in Kitwe, Zambia, High-Tech Entertainment grew from Hi-Tech Studio into an independent creative company bringing music, media and technology together. Led by producer and CEO L Junior ZM (L Junior Zambia), HTE works with artists and businesses from the first idea to the final release.</p></div>
+      <p class="genre-line"><span>OUR SOUND</span> Afrobeat · Dancehall · Drill · Choir</p>
+      <p class="vocal-project-note"><span>CHOIR &amp; VOCAL IDENTITY</span> The Golden Vocals</p>
+      <div class="team-grid"><article class="team-card"><span>FOUNDER &amp; CEO</span><h3>L Junior ZM</h3><p>Producer and creative lead.</p></article><article class="team-card"><span>MANAGEMENT</span><h3>Mr Michael Clayton</h3><p>Management and operations.</p></article><article class="team-card"><span>DJ</span><h3>DJ Maneuvera</h3><p>DJ and music contributor.</p></article><article class="team-card"><span>CREATIVE COLLABORATOR</span><h3>OJ Junior</h3><p>Part of the wider HTE creative network.</p></article></div>
+    </section>
     <section class="app-promo" id="download-app"><div><span class="eyebrow">THE MUSIC GOES WITH YOU</span><h2>HTE in your<br /><em>pocket.</em></h2><p>Take the official High-Tech Entertainment Android experience wherever you go. Open the official GitHub release page to get the latest published APK and installation details.</p><a class="button button-gold" href="https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest" target="_blank" rel="noreferrer">Get official Android app <span>↓</span></a></div><div class="phone-art"><div class="phone-frame"><div class="phone-speaker"></div><img src={`${base}high-tech-logo.svg`} alt="HTE app icon" /><strong>HIGH-TECH</strong><small>ENTERTAINMENT</small><span>MUSIC. BEATS. PRODUCTION.</span></div><span class="phone-orbit"></span></div></section>
-    <section class="booking-strip"><div><span class="eyebrow">HAVE A PROJECT IN MIND?</span><h2>Let's make something <em>that matters.</em></h2></div><a class="button button-gold" href={`${base}account/`}>Connect with HTE <span>↗</span></a></section>
+    <section class="booking-strip"><div><span class="eyebrow">HAVE A PROJECT IN MIND?</span><h2>Let's make something <em>that matters.</em></h2></div><div class="booking-strip-actions"><a class="button button-gold" href="#booking">Book a service <span>↗</span></a><a class="button button-outline" href={`${base}account/`}>Member account</a></div></section>
+    <section class="public-booking-section" id="booking"><div class="public-booking-intro"><span class="eyebrow">START A PROJECT</span><h2>Tell us what you <em>have in mind.</em></h2><p>Share a few details and the HTE team will get back to you about the service, next steps and availability.</p><p class="member-note">Already a member? <a href={`${base}account/`}>Sign in to manage your bookings and downloads.</a></p></div><PublicBookingForm client:load /></section>
+    <section class="public-feedback-section" id="feedback">
+      <div class="public-feedback-intro"><span class="eyebrow">LISTENER SURVEY</span><h2>Help shape the <em>next release.</em></h2><p>Tell us what you think about the music catalogue, videos, booking experience and High-Tech Entertainment app. Your feedback helps us improve what we make next.</p></div>
+      <PublicFeedbackForm client:load />
+    </section>
   </main>
   <footer class="site-footer"><a class="brand" href="#top"><img src={`${base}high-tech-logo.svg`} alt="" /><span>HIGH-TECH <small>ENTERTAINMENT</small></span></a><p>Music. Beats. Production. Beyond.</p><div class="footer-links"><a href={`${base}account/`}>Account</a><a href={`${base}privacy-policy.html`}>Privacy</a><a href={`${base}terms-of-service.html`}>Terms</a><a href="mailto:suwilanjisinkamba184@gmail.com">Contact</a></div><small>© {new Date().getFullYear()} High-Tech Entertainment. All rights reserved.</small></footer>
   <script is:inline define:vars={{base}}>
@@ -49,5 +65,4 @@ const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL :
     menu?.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{menu.classList.remove('is-open');toggle?.setAttribute('aria-expanded','false');toggle.textContent='Menu';}));
     document.addEventListener('keydown',e=>{if(e.key==='Escape'){menu?.classList.remove('is-open');toggle?.setAttribute('aria-expanded','false');toggle.textContent='Menu';}});
   </script>
-  <script is:inline src={`${base}supabase-config.js`}></script>
 </SiteLayout>

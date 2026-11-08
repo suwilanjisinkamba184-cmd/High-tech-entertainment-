@@ -15,5 +15,29 @@ The connected Supabase project already has the `artists`, `releases`, `tracks`, 
 ## Security
 Never put a Supabase `service_role` or `sb_secret_` key in browser files. The `sb_publishable_` key in `public/supabase-config.js` is intended for browser use; row-level security policies are essential. Do not share passwords or secret keys in chat.
 
+
+## Booking workflows
+
+The live project now has two separate booking paths:
+
+- **New guest booking:** the redesigned Astro homepage calls the `public-booking-request` Edge Function. JWT verification is disabled intentionally because guests do not sign in. The function validates fields, checks the website-origin allowlist, uses a honeypot, applies a per-IP limit of 5 requests per 15 minutes, writes the request server-side, and sends the email notification server-side.
+- **Member booking:** signed-in members use the `submit_booking_request` RPC. It binds the booking to `auth.uid()`. The `booking-notification` Edge Function validates the member JWT internally and checks that the booking belongs to that user before sending an email.
+- **Legacy guest compatibility:** the older static homepage still calls `submit_booking_request` followed by `booking-notification`. The RPC is a narrowly scoped, insert-only `SECURITY DEFINER` function with an empty search path: guests receive `user_id = NULL`, members are bound to `auth.uid()`, and callers cannot read messages or supply another user's ID. The notification function accepts guest rows only when `user_id` is NULL, the request is recent, the origin is an allowed website, and the IP rate limit passes. This compatibility path prevents the current live homepage from losing guest bookings before the redesign is merged.
+- **Public contact:** the contact form remains separate and can create a contact message with no user ID. Anonymous users cannot read the contact inbox or invoke admin RPCs.
+
+The service-role key and Resend key must remain in Supabase Edge Function secrets. Never add them to `supabase-config.js`, website source, or GitHub.
+
+
+### Reviewed Supabase Advisor findings
+
+- The duplicate permissive INSERT policies on `contact_messages` were consolidated into one policy. Anonymous inserts are limited to rows with `user_id IS NULL`; authenticated booking rows must use the caller's own `auth.uid()` and a booking subject.
+- The public Founder Studio RPCs (`hte_admin_get_analytics` and `hte_admin_list_users`) are now `SECURITY INVOKER` wrappers. Their `SECURITY DEFINER` implementations live in the non-exposed `private` schema and enforce the owner/admin role guard. The public `submit_booking_request` RPC is also an invoker wrapper; its private helper is insert-only, uses an empty search path, validates booking fields, derives `user_id` from `auth.uid()`, and returns only the newly created ID. The private schema is not exposed through the Data API. These changes removed the public SECURITY DEFINER warnings from Supabase Advisor.
+- The only remaining Supabase Security Advisor warning is disabled leaked-password protection. Enable it in **Authentication → Settings → Password Security** if available for the project plan.
+- Unused-index notices are informational. Keep the indexes until production query usage shows that they are genuinely unnecessary.
+
+## Current deployment state
+
+The booking database migration and both Edge Functions have been applied to the linked Supabase project. The website redesign is still under pull request review and has not been merged or deployed to the live website. Complete the GitHub Actions checks and test guest booking, member booking, contact submission, catalogue playback, downloads, and Founder Studio on the Pages preview before merging.
+
 ## Launch status
-This archive contains the integration and setup scripts, but the database changes must be run in your Supabase project and the deployed site must be tested by an account with project access. A successful SQL Editor message alone does not prove that every frontend workflow works.
+The booking migration and Edge Functions are already applied to the linked Supabase project. The website PR still requires final automated checks and real-device/browser verification; a successful build alone does not prove every frontend workflow works.
