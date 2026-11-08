@@ -1,5 +1,6 @@
 (()=>{'use strict';const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],C=window.HTE_SUPABASE_CONFIG||{},UID='b268df9e-eff5-43b9-a38f-869b33add38b',EMAIL='suwilanjisinkamba184@gmail.com';
-document.querySelectorAll('form').forEach(form=>{if(!form.dataset.startedAt)form.dataset.startedAt=String(Date.now())});const db=window.supabase&&C.url&&C.publishableKey?window.supabase.createClient(C.url,C.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}}):null;let session=null,profile=null,avatarDisplay='',tracks=[],artists=[],releases=[];const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),admin=u=>!!u&&u.id===UID&&String(u.email||'').toLowerCase()===EMAIL,siteBasePath=()=>location.pathname.startsWith('/High-tech-entertainment-/')?'/High-tech-entertainment-/':'/',notice=(el,s,type='')=>{if(el){el.textContent=s;el.className='status '+type}},toast=s=>{let e=$('#toast');if(e){e.textContent=s;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2500)}},initials=s=>String(s||'HT').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase()||'HT',image=(u,n)=>u?'<img src="'+esc(u)+'" alt="">':esc(initials(n)),cover=(u,n)=>u?'<img src="'+esc(u)+'" alt="'+esc(n)+' cover" loading="lazy">':esc(initials(n));async function rows(t,cols='*',pub=true){let q=db.from(t).select(cols);if(pub)q=q.eq('is_published',true);let {data,error}=await q.order('created_at',{ascending:false}).limit(100);if(error)throw error;return data||[]}function spotifyEmbed(raw){
+document.querySelectorAll('form').forEach(form=>{if(!form.dataset.startedAt)form.dataset.startedAt=String(Date.now())});const db=window.supabase&&C.url&&C.publishableKey?window.supabase.createClient(C.url,C.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}}):null;let session=null,profile=null,avatarDisplay='',tracks=[],artists=[],releases=[];const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),admin=u=>!!u&&u.id===UID&&String(u.email||'').toLowerCase()===EMAIL,siteBasePath=()=>location.pathname.startsWith('/High-tech-entertainment-/')?'/High-tech-entertainment-/':'/',notice=(el,s,type='')=>{if(el){el.textContent=s;el.className='status '+type}},toast=s=>{let e=$('#toast');if(e){e.textContent=s;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2500)}},initials=s=>String(s||'HT').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase()||'HT',image=(u,n)=>u?'<img src="'+esc(u)+'" alt="">':esc(initials(n)),cover=(u,n)=>{const safe=safeHttpsUrl(u);return safe?'<img src="'+esc(safe)+'" alt="'+esc(n)+' cover" loading="lazy">':esc(initials(n))};function safeHttpsUrl(value){try{const url=new URL(String(value||''));return url.protocol==='https:'&&!url.username&&!url.password?url.href:''}catch{return ''}}
+async function rows(t,cols='*',pub=true){let q=db.from(t).select(cols);if(pub)q=q.eq('is_published',true);let {data,error}=await q.order('created_at',{ascending:false}).limit(100);if(error)throw error;return data||[]}function spotifyEmbed(raw){
   const value=String(raw||'').trim();
   let type='',id='';
   if(value.startsWith('spotify:')){
@@ -22,10 +23,18 @@ function spotifyLink(raw){
   return /^https:\/\//i.test(value)?value:'#';
 }
 function trackPlayer(x){
-  const raw=String(x.audio_url||'').trim(),embed=spotifyEmbed(raw);
+  const raw=String(x.audio_url||'').trim(),embed=spotifyEmbed(raw),safe=safeHttpsUrl(raw);
   if(embed)return '<iframe title="Listen to '+esc(x.title)+' on Spotify" src="'+esc(embed)+'" width="100%" height="152" style="border:0" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe><a class="btn gold" style="width:100%;margin-top:8px" target="_blank" rel="noopener noreferrer" href="'+esc(spotifyLink(raw))+'">Open in Spotify ↗</a>';
   if(/spotify\.link|spotify\.com/i.test(raw))return '<a class="btn gold" style="width:100%;margin-top:8px" target="_blank" rel="noopener noreferrer" href="'+esc(spotifyLink(raw))+'">Listen on Spotify ↗</a>';
-  if(/^https:\/\//i.test(raw))return '<audio controls preload="none" src="'+esc(raw)+'" aria-label="Play '+esc(x.title)+'"></audio><a class="btn gold" style="width:100%;margin-top:8px" href="'+esc(raw)+(raw.includes('?')?'&':'?')+'download='+encodeURIComponent((x.title||'high-tech-track').replace(/[^a-zA-Z0-9 _-]/g,''))+'" download>↓ Download track</a>';
+  if(safe){
+    const url=new URL(safe),path=url.pathname.toLowerCase(),storage=path.includes('/storage/v1/object/'),direct=storage||/\.(mp3|m4a|wav|aac|ogg|flac|opus|webm)$/i.test(path);
+    if(direct){
+      const download=new URL(safe);
+      if(storage)download.searchParams.set('download',(x.title||'high-tech-track').replace(/[^a-zA-Z0-9 _-]/g,''));
+      return '<audio controls preload="none" src="'+esc(safe)+'" aria-label="Play '+esc(x.title)+'"></audio><a class="btn gold" style="width:100%;margin-top:8px" href="'+esc(download.href)+'" download>↓ Download track</a>';
+    }
+    return '<a class="btn gold" style="width:100%;margin-top:8px" target="_blank" rel="noopener noreferrer" href="'+esc(safe)+'">Open audio ↗</a>';
+  }
   return '<p class="muted small">Audio is being prepared.</p>';
 }
 function releasePlayer(x){
