@@ -297,3 +297,8 @@
 .admin-footer{border-top-color:rgba(220,188,119,.16)!important;color:#9c8b68!important}
 @media(max-width:900px){.admin-workspace{grid-template-columns:1fr}.admin-sidebar{position:sticky;top:78px;z-index:30;height:auto;min-height:0;padding:10px;display:flex;flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid rgba(220,188,119,.16)}.admin-side-heading,.admin-sidebar-bottom{display:none}.admin-nav-item{width:auto;min-width:max-content;min-height:42px;padding:0 12px}.admin-nav-item b{display:none}.admin-main{padding-top:24px}}
 @media(max-width:560px){.admin-main-top{align-items:flex-start;flex-direction:column}.admin-main-actions{width:100%;justify-content:space-between}.admin-welcome-banner{min-height:0}.admin-banner-art{display:none}.admin-topbar-inner{width:calc(100% - 24px)}.admin-top-actions .admin-live{display:none}}
+
+/* HTE_ORIGINAL_BRAND_ART — Founder Studio sign-in uses the shared brand artwork. */
+.admin-login-visual{background-image:linear-gradient(90deg,#080b12ed 0%,#080b12d9 48%,#080b1290 100%),url('../images/brand/high-tech-hero.svg');background-size:cover;background-position:62% center;border:1px solid #d7b66c33;border-radius:18px}
+.admin-login-orbit{border-color:#d7b66c50;box-shadow:0 0 70px #d7b66c12,inset 0 0 60px #e5c27612}
+.admin-login-orbit:before,.admin-login-orbit:after{border-color:#e5c27666}
