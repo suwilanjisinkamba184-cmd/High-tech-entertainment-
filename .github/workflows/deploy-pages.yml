@@ -48,6 +48,8 @@ jobs:
           grep -q 'auth.updateUser' assets/app.js
           grep -q '@2.119.0' account/index.html
           grep -q 'DEFAULT_COVER' website/src/components/PublicCatalogue.tsx
+          grep -q 'high-tech-hero.svg' assets/app.js
+          grep -Fq '/\.(mp4' website/src/components/PublicCatalogue.tsx
           grep -q 'AudioPlayer' website/src/components/PublicCatalogue.tsx
           grep -q 'hte-video-controls' website/src/components/PublicCatalogue.tsx
           grep -q 'id="booking-form"' account/index.html
