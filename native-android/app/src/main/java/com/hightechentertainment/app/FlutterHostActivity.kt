@@ -74,13 +74,15 @@ class FlutterHostActivity : FlutterActivity() {
     }
 
     override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        val restoreJob = sessionRestoreJob
-        lifecycleScope.launch {
-            restoreJob?.join()
+        // Publish the callback job before the Activity resumes so Flutter's
+        // getSession request waits for the PKCE exchange as well as restoration.
+        val previousAuthJob = sessionRestoreJob
+        sessionRestoreJob = lifecycleScope.launch {
+            previousAuthJob?.join()
             handleOAuthCallback(intent)
         }
+        super.onNewIntent(intent)
+        setIntent(intent)
     }
 
     private fun startGoogleOAuth(): Boolean {
