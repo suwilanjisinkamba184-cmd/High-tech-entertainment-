@@ -72,7 +72,7 @@ export default function PublicFeedbackForm() {
         throw new Error('We could not save your feedback. Please try again in a few minutes.');
       }
 
-      setStatus({ kind: 'success', message: 'Thank you. Your feedback has been sent to the High-Tech Entertainment team.' });
+      setStatus({ kind: 'success', message: 'Thank you. Your feedback has been recorded for the High-Tech Entertainment team.' });
       form.reset();
       form.dataset.startedAt = String(Date.now());
     } catch (error) {
