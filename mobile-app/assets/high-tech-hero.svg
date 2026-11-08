@@ -1,62 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
-<title id="title">High-Tech Entertainment — Quality Sound, Global Vibes</title>
-<desc id="desc">Original cinematic black, metallic gold and silver sound artwork with a headphone-wearing performer silhouette, studio microphone, luminous audio rings and equalizer bars.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760">
 <defs>
- <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#08090b"/><stop offset=".52" stop-color="#15130f"/><stop offset="1" stop-color="#050607"/></linearGradient>
- <radialGradient id="halo"><stop stop-color="#d7a84c" stop-opacity=".34"/><stop offset=".5" stop-color="#a87527" stop-opacity=".12"/><stop offset="1" stop-color="#08090b" stop-opacity="0"/></radialGradient>
- <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff1bd"/><stop offset=".28" stop-color="#e9c16c"/><stop offset=".62" stop-color="#98631d"/><stop offset="1" stop-color="#f4d98f"/></linearGradient>
- <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6f5f0"/><stop offset=".5" stop-color="#8d969d"/><stop offset="1" stop-color="#30383d"/></linearGradient>
- <linearGradient id="silhouette" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#34383a"/><stop offset=".48" stop-color="#111518"/><stop offset="1" stop-color="#050607"/></linearGradient>
- <filter id="glow"><feGaussianBlur stdDeviation="12" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
- <pattern id="grid" width="56" height="56" patternUnits="userSpaceOnUse"><path d="M56 0H0V56" fill="none" stroke="#d7b66c" stroke-opacity=".08" stroke-width="1"/></pattern>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#08090b"/><stop offset=".55" stop-color="#17140f"/><stop offset="1" stop-color="#06080a"/></linearGradient>
+ <radialGradient id="halo"><stop stop-color="#d7a84c" stop-opacity=".35"/><stop offset="1" stop-color="#08090b" stop-opacity="0"/></radialGradient>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff0b8"/><stop offset=".45" stop-color="#d9ae58"/><stop offset="1" stop-color="#87571b"/></linearGradient>
+ <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f3f3ee"/><stop offset="1" stop-color="#66717a"/></linearGradient>
+ <linearGradient id="figure" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#353a3d"/><stop offset="1" stop-color="#080b0d"/></linearGradient>
 </defs>
-<rect width="1600" height="1000" fill="url(#bg)"/>
-<rect width="1600" height="1000" fill="url(#grid)"/>
-<ellipse cx="1050" cy="455" rx="570" ry="520" fill="url(#halo)"/>
-<g fill="none" stroke="url(#gold)" opacity=".72" filter="url(#glow)">
- <ellipse cx="1080" cy="455" rx="440" ry="360" stroke-width="3"/>
- <ellipse cx="1080" cy="455" rx="380" ry="310" stroke-width="2" opacity=".7"/>
- <ellipse cx="1080" cy="455" rx="320" ry="260" stroke-width="1.5" opacity=".5"/>
- <path d="M670 455c130-220 270-310 410-310s280 90 410 310M670 455c130 220 270 310 410 310s280-90 410-310" stroke-width="2" opacity=".42"/>
+<rect width="1200" height="760" fill="url(#bg)"/>
+<ellipse cx="820" cy="350" rx="440" ry="390" fill="url(#halo)"/>
+<g fill="none" stroke="url(#gold)">
+ <ellipse cx="820" cy="350" rx="360" ry="280" stroke-width="3" opacity=".72"/>
+ <ellipse cx="820" cy="350" rx="300" ry="230" stroke-width="2" opacity=".52"/>
+ <ellipse cx="820" cy="350" rx="240" ry="180" stroke-width="1.5" opacity=".36"/>
+ <path d="M500 350c110-180 210-250 320-250s210 70 320 250M500 350c110 180 210 250 320 250s210-70 320-250" stroke-width="2" opacity=".4"/>
 </g>
-<g opacity=".95" stroke="url(#gold)" stroke-linecap="round" filter="url(#glow)">
- <path d="M760 850V720 M790 850V660 M820 850V700 M850 850V590 M880 850V640 M910 850V520 M940 850V610 M970 850V560 M1000 850V470 M1030 850V545 M1060 850V430 M1090 850V500 M1120 850V390 M1150 850V480 M1180 850V420 M1210 850V540 M1240 850V460 M1270 850V590 M1300 850V520 M1330 850V640 M1360 850V570 M1390 850V700" stroke-width="7"/>
+<g stroke="url(#gold)" stroke-width="6" stroke-linecap="round" opacity=".8">
+ <path d="M520 710V600M550 710V540M580 710V620M610 710V490M640 710V570M670 710V450M700 710V530M730 710V420M760 710V500M790 710V390M820 710V470M850 710V430M880 710V510M910 710V460M940 710V560M970 710V500M1000 710V610M1030 710V550M1060 710V640"/>
 </g>
-<!-- Performer silhouette -->
-<g>
- <path d="M900 1000c18-150 65-240 155-290 35-20 76-33 124-38 64-7 132 13 183 52 74 56 111 143 132 276z" fill="url(#silhouette)" stroke="#8d672d" stroke-opacity=".55" stroke-width="3"/>
- <path d="M1015 520c-22-64-12-155 23-220 38-71 111-109 190-95 78 14 128 79 131 163 3 87-31 169-92 210-53 35-129 37-188 4-28-16-50-36-64-62z" fill="url(#silhouette)" stroke="#b58a46" stroke-width="3"/>
- <path d="M1025 320c-3-104 58-181 159-186 104-6 171 69 173 173-40-37-79-50-125-49-70 2-122 40-207 62z" fill="#07090b" stroke="#9c773e" stroke-width="4"/>
- <path d="M1015 337c-28-3-49 25-43 65 5 38 28 69 53 67l7-42zM1352 337c28-3 49 25 43 65-5 38-28 69-53 67l-7-42z" fill="#101416" stroke="url(#gold)" stroke-width="10"/>
- <path d="M1027 315c-14-130 63-202 158-202 100 0 169 76 162 205" fill="none" stroke="url(#silver)" stroke-width="28" stroke-linecap="round"/>
- <path d="M1027 315c-14-130 63-202 158-202 100 0 169 76 162 205" fill="none" stroke="url(#gold)" stroke-width="5" stroke-linecap="round"/>
- <path d="M1074 365c26-14 52-17 79-8M1210 357c26-9 51-6 75 8" stroke="#d8b76f" stroke-width="9" stroke-linecap="round"/>
- <path d="M1145 410c30 17 61 17 91 0" fill="none" stroke="#a77a38" stroke-width="7" stroke-linecap="round"/>
- <path d="M1147 451c20 9 42 9 62 0" fill="none" stroke="#5f4a2d" stroke-width="5" stroke-linecap="round"/>
- <path d="M1050 532c-2 67 39 111 91 131 56 21 126 6 170-39l-18-81c-72 43-166 43-243-11z" fill="#0a0d0f" stroke="#7d5d2e" stroke-width="2"/>
+<path d="M620 760c20-120 65-195 145-235 42-21 91-31 143-25 94 10 157 81 190 260z" fill="url(#figure)" stroke="#8c682f" stroke-width="2"/>
+<path d="M750 430c-25-70-13-175 32-238 44-62 118-84 184-62 70 24 104 89 98 169-6 82-47 145-109 168-75 27-168 6-205-37z" fill="url(#figure)" stroke="#a77b3a" stroke-width="3"/>
+<path d="M752 270c10-105 76-164 168-157 85 6 142 73 143 164-44-38-85-51-130-48-67 4-119 38-181 41z" fill="#080a0c" stroke="#9c773e" stroke-width="4"/>
+<path d="M746 285c-28 0-45 25-39 62 6 34 26 57 49 53l5-35zM1056 285c28 0 45 25 39 62-6 34-26 57-49 53l-5-35z" fill="#101416" stroke="url(#gold)" stroke-width="9"/>
+<path d="M758 268c-8-116 56-179 159-179 91 0 153 67 151 181" fill="none" stroke="url(#silver)" stroke-width="25" stroke-linecap="round"/>
+<path d="M758 268c-8-116 56-179 159-179 91 0 153 67 151 181" fill="none" stroke="url(#gold)" stroke-width="4" stroke-linecap="round"/>
+<g transform="translate(1110 265)">
+ <path d="M0 0v270" stroke="url(#silver)" stroke-width="12" stroke-linecap="round"/>
+ <rect x="-28" y="-70" width="56" height="128" rx="26" fill="#11171a" stroke="url(#gold)" stroke-width="5"/>
+ <path d="M-19-38h38M-22-16h44M-22 6h44M-18 28h36" stroke="#aeb5b7" stroke-width="3"/>
+ <path d="M-75 270H75M-45 270l-22 65M45 270l22 65" fill="none" stroke="url(#gold)" stroke-width="6" stroke-linecap="round"/>
 </g>
-<!-- Studio microphone -->
-<g transform="translate(1440 355)">
- <path d="M0 0v290" stroke="url(#silver)" stroke-width="15" stroke-linecap="round"/>
- <rect x="-34" y="-84" width="68" height="155" rx="32" fill="#11171a" stroke="url(#gold)" stroke-width="5"/>
- <path d="M-24-48h48M-28-25h56M-28-2h56M-22 21h44" stroke="#aeb5b7" stroke-width="3" opacity=".75"/>
- <path d="M-90 290H90M-55 290l-28 75M55 290l28 75" fill="none" stroke="url(#gold)" stroke-width="7" stroke-linecap="round"/>
-</g>
-<!-- Brand lockup -->
-<g transform="translate(95 125)">
- <circle cx="78" cy="78" r="72" fill="#0a0b0c" stroke="url(#gold)" stroke-width="4"/>
- <circle cx="78" cy="78" r="57" fill="none" stroke="#d7b66c" stroke-opacity=".45" stroke-width="2"/>
+<g transform="translate(95 100)">
+ <circle cx="78" cy="78" r="70" fill="#0a0b0c" stroke="url(#gold)" stroke-width="4"/>
+ <circle cx="78" cy="78" r="55" fill="none" stroke="#d7b66c" stroke-opacity=".45" stroke-width="2"/>
  <path d="M34 105V49h19l25 30 25-30h19v56h-21V80L78 106 55 80v25z" fill="url(#gold)"/>
- <path d="M58 38h40" stroke="url(#silver)" stroke-width="4" stroke-linecap="round"/>
- <text x="0" y="205" fill="#f3f0e8" font-family="Arial,sans-serif" font-size="45" font-weight="900" letter-spacing="3">HIGH-TECH</text>
- <text x="0" y="250" fill="url(#gold)" font-family="Arial,sans-serif" font-size="35" font-weight="800" letter-spacing="7">ENTERTAINMENT</text>
- <text x="0" y="305" fill="#c8c5bd" font-family="Arial,sans-serif" font-size="21" letter-spacing="2">QUALITY SOUND, GLOBAL VIBES</text>
- <path d="M0 340H420" stroke="url(#gold)" stroke-width="2" opacity=".7"/>
- <text x="0" y="395" fill="#e6c77d" font-family="Arial,sans-serif" font-size="19" font-weight="700" letter-spacing="3">MUSIC · BEATS · PRODUCTION · BEYOND</text>
 </g>
-<g transform="translate(95 785)" fill="#e5c77e" font-family="Arial,sans-serif" font-size="17" letter-spacing="3">
- <text y="0">STREAM</text><text x="140" y="0">DISCOVER</text><text x="315" y="0">CREATE</text><text x="450" y="0">CONNECT</text>
- <path d="M0 28H560" stroke="#d7b66c" stroke-opacity=".55"/>
-</g>
-<rect x="2" y="2" width="1596" height="996" fill="none" stroke="#d7b66c" stroke-opacity=".35" stroke-width="3"/>
+<path d="M95 700H410" stroke="url(#gold)" stroke-width="2" opacity=".55"/>
+<rect x="2" y="2" width="1196" height="756" fill="none" stroke="#d7b66c" stroke-opacity=".3" stroke-width="3"/>
 </svg>
