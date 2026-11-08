@@ -807,8 +807,8 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
   Future<void> _togglePlayback() async {
     final method = _isPlaying ? 'pausePlayback' : 'resumePlayback';
     try {
-      await _appChannel.invokeMapMethod<String, dynamic>(method);
-      if (mounted) setState(() => _isPlaying = !_isPlaying);
+      final state = await _appChannel.invokeMapMethod<String, dynamic>(method);
+      if (mounted) setState(() => _isPlaying = state?['playing'] == true);
     } on PlatformException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -909,6 +909,36 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
         SnackBar(content: Text(error.message ?? 'Could not update artist follow.')));
     }
   }
+
+  Future<void> _skipTrack(String method) async {
+    try {
+      final state = await _appChannel.invokeMapMethod<String, dynamic>(method);
+      final mediaId = state?['mediaId']?.toString();
+      Map<String, dynamic>? selectedTrack;
+      for (final track in _tracks) {
+        if (track['id']?.toString() == mediaId) {
+          selectedTrack = track;
+          break;
+        }
+      }
+      if (mounted) {
+        setState(() {
+          if (selectedTrack != null) _nowPlayingTrack = selectedTrack;
+          _isPlaying = state?['playing'] == true;
+        });
+      }
+    } on PlatformException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message ?? 'Playback could not be changed.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _skipNext() => _skipTrack('nextTrack');
+
+  Future<void> _skipPrevious() => _skipTrack('previousTrack');
 
   Future<void> _signOut() async {
     try {
@@ -1016,9 +1046,8 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
               track: _nowPlayingTrack!,
               playing: _isPlaying,
               onToggle: _togglePlayback,
-              onNext: () async {
-                await _appChannel.invokeMethod<void>('nextTrack');
-              },
+              onPrevious: _skipPrevious,
+              onNext: _skipNext,
             ),
           NavigationBar(
         backgroundColor: _surface,
@@ -1848,12 +1877,14 @@ class _NowPlayingBar extends StatelessWidget {
     required this.track,
     required this.playing,
     required this.onToggle,
+    required this.onPrevious,
     required this.onNext,
   });
 
   final Map<String, dynamic> track;
   final bool playing;
   final Future<void> Function() onToggle;
+  final Future<void> Function() onPrevious;
   final Future<void> Function() onNext;
 
   @override
@@ -1878,6 +1909,11 @@ class _NowPlayingBar extends StatelessWidget {
                     style: const TextStyle(color: Colors.white60, fontSize: 11)),
               ],
             ),
+          ),
+          IconButton(
+            tooltip: 'Previous track',
+            onPressed: onPrevious,
+            icon: const Icon(Icons.skip_previous_rounded, color: _gold),
           ),
           IconButton(
             tooltip: playing ? 'Pause' : 'Resume',
