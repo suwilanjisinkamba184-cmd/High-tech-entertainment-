@@ -45,9 +45,57 @@ function spotifyEmbed(value?:string|null) {
   } catch { return ''; }
 }
 
+const DEFAULT_COVER = `${import.meta.env.BASE_URL}images/brand/high-tech-hero.svg`;
+
 function Cover({src,alt}:{src?:string|null;alt:string}) {
   const safe = safeHttps(src);
-  return <div className="cover-art">{safe ? <img src={safe} alt={alt} loading="lazy" decoding="async" /> : <span aria-hidden="true">HT</span>}</div>;
+  const [failed,setFailed] = useState(false);
+  const imageSrc = safe && !failed ? safe : DEFAULT_COVER;
+  return <div className="cover-art">
+    <img src={imageSrc} alt={safe && !failed ? alt : "High-Tech Entertainment promotional artwork used as the default cover"} loading="lazy" decoding="async"
+      onError={event => { if (imageSrc !== DEFAULT_COVER) setFailed(true); else event.currentTarget.style.display = "none"; }} />
+  </div>;
+}
+
+function formatMediaTime(seconds:number) {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60).toString().padStart(2,"0");
+  return mins + ":" + secs;
+}
+
+function AudioPlayer({src,title,downloadUrl,onPlay,onEnded}:{src:string;title:string;downloadUrl:string;onPlay?:()=>void;onEnded?:()=>void}) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing,setPlaying] = useState(false);
+  const [current,setCurrent] = useState(0);
+  const [duration,setDuration] = useState(0);
+  const [failed,setFailed] = useState(false);
+  const togglePlayback = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) { try { await audio.play(); setFailed(false); } catch { setFailed(true); } }
+    else audio.pause();
+  };
+  return <div className="hte-audio-player">
+    <audio ref={audioRef} src={src} preload="none"
+      onLoadedMetadata={event=>setDuration(event.currentTarget.duration || 0)}
+      onDurationChange={event=>setDuration(event.currentTarget.duration || 0)}
+      onTimeUpdate={event=>setCurrent(event.currentTarget.currentTime)}
+      onPlay={()=>{setPlaying(true);onPlay?.();}}
+      onPause={()=>setPlaying(false)}
+      onEnded={()=>{setPlaying(false);setCurrent(0);onEnded?.();}}
+      onError={()=>{setPlaying(false);setFailed(true);}} />
+    <div className="hte-audio-controls">
+      <button type="button" className="hte-player-play" onClick={()=>void togglePlayback()} aria-label={playing ? "Pause " + title : "Play " + title}>{playing ? "Ⅱ" : "▶"}</button>
+      <div className="hte-audio-track"><div className="hte-audio-title">{title}</div>
+        <input className="hte-player-seek" type="range" min="0" max={Math.max(duration,1)} step="0.1" value={Math.min(current,duration || 0)} disabled={!duration} aria-label={"Seek " + title}
+          onChange={event=>{const value=Number(event.currentTarget.value);if(audioRef.current){audioRef.current.currentTime=value;setCurrent(value);}}} />
+      </div>
+      <span className="hte-player-time">{formatMediaTime(current)} / {formatMediaTime(duration)}</span>
+    </div>
+    {failed && <p className="hte-player-error" role="alert">This audio could not be loaded. Check your connection and try again.</p>}
+    <a className="hte-player-download" href={downloadUrl || src} download>Download audio <span aria-hidden="true">↓</span></a>
+  </div>;
 }
 
 function Spotify({url,title}:{url:string;title:string}) {
@@ -62,12 +110,44 @@ function VideoPlayer({url,title,poster}:{url:string;title:string;poster?:string|
   const safe = safeHttps(url);
   const embed = videoEmbed(url);
   const safePoster = safeHttps(poster);
-  const direct = !!safe && (new URL(safe).pathname.includes('/storage/v1/object/') || /\.(mp4|webm|mov|m4v)$/i.test(new URL(safe).pathname));
+  const direct = !!safe && (new URL(safe).pathname.includes('/storage/v1/object/') || /\\.(mp4|webm|mov|m4v)$/i.test(new URL(safe).pathname));
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [failed,setFailed] = useState(false);
   const [attempt,setAttempt] = useState(0);
+  const [playing,setPlaying] = useState(false);
+  const [current,setCurrent] = useState(0);
+  const [duration,setDuration] = useState(0);
+  const [muted,setMuted] = useState(false);
+  const togglePlayback = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) { try { await video.play(); setFailed(false); } catch { setFailed(true); } }
+    else video.pause();
+  };
+  const toggleMute = () => { const video=videoRef.current; if(!video)return; video.muted=!video.muted; setMuted(video.muted); };
+  const fullscreen = () => { const video=videoRef.current; if(video?.requestFullscreen) void video.requestFullscreen(); };
 
-  if (embed) return <div className="video-player-shell"><iframe className="video-embed" title={'Watch ' + title} src={embed} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /><a className="text-link" href={safe || url} target="_blank" rel="noopener noreferrer">Open original video ↗</a></div>;
-  if (direct && safe) return <div className="video-player-shell">{failed ? <div className="video-load-error" role="alert"><p>This video could not be loaded.</p><button type="button" className="video-retry-button" onClick={()=>{setFailed(false);setAttempt(value=>value+1)}}>Retry video ↻</button><a className="text-link" href={safe} target="_blank" rel="noopener noreferrer">Open video directly ↗</a></div> : <video key={attempt} className="video-direct" controls preload="metadata" poster={safePoster || undefined} src={safe} onError={()=>setFailed(true)} onCanPlay={()=>setFailed(false)} />}</div>;
+  if (embed) return <div className="video-player-shell video-embed-shell"><iframe className="video-embed" title={'Watch ' + title} src={embed} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /><a className="text-link" href={safe || url} target="_blank" rel="noopener noreferrer">Open original video ↗</a></div>;
+  if (direct && safe) return <div className="video-player-shell">
+    {failed ? <div className="video-load-error" role="alert"><p>This video could not be loaded.</p><button type="button" className="video-retry-button" onClick={()=>{setFailed(false);setAttempt(value=>value+1)}}>Retry video ↻</button><a className="text-link" href={safe} target="_blank" rel="noopener noreferrer">Open video directly ↗</a></div> : <>
+      <video key={attempt} ref={videoRef} className="video-direct" preload="metadata" playsInline poster={safePoster || undefined} src={safe}
+        onLoadedMetadata={event=>setDuration(event.currentTarget.duration || 0)}
+        onDurationChange={event=>setDuration(event.currentTarget.duration || 0)}
+        onTimeUpdate={event=>setCurrent(event.currentTarget.currentTime)}
+        onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)}
+        onEnded={()=>{setPlaying(false);setCurrent(0);}}
+        onError={()=>{setFailed(true);setPlaying(false);}} onCanPlay={()=>setFailed(false)} />
+      <div className="hte-video-controls">
+        <button type="button" className="hte-player-play" onClick={()=>void togglePlayback()} aria-label={playing ? "Pause " + title : "Play " + title}>{playing ? "Ⅱ" : "▶"}</button>
+        <span className="hte-player-time">{formatMediaTime(current)}</span>
+        <input className="hte-player-seek" type="range" min="0" max={Math.max(duration,1)} step="0.1" value={Math.min(current,duration || 0)} disabled={!duration} aria-label={"Seek " + title}
+          onChange={event=>{const value=Number(event.currentTarget.value);if(videoRef.current){videoRef.current.currentTime=value;setCurrent(value);}}} />
+        <span className="hte-player-time">{formatMediaTime(duration)}</span>
+        <button type="button" className="hte-player-utility" onClick={toggleMute} aria-label={muted ? "Unmute video" : "Mute video"}>{muted ? "Unmute" : "Mute"}</button>
+        <button type="button" className="hte-player-utility" onClick={fullscreen} aria-label="Enter fullscreen">Full screen</button>
+      </div>
+    </>}
+  </div>;
   return safe ? <a className="text-link" href={safe} target="_blank" rel="noopener noreferrer">Watch video ↗</a> : <div className="video-load-error"><p>Video link unavailable.</p></div>;
 }
 
@@ -176,7 +256,7 @@ export default function PublicCatalogue() {
         const userKey = USER_SAVED_PREFIX + id + '.v1';
         const local = [...new Set([...readSavedIds(userKey),...readSavedIds(GUEST_SAVED_KEY)])];
         if (active && currentUserId.current === id) setSavedIds(local);
-        const {data:cloud,error} = await db.from('user_favorites').select('track_id');
+        const {data:cloud,error} = await db.from('user_favorites').select('track_id').eq('user_id',id);
         if (error) throw error;
         const merged = [...new Set([...(cloud || []).map((row:{track_id:string})=>row.track_id),...local])];
         if (active && currentUserId.current === id) setSavedIds(merged);
@@ -314,7 +394,7 @@ export default function PublicCatalogue() {
           <Cover src={track.cover_url} alt={track.title + ' artwork'} />
           <div className="card-copy">
             <span className="tag">{track.genre || 'Music'}</span><h3>{track.title}</h3><p className="muted">{track.artist || 'High-Tech Entertainment'}</p>
-            {spotify ? <Spotify url={track.audio_url || ''} title={track.title} /> : isAudioFile ? <><audio controls preload="none" src={source} aria-label={'Play ' + track.title} onPlay={()=>void recordPlay(track.id)} onEnded={()=>void markCompleted(track.id)} /><a className="text-link" href={downloadUrl || source} download>Download audio ↓</a></> : source ? <a className="text-link" href={source} target="_blank" rel="noopener noreferrer">Open audio ↗</a> : <p className="muted small">Audio coming soon.</p>}
+            {spotify ? <Spotify url={track.audio_url || ''} title={track.title} /> : isAudioFile ? <AudioPlayer src={source} title={track.title} downloadUrl={downloadUrl || source} onPlay={()=>void recordPlay(track.id)} onEnded={()=>void markCompleted(track.id)} /> : source ? <a className="text-link" href={source} target="_blank" rel="noopener noreferrer">Open audio ↗</a> : <p className="muted small">Audio coming soon.</p>}
             <button type="button" className="catalogue-save-button" aria-pressed={saved} onClick={()=>toggleSaved(track.id)}>{saved ? '♥ Saved' : '♡ Save track'}</button>
           </div>
         </article>;
