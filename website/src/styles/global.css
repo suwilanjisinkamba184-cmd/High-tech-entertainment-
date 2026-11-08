@@ -62,3 +62,11 @@
 .booking-status.success{color:#b6d9b5}.booking-status.error{color:#ffaaa4}.booking-status.info{color:#d7c18e}
 @media(max-width:800px){.about-heading,.public-booking-section{grid-template-columns:1fr;gap:22px}.team-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.team-grid,.public-booking-grid{grid-template-columns:1fr}.public-booking-form .booking-field-full{grid-column:auto}.booking-strip-actions{width:100%}.booking-strip-actions .button{flex:1;justify-content:center}}
+
+.video-player-shell{width:100%;min-width:0;background:#08090b}
+.video-embed,.video-direct{display:block;width:100%;aspect-ratio:16/9;border:0;background:#08090b;object-fit:contain}
+.video-player-shell>.text-link{display:inline-block;margin:10px 14px 14px}
+.video-load-error{display:grid;gap:12px;place-content:center;min-height:180px;aspect-ratio:16/9;padding:20px;border:1px solid var(--line);background:#0c0d0f;text-align:center}
+.video-load-error p{margin:0;color:#d1ccc2;font-size:.85rem}
+.video-retry-button{justify-self:center;padding:9px 14px;border:1px solid var(--gold);border-radius:999px;background:transparent;color:var(--gold);font:inherit;font-size:.82rem;cursor:pointer}
+.video-retry-button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
