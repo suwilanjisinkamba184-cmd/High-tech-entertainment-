@@ -29,6 +29,7 @@ import io.elevenlabs.ConversationSession
 import com.hightechentertainment.app.playback.StartupJingle
 import com.hightechentertainment.app.playback.PlaybackService
 import com.hightechentertainment.app.playback.OfflineMusicDownloads
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -52,6 +53,7 @@ class FlutterHostActivity : FlutterActivity() {
     private val sessionManager
         get() = hteApplication.sessionManager
     private var oauthInProgress = false
+    private var sessionRestoreJob: Job? = null
     private var pendingMediaPickerResult: MethodChannel.Result? = null
     private var pendingMediaPickerKind: String? = null
     private var appMethodChannel: MethodChannel? = null
@@ -64,15 +66,21 @@ class FlutterHostActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        lifecycleScope.launch { sessionManager.restore() }
+        sessionRestoreJob = lifecycleScope.launch {
+            sessionManager.restore()
+            handleOAuthCallback(intent)
+        }
         connectToPlaybackService()
-        handleOAuthCallback(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleOAuthCallback(intent)
+        val restoreJob = sessionRestoreJob
+        lifecycleScope.launch {
+            restoreJob?.join()
+            handleOAuthCallback(intent)
+        }
     }
 
     private fun startGoogleOAuth(): Boolean {
@@ -84,7 +92,7 @@ class FlutterHostActivity : FlutterActivity() {
         }.getOrDefault(false)
     }
 
-    private fun handleOAuthCallback(callbackIntent: Intent?) {
+    private suspend fun handleOAuthCallback(callbackIntent: Intent?) {
         val callback = callbackIntent?.data ?: return
         if (callback.scheme != "com.hightechentertainment.app" || callback.host != "login-callback") return
         val providerError = callback.getQueryParameter("error_description")
@@ -93,16 +101,14 @@ class FlutterHostActivity : FlutterActivity() {
         val code = callback.getQueryParameter("code")?.takeIf { it.isNotBlank() } ?: return
         if (oauthInProgress) return
         oauthInProgress = true
-        lifecycleScope.launch {
-            try {
-                when (val auth = authRepository.exchangeGoogleOAuthCode(code)) {
-                    is AuthResult.Success -> sessionManager.accept(auth.session)
-                    is AuthResult.Failure -> android.util.Log.w("HTE-OAuth", auth.message)
-                    is AuthResult.Notice -> android.util.Log.i("HTE-OAuth", auth.message)
-                }
-            } finally {
-                oauthInProgress = false
+        try {
+            when (val auth = authRepository.exchangeGoogleOAuthCode(code)) {
+                is AuthResult.Success -> sessionManager.accept(auth.session)
+                is AuthResult.Failure -> android.util.Log.w("HTE-OAuth", auth.message)
+                is AuthResult.Notice -> android.util.Log.i("HTE-OAuth", auth.message)
             }
+        } finally {
+            oauthInProgress = false
         }
     }
 
@@ -165,7 +171,10 @@ class FlutterHostActivity : FlutterActivity() {
                     "startVoiceSession" -> startVoiceSession(result)
                     "endVoiceSession" -> endVoiceSession(result)
                     "setVoiceMuted" -> setVoiceMuted(call.argument<Boolean>("muted") ?: false, result)
-                    "getSession" -> result.success(sessionMap())
+                    "getSession" -> lifecycleScope.launch {
+                        sessionRestoreJob?.join()
+                        result.success(sessionMap())
+                    }
                     "getPlaybackState" -> result.success(playbackState())
                     "playTrack" -> playTrack(call.argument<String>("trackId").orEmpty(), result)
                     "pausePlayback" -> {
