@@ -58,6 +58,13 @@ jobs:
           grep -q 'id="forgot-password"' account/index.html
           grep -q 'id="password-update-form"' account/index.html
           grep -q 'assets/app.js?v=14' account/index.html
+          grep -q 'async function profileLoad' assets/app.js
+          grep -q 'profiles.*insert' assets/app.js
+          grep -q 'entertainment-enhancements.css' index.html
+          grep -q 'entertainment-enhancements.css' account/index.html
+          grep -q 'releases/download/v3.2.0-SU/High-Tech-Entertainment-v3.2.0-SU.apk' index.html
+          grep -q 'id="primary-navigation"' index.html
+          grep -q 'class="menu-toggle"' index.html
           grep -q 'assets/app.js?v=12' admin/index.html
           grep -q 'authNext' website/src/pages/index.astro
           grep -q 'callbackParams.delete' website/src/pages/index.astro
