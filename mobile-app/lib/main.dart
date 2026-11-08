@@ -1320,9 +1320,9 @@ class Brand extends StatelessWidget {
       ),
       const SizedBox(width: 13),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('HIGH-TECH', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: 2.1, height: 1.05)),
+        const Text('HTE', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 3.0, height: 1.0)),
         const SizedBox(height: 4),
-        const Text('ENTERTAINMENT', style: TextStyle(fontSize: 9, color: Color(0xFFE2BC69), letterSpacing: 3.0, fontWeight: FontWeight.w800)),
+        const Text('HIGH-TECH ENTERTAINMENT', style: TextStyle(fontSize: 8, color: Color(0xFFE2BC69), letterSpacing: 1.6, fontWeight: FontWeight.w800)),
         const SizedBox(height: 5),
         Text(tagline, maxLines: 1, overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 8, color: Color(0xFF8795A3), letterSpacing: 1.0, fontWeight: FontWeight.w600)),
@@ -1337,7 +1337,7 @@ class Brand extends StatelessWidget {
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.graphic_eq_rounded, color: Color(0xFFE2BC69), size: 13),
           SizedBox(width: 5),
-          Text('HT MUSIC', style: TextStyle(color: Color(0xFFC7D5DF), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: .8)),
+          Text('HTE MUSIC', style: TextStyle(color: Color(0xFFC7D5DF), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: .8)),
         ]),
       ),
     ]),
