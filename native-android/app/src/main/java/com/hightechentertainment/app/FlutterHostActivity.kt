@@ -217,8 +217,8 @@ class FlutterHostActivity : FlutterActivity() {
                         if (track == null) {
                             result.success(mapOf(
                                 "success" to false,
-                                "message" to catalog.error
-                                    ?: "This track is no longer available in the published catalogue."
+                                "message" to (catalog.error
+                                    ?: "This track is no longer available in the published catalogue.")
                             ))
                             return@launch
                         }
