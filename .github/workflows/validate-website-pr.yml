@@ -11,6 +11,7 @@ on:
       - 'scripts/**'
       - 'sitemap.xml'
       - 'robots.txt'
+      - 'SUPABASE-CONNECTION.md'
       - '.github/workflows/deploy-pages.yml'
       - '.github/workflows/publish-github-pages.yml'
       - 'account/**'
