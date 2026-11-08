@@ -89,3 +89,48 @@
 .public-feedback-intro>p{max-width:440px;color:#aaa69d;line-height:1.75}
 .public-feedback-form{min-width:0}
 @media(max-width:800px){.public-feedback-section{grid-template-columns:1fr;gap:22px}}
+
+/* Original High-Tech Entertainment artwork: responsive desktop and mobile hero. */
+.hero-visual{overflow:hidden;isolation:isolate;background:#08090b}
+.hero-visual>img.hero-artwork{position:absolute;inset:0;width:100%;height:100%;max-height:none;object-fit:cover;object-position:center;filter:none;z-index:0}
+.hero-visual:after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(90deg,#08090b25,transparent 48%,#08090b20),linear-gradient(0deg,#08090b88,transparent 30%)}
+.hero-visual .visual-caption{z-index:2;padding:10px 12px;background:#08090b99;border:1px solid #d7b66c40;border-radius:4px;backdrop-filter:blur(8px)}
+@media(max-width:800px){.hero{grid-template-columns:1fr;min-height:auto;padding-bottom:78px}.hero-visual{min-height:330px}.hero-bottom{left:22px}}
+@media(max-width:560px){.hero-visual{min-height:270px}.hero-visual .visual-caption{font-size:.48rem;left:12px;right:12px;bottom:12px}.hero-visual>img.hero-artwork{object-position:58% center}}
+
+
+/* HTE shared interface system — matching web and Android visual language. */
+:root{
+  --hte-bg:#08090b;
+  --hte-panel:#111317;
+  --hte-panel-raised:#171a1e;
+  --hte-gold:#d7b66c;
+  --hte-gold-light:#f2dfae;
+  --hte-silver:#c6cbd1;
+  --hte-text:#f5f2eb;
+  --hte-muted:#a8a7a2;
+  --hte-border:rgba(215,182,108,.2);
+  --hte-radius-card:16px;
+  --hte-radius-control:10px;
+}
+.site-header,.mobile-menu{border-color:var(--hte-border)}
+.button,.catalogue-tools button,.catalogue-search input,.catalogue-genre select,
+.public-booking-form input,.public-booking-form select,.public-booking-form textarea{
+  border-radius:var(--hte-radius-control)
+}
+.media-card,.team-card,.public-booking-form{
+  border-color:var(--hte-border);
+  border-radius:var(--hte-radius-card);
+  box-shadow:0 16px 38px #0003;
+}
+.media-card:focus-within,.team-card:focus-within{
+  outline:2px solid var(--hte-gold);outline-offset:3px
+}
+.site-footer{border-top-color:var(--hte-border)}
+@media(hover:hover) and (pointer:fine){
+  .team-card{transition:transform .2s ease,border-color .2s ease,background .2s ease}
+  .team-card:hover{transform:translateY(-3px);border-color:#d7b66c70;background:linear-gradient(145deg,#1b1b18,#101114)}
+}
+@media(prefers-reduced-motion:reduce){
+  .team-card{transition:none}
+}

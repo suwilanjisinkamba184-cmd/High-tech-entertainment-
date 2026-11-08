@@ -51,3 +51,8 @@
 @media(max-width:760px){.account-shell{padding-top:34px}.account-heading{display:block}.account-layout{grid-template-columns:1fr}.account-aside{position:static;display:grid;grid-template-columns:90px 1fr;gap:14px;align-items:center;padding:16px}.account-aside-brand{aspect-ratio:1;margin:0}.account-aside-brand img{width:62%}.account-aside-links{grid-column:1/-1;grid-template-columns:1fr 1fr;margin-top:4px}.account-profile-avatar{width:76px;height:76px;flex-basis:76px;border-radius:18px}.account-security-row{align-items:flex-start;flex-direction:column}}
 @media(max-width:520px){.account-nav{min-height:72px}.account-brand img{width:42px;height:42px}.account-form-grid{grid-template-columns:1fr}.account-form-grid .field.full{grid-column:auto}.account-main-card,.account-login-card,.account-security{padding:18px}.account-profile-head{align-items:flex-start;gap:13px}.account-aside{grid-template-columns:72px 1fr}.account-aside-links a{text-align:center;padding:10px 7px;font-size:.75rem}}
 @media(prefers-reduced-motion:reduce){.account-page *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* HTE_ORIGINAL_BRAND_ART — shared artwork anchors the member experience. */
+.account-heading{position:relative;isolation:isolate;overflow:hidden;padding:clamp(22px,4vw,42px);border:1px solid var(--account-line);border-radius:18px;background:linear-gradient(90deg,#08090bf2 0%,#08090be8 48%,#08090b88 100%),url('../images/brand/high-tech-hero.svg') center 38%/cover no-repeat}
+.account-heading>div{position:relative;z-index:1}
+.account-aside-brand{background-image:linear-gradient(#090b0dcc,#090b0dcc),url('../images/brand/high-tech-hero.svg');background-size:cover;background-position:65% center}
