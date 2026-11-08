@@ -38,3 +38,5 @@ body{overflow-x:hidden}
 /* Comfortable touch targets for the static fallback */
 .btn,.hte-favourites-toggle,.music-card [data-track-fav]{min-height:44px}
 .navlinks a,.nav-actions a{min-height:44px;display:flex;align-items:center}
+
+.vocal-project-note{margin:10px 0 0;color:#d8d2c6;font-size:.86rem}.vocal-project-note span{margin-right:10px;color:var(--gold);font-size:.66rem;letter-spacing:.16em;font-weight:800}
