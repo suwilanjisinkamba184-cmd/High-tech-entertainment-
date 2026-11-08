@@ -26,6 +26,14 @@ The live project now has two separate booking paths:
 
 The service-role key and Resend key must remain in Supabase Edge Function secrets. Never add them to `supabase-config.js`, website source, or GitHub.
 
+
+### Reviewed Supabase Advisor findings
+
+- The duplicate permissive INSERT policies on `contact_messages` were consolidated into one policy. Anonymous inserts are limited to rows with `user_id IS NULL`; authenticated booking rows must use the caller's own `auth.uid()` and a booking subject.
+- The two `SECURITY DEFINER` RPC warnings (`hte_admin_get_analytics` and `hte_admin_list_users`) are intentional Founder Studio operations. They use an empty search path, check the private owner/admin role guard, and are not executable by `anon`. Do not remove them without replacing the Founder Studio functionality.
+- Supabase Auth's leaked-password protection is still disabled. Enable it in **Authentication → Settings → Password Security** if available for the project plan.
+- Unused-index notices are informational. Keep the indexes until production query usage shows that they are genuinely unnecessary.
+
 ## Current deployment state
 
 The booking database migration and both Edge Functions have been applied to the linked Supabase project. The website redesign is still under pull request review and has not been merged or deployed to the live website. Complete the GitHub Actions checks and test guest booking, member booking, contact submission, catalogue playback, downloads, and Founder Studio on the Pages preview before merging.
