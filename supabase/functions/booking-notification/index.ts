@@ -30,7 +30,7 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return response({ error: "Method not allowed" }, 405, origin);
   if (origin && !allowedOrigins.has(origin)) return response({ error: "Origin not allowed" }, 403, origin);
 
-  const accessToken = req.headers.get("authorization")?.match(/^Bearer\\s+(.+)$/i)?.[1] || "";
+  const accessToken = req.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1] || "";
   if (!accessToken) return response({ error: "A signed-in member session is required." }, 401, origin);
 
   const resendKey = Deno.env.get("RESEND_API_KEY");
