@@ -673,6 +673,7 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
   Map<String, dynamic>? _nowPlayingTrack;
   bool _isPlaying = false;
   String _searchQuery = '';
+  int _refreshGeneration = 0;
 
   @override
   void initState() {
@@ -735,47 +736,91 @@ class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
   }
 
   Future<void> _refresh() async {
+    final generation = ++_refreshGeneration;
     setState(() {
       _loading = true;
       _error = null;
     });
+
+    final warnings = <String>[];
+    var tracksResponse = <String, dynamic>{};
+    var tracks = <Map<String, dynamic>>[];
+
     try {
-      final tracksResponse =
-          await _appChannel.invokeMapMethod<String, dynamic>('getTracks');
-      final tracks = ((tracksResponse?['items'] as List?) ?? [])
+      tracksResponse =
+          await _appChannel.invokeMapMethod<String, dynamic>('getTracks') ?? {};
+      tracks = ((tracksResponse['items'] as List?) ?? [])
           .whereType<Map>()
           .map((row) => Map<String, dynamic>.from(row))
           .toList();
-      final artists = await _loadList('getArtists');
-      final releases = await _loadList('getReleases');
-      final videos = await _loadList('getVideos');
-      final favourites =
+      final catalogueError = tracksResponse['error']?.toString();
+      if (catalogueError != null && catalogueError.isNotEmpty) {
+        warnings.add('music catalogue');
+      }
+    } catch (_) {
+      warnings.add('music catalogue');
+    }
+
+    Future<List<Map<String, dynamic>>> loadSection(
+      String method,
+      String label,
+    ) async {
+      try {
+        return await _loadList(method);
+      } catch (_) {
+        warnings.add(label);
+        return [];
+      }
+    }
+
+    final artists = await loadSection('getArtists', 'artists');
+    final releases = await loadSection('getReleases', 'releases');
+    final videos = await loadSection('getVideos', 'videos');
+
+    List<String> favourites = [];
+    try {
+      favourites =
           await _appChannel.invokeListMethod<String>('getFavourites') ?? [];
-      final followedArtists =
+    } catch (_) {
+      warnings.add('saved tracks');
+    }
+
+    List<String> followedArtists = [];
+    try {
+      followedArtists =
           await _appChannel.invokeListMethod<String>('getFollowedArtists') ?? [];
-      if (!mounted) return;
-      setState(() {
-        _tracks = tracks;
-        _artists = artists;
-        _releases = releases;
-        _videos = videos;
-        _favourites = favourites.toSet();
-        _followedArtists = followedArtists.toSet();
-        _error = tracksResponse?['error']?.toString();
-        _loading = false;
-      });
-    } on PlatformException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _error = error.message ?? 'Could not load your High-Tech library.';
-        _loading = false;
-      });
-    } on MissingPluginException {
-      if (!mounted) return;
-      setState(() {
-        _error = 'The app data bridge is not available in this build.';
-        _loading = false;
-      });
+    } catch (_) {
+      warnings.add('followed artists');
+    }
+
+    if (!mounted || generation != _refreshGeneration) return;
+
+    final hasContent = tracks.isNotEmpty ||
+        artists.isNotEmpty ||
+        releases.isNotEmpty ||
+        videos.isNotEmpty;
+
+    setState(() {
+      _tracks = tracks;
+      _artists = artists;
+      _releases = releases;
+      _videos = videos;
+      _favourites = favourites.toSet();
+      _followedArtists = followedArtists.toSet();
+      _error = hasContent || warnings.isEmpty
+          ? null
+          : 'Could not load your library. Check your connection and try again.';
+      _loading = false;
+    });
+
+    if (warnings.isNotEmpty && hasContent && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Some sections could not be refreshed: ${warnings.join(', ')}.',
+          ),
+        ),
+      );
     }
   }
 
