@@ -2,6 +2,7 @@
 import SiteLayout from '../layouts/SiteLayout.astro';
 import PublicCatalogue from '../components/PublicCatalogue';
 import PublicBookingForm from '../components/PublicBookingForm';
+import PublicFeedbackForm from '../components/PublicFeedbackForm';
 const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
 const organizationSchema = { '@context':'https://schema.org', '@type':'Organization', name:'High-Tech Entertainment', alternateName:'Hi-Tech Studio', description:'Music production, recording, mixing, mastering, artist development, digital promotion and software development in Kitwe, Zambia.', founder:{ '@type':'Person', name:'L Junior ZM', alternateName:'L Junior Zambia' }, address:{ '@type':'PostalAddress', addressLocality:'Kitwe', addressCountry:'ZM' }, url:'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/', logo:'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/high-tech-logo.svg', sameAs:['https://open.spotify.com/artist/15MbaDwHuXAtvQCyscJA0H'] };
 ---
@@ -11,13 +12,13 @@ const organizationSchema = { '@context':'https://schema.org', '@type':'Organizat
   <header class="site-header">
     <a class="brand" href="#top" aria-label="High-Tech Entertainment home"><img src={`${base}high-tech-logo.svg`} alt="" /><span>HIGH-TECH <small>ENTERTAINMENT</small></span></a>
     <nav class="main-nav" aria-label="Main navigation">
-      <a href="#music">Music</a><a href="#artists">Artists</a><a href="#releases">Releases</a><a href="#videos">Videos</a><a href="#services">Studio</a><a href="#about">About</a><a href="#booking">Book</a>
+      <a href="#music">Music</a><a href="#artists">Artists</a><a href="#releases">Releases</a><a href="#videos">Videos</a><a href="#services">Studio</a><a href="#about">About</a><a href="#feedback">Feedback</a><a href="#booking">Book</a>
     </nav>
     <div class="header-actions"><a class="account-link" href={`${base}account/`}>My account</a><a class="button button-gold header-cta" href="#music">Explore sound</a></div>
     <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu">Menu</button>
   </header>
   <nav id="mobile-menu" class="mobile-menu" aria-label="Mobile navigation">
-    <a href="#music">Music</a><a href="#artists">Artists</a><a href="#releases">Releases</a><a href="#videos">Videos</a><a href="#services">Studio</a><a href="#about">About HTE</a><a href="#booking">Book a service</a><a href={`${base}account/`}>My account</a>
+    <a href="#music">Music</a><a href="#artists">Artists</a><a href="#releases">Releases</a><a href="#videos">Videos</a><a href="#services">Studio</a><a href="#about">About HTE</a><a href="#feedback">Feedback survey</a><a href="#booking">Book a service</a><a href={`${base}account/`}>My account</a>
   </nav>
   <main id="top">
     <section class="hero">
@@ -52,6 +53,10 @@ const organizationSchema = { '@context':'https://schema.org', '@type':'Organizat
     <section class="app-promo" id="download-app"><div><span class="eyebrow">THE MUSIC GOES WITH YOU</span><h2>HTE in your<br /><em>pocket.</em></h2><p>Take the official High-Tech Entertainment Android experience wherever you go. Open the official GitHub release page to get the latest published APK and installation details.</p><a class="button button-gold" href="https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest" target="_blank" rel="noreferrer">Get official Android app <span>↓</span></a></div><div class="phone-art"><div class="phone-frame"><div class="phone-speaker"></div><img src={`${base}high-tech-logo.svg`} alt="HTE app icon" /><strong>HIGH-TECH</strong><small>ENTERTAINMENT</small><span>MUSIC. BEATS. PRODUCTION.</span></div><span class="phone-orbit"></span></div></section>
     <section class="booking-strip"><div><span class="eyebrow">HAVE A PROJECT IN MIND?</span><h2>Let's make something <em>that matters.</em></h2></div><div class="booking-strip-actions"><a class="button button-gold" href="#booking">Book a service <span>↗</span></a><a class="button button-outline" href={`${base}account/`}>Member account</a></div></section>
     <section class="public-booking-section" id="booking"><div class="public-booking-intro"><span class="eyebrow">START A PROJECT</span><h2>Tell us what you <em>have in mind.</em></h2><p>Share a few details and the HTE team will get back to you about the service, next steps and availability.</p><p class="member-note">Already a member? <a href={`${base}account/`}>Sign in to manage your bookings and downloads.</a></p></div><PublicBookingForm client:load /></section>
+    <section class="public-feedback-section" id="feedback">
+      <div class="public-feedback-intro"><span class="eyebrow">LISTENER SURVEY</span><h2>Help shape the <em>next release.</em></h2><p>Tell us what you think about the music catalogue, videos, booking experience and High-Tech Entertainment app. Your feedback helps us improve what we make next.</p></div>
+      <PublicFeedbackForm client:load />
+    </section>
   </main>
   <footer class="site-footer"><a class="brand" href="#top"><img src={`${base}high-tech-logo.svg`} alt="" /><span>HIGH-TECH <small>ENTERTAINMENT</small></span></a><p>Music. Beats. Production. Beyond.</p><div class="footer-links"><a href={`${base}account/`}>Account</a><a href={`${base}privacy-policy.html`}>Privacy</a><a href={`${base}terms-of-service.html`}>Terms</a><a href="mailto:suwilanjisinkamba184@gmail.com">Contact</a></div><small>© {new Date().getFullYear()} High-Tech Entertainment. All rights reserved.</small></footer>
   <script is:inline define:vars={{base}}>
