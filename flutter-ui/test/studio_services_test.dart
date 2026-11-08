@@ -17,6 +17,8 @@ void main() {
     expect(find.text('Mixing & mastering'), findsOneWidget);
     expect(find.text('Music promotion'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('REQUEST A QUOTE').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('REQUEST A QUOTE').first);
     await tester.pumpAndSettle();
 
