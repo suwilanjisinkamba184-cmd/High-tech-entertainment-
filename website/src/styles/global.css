@@ -80,3 +80,5 @@
 .mobile-menu a{display:flex;align-items:center;min-height:44px;padding:12px 16px}
 
 .skip-link{position:absolute;left:16px;top:-90px;z-index:1000;padding:12px 16px;border-radius:7px;background:var(--gold2);color:#17130a;font-size:.82rem;font-weight:800}.skip-link:focus{top:12px;outline:3px solid #fff;outline-offset:3px}
+
+.vocal-project-note{margin:10px 0 0;color:#d8d2c6;font-size:.86rem}.vocal-project-note span{margin-right:10px;color:var(--gold);font-size:.66rem;letter-spacing:.16em;font-weight:800}
