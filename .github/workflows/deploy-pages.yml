@@ -41,6 +41,8 @@ jobs:
           test -s assets/videos.js
           test -s assets/booking-confirmation.aac
           test -s account/index.html
+          grep -q '<div id="account-login" class="account-login-card">' account/index.html
+          grep -q 'Supabase could not initialise in this browser' assets/app.js
           grep -q 'id="booking-form"' account/index.html
           grep -q 'id="account-downloads"' account/index.html
           grep -q 'loadAccountDownloads' assets/app.js
