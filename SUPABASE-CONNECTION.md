@@ -20,9 +20,10 @@ Never put a Supabase `service_role` or `sb_secret_` key in browser files. The `s
 
 The live project now has two separate booking paths:
 
-- **Guest booking:** the public website calls the `public-booking-request` Edge Function. JWT verification is disabled for this endpoint intentionally because guests do not sign in. The function validates the submitted fields, checks the website-origin allowlist, uses a honeypot, applies a per-IP limit of 5 requests per 15 minutes, writes the request server-side, and sends the email notification server-side.
-- **Member booking:** signed-in members use the `submit_booking_request` RPC. It records the authenticated user's ID. The `booking-notification` Edge Function requires a valid JWT and verifies that the booking belongs to that user before sending an email.
-- **Public contact:** the contact form remains separate and can create a contact message with no user ID. Anonymous users cannot read the contact inbox or invoke the member booking RPC.
+- **New guest booking:** the redesigned Astro homepage calls the `public-booking-request` Edge Function. JWT verification is disabled intentionally because guests do not sign in. The function validates fields, checks the website-origin allowlist, uses a honeypot, applies a per-IP limit of 5 requests per 15 minutes, writes the request server-side, and sends the email notification server-side.
+- **Member booking:** signed-in members use the `submit_booking_request` RPC. It binds the booking to `auth.uid()`. The `booking-notification` Edge Function validates the member JWT internally and checks that the booking belongs to that user before sending an email.
+- **Legacy guest compatibility:** the older static homepage still calls `submit_booking_request` followed by `booking-notification`. The RPC is a narrowly scoped, insert-only `SECURITY DEFINER` function with an empty search path: guests receive `user_id = NULL`, members are bound to `auth.uid()`, and callers cannot read messages or supply another user's ID. The notification function accepts guest rows only when `user_id` is NULL, the request is recent, the origin is an allowed website, and the IP rate limit passes. This compatibility path prevents the current live homepage from losing guest bookings before the redesign is merged.
+- **Public contact:** the contact form remains separate and can create a contact message with no user ID. Anonymous users cannot read the contact inbox or invoke admin RPCs.
 
 The service-role key and Resend key must remain in Supabase Edge Function secrets. Never add them to `supabase-config.js`, website source, or GitHub.
 
@@ -30,7 +31,7 @@ The service-role key and Resend key must remain in Supabase Edge Function secret
 ### Reviewed Supabase Advisor findings
 
 - The duplicate permissive INSERT policies on `contact_messages` were consolidated into one policy. Anonymous inserts are limited to rows with `user_id IS NULL`; authenticated booking rows must use the caller's own `auth.uid()` and a booking subject.
-- The two `SECURITY DEFINER` RPC warnings (`hte_admin_get_analytics` and `hte_admin_list_users`) are intentional Founder Studio operations. They use an empty search path, check the private owner/admin role guard, and are not executable by `anon`. Do not remove them without replacing the Founder Studio functionality.
+- The `SECURITY DEFINER` RPC warnings are intentional: `hte_admin_get_analytics` and `hte_admin_list_users` are admin-guarded Founder Studio operations; `submit_booking_request` is the narrow insert-only legacy guest-compatibility endpoint. The admin RPCs use an empty search path, check the private owner/admin role guard, and are not executable by `anon`. The booking RPC also uses an empty search path, accepts only validated booking fields, derives `user_id` from `auth.uid()`, and returns only the newly created ID. Do not remove these controls without replacing the corresponding workflows.
 - Supabase Auth's leaked-password protection is still disabled. Enable it in **Authentication → Settings → Password Security** if available for the project plan.
 - Unused-index notices are informational. Keep the indexes until production query usage shows that they are genuinely unnecessary.
 
