@@ -7,6 +7,12 @@ const allowedOrigins = new Set([
   "https://high-techmedia.netlify.app",
   "https://website-redesign-mainline-20.high-tech-entertainment.pages.dev",
 ]);
+function isAllowedOrigin(origin: string): boolean {
+  return allowedOrigins.has(origin) ||
+    origin === "https://high-tech-entertainment.pages.dev" ||
+    /^https:\/\/[a-z0-9-]+\.high-tech-entertainment\.pages\.dev$/.test(origin);
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://high-tech-entertainment.suwilanjisinkamba184.workers.dev",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -15,7 +21,7 @@ const corsHeaders = {
 };
 
 function response(body: unknown, status = 200, origin = "") {
-  const allowedOrigin = allowedOrigins.has(origin) ? origin : "https://high-tech-entertainment.suwilanjisinkamba184.workers.dev";
+  const allowedOrigin = isAllowedOrigin(origin) ? origin : "https://high-tech-entertainment.suwilanjisinkamba184.workers.dev";
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, "Access-Control-Allow-Origin": allowedOrigin, "Content-Type": "application/json", "Cache-Control": "no-store" },
@@ -43,11 +49,11 @@ const safe = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, c => ({
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin") || "";
   if (req.method === "OPTIONS") {
-    if (!allowedOrigins.has(origin)) return new Response("Origin not allowed", { status: 403, headers: corsHeaders });
+    if (!isAllowedOrigin(origin)) return new Response("Origin not allowed", { status: 403, headers: corsHeaders });
     return new Response("ok", { headers: { ...corsHeaders, "Access-Control-Allow-Origin": origin } });
   }
   if (req.method !== "POST") return response({ error: "Method not allowed" }, 405, origin);
-  if (!origin || !allowedOrigins.has(origin)) return response({ error: "Origin not allowed" }, 403, origin);
+  if (!origin || !isAllowedOrigin(origin)) return response({ error: "Origin not allowed" }, 403, origin);
 
   let input: Record<string, unknown>;
   try {
