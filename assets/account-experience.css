@@ -56,3 +56,10 @@
 .account-heading{position:relative;isolation:isolate;overflow:hidden;padding:clamp(22px,4vw,42px);border:1px solid var(--account-line);border-radius:18px;background:linear-gradient(90deg,#08090bf2 0%,#08090be8 48%,#08090b88 100%),url('../images/brand/high-tech-hero.svg') center 38%/cover no-repeat}
 .account-heading>div{position:relative;z-index:1}
 .account-aside-brand{background-image:linear-gradient(#090b0dcc,#090b0dcc),url('../images/brand/high-tech-hero.svg');background-size:cover;background-position:65% center}
+
+.account-auth-links{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
+.account-auth-links .btn{font-size:.78rem}
+.account-password-form{display:grid;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid var(--account-line)}
+.account-password-form label{font-size:.82rem;color:var(--account-muted)}
+.account-password-form input{width:100%;max-width:420px;padding:11px 13px;border:1px solid var(--account-line);border-radius:10px;background:#090a0c;color:var(--account-ink)}
+@media(max-width:560px){.account-auth-links{display:grid;grid-template-columns:1fr}.account-auth-links .btn{width:100%}}
