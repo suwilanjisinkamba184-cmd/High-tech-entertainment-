@@ -440,12 +440,12 @@ class HteApp extends StatelessWidget {
       ).copyWith(
         primary: const Color(0xFFE3B85F),
         onPrimary: const Color(0xFF17120A),
-        secondary: const Color(0xFFB8D3E6),
-        onSecondary: const Color(0xFF09121A),
-        surface: const Color(0xFF10151D),
-        surfaceContainer: const Color(0xFF131A23),
-        surfaceContainerHigh: const Color(0xFF19222D),
-        outline: const Color(0xFF34404D),
+        secondary: const Color(0xFFC6CBD1),
+        onSecondary: const Color(0xFF111317),
+        surface: const Color(0xFF111317),
+        surfaceContainer: const Color(0xFF171A1E),
+        surfaceContainerHigh: const Color(0xFF202329),
+        outline: const Color(0xFF514936),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Color(0xFF07090D),
@@ -1167,7 +1167,7 @@ class _MainScreenState extends State<MainScreen> {
           end: Alignment.bottomCenter,
           colors: [Color(0xF2141B24), Color(0xFF080B10)],
         ),
-        border: Border(top: BorderSide(color: Color(0xFF34404D), width: .7)),
+        border: Border(top: BorderSide(color: Color(0x33D7B66C), width: .8)),
         boxShadow: [BoxShadow(color: Color(0x66000000), blurRadius: 24, offset: Offset(0, -8))],
       ),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1630,15 +1630,15 @@ class HteNeoHero extends StatelessWidget {
           width: 270, height: 270,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: const Color(0x335CC9D8), width: 1.2),
-            boxShadow: const [BoxShadow(color: Color(0x223AB8C8), blurRadius: 36, spreadRadius: 12)],
+            border: Border.all(color: const Color(0x33D7B66C), width: 1.2),
+            boxShadow: const [BoxShadow(color: Color(0x22D7B66C), blurRadius: 36, spreadRadius: 12)],
           ),
         )),
         Positioned(right: -35, top: -45, child: Container(
           width: 180, height: 180,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: const Color(0x44D7B66B), width: 1),
+            border: Border.all(color: const Color(0x66D7B66C), width: 1),
           ),
         )),
         Positioned(right: 12, top: 52,
