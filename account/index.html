@@ -9,7 +9,7 @@
 <link rel="icon" type="image/svg+xml" href="../high-tech-logo.svg">
 <link rel="stylesheet" href="../assets/site.css?v=20261106-account">
 <link rel="stylesheet" href="../assets/premium-refresh.css?v=1">
-<link rel="stylesheet" href="../assets/account-experience.css?v=1"><link rel="stylesheet" href="../assets/hte-identity.css?v=1">
+<link rel="stylesheet" href="../assets/account-experience.css?v=1"><link rel="stylesheet" href="../assets/hte-identity.css?v=1"><link rel="stylesheet" href="../assets/mobile-navigation.css?v=1"><link rel="stylesheet" href="../assets/entertainment-enhancements.css?v=1">
 </head>
 <body class="account-page">
 <a class="skip" href="#main">Skip to content</a>
@@ -19,7 +19,8 @@
       <img src="../high-tech-logo.svg" alt="">
       <span>HTE <small>HIGH-TECH ENTERTAINMENT · MEMBER SPACE</small></span>
     </a>
-    <nav class="navlinks" aria-label="Account navigation"><a href="../">Website</a><a href="../#music">Listen</a></nav>
+    <nav class="navlinks" id="primary-navigation" aria-label="Account navigation"><a href="../">Website</a><a href="../#music">Listen</a></nav>
+    <button class="menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="primary-navigation"><span></span><span></span><span></span></button>
     <button class="btn" data-logout data-signed-in hidden>Sign out</button>
   </div>
 </header>
@@ -90,6 +91,6 @@
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script src="../supabase-config.js"></script>
-<script src="../assets/app.js?v=12"></script>
+<script src="../assets/app.js?v=14"></script><script src="../assets/mobile-navigation.js?v=1" defer></script>
 </body>
 </html>
