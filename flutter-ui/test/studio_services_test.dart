@@ -26,6 +26,8 @@ void main() {
     expect(find.text('Music production'), findsNWidgets(2));
     expect(find.text('SEND PROJECT REQUEST'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('SEND PROJECT REQUEST'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('SEND PROJECT REQUEST'));
     await tester.pump();
 
