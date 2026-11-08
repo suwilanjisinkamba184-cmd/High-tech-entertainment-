@@ -77,6 +77,8 @@ export default function PublicCatalogue() {
   const [userId,setUserId] = useState<string|null>(null);
   const [syncNotice,setSyncNotice] = useState('');
   const recordedPlays = useRef(new Set<string>());
+  const playHistoryIds = useRef(new Map<string,string>());
+  const completedPending = useRef(new Set<string>());
 
   useEffect(() => {
     setSavedIds(readSavedIds());
@@ -202,8 +204,15 @@ export default function PublicCatalogue() {
     recordedPlays.current.add(trackId);
     try {
       const db = supabase();
-      const {error} = await db.from('listening_history').insert({user_id:userId,track_id:trackId});
+      const {data,error} = await db.from('listening_history').insert({user_id:userId,track_id:trackId}).select('id').single();
       if (error) throw error;
+      if (data?.id) {
+        playHistoryIds.current.set(trackId,data.id);
+        if (completedPending.current.delete(trackId)) {
+          const {error:updateError} = await db.from('listening_history').update({completed:true}).eq('id',data.id).eq('user_id',userId);
+          if (updateError) throw updateError;
+        }
+      }
     } catch (e) {
       recordedPlays.current.delete(trackId);
       console.error('HTE listening history could not be recorded',e);
@@ -212,14 +221,12 @@ export default function PublicCatalogue() {
 
   const markCompleted = async (trackId:string) => {
     if (!userId) return;
+    const historyId = playHistoryIds.current.get(trackId);
+    if (!historyId) { completedPending.current.add(trackId); return; }
     try {
       const db = supabase();
-      const {data,error} = await db.from('listening_history').select('id').eq('user_id',userId).eq('track_id',trackId).order('played_at',{ascending:false}).limit(1).maybeSingle();
+      const {error} = await db.from('listening_history').update({completed:true}).eq('id',historyId).eq('user_id',userId);
       if (error) throw error;
-      if (data?.id) {
-        const {error:updateError} = await db.from('listening_history').update({completed:true}).eq('id',data.id).eq('user_id',userId);
-        if (updateError) throw updateError;
-      }
     } catch (e) { console.error('HTE listening completion could not be recorded',e); }
   };
 
