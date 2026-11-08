@@ -83,7 +83,12 @@ function tableRender(){let t=$('#admin-tracks');if(t)t.innerHTML=tracks.length?t
   form.reset();
   let notification;
   try{notification=await db.functions.invoke('booking-notification',{body:{message_id:data}})}catch(error){notification={error}}
-  const notificationError=notification.error?.message||notification.data?.error||'';
+  let notificationError=notification.error?.message||notification.data?.error||'';
+  const notificationContext=notification.error?.context;
+  if(notificationContext&&typeof notificationContext.clone==='function'){
+    const body=await notificationContext.clone().json().catch(()=>null);
+    if(typeof body?.error==='string'&&body.error.trim())notificationError=body.error;
+  }
   const notified=!notificationError&&(notification.data?.email_sent===true||notification.data?.already_sent===true);
   return {saved:true,notified,error:notificationError};
 }function playBookingConfirmation(statusElement){
