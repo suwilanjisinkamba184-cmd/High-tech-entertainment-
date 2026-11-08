@@ -41,8 +41,26 @@ jobs:
           test -s assets/videos.js
           test -s assets/booking-confirmation.aac
           test -s account/index.html
+          grep -q '<div id="account-login" class="account-login-card">' account/index.html
+          grep -q 'Supabase could not initialise in this browser' assets/app.js
+          grep -q 'auth.signUp' assets/app.js
+          grep -q 'resetPasswordForEmail' assets/app.js
+          grep -q 'auth.updateUser' assets/app.js
+          grep -q '@2.119.0' account/index.html
+          grep -q 'DEFAULT_COVER' website/src/components/PublicCatalogue.tsx
+          grep -q 'high-tech-hero.svg' assets/app.js
+          grep -Fq '/\.(mp4' website/src/components/PublicCatalogue.tsx
+          grep -q 'AudioPlayer' website/src/components/PublicCatalogue.tsx
+          grep -q 'hte-video-controls' website/src/components/PublicCatalogue.tsx
           grep -q 'id="booking-form"' account/index.html
           grep -q 'id="account-downloads"' account/index.html
+          grep -q 'id="auth-mode-toggle"' account/index.html
+          grep -q 'id="forgot-password"' account/index.html
+          grep -q 'id="password-update-form"' account/index.html
+          grep -q 'assets/app.js?v=12' account/index.html
+          grep -q 'assets/app.js?v=12' admin/index.html
+          grep -q 'authNext' website/src/pages/index.astro
+          grep -q 'callbackParams.delete' website/src/pages/index.astro
           grep -q 'loadAccountDownloads' assets/app.js
           test -s admin/index.html
           grep -q 'id="artists"' website/src/components/PublicCatalogue.tsx
