@@ -3,7 +3,7 @@ import SiteLayout from '../layouts/SiteLayout.astro';
 import PublicCatalogue from '../components/PublicCatalogue';
 import PublicBookingForm from '../components/PublicBookingForm';
 const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
-const organizationSchema = { '@context':'https://schema.org', '@type':'Organization', name:'High-Tech Entertainment', alternateName:'Hi-Tech Studio', description:'Music production, recording, mixing, mastering, artist development, digital promotion and software development in Kitwe, Zambia.', foundingDate:'2020', founder:{ '@type':'Person', name:'L Junior ZM', alternateName:'L Junior Zambia' }, address:{ '@type':'PostalAddress', addressLocality:'Kitwe', addressCountry:'ZM' }, url:'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/', logo:'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/high-tech-logo.svg' };
+const organizationSchema = { '@context':'https://schema.org', '@type':'Organization', name:'High-Tech Entertainment', alternateName:'Hi-Tech Studio', description:'Music production, recording, mixing, mastering, artist development, digital promotion and software development in Kitwe, Zambia.', foundingDate:'2020', founder:{ '@type':'Person', name:'L Junior ZM', alternateName:'L Junior Zambia' }, address:{ '@type':'PostalAddress', addressLocality:'Kitwe', addressCountry:'ZM' }, url:'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/', logo:'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/high-tech-logo.svg', sameAs:['https://open.spotify.com/artist/15MbaDwHuXAtvQCyscJA0H'] };
 ---
 <SiteLayout>
   <script type="application/ld+json" set:html={JSON.stringify(organizationSchema)} />
