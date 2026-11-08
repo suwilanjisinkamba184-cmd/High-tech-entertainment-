@@ -52,6 +52,11 @@ jobs:
           grep -q 'hte-video-controls' website/src/components/PublicCatalogue.tsx
           grep -q 'id="booking-form"' account/index.html
           grep -q 'id="account-downloads"' account/index.html
+          grep -q 'id="auth-mode-toggle"' account/index.html
+          grep -q 'id="forgot-password"' account/index.html
+          grep -q 'id="password-update-form"' account/index.html
+          grep -q 'authNext' website/src/pages/index.astro
+          grep -q 'callbackParams.delete' website/src/pages/index.astro
           grep -q 'loadAccountDownloads' assets/app.js
           test -s admin/index.html
           grep -q 'id="artists"' website/src/components/PublicCatalogue.tsx
