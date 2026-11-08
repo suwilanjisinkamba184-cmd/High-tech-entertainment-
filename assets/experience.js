@@ -11,7 +11,7 @@ if(tracks){
  tools.innerHTML='<input type="search" id="hte-track-search" placeholder="Search tracks or artists…" aria-label="Search music catalogue"><select id="hte-genre-filter" aria-label="Filter by genre"><option value="">All genres</option></select><button class="hte-favourites-toggle" id="hte-favourites-toggle" type="button" aria-pressed="false">♡ Saved tracks</button><span class="catalog-count" id="hte-catalog-count" aria-live="polite">Explore the catalogue</span>';
  tracks.parentNode.insertBefore(tools,tracks);
  const search=$('#hte-track-search'),genre=$('#hte-genre-filter'),count=$('#hte-catalog-count'),favToggle=$('#hte-favourites-toggle');
- const storageKey='hte.savedTracks.v1';let saved=new Set();
+ const storageKey='hte.savedTracks.guest.v1';let saved=new Set();
  try{saved=new Set(JSON.parse(localStorage.getItem(storageKey)||'[]').map(String))}catch{saved=new Set()}
  let savedOnly=false;
  const persist=()=>{try{localStorage.setItem(storageKey,JSON.stringify([...saved]))}catch{count.textContent='Saved tracks are unavailable in this browser'}}
@@ -22,7 +22,7 @@ if(tracks){
   b.addEventListener('click',()=>{if(saved.has(id))saved.delete(id);else saved.add(id);persist();b.setAttribute('aria-pressed',String(saved.has(id)));b.textContent=saved.has(id)?'♥ Saved':'♡ Save track';apply()});
   card.append(b);
  });
- const apply=()=>{const q=search.value.trim().toLowerCase(),g=genre.value;let visible=0;tracks.querySelectorAll('.music-card').forEach(card=>{const text=card.textContent.toLowerCase(),pill=card.querySelector('.pill')?.textContent.trim().toLowerCase()||'',id=card.dataset.trackId;const show=(!q||text.includes(q))&&(!g||pill===g)&&(!savedOnly||saved.has(id));card.hidden=!show;if(show)visible++});count.textContent=visible+' track'+(visible===1?'':'s')+(savedOnly?' saved':'')+(q||g?' found':' available');favToggle.setAttribute('aria-pressed',String(savedOnly));favToggle.textContent=savedOnly?'♥ Showing saved tracks':'♡ Saved tracks'};
+ const apply=()=>{const q=search.value.trim().toLowerCase(),g=genre.value;let visible=0;tracks.querySelectorAll('.music-card').forEach(card=>{const text=[card.querySelector('h3')?.textContent,card.querySelector('.muted')?.textContent,card.querySelector('.pill')?.textContent].filter(Boolean).join(' ').toLowerCase(),pill=card.querySelector('.pill')?.textContent.trim().toLowerCase()||'',id=card.dataset.trackId;const show=(!q||text.includes(q))&&(!g||pill===g)&&(!savedOnly||saved.has(id));card.hidden=!show;if(show)visible++});count.textContent=visible+' track'+(visible===1?'':'s')+(savedOnly?' saved':'')+(q||g?' found':' available');favToggle.setAttribute('aria-pressed',String(savedOnly));favToggle.textContent=savedOnly?'♥ Showing saved tracks':'♡ Saved tracks'};
  const populate=()=>{const vals=[...new Set([...tracks.querySelectorAll('.music-card .pill')].map(x=>x.textContent.trim()).filter(Boolean))].sort();const current=genre.value;genre.innerHTML='<option value="">All genres</option>'+vals.map(v=>'<option value="'+v.replace(/&/g,'&amp;').replace(/"/g,'&quot;').toLowerCase()+'">'+v.replace(/</g,'&lt;')+'</option>').join('');genre.value=current;addButtons();apply()};
  search.addEventListener('input',apply);genre.addEventListener('change',apply);favToggle.addEventListener('click',()=>{savedOnly=!savedOnly;apply()});
  new MutationObserver(populate).observe(tracks,{childList:true,subtree:true});populate();
