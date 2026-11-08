@@ -33,6 +33,7 @@ const allowedServices = new Set([
   "Beat production",
   "Recording & engineering",
   "Mixing and mastering",
+  "Artist development",
   "Artist promotion",
   "Spotify & digital promotion",
   "Music video / content",
