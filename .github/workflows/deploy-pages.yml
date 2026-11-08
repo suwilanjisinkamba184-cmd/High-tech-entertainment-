@@ -43,6 +43,13 @@ jobs:
           test -s account/index.html
           grep -q '<div id="account-login" class="account-login-card">' account/index.html
           grep -q 'Supabase could not initialise in this browser' assets/app.js
+          grep -q 'auth.signUp' assets/app.js
+          grep -q 'resetPasswordForEmail' assets/app.js
+          grep -q 'auth.updateUser' assets/app.js
+          grep -q '@2.119.0' account/index.html
+          grep -q 'DEFAULT_COVER' website/src/components/PublicCatalogue.tsx
+          grep -q 'AudioPlayer' website/src/components/PublicCatalogue.tsx
+          grep -q 'hte-video-controls' website/src/components/PublicCatalogue.tsx
           grep -q 'id="booking-form"' account/index.html
           grep -q 'id="account-downloads"' account/index.html
           grep -q 'loadAccountDownloads' assets/app.js
