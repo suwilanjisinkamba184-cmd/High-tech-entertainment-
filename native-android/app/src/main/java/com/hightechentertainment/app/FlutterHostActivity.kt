@@ -212,9 +212,27 @@ class FlutterHostActivity : FlutterActivity() {
                             }
                         }
                         val id = call.argument<String>("trackId").orEmpty()
-                        val track = hteApplication.catalogRepository.publishedTracks().items.firstOrNull { it.id == id }
-                        val downloadId = track?.let { offlineDownloads.enqueue(it) }
-                        result.success(mapOf("success" to (downloadId != null), "downloadId" to downloadId))
+                        val catalog = hteApplication.catalogRepository.publishedTracks()
+                        val track = catalog.items.firstOrNull { it.id == id }
+                        if (track == null) {
+                            result.success(mapOf(
+                                "success" to false,
+                                "message" to catalog.error
+                                    ?: "This track is no longer available in the published catalogue."
+                            ))
+                            return@launch
+                        }
+                        if (track.audioUrl.isNullOrBlank()) {
+                            result.success(mapOf("success" to false, "message" to "This track has no downloadable audio file."))
+                            return@launch
+                        }
+                        val downloadId = runCatching { offlineDownloads.enqueue(track) }.getOrNull()
+                        result.success(mapOf(
+                            "success" to (downloadId != null),
+                            "downloadId" to downloadId,
+                            "message" to if (downloadId != null) "Download added to your offline queue."
+                                else "Android could not add this download. Check available storage and try again."
+                        ))
                     }
                     "signIn" -> authenticate(call.argument<String>("email"), call.argument<String>("password"), result, false)
                     "signUp" -> authenticate(call.argument<String>("email"), call.argument<String>("password"), result, true)
@@ -1019,6 +1037,10 @@ class FlutterHostActivity : FlutterActivity() {
                 return@launch
             }
             val tracksResult = hteApplication.catalogRepository.publishedTracks()
+            if (tracksResult.items.isEmpty() && tracksResult.error != null) {
+                result.success(mapOf("success" to false, "message" to tracksResult.error))
+                return@launch
+            }
             val playableTracks = tracksResult.items.filter { !it.audioUrl.isNullOrBlank() }
             val startIndex = playableTracks.indexOfFirst { it.id == trackId }
             if (startIndex < 0) {
