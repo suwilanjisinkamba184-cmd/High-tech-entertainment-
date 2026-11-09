@@ -2,7 +2,7 @@ name: High-Tech Entertainment — Native Android Signed Candidate
 
 on:
   push:
-    branches: ["feature/**", "maintenance/**"]
+    branches: ["main", "feature/**", "maintenance/**"]
     paths:
       - "flutter-ui/**"
       - "native-android/**"
@@ -105,8 +105,8 @@ jobs:
             echo "::error::Release APK package ID does not match production application ID."
             exit 1
           }
-          printf '%s\n' "$BADGING" | grep -F "versionCode='30' versionName='3.1.0'" >/dev/null || {
-            echo "::error::Unexpected native release version; expected 3.1.0 (30)."
+          printf '%s\n' "$BADGING" | grep -F "versionCode='33' versionName='3.2.1'" >/dev/null || {
+            echo "::error::Unexpected native release version; expected 3.2.1 (30)."
             exit 1
           }
 
@@ -145,13 +145,18 @@ jobs:
           test "${#CERT_SHA256}" -eq 64 || { echo "::error::Could not extract signer SHA-256."; exit 1; }
 
           # Compare against the latest publicly published production APK, not just the keystore.
-          # The latest official production release at this commit is v2.2.10-SU.
-          PRODUCTION_APK="$RUNNER_TEMP/production-v2.2.10-SU.apk"
+          # The latest official production release at this commit is v3.2.0-SU.
+          PRODUCTION_APK="$RUNNER_TEMP/production-v3.2.0-SU.apk"
           curl --fail --location --retry 3 --retry-delay 2 \
-            "https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/v2.2.10-SU/High-Tech-Entertainment-v2.2.10-SU.apk" \
+            "https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/v3.2.0-SU/High-Tech-Entertainment-v3.2.0-SU.apk" \
             --output "$PRODUCTION_APK"
-          "$SDK_BUILD_TOOLS/aapt" dump badging "$PRODUCTION_APK" | grep -F "package: name='com.hightechentertainment.app'" >/dev/null || {
+          PRODUCTION_BADGING="$("$SDK_BUILD_TOOLS/aapt" dump badging "$PRODUCTION_APK")"
+          printf '%s\\n' "$PRODUCTION_BADGING" | grep -F "package: name='com.hightechentertainment.app'" >/dev/null || {
             echo "::error::Reference production APK package ID does not match."
+            exit 1
+          }
+          printf '%s\\n' "$PRODUCTION_BADGING" | grep -F "versionCode='32' versionName='3.2.0'" >/dev/null || {
+            echo "::error::Reference production APK is not v3.2.0-SU (build 32)."
             exit 1
           }
           PRODUCTION_VERIFY="$("$SDK_BUILD_TOOLS/apksigner" verify --verbose --print-certs "$PRODUCTION_APK")"
@@ -160,9 +165,9 @@ jobs:
             echo "::error::Native candidate signer differs from the latest production APK. Install-over compatibility is not established."
             exit 1
           fi
-          echo "PASS: native candidate signer exactly matches production v2.2.10-SU."
+          echo "PASS: native candidate signer exactly matches production v3.2.0-SU."
 
-          FINAL_APK="$RUNNER_TEMP/High-Tech-Entertainment-native-v3.1.0.apk"
+          FINAL_APK="$RUNNER_TEMP/High-Tech-Entertainment-native-v3.2.1.apk"
           mv "$SIGNED_APK" "$FINAL_APK"
           "$SDK_BUILD_TOOLS/zipalign" -c -p 4 "$FINAL_APK"
           printf '%s  %s\n' "$APK_SHA256" "$(basename "$FINAL_APK")" > "$RUNNER_TEMP/SHA256SUMS.txt"
@@ -172,15 +177,15 @@ jobs:
           import json, os
           manifest = {
               "packageName": "com.hightechentertainment.app",
-              "versionName": "3.1.0",
-              "versionCode": 30,
+              "versionName": "3.2.1",
+              "versionCode": 33,
               "apkAssetName": os.path.basename(os.environ["FINAL_APK"]),
               "sha256": os.environ["APK_SHA256"],
               "certificateSha256": os.environ["CERT_SHA256"],
               "productionSignerMatch": os.environ["CERT_SHA256"] == os.environ["PRODUCTION_CERT_SHA256"],
-              "comparedProductionRelease": "v2.2.10-SU",
+              "comparedProductionRelease": "v3.2.0-SU",
               "channel": "candidate",
-              "releaseNotes": "High-Tech Entertainment native Android 3.1.0 signed candidate."
+              "releaseNotes": "High-Tech Entertainment native Android 3.2.1 signed candidate."
           }
           with open(os.path.join(os.environ["RUNNER_TEMP"], "manifest.json"), "w") as output:
               json.dump(manifest, output, separators=(",", ":"))
@@ -188,9 +193,9 @@ jobs:
       - name: Upload signed native candidate and verification manifest
         uses: actions/upload-artifact@v7
         with:
-          name: high-tech-entertainment-native-v3.1.0-signed-candidate
+          name: high-tech-entertainment-native-v3.2.1-signed-candidate
           path: |
-            ${{ runner.temp }}/High-Tech-Entertainment-native-v3.1.0.apk
+            ${{ runner.temp }}/High-Tech-Entertainment-native-v3.2.1.apk
             ${{ runner.temp }}/SHA256SUMS.txt
             ${{ runner.temp }}/manifest.json
           if-no-files-found: error
@@ -200,10 +205,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "native-v3.1.0-candidate-${GITHUB_RUN_NUMBER}" \
-            "$RUNNER_TEMP/High-Tech-Entertainment-native-v3.1.0.apk" \
+          gh release create "native-v3.2.1-candidate-${GITHUB_RUN_NUMBER}" \
+            "$RUNNER_TEMP/High-Tech-Entertainment-native-v3.2.1.apk" \
             "$RUNNER_TEMP/SHA256SUMS.txt" \
             "$RUNNER_TEMP/manifest.json" \
             --prerelease \
-            --title "High-Tech Entertainment native 3.1.0 candidate ${GITHUB_RUN_NUMBER}" \
-            --notes "Signed native Android 3.1.0 candidate. This prerelease is for installation and signer-compatibility verification. It is not a production release or OTA patch."
+            --title "High-Tech Entertainment native 3.2.1 candidate ${GITHUB_RUN_NUMBER}" \
+            --notes "Signed native Android 3.2.1 candidate. This prerelease is for installation and signer-compatibility verification. It is not a production release or OTA patch."

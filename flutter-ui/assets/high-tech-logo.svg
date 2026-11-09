@@ -1,25 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
-<title id="title">High-Tech Entertainment HT emblem</title>
-<desc id="desc">A bold metallic gold HT monogram enclosed by two illuminated circular gold rings on a deep black background.</desc>
+<title id="title">HTE — High-Tech Entertainment</title>
+<desc id="desc">A custom HTE monogram in dimensional metallic gold and silver, framed by illuminated concentric rings on a deep black field.</desc>
 <defs>
-  <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0" stop-color="#fff1b8"/><stop offset=".22" stop-color="#f8ce61"/>
-    <stop offset=".5" stop-color="#b97912"/><stop offset=".72" stop-color="#ffe28a"/>
-    <stop offset="1" stop-color="#8b5209"/>
-  </linearGradient>
-  <linearGradient id="face" x1="0" y1="0" x2=".8" y2="1">
-    <stop offset="0" stop-color="#fff5c9"/><stop offset=".25" stop-color="#f5bd3e"/>
-    <stop offset=".62" stop-color="#c17a0c"/><stop offset="1" stop-color="#ffe18a"/>
-  </linearGradient>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff4c8"/><stop offset=".2" stop-color="#f2ca68"/><stop offset=".48" stop-color="#a86c18"/><stop offset=".7" stop-color="#ffe7a0"/><stop offset="1" stop-color="#87500d"/></linearGradient>
+ <linearGradient id="silver" x1="0" y1="0" x2=".9" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".28" stop-color="#c9ced2"/><stop offset=".55" stop-color="#777f86"/><stop offset=".78" stop-color="#eef0ed"/><stop offset="1" stop-color="#858c92"/></linearGradient>
+ <linearGradient id="face" x1="0" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="#fff4c9"/><stop offset=".22" stop-color="#f5c65b"/><stop offset=".58" stop-color="#bd7b19"/><stop offset="1" stop-color="#ffe39a"/></linearGradient>
+ <filter id="glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="12" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceAlpha" stdDeviation="9" result="b"/><feOffset dy="11" result="o"/><feComponentTransfer><feFuncA type="linear" slope=".7"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 </defs>
-<rect width="1024" height="1024" rx="150" fill="#050505"/>
-<circle cx="512" cy="512" r="426" fill="none" stroke="#9a650e" stroke-width="27" opacity=".5"/>
-<circle cx="512" cy="512" r="426" fill="none" stroke="url(#gold)" stroke-width="19"/>
-<circle cx="512" cy="512" r="393" fill="none" stroke="#f8d778" stroke-width="5" opacity=".72"/>
-<g fill="url(#face)" stroke="#8b570b" stroke-width="7" stroke-linejoin="bevel">
-  <path d="M205 286h112v170h180V286h112v452H497V565H317v173H205z"/>
-  <path d="M475 286h344v105H699v347H587V391H475z"/>
+<rect width="1024" height="1024" rx="148" fill="#050607"/>
+<circle cx="512" cy="512" r="430" fill="none" stroke="#9d681d" stroke-width="25" opacity=".45" filter="url(#glow)"/>
+<circle cx="512" cy="512" r="430" fill="none" stroke="url(#gold)" stroke-width="17"/>
+<circle cx="512" cy="512" r="397" fill="none" stroke="url(#silver)" stroke-width="3" opacity=".72"/>
+<circle cx="512" cy="512" r="365" fill="none" stroke="#d7ad5a" stroke-width="2" opacity=".22"/>
+<g filter="url(#shadow)" fill="url(#face)" stroke="#82500e" stroke-width="5" stroke-linejoin="bevel">
+ <path d="M132 332h82v135h122V332h82v360h-82V544H214v148h-82z"/>
+ <path d="M414 332h238v78h-78v282h-82V410h-78z"/>
+ <path d="M690 332h202v74H772v66h108v73H772v73h120v74H690z"/>
 </g>
-<path d="M210 291h102v8H210zM480 291h330v8H480z" fill="#fff4c5" opacity=".75"/>
-<circle cx="512" cy="512" r="448" fill="none" stroke="#fff0b0" stroke-width="3" opacity=".45"/>
+<path d="M140 338h66v7h-66zM422 338h222v7H422zM698 338h185v7H698z" fill="#fff3c5" opacity=".72"/>
+<path d="M132 730h760" stroke="url(#silver)" stroke-width="2" opacity=".42"/>
+<text x="512" y="790" text-anchor="middle" fill="url(#silver)" font-family="Arial,sans-serif" font-size="26" font-weight="700" letter-spacing="12">HIGH-TECH ENTERTAINMENT</text>
 </svg>

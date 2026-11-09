@@ -1,7 +1,7 @@
 name: high_tech_ui
-description: Flutter presentation module for High-Tech Entertainment Android 3.1.
+description: Flutter presentation module for High-Tech Entertainment Android 3.2.1.
 publish_to: 'none'
-version: 3.1.0+30
+version: 3.2.1+33
 environment:
   sdk: '>=3.13.0 <4.0.0'
 
