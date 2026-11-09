@@ -63,7 +63,8 @@ jobs:
               exit 1
             fi
             yes | "$SDKMANAGER" --licenses
-            "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"\n            test -d "$SDK_ROOT/ndk/28.2.13676358"
+            "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"
+            test -d "$SDK_ROOT/ndk/28.2.13676358"
           fi
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
