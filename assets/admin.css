@@ -302,3 +302,39 @@
 .admin-login-visual{background-image:linear-gradient(90deg,#080b12ed 0%,#080b12d9 48%,#080b1290 100%),url('../images/brand/high-tech-hero.svg');background-size:cover;background-position:62% center;border:1px solid #d7b66c33;border-radius:18px}
 .admin-login-orbit{border-color:#d7b66c50;box-shadow:0 0 70px #d7b66c12,inset 0 0 60px #e5c27612}
 .admin-login-orbit:before,.admin-login-orbit:after{border-color:#e5c27666}
+
+/* AI Marketing Agent — Founder Studio */
+.hte-marketing-hero{display:flex;justify-content:space-between;align-items:center;gap:25px;min-height:235px;padding:clamp(24px,4vw,42px);border:1px solid #e5c27638;border-radius:22px;background:radial-gradient(ellipse at 78% 45%,#77ddff22,transparent 38%),linear-gradient(120deg,#172638,#0a111a 70%,#17140e);overflow:hidden}
+.hte-marketing-hero .eyebrow{color:#77ddff;font-size:.64rem;letter-spacing:.18em}
+.hte-marketing-hero h2{font:850 clamp(2rem,4vw,3.5rem)/1.02 Manrope,sans-serif;letter-spacing:-.06em;margin:12px 0}
+.hte-marketing-hero h2 span{color:#e5c276}
+.hte-marketing-hero p{max-width:570px;color:#a5b5c5;margin:0 0 16px}
+.hte-marketing-chips,.hte-job-chips{display:flex;flex-wrap:wrap;gap:7px}
+.hte-marketing-chips span,.hte-job-chips span{font-size:.6rem;letter-spacing:.09em;padding:6px 9px;border:1px solid #77ddff30;border-radius:999px;color:#b8d6e5;background:#77ddff0a}
+.hte-marketing-orbit{width:170px;height:170px;flex:0 0 170px;border:1px solid #e5c27666;border-radius:50%;display:grid;place-items:center;font:900 3.3rem Manrope;color:#f5e4bd;box-shadow:0 0 0 16px #77ddff0a,0 0 50px #77ddff20,inset 0 0 35px #e5c27614}
+.hte-marketing-orbit span{color:#77ddff;font-size:1.5rem}
+.hte-marketing-notice{margin-top:16px;padding:14px 16px;border:1px solid #e5c27644;border-radius:13px;background:#e5c2760b;color:#c5cbd1;font-size:.78rem;line-height:1.6}
+.hte-marketing-notice strong{color:#f0d99e}
+.hte-marketing-layout{grid-template-columns:minmax(0,1.45fr) minmax(230px,.75fr)}
+.hte-channel-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.hte-channel-grid label{display:flex;align-items:center;gap:9px;padding:11px;border:1px solid var(--admin-line);border-radius:10px;background:#0a121c;color:#c4d0dc;font-size:.8rem}
+.hte-channel-grid input{accent-color:#e5c276}
+.hte-social-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.hte-social-card{display:flex;align-items:center;gap:12px;padding:16px;border:1px solid var(--admin-line);background:linear-gradient(145deg,#142131,#0c131c);border-radius:15px;min-width:0}
+.hte-social-mark{width:40px;height:40px;flex:0 0 40px;border-radius:12px;display:grid;place-items:center;background:#77ddff13;color:#e5c276;font:800 1.1rem Manrope}
+.hte-social-copy{min-width:0;display:grid;gap:4px}
+.hte-social-copy strong{font:700 .86rem Manrope}
+.hte-social-copy small{font-size:.69rem;color:#8295a8;overflow-wrap:anywhere}
+.hte-social-state{display:inline-flex;width:max-content;max-width:100%;font-size:.57rem;letter-spacing:.1em;font-weight:800;color:#9caaba}
+.hte-social-state.connected,.hte-social-state.published{color:#75e6ae}
+.hte-social-state.error,.hte-social-state.failed{color:#ff9d9d}
+.hte-social-state.needs_manual_share{color:#e5c276}
+.hte-marketing-campaigns{display:grid;gap:12px}
+.hte-campaign-card{padding:18px;border:1px solid var(--admin-line);background:linear-gradient(145deg,#142131,#0c131c);border-radius:16px}
+.hte-campaign-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.hte-campaign-heading h3{font:750 1rem Manrope;margin:8px 0 3px}
+.hte-campaign-heading small{color:#8194a7;font-size:.7rem}
+.hte-campaign-card p{color:#b0bfcd;font-size:.82rem;white-space:pre-wrap;overflow-wrap:anywhere}
+.hte-job-chips span{font-size:.62rem;text-transform:none;letter-spacing:0}
+@media(max-width:900px){.hte-marketing-layout{grid-template-columns:1fr}.hte-social-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.hte-marketing-hero{min-height:0}.hte-marketing-orbit{display:none}.hte-social-grid{grid-template-columns:1fr}.hte-channel-grid{grid-template-columns:1fr}.hte-campaign-heading{align-items:flex-start}.hte-campaign-heading .btn{padding:8px 10px}}
