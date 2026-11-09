@@ -1,0 +1,74 @@
+name: High-Tech Entertainment media compatibility audit
+
+on:
+  push:
+    branches:
+      - diagnostics/media-compatibility-20261109
+    paths:
+      - .github/workflows/media-compatibility-audit.yml
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-public-media:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install FFmpeg tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Inspect public audio and video objects
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$RUNNER_TEMP/media-audit.txt"
+          : > "$report"
+
+          inspect_media() {
+            local label="$1"
+            local url="$2"
+            local file="$RUNNER_TEMP/$3"
+            local headers="$RUNNER_TEMP/$3.headers"
+
+            echo "## $label" | tee -a "$report"
+            curl -sS -L -D "$headers" -H "Range: bytes=0-1023" -o /dev/null "$url"
+            echo "HTTP/Range headers:" | tee -a "$report"
+            grep -Ei '^HTTP/|^content-range:|^accept-ranges:|^content-length:|^content-type:' "$headers" | tail -n 8 | tee -a "$report" || true
+
+            curl -sS -L --fail "$url" -o "$file"
+            echo "Media metadata:" | tee -a "$report"
+            ffprobe -v error \
+              -show_entries stream=index,codec_type,codec_name,profile,width,height,pix_fmt,level,sample_rate,channels \
+              -show_entries format=format_name,duration,size \
+              -of json "$file" | tee -a "$report"
+
+            echo "Full decode test:" | tee -a "$report"
+            ffmpeg -v error -i "$file" -f null - 2>>"$report"
+            echo "PASS: $label decoded successfully." | tee -a "$report"
+            echo "" | tee -a "$report"
+          }
+
+          inspect_media "Think before you talk video" \
+            "https://wqrxacjbsldbnoekbkbf.supabase.co/storage/v1/object/public/hte-video/b268df9e-eff5-43b9-a38f-869b33add38b/1793673630122-27714.mp4" \
+            "think-before-you-talk.mp4"
+
+          inspect_media "Salt love video" \
+            "https://wqrxacjbsldbnoekbkbf.supabase.co/storage/v1/object/public/hte-video/b268df9e-eff5-43b9-a38f-869b33add38b/1793673003447-27710.mp4" \
+            "salt-love.mp4"
+
+          inspect_media "Published test audio track" \
+            "https://wqrxacjbsldbnoekbkbf.supabase.co/storage/v1/object/public/hte-audio/b268df9e-eff5-43b9-a38f-869b33add38b/1793386023105-AUD-20240702-WA0005.mp3" \
+            "test-track.mp3"
+
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          cat "$report"
+
+      - name: Upload media audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: high-tech-media-compatibility-audit
+          path: ${{ runner.temp }}/media-audit.txt
+          if-no-files-found: error
+          retention-days: 3
