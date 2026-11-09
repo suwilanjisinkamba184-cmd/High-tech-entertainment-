@@ -155,6 +155,7 @@ jobs:
           printf '%s\n' "$PRODUCTION_BADGING" | grep -F "package: name='com.hightechentertainment.app'" >/dev/null || {
             echo "::error::Reference production APK package ID does not match."
             exit 1
+          }
           # The GitHub release tag/body is not authoritative APK metadata.
           # Log the actual APK version and enforce package identity + signer equality.
           printf '%s\n' "$PRODUCTION_BADGING" | grep -E "^package: .*versionCode='[0-9]+' .*versionName='[^']+'" || {
