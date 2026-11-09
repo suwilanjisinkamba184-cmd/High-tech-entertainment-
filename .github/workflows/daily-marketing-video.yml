@@ -17,6 +17,9 @@ jobs:
   render-and-publish:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      META_PAGE_ACCESS_TOKEN: ${{ secrets.META_PAGE_ACCESS_TOKEN }}
+      META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
     steps:
       - name: Check out official source
         uses: actions/checkout@v4
@@ -42,7 +45,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish video to the High-Tech Entertainment Facebook Page
-        if: ${{ secrets.META_PAGE_ACCESS_TOKEN != '' && secrets.META_PAGE_ID != '' }}
+        if: ${{ env.META_PAGE_ACCESS_TOKEN != '' && env.META_PAGE_ID != '' }}
         env:
           META_PAGE_ACCESS_TOKEN: ${{ secrets.META_PAGE_ACCESS_TOKEN }}
           META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
@@ -65,7 +68,7 @@ jobs:
           PY
 
       - name: Explain why automatic publishing was skipped
-        if: ${{ secrets.META_PAGE_ACCESS_TOKEN == '' || secrets.META_PAGE_ID == '' }}
+        if: ${{ env.META_PAGE_ACCESS_TOKEN == '' || env.META_PAGE_ID == '' }}
         run: |
           echo "::warning::Video generated and saved as an artifact, but Facebook publishing is not configured."
           echo "Add META_PAGE_ACCESS_TOKEN and META_PAGE_ID under repository Settings > Secrets and variables > Actions."
