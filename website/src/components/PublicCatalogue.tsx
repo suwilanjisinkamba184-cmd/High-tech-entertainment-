@@ -142,6 +142,8 @@ function VideoPlayer({url,title,poster}:{url:string;title:string;poster?:string|
   const direct = !!safe && (new URL(safe).pathname.includes('/storage/v1/object/') || /\.(mp4|webm|mov|m4v)$/i.test(new URL(safe).pathname));
   const videoRef = useRef<HTMLVideoElement>(null);
   const [failed,setFailed] = useState(false);
+  const [failureReason,setFailureReason] = useState('');
+  const [metadataLoaded,setMetadataLoaded] = useState(false);
   const [attempt,setAttempt] = useState(0);
   const [playing,setPlaying] = useState(false);
   const [current,setCurrent] = useState(0);
@@ -150,7 +152,7 @@ function VideoPlayer({url,title,poster}:{url:string;title:string;poster?:string|
   const togglePlayback = async () => {
     const video = videoRef.current;
     if (!video) return;
-    if (video.paused) { try { await video.play(); setFailed(false); } catch { setFailed(true); } }
+    if (video.paused) { try { await video.play(); setFailed(false); setFailureReason(''); } catch { setFailureReason('The video could not start. Try again or open the original file.'); setFailed(true); } }
     else video.pause();
   };
   const toggleMute = () => { const video=videoRef.current; if(!video)return; video.muted=!video.muted; setMuted(video.muted); };
@@ -158,20 +160,23 @@ function VideoPlayer({url,title,poster}:{url:string;title:string;poster?:string|
 
   if (embed) return <div className="video-player-shell video-embed-shell"><iframe className="video-embed" title={'Watch ' + title} src={embed} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /><a className="text-link" href={safe || url} target="_blank" rel="noopener noreferrer">Open original video ↗</a></div>;
   if (direct && safe) return <div className="video-player-shell">
-    {failed ? <div className="video-load-error" role="alert">{safePoster && <img className="video-fallback-poster" src={safePoster} alt={title + ' video preview'} loading="lazy" decoding="async" />}<p>This video could not be played in the embedded player.</p><div className="video-error-actions"><button type="button" className="video-retry-button" onClick={()=>{setFailed(false);setAttempt(value=>value+1)}}>Retry video ↻</button><a className="text-link" href={safe} target="_blank" rel="noopener noreferrer">Open video directly ↗</a></div></div> : <>
-      <video key={attempt} ref={videoRef} className="video-direct" preload="metadata" playsInline poster={safePoster || undefined} src={safe}
-        onLoadedMetadata={event=>setDuration(event.currentTarget.duration || 0)}
-        onDurationChange={event=>setDuration(event.currentTarget.duration || 0)}
+    {failed ? <div className="video-load-error" role="alert">{safePoster && <img className="video-fallback-poster" src={safePoster} alt={title + ' video preview'} loading="lazy" decoding="async" />}<p>{failureReason || "This video could not be played in the embedded player."}</p><div className="video-error-actions"><button type="button" className="video-retry-button" onClick={()=>{setFailed(false);setFailureReason('');setMetadataLoaded(false);setDuration(0);setAttempt(value=>value+1)}}>Retry video ↻</button><a className="text-link" href={safe} target="_blank" rel="noopener noreferrer">Open video directly ↗</a></div></div> : <>
+      <video key={attempt} ref={videoRef} className="video-direct" preload="none" playsInline poster={safePoster || undefined}
+        onLoadedMetadata={event=>{setDuration(event.currentTarget.duration || 0);setMetadataLoaded(true);}}
+        onDurationChange={event=>{setDuration(event.currentTarget.duration || 0);setMetadataLoaded(true);}}
         onTimeUpdate={event=>setCurrent(event.currentTarget.currentTime)}
-        onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)}
+        onPlay={()=>{setPlaying(true);setFailed(false);setFailureReason('');}} onPause={()=>setPlaying(false)}
         onEnded={()=>{setPlaying(false);setCurrent(0);}}
-        onError={()=>{setFailed(true);setPlaying(false);}} onCanPlay={()=>setFailed(false)} />
+        onError={event=>{const code=event.currentTarget.error?.code;setPlaying(false);if(code===1){setFailed(false);setMetadataLoaded(false);setDuration(0);return;}setFailureReason(code===4?'This browser cannot decode this MP4. Try Chrome or open the original video.':code===2?'The video stream could not be loaded. Check your connection and retry.':'The video could not be decoded by this browser.');setFailed(true);}}
+        onCanPlay={()=>{setFailed(false);setFailureReason('');setMetadataLoaded(true);}}>
+        <source src={safe} type="video/mp4" />
+      </video>
       <div className="hte-video-controls">
         <button type="button" className="hte-player-play" onClick={()=>void togglePlayback()} aria-label={playing ? "Pause " + title : "Play " + title}>{playing ? "Ⅱ" : "▶"}</button>
-        <span className="hte-player-time">{formatMediaTime(current)}</span>
+        <span className="hte-player-time" aria-live="polite">{metadataLoaded ? formatMediaTime(current) : "Ready"}</span>
         <input className="hte-player-seek" type="range" min="0" max={Math.max(duration,1)} step="0.1" value={Math.min(current,duration || 0)} disabled={!duration} aria-label={"Seek " + title}
           onChange={event=>{const value=Number(event.currentTarget.value);if(videoRef.current){videoRef.current.currentTime=value;setCurrent(value);}}} />
-        <span className="hte-player-time">{formatMediaTime(duration)}</span>
+        <span className="hte-player-time">{metadataLoaded ? formatMediaTime(duration) : "Tap play"}</span>
         <button type="button" className="hte-player-utility" onClick={toggleMute} aria-label={muted ? "Unmute video" : "Mute video"}>{muted ? "Unmute" : "Mute"}</button>
         <button type="button" className="hte-player-utility" onClick={fullscreen} aria-label="Enter fullscreen">Full screen</button>
       </div>
