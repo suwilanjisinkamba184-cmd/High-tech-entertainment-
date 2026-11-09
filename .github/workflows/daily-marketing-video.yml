@@ -1,0 +1,74 @@
+name: Daily High-Tech cinematic promo
+
+on:
+  schedule:
+    # 09:00 Zambia time (UTC+2). GitHub scheduled runs may be delayed.
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hte-daily-marketing-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  render-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      META_PAGE_ACCESS_TOKEN: ${{ secrets.META_PAGE_ACCESS_TOKEN }}
+      META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
+    steps:
+      - name: Check out official source
+        uses: actions/checkout@v4
+
+      - name: Install video tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install Pillow cairosvg
+
+      - name: Render today's original HTE motion-graphics video
+        run: python scripts/create_daily_marketing_video.py
+
+      - name: Save video and caption as a downloadable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hte-daily-promo-${{ github.run_id }}
+          path: |
+            output/*.mp4
+            output/*.txt
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish video to the High-Tech Entertainment Facebook Page
+        if: ${{ env.META_PAGE_ACCESS_TOKEN != '' && env.META_PAGE_ID != '' }}
+        env:
+          META_PAGE_ACCESS_TOKEN: ${{ secrets.META_PAGE_ACCESS_TOKEN }}
+          META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
+        run: |
+          VIDEO="$(find output -maxdepth 1 -name '*.mp4' -type f | head -n 1)"
+          CAPTION="$(cat "$(find output -maxdepth 1 -name '*.txt' -type f | head -n 1)")"
+          RESPONSE="$(curl --fail-with-body --silent --show-error \
+            -F "access_token=${META_PAGE_ACCESS_TOKEN}" \
+            -F "description=${CAPTION}" \
+            -F "source=@${VIDEO};type=video/mp4" \
+            "https://graph-video.facebook.com/v27.0/${META_PAGE_ID}/videos")"
+          echo "$RESPONSE" > output/facebook-publish-result.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("output/facebook-publish-result.json").read_text())
+          if not data.get("id"):
+              raise SystemExit("Meta did not return a published video ID.")
+          print("Facebook video published. Post ID:", data["id"])
+          PY
+
+      - name: Explain why automatic publishing was skipped
+        if: ${{ env.META_PAGE_ACCESS_TOKEN == '' || env.META_PAGE_ID == '' }}
+        run: |
+          echo "::warning::Video generated and saved as an artifact, but Facebook publishing is not configured."
+          echo "Add META_PAGE_ACCESS_TOKEN and META_PAGE_ID under repository Settings > Secrets and variables > Actions."

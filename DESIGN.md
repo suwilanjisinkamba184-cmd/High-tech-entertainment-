@@ -26,7 +26,7 @@ An editorial independent music label: obsidian, brushed gold, and restrained sil
 - Preserve the existing functional Supabase catalogue, booking, account, and admin flows.
 
 ## Android app principles
-- Reuse the same HT crest SVG and gold/obsidian palette.
+- Reuse the HTE monogram SVG and shared gold/obsidian/silver palette.
 - Use native Android navigation, clear touch targets, readable text, and predictable playback feedback.
 - Keep the app more functional and compact than the website, but not childish or overly decorative.
 - Spotify catalogue entries open the official Spotify embedded player in an in-app WebView; direct HTTPS audio uses the native audio engine.
