@@ -73,11 +73,12 @@ try:
         phase = frame / max(1, FRAMES - 1)
         base = Image.new("RGB", (W, H), (4, 5, 7))
         # Subtle vertical graphite gradient.
-        pix = base.load()
+        gradient = Image.new("RGB", (1, H))
+        gd0 = ImageDraw.Draw(gradient)
         for y in range(H):
             lift = int(9 * (1 - y / H))
-            for x in range(W):
-                pix[x, y] = (5 + lift // 3, 6 + lift // 3, 8 + lift // 2)
+            gd0.point((0, y), fill=(5 + lift // 3, 6 + lift // 3, 8 + lift // 2))
+        base = gradient.resize((W, H))
         glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         gd = ImageDraw.Draw(glow)
         sweep_x = int(-220 + (W + 440) * phase)
