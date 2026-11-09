@@ -4,7 +4,6 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const allowedOrigins = new Set([
   "https://high-tech-entertainment.suwilanjisinkamba184.workers.dev",
   "https://suwilanjisinkamba184-cmd.github.io",
-  "https://high-techmedia.netlify.app",
   "https://website-redesign-mainline-20.high-tech-entertainment.pages.dev",
 ]);
 function isAllowedOrigin(origin: string): boolean {
@@ -39,7 +38,7 @@ Deno.serve(async (req: Request) => {
 
   const accessToken = req.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1] || "";
 
-  const resendKey = Deno.env.get("RESEND_API_KEY");
+  const resendKey = Deno.env.get("RESEND_API_KEY") || Deno.env.get("Resend");
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const secretKeysRaw = Deno.env.get("SUPABASE_SECRET_KEYS");
   if (!resendKey || !supabaseUrl || !secretKeysRaw) {

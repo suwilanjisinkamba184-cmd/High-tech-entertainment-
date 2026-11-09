@@ -4,7 +4,6 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const allowedOrigins = new Set([
   "https://high-tech-entertainment.suwilanjisinkamba184.workers.dev",
   "https://suwilanjisinkamba184-cmd.github.io",
-  "https://high-techmedia.netlify.app",
   "https://website-redesign-mainline-20.high-tech-entertainment.pages.dev",
 ]);
 function isAllowedOrigin(origin: string): boolean {
@@ -141,7 +140,7 @@ Deno.serve(async (req: Request) => {
       return response({ ok: true, saved: true, email_sent: false, error: "Your request is saved, but the email alert is delayed. The team can still review it in Founder Studio." }, 200, origin);
     }
 
-    const resendKey = Deno.env.get("RESEND_API_KEY");
+    const resendKey = Deno.env.get("RESEND_API_KEY") || Deno.env.get("Resend");
     if (!resendKey) {
       await admin.from("booking_notification_log").update({
         status: "failed", error: "RESEND_API_KEY is not configured", updated_at: new Date().toISOString(),

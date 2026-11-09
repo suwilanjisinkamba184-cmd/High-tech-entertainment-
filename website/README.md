@@ -12,4 +12,4 @@ The public homepage is built from **Astro**, not the legacy root `index.html`.
 
 The GitHub Pages workflow runs `scripts/build-website.sh` and publishes `dist/`. Changes made only to the legacy root `index.html` do not control the deployed homepage. The build now checks for Astro homepage markers so this mismatch fails CI instead of silently publishing the wrong UI.
 
-GitHub Pages remains the canonical production host. Cloudflare is used only for root-path preview builds; Netlify is not part of this deployment.
+GitHub Pages remains the canonical production host. Cloudflare is used only for root-path preview builds.
