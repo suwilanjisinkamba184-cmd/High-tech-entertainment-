@@ -13,12 +13,15 @@ document.addEventListener('submit',async function(event){
   try{
     const config=window.HTE_SUPABASE_CONFIG||{};
     if(!window.supabase||!config.url||!config.publishableKey)throw new Error('The upload service did not load. Refresh the page and try again.');
-    const client=window.supabase.createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});
+    const client=window.HTE_SUPABASE_CLIENT;if(!client)throw new Error('The shared High-Tech Entertainment session could not be restored. Reload Founder Studio and try again.');
     say('Checking founder access…');
     const {data:auth,error:authError}=await client.auth.getSession();
     if(authError)throw authError;
     const user=auth.session?.user;
-    if(!user||user.id!=='b268df9e-eff5-43b9-a38f-869b33add38b'||String(user.email||'').toLowerCase()!=='suwilanjisinkamba184@gmail.com')throw new Error('Founder session not found. Sign out, sign in again, and retry.');
+    if(!user)throw new Error('Your founder session is not active. Sign in again and retry.');
+    const {data:founderAllowed,error:founderError}=await client.rpc('hte_is_admin');
+    if(founderError)throw founderError;
+    if(founderAllowed!==true)throw new Error('This account is not authorised to upload music to Founder Studio.');
     const data=new FormData(form);
     const file=data.get('audio');
     if(!(file instanceof File)||!file.size)throw new Error('Please select an audio file.');
