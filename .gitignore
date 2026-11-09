@@ -1,3 +1,11 @@
 .netlify/
 node_modules/
 .DS_Store
+
+# Flutter module generated files
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+flutter-ui/.android/
+flutter-ui/build/
+flutter-ui/.dart_tool/

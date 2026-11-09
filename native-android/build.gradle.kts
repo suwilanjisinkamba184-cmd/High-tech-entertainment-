@@ -1,5 +1,5 @@
 plugins {
-    id("com.android.application") version "9.5.0" apply false
-    // AGP 9 provides built-in Kotlin support; only the Compose compiler plugin is applied.
-    id("org.jetbrains.kotlin.plugin.compose") version "2.4.10" apply false
+    // Flutter 3.47.9 enforces AGP 8.11.1 as its minimum supported version.
+    // Keep Kotlin Gradle Plugin 2.2.21 in settings.gradle.kts for Flutter compatibility.
+    id("com.android.application") version "8.11.1" apply false
 }

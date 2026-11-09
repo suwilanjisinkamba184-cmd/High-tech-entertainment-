@@ -17,6 +17,8 @@
         android:name=".HteApplication"
         android:allowBackup="false"
         android:label="High-Tech Entertainment"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <service
@@ -28,7 +30,7 @@
             </intent-filter>
         </service>
         <activity
-            android:name=".MainActivity"
+            android:name=".FlutterHostActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:screenOrientation="unspecified">
@@ -43,5 +45,9 @@
                 <data android:scheme="com.hightechentertainment.app" android:host="login-callback" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".NativeVideoActivity"
+            android:exported="false"
+            android:screenOrientation="unspecified" />
     </application>
 </manifest>
