@@ -57,7 +57,12 @@ jobs:
           grep -q 'id="auth-mode-toggle"' account/index.html
           grep -q 'id="forgot-password"' account/index.html
           grep -q 'id="password-update-form"' account/index.html
-          grep -q 'assets/app.js?v=14' account/index.html
+          grep -q 'assets/app.js?v=15' account/index.html
+          grep -q 'onAuthStateChange' assets/app.js
+          grep -q "rpc('hte_is_admin')" assets/app.js
+          grep -q 'HTE_SUPABASE_CLIENT' assets/app.js
+          grep -q 'window.HTE_SUPABASE_CLIENT' assets/admin-upload.js
+          grep -q "client.rpc('hte_is_admin')" assets/admin-upload.js
           grep -q 'async function profileLoad' assets/app.js
           grep -q 'profiles.*insert' assets/app.js
           grep -q 'entertainment-enhancements.css' index.html
@@ -65,7 +70,8 @@ jobs:
           grep -q 'releases/download/v3.2.0-SU/High-Tech-Entertainment-v3.2.0-SU.apk' index.html
           grep -q 'id="primary-navigation"' index.html
           grep -q 'class="menu-toggle"' index.html
-          grep -q 'assets/app.js?v=12' admin/index.html
+          grep -q 'assets/app.js?v=15' admin/index.html
+          grep -q 'assets/admin-upload.js?v=20261109-session1' admin/index.html
           grep -q 'authNext' website/src/pages/index.astro
           grep -q 'callbackParams.delete' website/src/pages/index.astro
           grep -q 'loadAccountDownloads' assets/app.js
