@@ -1,4 +1,4 @@
-name: High-Tech Entertainment — Native Android CI
+name: High-Tech Entertainment â Native Android CI
 
 on:
   pull_request:
@@ -62,7 +62,7 @@ jobs:
               echo "::error::Android sdkmanager was not found and required SDK packages are missing."
               exit 1
             fi
-            yes | "$SDKMANAGER" --licenses
+            yes | "$SDKMANAGER" --licenses || true
             "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"
             test -d "$SDK_ROOT/ndk/28.2.13676358"
           fi

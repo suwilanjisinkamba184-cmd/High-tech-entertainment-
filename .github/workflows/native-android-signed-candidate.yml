@@ -1,4 +1,4 @@
-name: High-Tech Entertainment — Native Android Signed Candidate
+name: High-Tech Entertainment â Native Android Signed Candidate
 
 on:
   push:
@@ -152,11 +152,11 @@ jobs:
             "https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/v3.2.0-SU/High-Tech-Entertainment-v3.2.0-SU.apk" \
             --output "$PRODUCTION_APK"
           PRODUCTION_BADGING="$("$SDK_BUILD_TOOLS/aapt" dump badging "$PRODUCTION_APK")"
-          printf '%s\\n' "$PRODUCTION_BADGING" | grep -F "package: name='com.hightechentertainment.app'" >/dev/null || {
+          printf '%s\n' "$PRODUCTION_BADGING" | grep -F "package: name='com.hightechentertainment.app'" >/dev/null || {
             echo "::error::Reference production APK package ID does not match."
             exit 1
           }
-          printf '%s\\n' "$PRODUCTION_BADGING" | grep -F "versionCode='32' versionName='3.2.0'" >/dev/null || {
+          printf '%s\n' "$PRODUCTION_BADGING" | grep -F "versionCode='32' versionName='3.2.0'" >/dev/null || {
             echo "::error::Reference production APK is not v3.2.0-SU (build 32)."
             exit 1
           }
