@@ -6,6 +6,7 @@ This workflow creates one original 10-second vertical motion-graphics promotiona
 
 - Uses the official `high-tech-logo.svg` and the existing black / metallic-gold / silver brand palette.
 - Produces a fresh daily variation of the HTE brand message using original animated graphics.
+- The initial MP4 is silent: it does not yet add narration or a music track.
 - Uses FFmpeg, Pillow and CairoSVG; no paid AI-video API, HeyGen API key or ElevenLabs API key is required.
 - Saves the MP4 and caption as a GitHub Actions artifact for 30 days.
 - Publishes to the Facebook Page automatically when both Page secrets are configured.
