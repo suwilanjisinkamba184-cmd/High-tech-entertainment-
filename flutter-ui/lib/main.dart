@@ -3091,8 +3091,8 @@ class _FlutterVideoPlayerScreenState extends State<FlutterVideoPlayerScreen> {
             : !ready
                 ? const Center(child: CircularProgressIndicator(color: _gold))
                 : _fullscreen
-                    ? _buildFullscreen(controller)
-                    : _buildRegular(controller),
+                    ? _buildFullscreen(controller!)
+                    : _buildRegular(controller!),
       ),
     );
   }
