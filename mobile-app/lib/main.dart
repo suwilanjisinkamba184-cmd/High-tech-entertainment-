@@ -1,4 +1,4 @@
-// Full-release repair: 2.2.10 SU+27 includes the updated compiled icon asset.
+// Production app source for High-Tech Entertainment 3.2.0 SU (build 32).
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -440,12 +440,12 @@ class HteApp extends StatelessWidget {
       ).copyWith(
         primary: const Color(0xFFE3B85F),
         onPrimary: const Color(0xFF17120A),
-        secondary: const Color(0xFFB8D3E6),
-        onSecondary: const Color(0xFF09121A),
-        surface: const Color(0xFF10151D),
-        surfaceContainer: const Color(0xFF131A23),
-        surfaceContainerHigh: const Color(0xFF19222D),
-        outline: const Color(0xFF34404D),
+        secondary: const Color(0xFFC6CBD1),
+        onSecondary: const Color(0xFF111317),
+        surface: const Color(0xFF111214),
+        surfaceContainer: const Color(0xFF191816),
+        surfaceContainerHigh: const Color(0xFF24211B),
+        outline: const Color(0xFF514936),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Color(0xFF07090D),
@@ -459,12 +459,12 @@ class HteApp extends StatelessWidget {
         displayColor: const Color(0xFFF8F5EC),
       ),
       cardTheme: CardThemeData(
-        color: const Color(0xFF111720),
+        color: const Color(0xFF111214),
         elevation: 0,
         margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
-          side: const BorderSide(color: Color(0xFF263442)),
+          side: const BorderSide(color: Color(0xFF3A3428)),
         ),
       ),
       listTileTheme: const ListTileThemeData(
@@ -1165,9 +1165,9 @@ class _MainScreenState extends State<MainScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xF2141B24), Color(0xFF080B10)],
+          colors: [Color(0xF2101113), Color(0xFF070809)],
         ),
-        border: Border(top: BorderSide(color: Color(0xFF34404D), width: .7)),
+        border: Border(top: BorderSide(color: Color(0x55D7B66C), width: .8)),
         boxShadow: [BoxShadow(color: Color(0x66000000), blurRadius: 24, offset: Offset(0, -8))],
       ),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1309,7 +1309,7 @@ class Brand extends StatelessWidget {
         padding: const EdgeInsets.all(5),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: const SweepGradient(colors: [Color(0xFF7E5A26), Color(0xFFE8C878), Color(0xFF607D91), Color(0xFF7E5A26)]),
+          gradient: const SweepGradient(colors: [Color(0xFF7E5A26), Color(0xFFE8C878), Color(0xFFC6CBD1), Color(0xFF7E5A26)]),
           boxShadow: const [BoxShadow(color: Color(0x337E5A26), blurRadius: 18, spreadRadius: 1)],
         ),
         child: Container(
@@ -1320,9 +1320,9 @@ class Brand extends StatelessWidget {
       ),
       const SizedBox(width: 13),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('HIGH-TECH', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: 2.1, height: 1.05)),
+        const Text('HTE', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 3.0, height: 1.0)),
         const SizedBox(height: 4),
-        const Text('ENTERTAINMENT', style: TextStyle(fontSize: 9, color: Color(0xFFE2BC69), letterSpacing: 3.0, fontWeight: FontWeight.w800)),
+        const Text('HIGH-TECH ENTERTAINMENT', style: TextStyle(fontSize: 8, color: Color(0xFFE2BC69), letterSpacing: 1.6, fontWeight: FontWeight.w800)),
         const SizedBox(height: 5),
         Text(tagline, maxLines: 1, overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 8, color: Color(0xFF8795A3), letterSpacing: 1.0, fontWeight: FontWeight.w600)),
@@ -1330,14 +1330,14 @@ class Brand extends StatelessWidget {
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
         decoration: BoxDecoration(
-          color: const Color(0xFF13202A),
+          color: const Color(0xFF171512),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF344B5A)),
+          border: Border.all(color: const Color(0xFF51452E)),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.graphic_eq_rounded, color: Color(0xFFE2BC69), size: 13),
           SizedBox(width: 5),
-          Text('HT MUSIC', style: TextStyle(color: Color(0xFFC7D5DF), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: .8)),
+          Text('HTE MUSIC', style: TextStyle(color: Color(0xFFC7D5DF), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: .8)),
         ]),
       ),
     ]),
@@ -1592,28 +1592,53 @@ class HteNeoHero extends StatelessWidget {
       gradient: const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFF18232D), Color(0xFF0C121A), Color(0xFF080B10)],
+        colors: [Color(0xFF17140F), Color(0xFF0D0E10), Color(0xFF070809)],
       ),
       boxShadow: const [
-        BoxShadow(color: Color(0x4439A7B8), blurRadius: 34, offset: Offset(12, -8)),
+        BoxShadow(color: Color(0x22D7B66C), blurRadius: 30, offset: Offset(12, -8)),
         BoxShadow(color: Color(0x553A2A10), blurRadius: 28, offset: Offset(0, 14)),
       ],
     ),
     child: Stack(
       children: [
+        Positioned.fill(
+          child: Opacity(
+            opacity: .24,
+            child: SvgPicture.asset(
+              'assets/high-tech-hero.svg',
+              fit: BoxFit.cover,
+              alignment: Alignment.centerRight,
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  Color(0xE6101217),
+                  Color(0xA6101217),
+                  Color(0x55101217),
+                ],
+              ),
+            ),
+          ),
+        ),
         Positioned(right: -82, top: -92, child: Container(
           width: 270, height: 270,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: const Color(0x335CC9D8), width: 1.2),
-            boxShadow: const [BoxShadow(color: Color(0x223AB8C8), blurRadius: 36, spreadRadius: 12)],
+            border: Border.all(color: const Color(0x33D7B66C), width: 1.2),
+            boxShadow: const [BoxShadow(color: Color(0x22D7B66C), blurRadius: 36, spreadRadius: 12)],
           ),
         )),
         Positioned(right: -35, top: -45, child: Container(
           width: 180, height: 180,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: const Color(0x44D7B66B), width: 1),
+            border: Border.all(color: const Color(0x66D7B66C), width: 1),
           ),
         )),
         Positioned(right: 12, top: 52,
@@ -1627,7 +1652,7 @@ class HteNeoHero extends StatelessWidget {
                 width: 3, height: h,
                 margin: const EdgeInsets.symmetric(horizontal: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF64C6D2).withValues(alpha: .52),
+                  color: const Color(0xFFBFC6CB).withValues(alpha: .52),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -1642,15 +1667,15 @@ class HteNeoHero extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                   decoration: BoxDecoration(
-                    color: const Color(0x1A62C6D2),
+                    color: const Color(0x1AD7B66C),
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: const Color(0x555CC9D8)),
+                    border: Border.all(color: const Color(0x66D7B66C)),
                   ),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF7FE0C0), shape: BoxShape.circle)),
+                    Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFFE3BD70), shape: BoxShape.circle)),
                     SizedBox(width: 7),
-                    Text('HIGH-TECH · SOUND SYSTEM',
-                      style: TextStyle(color: Color(0xFFD2E0E5), fontSize: 8,
+                    Text('HTE · SOUND SYSTEM',
+                      style: TextStyle(color: Color(0xFFE9DDBF), fontSize: 8,
                         fontWeight: FontWeight.w800, letterSpacing: 1.05)),
                   ]),
                 ),
@@ -3444,9 +3469,53 @@ class _AccountTabState extends State<AccountTab> {
   final password = TextEditingController();
   bool signup = false;
   bool busy = false;
+  bool _founderAccess = false;
+  bool _checkingFounderAccess = true;
+  bool _founderCheckInFlight = false;
+  String? _founderCheckedUserId;
+  StreamSubscription? _authSubscription;
 
   @override
-  void dispose() { email.dispose(); password.dispose(); super.dispose(); } 
+  void initState() {
+    super.initState();
+    _authSubscription = db.auth.onAuthStateChange.listen((_) => _refreshFounderAccess());
+    _refreshFounderAccess();
+  }
+
+  Future<void> _refreshFounderAccess() async {
+    final user = db.auth.currentUser;
+    if (user == null) {
+      _founderCheckedUserId = null;
+      if (mounted) setState(() { _founderAccess = false; _checkingFounderAccess = false; });
+      return;
+    }
+    if (_founderCheckInFlight && _founderCheckedUserId == user.id) return;
+    if (_founderCheckedUserId == user.id && !_checkingFounderAccess) return;
+    _founderCheckInFlight = true;
+    _founderCheckedUserId = user.id;
+    if (mounted) setState(() => _checkingFounderAccess = true);
+    try {
+      final allowed = await db.rpc('hte_is_admin');
+      if (!mounted || db.auth.currentUser?.id != user.id) return;
+      setState(() {
+        _founderAccess = allowed == true;
+        _checkingFounderAccess = false;
+      });
+    } catch (_) {
+      if (!mounted || db.auth.currentUser?.id != user.id) return;
+      setState(() { _founderAccess = false; _checkingFounderAccess = false; });
+    } finally {
+      _founderCheckInFlight = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    email.dispose();
+    password.dispose();
+    super.dispose();
+  } 
   Future<void> authenticate() async {
     if (busy) return;
     final address = email.text.trim();
@@ -3618,7 +3687,13 @@ class _AccountTabState extends State<AccountTab> {
       ] else ...[
         const SizedBox(height: 8),
       ],
-      if (user != null && user.id == 'b268df9e-eff5-43b9-a38f-869b33add38b') ...[
+      if (user != null && _checkingFounderAccess) ...[
+        const Card(child: ListTile(
+          leading: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+          title: Text('Checking Founder Studio access...'),
+        )),
+      ],
+      if (user != null && _founderAccess) ...[
         Card(child: ListTile(
           leading: const Icon(Icons.admin_panel_settings_outlined, color: Color(0xFFD9B96E), size: 28),
           title: const Text('HT Admin — Founder Studio', style: TextStyle(fontWeight: FontWeight.w700)),

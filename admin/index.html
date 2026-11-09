@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>Founder Studio · High Tech Entertainment</title>
   <link rel="stylesheet" href="../assets/site.css?v=20261101-2">
-  <link rel="stylesheet" href="../assets/admin.css?v=20261102-gold1"><link rel="stylesheet" href="../assets/premium-refresh.css?v=1">
+  <link rel="stylesheet" href="../assets/admin.css?v=20261109-marketing1"><link rel="stylesheet" href="../assets/premium-refresh.css?v=1">
   <link rel="stylesheet" href="../assets/admin-enhancements.css?v=1">
 </head>
 <body class="admin-page">
@@ -62,6 +62,7 @@
     <button class="admin-nav-item" data-tab="inbox"><span class="admin-nav-icon">✉</span><span>Inbox</span><b>05</b></button>
     <div class="admin-side-heading admin-side-gap">SYSTEM</div>
     <button class="admin-nav-item hte-ai-nav" data-tab="ads"><span class="admin-nav-icon">🎙</span><span>AI Ad Studio</span><b>07</b></button>
+    <button class="admin-nav-item hte-ai-nav" data-tab="marketing"><span class="admin-nav-icon">✦</span><span>AI Marketing Agent</span><b>08</b></button>
     <button class="admin-nav-item" data-tab="settings"><span class="admin-nav-icon">⚙</span><span>Settings</span><b>06</b></button>
     <a class="admin-nav-item" href="../account/"><span class="admin-nav-icon">◉</span><span>Profile & account</span><b>↗</b></a>
     <a class="admin-nav-item" href="../"><span class="admin-nav-icon">↗</span><span>Public website</span><b>↗</b></a>
@@ -195,6 +196,38 @@
       <div class="admin-table-heading hte-ai-campaign-heading"><div><span>02 / CAMPAIGN LIBRARY</span><h3>Your generated advertisements</h3><p class="admin-field-help">Manage drafts and published audio campaigns.</p></div><button class="btn" id="ai-ad-refresh" type="button">↻ Refresh campaigns</button></div>
       <div id="ai-ad-list" class="hte-ai-campaign-list"><div class="empty">Your campaigns will appear here after loading.</div></div>
     </section>
+    <section class="admin-view" data-view="marketing" hidden>
+      <div class="hte-marketing-hero"><div><div class="eyebrow">HIGH-TECH ENTERTAINMENT / SOCIAL COMMAND</div><h2>One campaign.<br><span>Every platform.</span></h2><p>Create a campaign once, prepare channel-specific copy and manage its publishing queue from Founder Studio.</p><div class="hte-marketing-chips"><span>INSTAGRAM</span><span>FACEBOOK</span><span>TIKTOK</span><span>YOUTUBE</span><span>X</span><span>WHATSAPP</span></div></div><div class="hte-marketing-orbit">HT<span>✦</span></div></div>
+      <div class="hte-marketing-notice" role="status"><strong>Publishing setup:</strong> The campaign workspace is connected to Supabase. Social accounts are not connected yet, so this build saves drafts and queue records only. It will not claim a post was published until a provider confirms it. WhatsApp Status remains a native-share step.</div>
+      <div class="admin-section-label"><div><span>01 / CAMPAIGN BUILDER</span><h2>Create a promotion</h2><p>Prepare a reusable campaign for High-Tech Entertainment.</p></div></div>
+      <div class="admin-content-grid hte-marketing-layout">
+        <div class="panel admin-form-panel">
+          <div class="admin-panel-heading"><span class="admin-panel-icon">✦</span><div><h3>New marketing campaign</h3><p>Start with a clear objective and a strong message.</p></div></div>
+          <form id="hte-marketing-form">
+            <div class="form-grid">
+              <div class="field"><label for="hte-campaign-title">Campaign title</label><input id="hte-campaign-title" name="title" required maxlength="160" placeholder="e.g. New music Friday"></div>
+              <div class="field"><label for="hte-campaign-type">Campaign objective</label><select id="hte-campaign-type" name="campaign_type"><option value="brand">Brand awareness</option><option value="release">Music release</option><option value="artist">Artist spotlight</option><option value="beats">Beat promotion</option><option value="studio">Studio services</option><option value="announcement">Announcement</option></select></div>
+              <div class="field full"><label for="hte-campaign-message">Main message</label><textarea id="hte-campaign-message" name="message" rows="5" maxlength="3000" required placeholder="Describe the real promotion, release or service. Avoid claims that cannot be verified."></textarea></div>
+              <div class="field full"><label for="hte-campaign-link">Destination link <span class="optional">OPTIONAL</span></label><input id="hte-campaign-link" name="link" type="url" placeholder="https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/"></div>
+              <div class="field full"><label for="hte-campaign-media">Media URL <span class="optional">OPTIONAL</span></label><input id="hte-campaign-media" name="media_url" type="url" placeholder="Public image or video URL"></div>
+              <div class="field full"><label>Target channels</label><div class="hte-channel-grid">
+                <label><input type="checkbox" name="channels" value="instagram" checked> Instagram</label><label><input type="checkbox" name="channels" value="facebook" checked> Facebook</label><label><input type="checkbox" name="channels" value="tiktok" checked> TikTok</label><label><input type="checkbox" name="channels" value="youtube" checked> YouTube</label><label><input type="checkbox" name="channels" value="x" checked> X</label><label><input type="checkbox" name="channels" value="whatsapp_business" checked> WhatsApp Business</label><label><input type="checkbox" name="channels" value="whatsapp_status"> WhatsApp Status (manual share)</label>
+              </div></div>
+            </div>
+            <button class="btn gold admin-submit" id="hte-campaign-save" type="submit">Save campaign draft →</button><div class="status" id="hte-marketing-status" role="status" aria-live="polite"></div>
+          </form>
+        </div>
+        <aside class="admin-side-info">
+          <div class="admin-info-card"><span class="admin-info-icon">01 / CONTENT</span><h3>Channel-ready copy</h3><p>Next build stage: generate platform-specific captions, hashtags, short-form scripts and creative briefs from the campaign facts.</p></div>
+          <div class="admin-info-card"><span class="admin-info-icon">02 / CONNECTIONS</span><h3>Secure account linking</h3><p>OAuth app credentials and provider permissions are required before any channel can publish. Tokens belong in server-side secrets, never browser storage.</p></div>
+          <div class="admin-info-card"><span class="admin-info-icon">03 / AUTOMATION</span><h3>Verified publishing</h3><p>Scheduling and automatic delivery will activate only after each provider integration passes a real end-to-end publish test.</p></div>
+        </aside>
+      </div>
+      <div class="admin-section-label"><div><span>02 / SOCIAL CONNECTIONS</span><h2>Platform readiness</h2><p>Live status from the secure Supabase connection registry.</p></div><button class="btn" type="button" id="hte-marketing-refresh">↻ Refresh</button></div>
+      <div id="hte-social-connections" class="hte-social-grid"><div class="empty">Loading platform status…</div></div>
+      <div class="admin-section-label"><div><span>03 / CAMPAIGN LIBRARY</span><h2>Your campaigns</h2><p>Saved campaign drafts and their channel queue records.</p></div></div>
+      <div id="hte-marketing-campaigns" class="hte-marketing-campaigns"><div class="empty">Loading campaigns…</div></div>
+    </section>
     <section class="admin-view" data-view="settings" hidden>
       <div class="admin-section-label"><div><span>06 / SYSTEM</span><h2>Studio settings</h2><p>Information about your account, access and platform setup.</p></div></div>
       <div class="admin-settings-grid">
@@ -209,12 +242,14 @@
   </main>
 </div>
 <div id="toast" class="toast" role="status"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script src="../supabase-config.js"></script>
-<script src="../assets/app.js?v=20261101-2"></script>
-<script src="../assets/admin-upload.js?v=20261101-2"></script>
-<script src="../assets/admin-video.js?v=20261101-2"></script>
-<script src="../assets/admin-ui.js?v=20261101-2"></script>\n<script src="../assets/admin-enhancements.js?v=1"></script>
-<script src="../assets/ai-ad-studio.js?v=20261102-voice1"></script>
+<script src="../assets/app.js?v=15"></script>
+<script src="../assets/admin-upload.js?v=20261109-session1"></script>
+<script src="../assets/admin-video.js?v=20261109-rpc1"></script>
+<script src="../assets/admin-ui.js?v=20261101-2"></script>
+<script src="../assets/admin-enhancements.js?v=20261109-rpc1"></script>
+<script src="../assets/ai-ad-studio.js?v=20261109-rpc1"></script>
+<script src="../assets/ai-marketing-agent.js?v=20261109-rpc1"></script>
 </body>
 </html>

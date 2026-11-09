@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760">
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#08090b"/><stop offset=".55" stop-color="#17140f"/><stop offset="1" stop-color="#06080a"/></linearGradient>
+ <radialGradient id="halo"><stop stop-color="#d7a84c" stop-opacity=".35"/><stop offset="1" stop-color="#08090b" stop-opacity="0"/></radialGradient>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff0b8"/><stop offset=".45" stop-color="#d9ae58"/><stop offset="1" stop-color="#87571b"/></linearGradient>
+ <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f3f3ee"/><stop offset="1" stop-color="#66717a"/></linearGradient>
+ <linearGradient id="figure" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#353a3d"/><stop offset="1" stop-color="#080b0d"/></linearGradient>
+</defs>
+<rect width="1200" height="760" fill="url(#bg)"/>
+<ellipse cx="820" cy="350" rx="440" ry="390" fill="url(#halo)"/>
+<g fill="none" stroke="url(#gold)">
+ <ellipse cx="820" cy="350" rx="360" ry="280" stroke-width="3" opacity=".72"/>
+ <ellipse cx="820" cy="350" rx="300" ry="230" stroke-width="2" opacity=".52"/>
+ <ellipse cx="820" cy="350" rx="240" ry="180" stroke-width="1.5" opacity=".36"/>
+ <path d="M500 350c110-180 210-250 320-250s210 70 320 250M500 350c110 180 210 250 320 250s210-70 320-250" stroke-width="2" opacity=".4"/>
+</g>
+<g stroke="url(#gold)" stroke-width="6" stroke-linecap="round" opacity=".8">
+ <path d="M520 710V600M550 710V540M580 710V620M610 710V490M640 710V570M670 710V450M700 710V530M730 710V420M760 710V500M790 710V390M820 710V470M850 710V430M880 710V510M910 710V460M940 710V560M970 710V500M1000 710V610M1030 710V550M1060 710V640"/>
+</g>
+<path d="M620 760c20-120 65-195 145-235 42-21 91-31 143-25 94 10 157 81 190 260z" fill="url(#figure)" stroke="#8c682f" stroke-width="2"/>
+<path d="M750 430c-25-70-13-175 32-238 44-62 118-84 184-62 70 24 104 89 98 169-6 82-47 145-109 168-75 27-168 6-205-37z" fill="url(#figure)" stroke="#a77b3a" stroke-width="3"/>
+<path d="M752 270c10-105 76-164 168-157 85 6 142 73 143 164-44-38-85-51-130-48-67 4-119 38-181 41z" fill="#080a0c" stroke="#9c773e" stroke-width="4"/>
+<path d="M746 285c-28 0-45 25-39 62 6 34 26 57 49 53l5-35zM1056 285c28 0 45 25 39 62-6 34-26 57-49 53l-5-35z" fill="#101416" stroke="url(#gold)" stroke-width="9"/>
+<path d="M758 268c-8-116 56-179 159-179 91 0 153 67 151 181" fill="none" stroke="url(#silver)" stroke-width="25" stroke-linecap="round"/>
+<path d="M758 268c-8-116 56-179 159-179 91 0 153 67 151 181" fill="none" stroke="url(#gold)" stroke-width="4" stroke-linecap="round"/>
+<g transform="translate(1110 265)">
+ <path d="M0 0v270" stroke="url(#silver)" stroke-width="12" stroke-linecap="round"/>
+ <rect x="-28" y="-70" width="56" height="128" rx="26" fill="#11171a" stroke="url(#gold)" stroke-width="5"/>
+ <path d="M-19-38h38M-22-16h44M-22 6h44M-18 28h36" stroke="#aeb5b7" stroke-width="3"/>
+ <path d="M-75 270H75M-45 270l-22 65M45 270l22 65" fill="none" stroke="url(#gold)" stroke-width="6" stroke-linecap="round"/>
+</g>
+<g transform="translate(95 100)">
+ <circle cx="78" cy="78" r="70" fill="#0a0b0c" stroke="url(#gold)" stroke-width="4"/>
+ <circle cx="78" cy="78" r="55" fill="none" stroke="#d7b66c" stroke-opacity=".45" stroke-width="2"/>
+ <path d="M34 105V49h19l25 30 25-30h19v56h-21V80L78 106 55 80v25z" fill="url(#gold)"/>
+</g>
+<path d="M95 700H410" stroke="url(#gold)" stroke-width="2" opacity=".55"/>
+<rect x="2" y="2" width="1196" height="756" fill="none" stroke="#d7b66c" stroke-opacity=".3" stroke-width="3"/>
+</svg>

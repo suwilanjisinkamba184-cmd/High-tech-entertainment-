@@ -1,1 +1,96 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0a0a0b"><meta name="robots" content="noindex,nofollow,noarchive"><title>My Account · High Tech Entertainment</title><link rel="stylesheet" href="../assets/site.css?v=6"><link rel="stylesheet" href="../assets/premium-refresh.css?v=1"><link rel="stylesheet" href="../assets/2026-premium-system.css?v=20261107-1"></head><body><a class="skip" href="#main">Skip to content</a><header class="topbar"><div class="wrap nav"><a class="brand" href="../"><img class="brand-logo" src="../high-tech-logo.svg" alt="High-Tech Entertainment"><span>HIGH TECH <small>ENTERTAINMENT</small></span></a><nav class="navlinks"><a href="../">Home</a></nav><button class="btn" data-logout data-signed-in hidden>Sign out</button></div></header><main id="main" class="wrap section"><div class="eyebrow">Personal space</div><h1 class="page-title">Your account.</h1><p class="page-intro">Manage your profile picture and personal details.</p><div id="account-login" class="panel" hidden><h2>Sign in to your account</h2><form id="login-form"><button class="btn gold" id="google-login" type="button" style="width:100%;margin:8px 0 16px">Continue with Google</button><div class="muted small" style="text-align:center;margin-bottom:14px">Or sign in with your email</div><div class="form-grid"><div class="field full"><label>Email</label><input name="email" type="email" required autocomplete="username"></div><div class="field full"><label>Password</label><input name="password" type="password" required autocomplete="current-password"></div></div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px"><button class="btn gold">Sign in</button></div><div class="status" id="login-status"></div></form></div><div id="account-content" hidden><div class="panel"><div class="profile-head"><div class="avatar" id="profile-avatar">HT</div><div><div class="eyebrow">Account profile</div><h2 data-user-name style="margin:5px 0">Your profile</h2><div id="profile-email" class="muted small"></div><div class="muted small">Secure Supabase account</div><button class="btn" type="button" data-switch-account style="margin-top:10px">Switch account</button></div></div><hr class="divider"><form id="profile-form"><div class="form-grid"><div class="field"><label>Display name</label><input name="display_name" maxlength="100" placeholder="Your name"></div><div class="field"><label>Phone (optional)</label><input name="phone" type="tel" maxlength="40"></div><div class="field full"><label>About you (optional)</label><textarea name="bio" maxlength="1000"></textarea></div><div class="field full"><label>Profile photo (JPG, PNG or WebP; max 5 MB)</label><input name="avatar" type="file" accept="image/jpeg,image/png,image/webp"></div></div><div style="margin-top:18px"><button class="btn gold">Save profile</button><a class="btn" href="../admin/" data-admin-only hidden>Founder studio</a></div><div id="profile-status" class="status" role="status"></div></form></div><section class="panel" style="margin-top:18px" aria-labelledby="account-booking-title"><div class="eyebrow">Studio & artist services</div><h2 id="account-booking-title">Request a booking.</h2><p class="muted">Send a request for a studio session, beat production, mixing, mastering or artist promotion. Your booking is not confirmed until the team replies.</p><form id="booking-form"><div class="hte-honeypot" aria-hidden="true"><label>Leave this field empty<input name="website" type="text" tabindex="-1" autocomplete="off"></label></div><div class="form-grid"><div class="field"><label for="account-booking-name">Your name</label><input id="account-booking-name" name="name" required maxlength="100" autocomplete="name" value=""></div><div class="field"><label for="account-booking-email">Email address</label><input id="account-booking-email" name="email" type="email" required maxlength="254" autocomplete="email"></div><div class="field"><label for="account-booking-phone">Phone / WhatsApp (optional)</label><input id="account-booking-phone" name="phone" type="tel" maxlength="40" autocomplete="tel"></div><div class="field"><label for="account-booking-service">Service</label><select id="account-booking-service" name="service" required><option value="">Choose a service</option><option>Studio session</option><option>Beat production</option><option>Mixing and mastering</option><option>Artist promotion</option><option>Music video / content</option><option>Collaboration</option><option>Other</option></select></div><div class="field"><label for="account-booking-date">Preferred date (optional)</label><input id="account-booking-date" name="date" type="date"></div><div class="field"><label for="account-booking-time">Preferred time (optional)</label><input id="account-booking-time" name="time" type="time"></div><div class="field full"><label for="account-booking-details">Project details</label><textarea id="account-booking-details" name="details" required maxlength="4000" placeholder="Describe your project and what you need…"></textarea></div></div><button class="btn gold" type="submit" style="margin-top:16px">Send booking request</button><div id="booking-status" class="status" role="status" aria-live="polite"></div></form></section><section class="panel" style="margin-top:18px" aria-labelledby="account-downloads-title"><div class="eyebrow">Your music library</div><h2 id="account-downloads-title">Download music.</h2><p class="muted">Browse published High-Tech Entertainment tracks. Direct audio files can be downloaded; Spotify releases open in Spotify.</p><div id="account-downloads"><div class="empty">Loading available downloads…</div></div></section><div class="panel" style="margin-top:18px"><div class="eyebrow">Sign-in & security</div><h2>Account security</h2><p class="muted">Your profile is private to your account. Never share your password or verification codes.</p><button class="btn danger" data-logout>Sign out of this device</button></div></div><div class="status" data-auth-status></div></main><footer class="footer"><div class="wrap footer-row"><span>© <span id="year"></span> High Tech Entertainment</span><a href="../">Back to website</a></div></footer><div id="toast" class="toast" role="status"></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="../supabase-config.js"></script><script src="../assets/app.js?v=5"></script><script src="../assets/2026-navigation.js" defer></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08090b">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>My Account · High-Tech Entertainment</title>
+<link rel="icon" type="image/svg+xml" href="../high-tech-logo.svg">
+<link rel="stylesheet" href="../assets/site.css?v=20261106-account">
+<link rel="stylesheet" href="../assets/premium-refresh.css?v=1">
+<link rel="stylesheet" href="../assets/account-experience.css?v=1"><link rel="stylesheet" href="../assets/hte-identity.css?v=1"><link rel="stylesheet" href="../assets/mobile-navigation.css?v=1"><link rel="stylesheet" href="../assets/entertainment-enhancements.css?v=1">
+</head>
+<body class="account-page">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar account-topbar">
+  <div class="wrap nav account-nav">
+    <a class="account-brand" href="../" aria-label="High-Tech Entertainment home">
+      <img src="../high-tech-logo.svg" alt="">
+      <span>HTE <small>HIGH-TECH ENTERTAINMENT · MEMBER SPACE</small></span>
+    </a>
+    <nav class="navlinks" id="primary-navigation" aria-label="Account navigation"><a href="../">Website</a><a href="../#music">Listen</a></nav>
+    <button class="menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="primary-navigation"><span></span><span></span><span></span></button>
+    <button class="btn" data-logout data-signed-in hidden>Sign out</button>
+  </div>
+</header>
+<main id="main" class="wrap section account-shell">
+  <div class="account-heading">
+    <div><div class="account-kicker">Your personal space</div><h1>My account<span class="gold-text">.</span></h1><p>Manage your High-Tech Entertainment profile, keep your details current and access your private member space.</p></div>
+  </div>
+  <div class="account-layout">
+    <aside class="account-aside">
+      <div class="account-aside-brand"><img src="../high-tech-logo.svg" alt="High-Tech Entertainment"></div>
+      <div><h2>One account. Your HTE space.</h2><p>Sign in securely to manage your profile and account details.</p></div>
+      <nav class="account-aside-links" aria-label="Quick links"><a href="../">← Official website</a><a href="../#booking">Book a service</a></nav>
+    </aside>
+    <section>
+      <div id="account-login" class="account-login-card">
+        <div class="account-kicker">Member authentication</div>
+        <h2 id="auth-mode-title">Welcome back.</h2>
+        <p class="account-muted" id="auth-mode-copy">Sign in with Google or your registered email and password to access your account.</p>
+        <form id="login-form">
+          <button class="btn gold" id="google-login" type="button" style="width:100%;margin:12px 0 18px">Continue with Google</button>
+          <div class="muted small" style="text-align:center;margin-bottom:14px">OR USE EMAIL</div>
+          <div class="account-form-grid"><div class="field full" id="account-display-name-field" hidden><label for="account-display-name">Your name</label><input id="account-display-name" name="display_name" maxlength="100" autocomplete="name"></div>
+            <div class="field full"><label for="account-email">Email address</label><input id="account-email" name="email" type="email" required autocomplete="username"></div>
+            <div class="field full"><label for="account-password">Password</label><input id="account-password" name="password" type="password" required minlength="8" autocomplete="current-password"></div><div class="field full" id="account-confirm-password-field" hidden><label for="account-confirm-password">Confirm password</label><input id="account-confirm-password" name="confirm_password" type="password" autocomplete="new-password"></div>
+          </div>
+          <div class="account-actions"><button class="btn gold" id="login-submit" type="submit">Sign in securely</button><a class="btn" href="../">Return home</a></div><div class="account-auth-links"><button class="btn ghost" type="button" id="auth-mode-toggle">New to HTE? Create an account</button><button class="btn ghost" type="button" id="forgot-password">Forgot password?</button></div>
+          <div class="status" id="login-status" role="status" aria-live="polite"></div>
+        </form>
+      </div>
+      <div id="account-content" hidden>
+        <section class="account-main-card">
+          <div class="account-kicker">Profile overview</div>
+          <div class="account-profile-head">
+            <div class="avatar account-profile-avatar" id="profile-avatar">HT</div>
+            <div class="account-profile-meta"><div class="account-kicker">Account profile</div><h2 data-user-name>Your profile</h2><div id="profile-email" class="muted small"></div><div class="muted small">Authenticated with Supabase</div><button class="btn" type="button" data-switch-account style="margin-top:10px">Switch account</button></div>
+          </div>
+          <hr class="divider account-divider">
+          <form id="profile-form">
+            <div class="account-kicker">Personal information</div>
+            <h2>Profile details</h2>
+            <p class="account-muted">These details help the team identify you when you make a booking or contact us.</p>
+            <div class="account-form-grid">
+              <div class="field"><label for="profile-display-name">Display name</label><input id="profile-display-name" name="display_name" maxlength="100" placeholder="Your name" autocomplete="name"></div>
+              <div class="field"><label for="profile-phone">Phone (optional)</label><input id="profile-phone" name="phone" type="tel" maxlength="40" autocomplete="tel"></div>
+              <div class="field full"><label for="profile-bio">About you (optional)</label><textarea id="profile-bio" name="bio" maxlength="1000" placeholder="A short introduction…"></textarea></div>
+              <div class="field full"><label for="profile-photo">Profile photo (JPG, PNG or WebP · max 5 MB)</label><input id="profile-photo" name="avatar" type="file" accept="image/jpeg,image/png,image/webp"></div>
+            </div>
+            <div class="account-actions"><button class="btn gold" type="submit">Save profile</button><a class="btn" href="../admin/" data-admin-only hidden>Open Founder Studio ↗</a></div>
+            <div id="profile-status" class="status" role="status" aria-live="polite"></div>
+          </form>
+        </section>
+        <section class="account-security">
+          <div class="account-kicker">Session & privacy</div><h2>Account security</h2>
+          <div class="account-security-row">
+            <div class="account-security-label"><div class="account-security-icon" aria-hidden="true">◇</div><div><strong>Private sign-in session</strong><span>Your profile is linked to your authenticated account.</span></div></div>
+            <button class="btn danger" type="button" data-logout>Sign out of this device</button>
+          </div>
+          <p class="account-muted small">Never share your password or one-time verification codes. Founder Studio access is restricted to authorised founder accounts.</p><form id="password-update-form" class="account-password-form"><div class="account-kicker">Password recovery</div><label for="new-account-password">Set a new password</label><input id="new-account-password" name="password" type="password" minlength="8" autocomplete="new-password" required><button class="btn" type="submit">Update password</button><div id="password-update-status" class="status" role="status" aria-live="polite"></div></form>
+        </section>
+<section class="account-main-card account-booking-card" aria-labelledby="account-booking-title"><div class="eyebrow">Studio & artist services</div><h2 id="account-booking-title">Request a booking.</h2><p class="muted">Send a request for a studio session, beat production, mixing, mastering or artist promotion. Your booking is not confirmed until the team replies.</p><form id="booking-form"><div class="hte-honeypot" aria-hidden="true"><label>Leave this field empty<input name="website" type="text" tabindex="-1" autocomplete="off"></label></div><div class="form-grid"><div class="field"><label for="account-booking-name">Your name</label><input id="account-booking-name" name="name" required maxlength="100" autocomplete="name" value=""></div><div class="field"><label for="account-booking-email">Email address</label><input id="account-booking-email" name="email" type="email" required maxlength="254" autocomplete="email"></div><div class="field"><label for="account-booking-phone">Phone / WhatsApp (optional)</label><input id="account-booking-phone" name="phone" type="tel" maxlength="40" autocomplete="tel"></div><div class="field"><label for="account-booking-service">Service</label><select id="account-booking-service" name="service" required><option value="">Choose a service</option><option>Studio session</option><option>Beat production</option><option>Mixing and mastering</option><option>Artist development</option><option>Artist promotion</option><option>Spotify &amp; digital promotion</option><option>Music video / content</option><option>Software development</option><option>Collaboration</option><option>Other</option></select></div><div class="field"><label for="account-booking-date">Preferred date (optional)</label><input id="account-booking-date" name="date" type="date"></div><div class="field"><label for="account-booking-time">Preferred time (optional)</label><input id="account-booking-time" name="time" type="time"></div><div class="field full"><label for="account-booking-details">Project details</label><textarea id="account-booking-details" name="details" required maxlength="4000" placeholder="Describe your project and what you need…"></textarea></div></div><button class="btn gold" type="submit" style="margin-top:16px">Send booking request</button><div id="booking-status" class="status" role="status" aria-live="polite"></div></form></section>
+<section class="account-main-card account-downloads-card" aria-labelledby="account-downloads-title"><div class="eyebrow">Your music library</div><h2 id="account-downloads-title">Download music.</h2><p class="muted">Browse published High-Tech Entertainment tracks. Direct audio files can be downloaded; Spotify releases open in Spotify.</p><div id="account-downloads"><div class="empty">Loading available downloads…</div></div></section>
+      </div>
+      <div class="status" data-auth-status role="status" aria-live="polite"></div>
+    </section>
+  </div>
+</main>
+<footer class="account-footer"><div class="wrap footer-row"><span>© <span id="year"></span> High-Tech Entertainment</span><span>Music. Beats. Production. Beyond.</span><a href="../privacy-policy.html">Privacy policy</a></div></footer>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
+<script src="../supabase-config.js"></script>
+<script src="../assets/app.js?v=15"></script><script src="../assets/mobile-navigation.js?v=1" defer></script>
+</body>
+</html>

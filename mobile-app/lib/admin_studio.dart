@@ -5,7 +5,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'diagnostics_service.dart';
 
-const _founderId = 'b268df9e-eff5-43b9-a38f-869b33add38b';
 const _gold = Color(0xFFE3BD70);
 final _supabase = Supabase.instance.client;
 
@@ -54,7 +53,7 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
   static const _sections = ['Overview','Music uploads','Tracks','Artists','Releases','Artwork','Users','Analytics','Activity','Videos','Notifications','Audio ads','Developer diagnostics'];
 
   @override
-  void initState() { super.initState(); _loadAll(); }
+  void initState() { super.initState(); _verifyFounderAndLoad(); }
   @override
   void dispose() {
     _title.dispose(); _artist.dispose(); _genre.dispose();
@@ -78,10 +77,34 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
     _toast('Local diagnostic history cleared.');
   }
 
-  bool get _isFounder => _supabase.auth.currentUser?.id == _founderId;
+  bool _isFounder = false;
+  bool _checkingFounder = true;
   void _toast(String value) {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
   }
+  Future<void> _verifyFounderAndLoad() async {
+    if (_supabase.auth.currentUser == null) {
+      if (mounted) setState(() => _checkingFounder = false);
+      return;
+    }
+    try {
+      final allowed = await _supabase.rpc('hte_is_admin');
+      if (!mounted) return;
+      setState(() {
+        _isFounder = allowed == true;
+        _checkingFounder = false;
+      });
+      if (_isFounder) await _loadAll();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isFounder = false;
+        _checkingFounder = false;
+        _error = 'Could not verify Founder Studio access. Please reload and try again.';
+      });
+    }
+  }
+
   Future<void> _loadAll() async {
     if (!_isFounder) return;
     setState(() { _busy = true; _error = null; });
@@ -756,10 +779,16 @@ class _AdminStudioPageState extends State<AdminStudioPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_checkingFounder) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('HT ADMIN')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
     if (!_isFounder) {
       return Scaffold(
         appBar: AppBar(title: const Text('HT ADMIN')),
-        body: const Center(child: _AdminEmpty('Founder authorization required. This area is private.')),
+        body: Center(child: _AdminEmpty(_error ?? 'Founder authorization required. This area is private.')),
       );
     }
     return Scaffold(
