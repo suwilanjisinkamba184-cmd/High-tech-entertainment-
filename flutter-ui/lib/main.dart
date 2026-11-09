@@ -2944,34 +2944,92 @@ class FlutterVideoPlayerScreen extends StatefulWidget {
 }
 
 class _FlutterVideoPlayerScreenState extends State<FlutterVideoPlayerScreen> {
-  late final VideoPlayerController _controller;
+  VideoPlayerController? _controller;
   String? _error;
+  bool _loading = true;
+  bool _fullscreen = false;
+  int _loadGeneration = 0;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
     _initializeVideo();
   }
 
   Future<void> _initializeVideo() async {
-    try {
-      await _controller.initialize();
-      if (!mounted) return;
-      setState(() {});
-      await _controller.play();
-    } catch (_) {
+    final generation = ++_loadGeneration;
+    final uri = Uri.tryParse(widget.videoUrl);
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
       if (mounted) {
         setState(() {
-          _error = 'This video could not be loaded. Check your connection and try again.';
+          _loading = false;
+          _error = 'This video link is invalid or insecure. Please contact the publisher.';
         });
+      }
+      return;
+    }
+
+    final previous = _controller;
+    final next = VideoPlayerController.networkUrl(uri);
+    _controller = next;
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    await previous?.dispose();
+
+    try {
+      await next.initialize();
+      if (!mounted || generation != _loadGeneration) {
+        await next.dispose();
+        return;
+      }
+      setState(() => _loading = false);
+      await next.play();
+    } catch (_) {
+      if (!mounted || generation != _loadGeneration) return;
+      setState(() {
+        _loading = false;
+        _error = 'This video could not be loaded. Check your connection and try again.';
+      });
+      await next.dispose();
+      if (identical(_controller, next)) _controller = null;
+    }
+  }
+
+  Future<void> _toggleFullscreen() async {
+    final entering = !_fullscreen;
+    try {
+      await SystemChrome.setPreferredOrientations(
+        entering
+            ? const [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]
+            : const [DeviceOrientation.portraitUp],
+      );
+      await SystemChrome.setEnabledSystemUIMode(
+        entering ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
+      );
+      if (mounted) setState(() => _fullscreen = entering);
+    } on PlatformException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Fullscreen mode is unavailable on this device.')),
+        );
       }
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _loadGeneration++;
+    final active = _controller;
+    _controller = null;
+    if (active != null) unawaited(active.dispose());
+    if (_fullscreen) {
+      unawaited(SystemChrome.setPreferredOrientations(const [DeviceOrientation.portraitUp]));
+      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+    }
     super.dispose();
   }
 
@@ -2984,22 +3042,35 @@ class _FlutterVideoPlayerScreenState extends State<FlutterVideoPlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final controller = _controller;
+    final ready = !_loading && controller != null && controller.value.isInitialized;
     return Scaffold(
       backgroundColor: _black,
-      appBar: AppBar(
-        backgroundColor: _black,
-        title: Text(
-          widget.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
+      appBar: _fullscreen
+          ? null
+          : AppBar(
+              backgroundColor: _black,
+              title: Text(
+                widget.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              actions: [
+                IconButton(
+                  tooltip: 'Enter fullscreen',
+                  onPressed: ready ? _toggleFullscreen : null,
+                  icon: const Icon(Icons.fullscreen),
+                ),
+              ],
+            ),
       body: SafeArea(
-        child: Center(
-          child: _error != null
-              ? Padding(
-                  padding: const EdgeInsets.all(28),
+        top: !_fullscreen,
+        bottom: !_fullscreen,
+        child: _error != null
+            ? Padding(
+                padding: const EdgeInsets.all(28),
+                child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -3009,84 +3080,123 @@ class _FlutterVideoPlayerScreenState extends State<FlutterVideoPlayerScreen> {
                           style: const TextStyle(color: Colors.white70)),
                       const SizedBox(height: 18),
                       OutlinedButton.icon(
-                        onPressed: () {
-                          setState(() => _error = null);
-                          _initializeVideo();
-                        },
+                        onPressed: _initializeVideo,
                         icon: const Icon(Icons.refresh),
                         label: const Text('TRY AGAIN'),
                       ),
                     ],
                   ),
-                )
-              : !_controller.value.isInitialized
-                  ? const CircularProgressIndicator(color: _gold)
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: AspectRatio(
-                              aspectRatio: _controller.value.aspectRatio,
-                              child: VideoPlayer(_controller),
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-                          Text(
-                            widget.title,
-                            style: const TextStyle(
-                              fontSize: 19,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          ValueListenableBuilder<VideoPlayerValue>(
-                            valueListenable: _controller,
-                            builder: (context, value, _) => Column(
-                              children: [
-                                VideoProgressIndicator(
-                                  _controller,
-                                  allowScrubbing: true,
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  colors: const VideoProgressColors(
-                                    playedColor: _gold,
-                                    bufferedColor: Colors.white30,
-                                    backgroundColor: Colors.white12,
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    Text(_formatDuration(value.position),
-                                        style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                                    const Spacer(),
-                                    IconButton.filled(
-                                      onPressed: () {
-                                        if (value.isPlaying) {
-                                          _controller.pause();
-                                        } else {
-                                          _controller.play();
-                                        }
-                                      },
-                                      style: IconButton.styleFrom(
-                                        backgroundColor: _gold,
-                                        foregroundColor: _black,
-                                      ),
-                                      icon: Icon(value.isPlaying ? Icons.pause : Icons.play_arrow),
-                                    ),
-                                    const Spacer(),
-                                    Text(_formatDuration(value.duration),
-                                        style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                ),
+              )
+            : !ready
+                ? const Center(child: CircularProgressIndicator(color: _gold))
+                : _fullscreen
+                    ? _buildFullscreen(controller)
+                    : _buildRegular(controller),
+      ),
+    );
+  }
+
+  Widget _buildFullscreen(VideoPlayerController controller) {
+    return ColoredBox(
+      color: Colors.black,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Center(
+            child: AspectRatio(
+              aspectRatio: controller.value.aspectRatio,
+              child: VideoPlayer(controller),
+            ),
+          ),
+          Positioned(
+            top: 12,
+            right: 12,
+            child: IconButton.filledTonal(
+              tooltip: 'Exit fullscreen',
+              onPressed: _toggleFullscreen,
+              icon: const Icon(Icons.fullscreen_exit),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRegular(VideoPlayerController controller) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              alignment: Alignment.topRight,
+              children: [
+                AspectRatio(
+                  aspectRatio: controller.value.aspectRatio,
+                  child: VideoPlayer(controller),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: IconButton.filledTonal(
+                    tooltip: 'Enter fullscreen',
+                    onPressed: _toggleFullscreen,
+                    icon: const Icon(Icons.fullscreen),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            widget.title,
+            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 14),
+          ValueListenableBuilder<VideoPlayerValue>(
+            valueListenable: controller,
+            builder: (context, value, _) => Column(
+              children: [
+                VideoProgressIndicator(
+                  controller,
+                  allowScrubbing: true,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  colors: const VideoProgressColors(
+                    playedColor: _gold,
+                    bufferedColor: Colors.white30,
+                    backgroundColor: Colors.white12,
+                  ),
+                ),
+                Row(
+                  children: [
+                    Text(_formatDuration(value.position),
+                        style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                    const Spacer(),
+                    IconButton.filled(
+                      onPressed: () {
+                        if (value.isPlaying) {
+                          controller.pause();
+                        } else {
+                          controller.play();
+                        }
+                      },
+                      style: IconButton.styleFrom(
+                        backgroundColor: _gold,
+                        foregroundColor: _black,
                       ),
+                      icon: Icon(value.isPlaying ? Icons.pause : Icons.play_arrow),
                     ),
-        ),
+                    const Spacer(),
+                    Text(_formatDuration(value.duration),
+                        style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
