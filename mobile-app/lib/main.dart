@@ -1,4 +1,4 @@
-// Full-release repair: 2.2.10 SU+27 includes the updated compiled icon asset.
+// Production app source for High-Tech Entertainment 3.2.0 SU (build 32).
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -3469,9 +3469,53 @@ class _AccountTabState extends State<AccountTab> {
   final password = TextEditingController();
   bool signup = false;
   bool busy = false;
+  bool _founderAccess = false;
+  bool _checkingFounderAccess = true;
+  bool _founderCheckInFlight = false;
+  String? _founderCheckedUserId;
+  StreamSubscription? _authSubscription;
 
   @override
-  void dispose() { email.dispose(); password.dispose(); super.dispose(); } 
+  void initState() {
+    super.initState();
+    _authSubscription = db.auth.onAuthStateChange.listen((_) => _refreshFounderAccess());
+    _refreshFounderAccess();
+  }
+
+  Future<void> _refreshFounderAccess() async {
+    final user = db.auth.currentUser;
+    if (user == null) {
+      _founderCheckedUserId = null;
+      if (mounted) setState(() { _founderAccess = false; _checkingFounderAccess = false; });
+      return;
+    }
+    if (_founderCheckInFlight && _founderCheckedUserId == user.id) return;
+    if (_founderCheckedUserId == user.id && !_checkingFounderAccess) return;
+    _founderCheckInFlight = true;
+    _founderCheckedUserId = user.id;
+    if (mounted) setState(() => _checkingFounderAccess = true);
+    try {
+      final allowed = await db.rpc('hte_is_admin');
+      if (!mounted || db.auth.currentUser?.id != user.id) return;
+      setState(() {
+        _founderAccess = allowed == true;
+        _checkingFounderAccess = false;
+      });
+    } catch (_) {
+      if (!mounted || db.auth.currentUser?.id != user.id) return;
+      setState(() { _founderAccess = false; _checkingFounderAccess = false; });
+    } finally {
+      _founderCheckInFlight = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    email.dispose();
+    password.dispose();
+    super.dispose();
+  } 
   Future<void> authenticate() async {
     if (busy) return;
     final address = email.text.trim();
@@ -3643,7 +3687,13 @@ class _AccountTabState extends State<AccountTab> {
       ] else ...[
         const SizedBox(height: 8),
       ],
-      if (user != null && user.id == 'b268df9e-eff5-43b9-a38f-869b33add38b') ...[
+      if (user != null && _checkingFounderAccess) ...[
+        const Card(child: ListTile(
+          leading: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+          title: Text('Checking Founder Studio access...'),
+        )),
+      ],
+      if (user != null && _founderAccess) ...[
         Card(child: ListTile(
           leading: const Icon(Icons.admin_panel_settings_outlined, color: Color(0xFFD9B96E), size: 28),
           title: const Text('HT Admin — Founder Studio', style: TextStyle(fontWeight: FontWeight.w700)),
