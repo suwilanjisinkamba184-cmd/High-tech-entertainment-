@@ -1,4 +1,4 @@
-name: High-Tech Entertainment â Native Android CI
+name: High-Tech Entertainment - Native Android CI
 
 on:
   pull_request:
