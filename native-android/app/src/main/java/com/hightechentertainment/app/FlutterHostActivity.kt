@@ -158,14 +158,14 @@ class FlutterHostActivity : FlutterActivity() {
                         val share = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
                             putExtra(Intent.EXTRA_TEXT,
-                                "Discover music, artists and original productions with High-Tech Entertainment: https://high-techmedia.netlify.app")
+                                "Discover music, artists and original productions with High-Tech Entertainment: https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-")
                         }
                         startActivity(Intent.createChooser(share, "Share High-Tech Entertainment"))
                         result.success(true)
                     }
                     "openAccountDeletion" -> {
                         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(
-                            "https://high-techmedia.netlify.app/account-deletion.html"
+                            "https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account-deletion.html"
                         )))
                         result.success(true)
                     }
