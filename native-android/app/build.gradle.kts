@@ -15,7 +15,7 @@ val prepareStartupJingle = tasks.register<Copy>("prepareStartupJingle") {
 
 android {
     namespace = "com.hightechentertainment.app"
-    compileSdk = 36
+    compileSdk = 36\n    ndkVersion = "28.2.13676358"
 
     defaultConfig {
         applicationId = "com.hightechentertainment.app"

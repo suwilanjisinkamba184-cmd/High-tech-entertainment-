@@ -54,8 +54,8 @@ jobs:
         shell: bash
         run: |
           SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
-          if [ -d "$SDK_ROOT/platforms/android-36" ] && [ -d "$SDK_ROOT/build-tools/36.0.0" ]; then
-            echo "Android API 36 and Build Tools 36.0.0 are already installed."
+          if [ -d "$SDK_ROOT/platforms/android-36" ] && [ -d "$SDK_ROOT/build-tools/36.0.0" ] && [ -d "$SDK_ROOT/ndk/28.2.13676358" ]; then
+            echo "Android API 36, Build Tools 36.0.0 and NDK 28.2.13676358 are already installed."
           else
             SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager -print -quit)"
             if [ -z "$SDKMANAGER" ]; then
@@ -63,7 +63,7 @@ jobs:
               exit 1
             fi
             yes | "$SDKMANAGER" --licenses
-            "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0"
+            "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"\n            test -d "$SDK_ROOT/ndk/28.2.13676358"
           fi
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6

@@ -73,7 +73,7 @@ jobs:
           # sdkmanager closes stdin after accepting all licenses; yes may then exit on SIGPIPE.
           # The following package installation is the authoritative license check.
           yes | "$SDKMANAGER" --licenses || true
-          "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+          "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "platform-tools" "ndk;28.2.13676358"\n          test -d "$SDK_ROOT/ndk/28.2.13676358"
           test -x "$SDK_ROOT/build-tools/36.0.0/apksigner"
           test -x "$SDK_ROOT/build-tools/36.0.0/zipalign"
           test -x "$SDK_ROOT/build-tools/36.0.0/aapt"
