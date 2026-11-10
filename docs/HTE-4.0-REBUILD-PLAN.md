@@ -75,3 +75,18 @@ Build a premium, cinematic High-Tech Entertainment experience using the existing
 ## Cleanup policy
 
 Do not bulk-delete the 86 branches or close all open pull requests. First classify each branch by last commit, open PR association, unique commits, release dependency and whether its work is already merged. Archive or delete only confirmed abandoned duplicates after explicit approval.
+
+
+## Existing visual design references
+
+The user's existing MagicPath workspace already contains reusable High-Tech Entertainment concepts; do not create another duplicate prototype:
+- [HT Music & HT Admin prototype project](https://www.magicpath.ai/files/468084098691395584)
+  - HT Music Android App Prototype: `lively-room-4794` (component ID `468084130450673664`).
+  - HT Admin Private Android App Prototype: `cleverly-brook-4577` (component ID `468091338185936896`).
+- [Three visual directions exploration](https://www.magicpath.ai/files/468639260782764032), component `brightly-home-4479`.
+
+The HT Music prototype establishes the approved visual language: black surfaces, restrained metallic gold, branded hero, music artwork cards, discovery sections, persistent mini-player and bottom navigation. The Founder Studio prototype establishes a separate private command-centre experience.
+
+These are design prototypes, not production implementations: their demo content is hard-coded and must not be copied into the live catalogue. Connect real Supabase data and native playback when implementing the Flutter screens.
+
+Information-architecture mismatch to resolve: the HT Music prototype has Home, Discover, Releases, Search, Library and Profile; PR #67's `flutter-ui/` currently uses Discover, Library, Studio, Profile and Voice. The rebuild must define one complete navigation model before porting screens.
