@@ -51,4 +51,7 @@ jobs:
         with:
           apiToken: ${{ secrets.APPETIZE_API_TOKEN }}
           publicKey: zx6aumhthcok64vx3yoc3udqqm
-          appPath: android-rebuild/app/build/outputs/apk/debug/app-debug.apk
+          appFile: android-rebuild/app/build/outputs/apk/debug/app-debug.apk
+          platform: android
+          fileType: apk
+          note: "HTE clean native rebuild 4.0.0"
