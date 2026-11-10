@@ -32,6 +32,8 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
+      - name: Install media validation tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Validate bundled startup recording
         run: |
           test -s mobile-app/assets/high-tech-startup.mp3
