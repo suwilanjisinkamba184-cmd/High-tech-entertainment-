@@ -1119,17 +1119,17 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int tab = 0;
   static const _pages = <Widget>[
-    HomeTab(), DiscoverTab(), ReleasesTab(), LibraryTab(), AccountTab(), MoreTab(),
+    HomeTab(), DiscoverTab(), VideosTab(), LibraryTab(), AccountTab(), MoreTab(),
   ];
-  // Mount tabs on first visit to avoid six simultaneous catalogue loads on low-RAM phones.
+  // Mount tabs on first visit to avoid simultaneous catalogue loads on low-RAM phones.
   final Set<int> _visitedTabs = <int>{0};
   static const _items = [
-    (Icons.space_dashboard_rounded, 'Home'),
+    (Icons.home_rounded, 'Home'),
     (Icons.explore_rounded, 'Discover'),
-    (Icons.album_rounded, 'Releases'),
+    (Icons.movie_filter_rounded, 'Videos'),
     (Icons.library_music_rounded, 'Library'),
     (Icons.person_rounded, 'Profile'),
-    (Icons.grid_view_rounded, 'More'),
+    (Icons.more_horiz_rounded, 'More'),
   ];
 
   @override
@@ -1153,9 +1153,7 @@ class _MainScreenState extends State<MainScreen> {
           index: tab,
           children: List<Widget>.generate(
             _pages.length,
-            (index) => _visitedTabs.contains(index)
-                ? _pages[index]
-                : const SizedBox.shrink(),
+            (index) => _visitedTabs.contains(index) ? _pages[index] : const SizedBox.shrink(),
           ),
         ),
       ),
@@ -1175,7 +1173,7 @@ class _MainScreenState extends State<MainScreen> {
         SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 7),
+            padding: const EdgeInsets.fromLTRB(7, 7, 7, 6),
             child: Row(
               children: List.generate(_items.length, (index) {
                 final selected = tab == index;
@@ -1186,30 +1184,27 @@ class _MainScreenState extends State<MainScreen> {
                     selected: selected,
                     label: item.$2,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(15),
+                      borderRadius: BorderRadius.circular(14),
                       onTap: () => setState(() { tab = index; _visitedTabs.add(index); }),
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 240),
+                        duration: const Duration(milliseconds: 200),
                         curve: Curves.easeOutCubic,
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
                           gradient: selected ? const LinearGradient(
                             begin: Alignment.topLeft, end: Alignment.bottomRight,
-                            colors: [Color(0xFF4A3920), Color(0xFF211D17)],
+                            colors: [Color(0xFF3C301D), Color(0xFF191713)],
                           ) : null,
-                          color: selected ? null : Colors.transparent,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: selected ? const Color(0xFFB68B43) : Colors.transparent,
-                          ),
+                          borderRadius: BorderRadius.circular(13),
+                          border: Border.all(color: selected ? const Color(0xFF8D713F) : Colors.transparent),
                         ),
                         child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(item.$1, size: 20,
+                          Icon(item.$1, size: 21,
                             color: selected ? const Color(0xFFF0CC7B) : const Color(0xFF82909E)),
                           const SizedBox(height: 4),
                           Text(item.$2, maxLines: 1,
-                            style: TextStyle(fontSize: 9, letterSpacing: .2,
+                            style: TextStyle(fontSize: 9, letterSpacing: .1,
                               fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
                               color: selected ? const Color(0xFFF0CC7B) : const Color(0xFF9BA7B2))),
                         ]),
@@ -1231,10 +1226,7 @@ class MoreTab extends StatelessWidget {
 
   void _open(BuildContext context, String title, Widget page) {
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => Scaffold(
-        appBar: AppBar(title: Text(title)),
-        body: SafeArea(child: page),
-      ),
+      builder: (_) => Scaffold(appBar: AppBar(title: Text(title)), body: SafeArea(child: page)),
     ));
   }
 
@@ -1243,55 +1235,42 @@ class MoreTab extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: 24),
     children: [
       const Brand(),
-      const Padding(
-        padding: EdgeInsets.fromLTRB(20, 12, 20, 8),
-        child: Text('Explore more', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
-      ),
+      const Padding(padding: EdgeInsets.fromLTRB(20, 12, 20, 8), child: Text('Explore more', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold))),
       Card(child: ListTile(
         leading: const Icon(Icons.tune_rounded, color: Color(0xFFD4AF37)),
-        title: const Text('App settings'),
-        subtitle: const Text('Appearance, playback, downloads, updates and privacy'),
+        title: const Text('App settings'), subtitle: const Text('Appearance, playback, downloads, updates and privacy'),
         trailing: const Icon(Icons.chevron_right),
-        // SettingsPage owns its Scaffold and AppBar. Do not wrap it in a
-        // second Scaffold, which produced duplicate Settings/back bars.
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const SettingsPage()),
-        ),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsPage())),
       )),
       Card(child: ListTile(
         leading: const Icon(Icons.download_for_offline_outlined, color: Color(0xFFD4AF37)),
-        title: const Text('Offline media library'),
-        subtitle: const Text('Manage music and videos saved on this device'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => _open(context, 'Offline media', const LocalFilesTab()),
+        title: const Text('Offline media library'), subtitle: const Text('Manage music and videos saved on this device'),
+        trailing: const Icon(Icons.chevron_right), onTap: () => _open(context, 'Offline media', const LocalFilesTab()),
+      )),
+      Card(child: ListTile(
+        leading: const Icon(Icons.album_outlined, color: Color(0xFFD4AF37)),
+        title: const Text('Releases'), subtitle: const Text('Explore published singles, EPs and albums'),
+        trailing: const Icon(Icons.chevron_right), onTap: () => _open(context, 'Releases', const ReleasesTab()),
       )),
       Card(child: ListTile(
         leading: const Icon(Icons.notifications_none, color: Color(0xFFD4AF37)),
-        title: const Text('Notifications'),
-        subtitle: const Text('Release news and account announcements'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsPage())),
+        title: const Text('Notifications'), subtitle: const Text('Release news and account announcements'),
+        trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsPage())),
       )),
       Card(child: ListTile(
         leading: const Icon(Icons.people_outline, color: Color(0xFFD4AF37)),
-        title: const Text('Artists'),
-        subtitle: const Text('Discover High-Tech artists and their profiles'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => _open(context, 'Artists', const ArtistsTab()),
+        title: const Text('Artists'), subtitle: const Text('Discover High-Tech artists and their profiles'),
+        trailing: const Icon(Icons.chevron_right), onTap: () => _open(context, 'Artists', const ArtistsTab()),
       )),
       Card(child: ListTile(
         leading: const Icon(Icons.video_library_outlined, color: Color(0xFFD4AF37)),
-        title: const Text('Videos'),
-        subtitle: const Text('Watch music videos and visual content'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => _open(context, 'Videos', const VideosTab()),
+        title: const Text('Videos'), subtitle: const Text('Watch music videos and visual content'),
+        trailing: const Icon(Icons.chevron_right), onTap: () => _open(context, 'Videos', const VideosTab()),
       )),
       Card(child: ListTile(
         leading: const Icon(Icons.person_outline, color: Color(0xFFD4AF37)),
-        title: const Text('Account'),
-        subtitle: const Text('Profile, sign out and account details'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => _open(context, 'Account', const AccountTab()),
+        title: const Text('Account'), subtitle: const Text('Profile, sign out and account details'),
+        trailing: const Icon(Icons.chevron_right), onTap: () => _open(context, 'Account', const AccountTab()),
       )),
     ],
   );
@@ -1505,65 +1484,27 @@ class HomeTab extends StatelessWidget {
     children: [
       const Brand(),
       const AppUpdateBanner(),
-      const HteNeoHero(),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(19, 4, 19, 10),
-        child: Row(children: [
-          const Expanded(child: Text('ENTER THE SOUND',
+      const Padding(
+        padding: EdgeInsets.fromLTRB(19, 8, 19, 12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('YOUR SOUND. YOUR SCENE.',
             style: TextStyle(color: Color(0xFFE4C57E), fontSize: 9,
-              letterSpacing: 1.8, fontWeight: FontWeight.w900))),
-          Container(width: 38, height: 1, color: const Color(0xFF6F5A35)),
+              letterSpacing: 1.8, fontWeight: FontWeight.w900)),
+          SizedBox(height: 7),
+          Text('Discover what moves you.',
+            style: TextStyle(fontSize: 25, height: 1.12, fontWeight: FontWeight.w900,
+              letterSpacing: -.7, color: Color(0xFFF4F1E9))),
         ]),
       ),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(children: [
-          Expanded(child: _HomeQuickAction(icon: Icons.album_rounded, title: 'New releases',
-            subtitle: 'Fresh from HTE', onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Releases')), body: const ReleasesTab()))))),
-          const SizedBox(width: 10),
-          Expanded(child: _HomeQuickAction(icon: Icons.people_alt_rounded, title: 'Artists',
-            subtitle: 'Meet the creators', onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('Artists')), body: const ArtistsTab()))))),
-        ]),
-      ),
+      const HteEditorialRelease(),
       const ContinueListeningCard(),
-      const Heading('Latest releases'),
+      const Heading('New on High-Tech'),
       const ReleaseList(horizontal: true),
-      const Heading('Featured artists'),
+      const Heading('Artists to discover'),
       const ArtistList(horizontal: true),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [Color(0xFF15212A), Color(0xFF10151C)]),
-            borderRadius: BorderRadius.circular(19),
-            border: Border.all(color: const Color(0xFF334B5B)),
-          ),
-          child: Row(children: [
-            Container(width: 42, height: 42,
-              decoration: BoxDecoration(color: const Color(0xFF23313A), borderRadius: BorderRadius.circular(13)),
-              child: const Icon(Icons.video_library_rounded, color: Color(0xFFE3C47D), size: 22)),
-            const SizedBox(width: 13),
-            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Beyond the audio', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
-              SizedBox(height: 4),
-              Text('Official videos and visual releases.',
-                style: TextStyle(color: Color(0xFF9EADB8), fontSize: 10)),
-            ])),
-            IconButton(
-              tooltip: 'Explore videos',
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => Scaffold(appBar: AppBar(title: const Text('Videos')), body: const VideosTab()))),
-              icon: const Icon(Icons.arrow_forward_rounded, color: Color(0xFFE3C47D)),
-            ),
-          ]),
-        ),
-      ),
-      const Heading('Watch the latest videos'),
+      const Heading('Watch the latest'),
       const VideoPreviewList(),
-      const Heading('Released music'),
+      const Heading('In rotation'),
       const TrackList(compact: true),
       const Padding(
         padding: EdgeInsets.fromLTRB(20, 24, 20, 8),
@@ -1576,9 +1517,105 @@ class HomeTab extends StatelessWidget {
   );
 }
 
+/// Editorial cover story powered by the published Supabase releases catalogue.
+/// No prototype-only artists, titles, artwork or play counts are hardcoded here.
+class HteEditorialRelease extends StatelessWidget {
+  const HteEditorialRelease({super.key});
 
-/// Premium NEO hero inspired by futuristic music-streaming interfaces:
-/// deep graphite surfaces, restrained gold/cyan lighting and glass-like panels.
+  void _openReleases(BuildContext context) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => Scaffold(appBar: AppBar(title: const Text('New releases')), body: const ReleasesTab()),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) => RetryFutureBuilder<List<Map<String, dynamic>>>(
+    future: () => rows('releases', 'created_at'),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
+      if (!snapshot.hasData) return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16), child: SizedBox(height: 230, child: Busy()),
+      );
+      final items = snapshot.data!;
+      if (items.isEmpty) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 2, 16, 18),
+          child: Container(
+            height: 205,
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(23),
+              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+                colors: [Color(0xFF292219), Color(0xFF111418), Color(0xFF090B0E)]),
+              border: Border.all(color: const Color(0xFF665333)),
+            ),
+            child: const Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.end, children: [
+              Text('HIGH-TECH EXCLUSIVES', style: TextStyle(color: Color(0xFFE3BD70), fontSize: 9, letterSpacing: 1.7, fontWeight: FontWeight.w900)),
+              SizedBox(height: 10),
+              Text('The next release starts here.', style: TextStyle(fontSize: 23, height: 1.1, fontWeight: FontWeight.w900)),
+              SizedBox(height: 8),
+              Text('Published releases will appear here as they arrive.', style: TextStyle(color: Color(0xFFB6C1CA), fontSize: 12)),
+            ]),
+          ),
+        );
+      }
+      final release = items.first;
+      final title = (release['title'] ?? 'Featured release').toString();
+      final date = (release['release_date'] ?? '').toString();
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 2, 16, 18),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(23),
+          child: Material(
+            color: const Color(0xFF111214),
+            child: InkWell(
+              onTap: () => _openReleases(context),
+              child: SizedBox(
+                height: 264,
+                child: Stack(fit: StackFit.expand, children: [
+                  MediaCover(url: release['cover_url']?.toString(), height: 264),
+                  const DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(
+                    begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                    colors: [Color(0x11000000), Color(0x44000000), Color(0xF0000000)],
+                  ))),
+                  Positioned(
+                    left: 18, right: 18, bottom: 18,
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(color: const Color(0xCC17130B), borderRadius: BorderRadius.circular(30), border: Border.all(color: const Color(0x99D7B66C))),
+                        child: const Text('FEATURED RELEASE', style: TextStyle(color: Color(0xFFF0D18D), fontSize: 8, letterSpacing: 1.4, fontWeight: FontWeight.w900)),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontSize: 25, height: 1.05, fontWeight: FontWeight.w900, letterSpacing: -.5)),
+                      if (date.isNotEmpty) ...[
+                        const SizedBox(height: 5),
+                        Text(date, style: const TextStyle(color: Color(0xFFD0D0D0), fontSize: 11)),
+                      ],
+                      const SizedBox(height: 12),
+                      Row(children: [
+                        FilledButton.icon(
+                          onPressed: () => _openReleases(context),
+                          icon: const Icon(Icons.arrow_forward_rounded, size: 17),
+                          label: const Text('Explore release'),
+                          style: FilledButton.styleFrom(minimumSize: const Size(0, 43), backgroundColor: const Color(0xFFE3BD70), foregroundColor: const Color(0xFF17130B)),
+                        ),
+                        const SizedBox(width: 10),
+                        const Text('HIGH-TECH ENTERTAINMENT', style: TextStyle(color: Color(0xFFE0D9CA), fontSize: 8, letterSpacing: .8, fontWeight: FontWeight.w800)),
+                      ]),
+                    ]),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
 class HteNeoHero extends StatelessWidget {
   const HteNeoHero({super.key});
 
@@ -2297,242 +2334,174 @@ class FullPlayerPage extends StatelessWidget {
   Future<void> _seekBy(Duration delta) async {
     final duration = player.duration ?? Duration.zero;
     final target = player.position + delta;
-    final clamped = target < Duration.zero
-        ? Duration.zero
-        : target > duration
-            ? duration
-            : target;
+    final clamped = target < Duration.zero ? Duration.zero : target > duration ? duration : target;
     await player.seek(clamped);
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    backgroundColor: const Color(0xFF070809),
     appBar: AppBar(
-      title: const Text('NOW PLAYING', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+      backgroundColor: const Color(0xFF070809),
+      title: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('NOW PLAYING', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.7, color: Color(0xFFE3BD70))),
+        SizedBox(height: 2),
+        Text('HIGH-TECH AUDIO', style: TextStyle(fontSize: 8, letterSpacing: 1.2, color: Color(0xFF9BA7B2))),
+      ]),
       actions: [
-        IconButton(
-          tooltip: 'Playback queue',
-          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QueuePage())),
-          icon: const Icon(Icons.queue_music_rounded, color: Color(0xFFE3BD70)),
-        ),
+        IconButton(tooltip: 'Playback queue', onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QueuePage())),
+          icon: const Icon(Icons.queue_music_rounded, color: Color(0xFFE3BD70))),
       ],
     ),
     body: Stack(children: [
-      const Positioned.fill(child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [Color(0xFF17130D), Color(0xFF0B1118), Color(0xFF07090D)],
-          ),
-        ),
-      )),
+      const Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+        colors: [Color(0xFF17130D), Color(0xFF0B1118), Color(0xFF07090D)],
+      )))),
       ValueListenableBuilder<bool>(
-      valueListenable: playback.adPlaying,
-      builder: (context, isAd, _) {
-        if (isAd) {
-          return Center(child: Container(
-            margin: const EdgeInsets.all(24),
-            padding: const EdgeInsets.all(26),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFF302719), Color(0xFF111923)]),
-              borderRadius: BorderRadius.circular(25),
-              border: Border.all(color: const Color(0xFF80653A)),
-            ),
-            child: const Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+        valueListenable: playback.adPlaying,
+        builder: (context, isAd, _) {
+          if (isAd) {
+            return Center(child: Container(
+              margin: const EdgeInsets.all(24), padding: const EdgeInsets.all(26),
+              decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF302719), Color(0xFF111923)]), borderRadius: BorderRadius.circular(25), border: Border.all(color: const Color(0xFF80653A))),
+              child: const Column(mainAxisSize: MainAxisSize.min, children: [
                 Icon(Icons.campaign_rounded, size: 58, color: Color(0xFFE3BD70)),
                 SizedBox(height: 18),
-                Text('HIGH-TECH PROMOTION',
-                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
+                Text('HIGH-TECH PROMOTION', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
                 SizedBox(height: 8),
-                Text('Please listen until the sponsored audio finishes.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFFB6C1CA), fontSize: 12)),
-                SizedBox(height: 20),
-                CircularProgressIndicator(color: Color(0xFFE3BD70)),
-              ],
-            ),
-          ));
-        }
-        return ValueListenableBuilder<Map<String,dynamic>?>(
-          valueListenable: playback.currentTrack,
-          builder: (context, track, _) => track == null
-            ? const Notice('Choose a track to start listening.')
-            : LayoutBuilder(
-              builder: (context, constraints) {
-                final artworkSize = (constraints.maxWidth - 56).clamp(150.0, 280.0).toDouble();
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight - 46),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('HIGH-TECH AUDIO EXPERIENCE',
-                          style: TextStyle(color: Color(0xFFE3BD70), fontSize: 8,
-                            fontWeight: FontWeight.w900, letterSpacing: 1.8)),
-                        const SizedBox(height: 13),
+                Text('Please listen until the sponsored audio finishes.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFB6C1CA), fontSize: 12)),
+                SizedBox(height: 20), CircularProgressIndicator(color: Color(0xFFE3BD70)),
+              ]),
+            ));
+          }
+          return ValueListenableBuilder<Map<String, dynamic>?>(
+            valueListenable: playback.currentTrack,
+            builder: (context, track, _) => track == null
+              ? const Notice('Choose a track to start listening.')
+              : LayoutBuilder(builder: (context, constraints) {
+                  final artworkSize = (constraints.maxWidth - 48).clamp(160.0, 310.0).toDouble();
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: constraints.maxHeight - 34),
+                      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          Container(width: 5, height: 5, decoration: const BoxDecoration(color: Color(0xFFE3BD70), shape: BoxShape.circle)),
+                          const SizedBox(width: 8),
+                          const Text('PLAYING FROM HIGH-TECH', style: TextStyle(color: Color(0xFFE3BD70), fontSize: 8, letterSpacing: 1.5, fontWeight: FontWeight.w900)),
+                        ]),
+                        const SizedBox(height: 18),
                         Container(
-                          width: artworkSize + 8,
-                          height: artworkSize + 8,
-                          padding: const EdgeInsets.all(4),
+                          width: artworkSize + 10, height: artworkSize + 10, padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            gradient: const SweepGradient(colors: [
-                              Color(0xFF77572C), Color(0xFFE5C477),
-                              Color(0xFF587D91), Color(0xFF77572C),
-                            ]),
-                            borderRadius: BorderRadius.circular(27),
-                            boxShadow: const [
-                              BoxShadow(color: Color(0x553D2C08), blurRadius: 30, spreadRadius: 2),
-                            ],
+                            gradient: const SweepGradient(colors: [Color(0xFF77572C), Color(0xFFE5C477), Color(0xFF8D9BA6), Color(0xFF77572C)]),
+                            borderRadius: BorderRadius.circular(25),
+                            boxShadow: const [BoxShadow(color: Color(0x553D2C08), blurRadius: 28, spreadRadius: 1)],
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(23),
-                            child: MediaCover(url: track['cover_url']?.toString(), height: artworkSize),
-                          ),
+                          child: ClipRRect(borderRadius: BorderRadius.circular(21), child: MediaCover(url: track['cover_url']?.toString(), height: artworkSize)),
                         ),
-                        const SizedBox(height: 23),
-                        Text((track['title'] ?? 'Now playing').toString(),
-                          style: const TextStyle(fontSize: 24, height: 1.15,
-                            fontWeight: FontWeight.w900, letterSpacing: -.6),
-                          textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: 7),
-                        Text((track['artist'] ?? 'High-Tech Entertainment').toString(),
-                          style: const TextStyle(color: Color(0xFFAFBBC5), fontSize: 13),
-                          textAlign: TextAlign.center),
+                        const SizedBox(height: 25),
+                        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text((track['title'] ?? 'Now playing').toString(), maxLines: 2, overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 23, height: 1.12, fontWeight: FontWeight.w900, letterSpacing: -.5)),
+                            const SizedBox(height: 6),
+                            Text((track['artist'] ?? 'High-Tech Entertainment').toString(), maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Color(0xFFB4BEC6), fontSize: 13)),
+                          ])),
+                          Container(
+                            width: 42, height: 42,
+                            decoration: BoxDecoration(color: const Color(0xFF211C12), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF685431))),
+                            child: const Icon(Icons.graphic_eq_rounded, color: Color(0xFFE3BD70)),
+                          ),
+                        ]),
                         ValueListenableBuilder<String?>(
                           valueListenable: playback.playbackError,
-                          builder: (context, error, _) => error == null
-                            ? const SizedBox(height: 10)
-                            : Padding(padding: const EdgeInsets.only(top: 10),
-                              child: Text(error, textAlign: TextAlign.center,
-                                style: const TextStyle(color: Color(0xFFFFAAA4), fontSize: 12))),
+                          builder: (context, error, _) => error == null ? const SizedBox(height: 8) : Padding(
+                            padding: const EdgeInsets.only(top: 10), child: Text(error, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFFFAAA4), fontSize: 12))),
                         ),
+                        const SizedBox(height: 8),
                         StreamBuilder<Duration>(
-                          stream: player.positionStream,
-                          initialData: Duration.zero,
-                          builder: (context, positionSnapshot) {
+                          stream: player.positionStream, initialData: Duration.zero,
+                          builder: (context, snapshot) {
                             final duration = player.duration ?? Duration.zero;
-                            final position = positionSnapshot.data ?? Duration.zero;
+                            final position = snapshot.data ?? Duration.zero;
                             final maxMs = duration.inMilliseconds;
-                            final currentMs = maxMs <= 0
-                                ? 0.0
-                                : position.inMilliseconds.clamp(0, maxMs).toDouble();
+                            final currentMs = maxMs <= 0 ? 0.0 : position.inMilliseconds.clamp(0, maxMs).toDouble();
                             return Column(children: [
                               Slider(
-                                value: currentMs,
-                                max: maxMs <= 0 ? 1.0 : maxMs.toDouble(),
-                                onChanged: maxMs <= 0
-                                    ? null
-                                    : (value) => player.seek(Duration(milliseconds: value.round())),
+                                value: currentMs, max: maxMs <= 0 ? 1.0 : maxMs.toDouble(),
+                                onChanged: maxMs <= 0 ? null : (value) => player.seek(Duration(milliseconds: value.round())),
+                                activeColor: const Color(0xFFE3BD70), inactiveColor: const Color(0xFF45413A),
                               ),
-                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(_time(position), style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                                  Text(_time(duration), style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                                ]),
+                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                                Text(_time(position), style: const TextStyle(color: Color(0xFF9DA7AF), fontSize: 10)),
+                                Text(_time(duration), style: const TextStyle(color: Color(0xFF9DA7AF), fontSize: 10)),
+                              ]),
                             ]);
                           },
                         ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            IconButton(
-                              tooltip: 'Shuffle',
-                              onPressed: () => playback.toggleShuffle(),
-                              icon: Icon(playback.shuffle ? Icons.shuffle_on : Icons.shuffle,
-                                color: playback.shuffle ? const Color(0xFFD4AF37) : null),
+                        const SizedBox(height: 14),
+                        Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, spacing: 2, runSpacing: 2, children: [
+                          IconButton(tooltip: 'Shuffle', onPressed: () => playback.toggleShuffle(),
+                            icon: Icon(playback.shuffle ? Icons.shuffle_on_rounded : Icons.shuffle_rounded, color: playback.shuffle ? const Color(0xFFE3BD70) : const Color(0xFFB6BEC5))),
+                          IconButton(tooltip: 'Back 10 seconds', onPressed: () => _seekBy(const Duration(seconds: -10)), icon: const Icon(Icons.replay_10_rounded, color: Color(0xFFB6BEC5))),
+                          IconButton(tooltip: 'Previous track', iconSize: 31, onPressed: () => playback.previous(), icon: const Icon(Icons.skip_previous_rounded)),
+                          StreamBuilder<PlayerState>(
+                            stream: player.playerStateStream,
+                            builder: (context, snapshot) {
+                              final playing = snapshot.data?.playing ?? false;
+                              return Container(
+                                width: 64, height: 64,
+                                decoration: const BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [Color(0xFFF0D18D), Color(0xFFD2A64F)]), boxShadow: [BoxShadow(color: Color(0x557C5B28), blurRadius: 20, spreadRadius: 1)]),
+                                child: IconButton(tooltip: playing ? 'Pause' : 'Play', iconSize: 39,
+                                  color: const Color(0xFF17130B), onPressed: () => playing ? player.pause() : player.play(),
+                                  icon: Icon(playing ? Icons.pause_rounded : Icons.play_arrow_rounded)),
+                              );
+                            },
+                          ),
+                          IconButton(tooltip: 'Next track', iconSize: 31, onPressed: () => playback.next(), icon: const Icon(Icons.skip_next_rounded)),
+                          IconButton(tooltip: 'Forward 10 seconds', onPressed: () => _seekBy(const Duration(seconds: 10)), icon: const Icon(Icons.forward_10_rounded, color: Color(0xFFB6BEC5))),
+                          StreamBuilder<LoopMode>(
+                            stream: player.loopModeStream, initialData: LoopMode.off,
+                            builder: (context, snapshot) {
+                              final repeating = snapshot.data == LoopMode.one;
+                              return IconButton(tooltip: repeating ? 'Turn repeat off' : 'Repeat this track', onPressed: () => playback.setRepeat(!repeating),
+                                icon: Icon(Icons.repeat_one_rounded, color: repeating ? const Color(0xFFE3BD70) : const Color(0xFFB6BEC5)));
+                            },
+                          ),
+                        ]),
+                        const SizedBox(height: 19),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(color: const Color(0xFF111418), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF34302A))),
+                          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                            TextButton.icon(
+                              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QueuePage())),
+                              icon: const Icon(Icons.queue_music_rounded, size: 18, color: Color(0xFFE3BD70)),
+                              label: const Text('Up next', style: TextStyle(color: Color(0xFFE8E3D9))),
                             ),
-                            IconButton(
-                              tooltip: 'Back 10 seconds',
-                              onPressed: () => _seekBy(const Duration(seconds: -10)),
-                              icon: const Icon(Icons.replay_10),
-                            ),
-                            IconButton(
-                              tooltip: 'Previous track',
-                              iconSize: 38,
-                              onPressed: () => playback.previous(),
-                              icon: const Icon(Icons.skip_previous),
-                            ),
-                            StreamBuilder<PlayerState>(
-                              stream: player.playerStateStream,
-                              builder: (context, snapshot) {
-                                final playing = snapshot.data?.playing ?? false;
-                                return IconButton(
-                                  tooltip: playing ? 'Pause' : 'Play',
-                                  iconSize: 66,
-                                  color: const Color(0xFFD4AF37),
-                                  onPressed: () => playing ? player.pause() : player.play(),
-                                  icon: Icon(playing ? Icons.pause_circle_filled : Icons.play_circle_fill),
-                                );
-                              },
-                            ),
-                            IconButton(
-                              tooltip: 'Next track',
-                              iconSize: 38,
-                              onPressed: () => playback.next(),
-                              icon: const Icon(Icons.skip_next),
-                            ),
-                            IconButton(
-                              tooltip: 'Forward 10 seconds',
-                              onPressed: () => _seekBy(const Duration(seconds: 10)),
-                              icon: const Icon(Icons.forward_10),
-                            ),
-                            StreamBuilder<LoopMode>(
-                              stream: player.loopModeStream,
-                              initialData: LoopMode.off,
-                              builder: (context, snapshot) {
-                                final repeating = snapshot.data == LoopMode.one;
-                                return IconButton(
-                                  tooltip: repeating ? 'Turn repeat off' : 'Repeat this track',
-                                  onPressed: () => playback.setRepeat(!repeating),
-                                  icon: Icon(Icons.repeat_one,
-                                    color: repeating ? const Color(0xFFD4AF37) : null),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.speed, size: 18, color: Color(0xFFD9B96E)),
-                            const SizedBox(width: 8),
-                            const Text('Playback speed'),
-                            const SizedBox(width: 10),
-                            PopupMenuButton<double>(
-                              tooltip: 'Choose audio playback speed',
-                              onSelected: (speed) => player.setSpeed(speed),
-                              itemBuilder: (_) => [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
-                                  .map((speed) => PopupMenuItem<double>(
-                                    value: speed,
-                                    child: Text(speed == 1.0 ? 'Normal (1×)' : '$speed×'),
-                                  )).toList(),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: const Color(0xFFD9B96E)),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: const Text('Change', style: TextStyle(color: Color(0xFFD9B96E))),
+                            Row(mainAxisSize: MainAxisSize.min, children: [
+                              const Icon(Icons.speed_rounded, size: 17, color: Color(0xFFE3BD70)),
+                              const SizedBox(width: 4),
+                              PopupMenuButton<double>(
+                                tooltip: 'Choose audio playback speed',
+                                onSelected: (speed) => player.setSpeed(speed),
+                                itemBuilder: (_) => [0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((speed) => PopupMenuItem<double>(value: speed, child: Text(speed == 1.0 ? 'Normal (1×)' : '$speed×'))).toList(),
+                                child: const Padding(padding: EdgeInsets.symmetric(horizontal: 8, vertical: 10), child: Text('Speed', style: TextStyle(color: Color(0xFFE8E3D9), fontWeight: FontWeight.w600))),
                               ),
-                            ),
-                          ],
+                            ]),
+                          ]),
                         ),
-                        const SizedBox(height: 10),
-                        const Text('Quality Sound, Global Vibes',
-                          style: TextStyle(color: Colors.white54, fontSize: 12)),
-                      ],
+                        const SizedBox(height: 14),
+                        const Text('QUALITY SOUND. GLOBAL VIBES.', style: TextStyle(color: Color(0xFF89949D), fontSize: 8, letterSpacing: 1.5, fontWeight: FontWeight.w800)),
+                      ]),
                     ),
-                  ),
-                );
-              },
-            ),
-        );
-      },
+                  );
+                }),
+          );
+        },
       ),
     ]),
   );
@@ -2552,76 +2521,120 @@ class QueuePage extends StatelessWidget {
 
 class VideosTab extends StatelessWidget {
   const VideosTab({super.key});
+
+  Future<void> _openVideo(BuildContext context, Map<String, dynamic> item) async {
+    final raw = (item['video_url'] ?? '').toString().trim();
+    final uri = Uri.tryParse(raw);
+    if (uri == null || (uri.scheme != 'https' && uri.scheme != 'http') || uri.host.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This video is not available yet.')));
+      return;
+    }
+    final host = uri.host.toLowerCase();
+    if (host.contains('youtube.com') || host == 'youtu.be' || host.contains('vimeo.com')) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      return;
+    }
+    if (!context.mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => HteVideoPlayerPage(
+      url: raw, title: (item['title'] ?? 'High-Tech video').toString(),
+    )));
+  }
+
+  Future<void> _downloadVideo(BuildContext context, Map<String, dynamic> item) async {
+    try {
+      final raw = (item['video_url'] ?? '').toString().trim();
+      final uri = Uri.tryParse(raw);
+      final isDirect = uri != null && (uri.scheme == 'https' || uri.scheme == 'http') && uri.host.isNotEmpty &&
+        !raw.toLowerCase().contains('youtube.com') && !raw.toLowerCase().contains('youtu.be') && !raw.toLowerCase().contains('vimeo.com');
+      if (!isDirect) throw StateError('Only direct video-file links can be downloaded. YouTube and Vimeo must be watched online.');
+      await downloadRemoteMedia(url: raw, title: (item['title'] ?? 'High-Tech video').toString(), kind: 'mp4');
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Video saved to your Offline media library.')));
+    } catch (error) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
+    }
+  }
+
+  Widget _featured(BuildContext context, Map<String, dynamic> item) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 5, 16, 16),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: Material(
+        color: const Color(0xFF111214),
+        child: InkWell(
+          onTap: () => _openVideo(context, item),
+          child: SizedBox(height: 246, child: Stack(fit: StackFit.expand, children: [
+            MediaCover(url: item['thumbnail_url']?.toString(), height: 246),
+            const DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x11000000), Color(0x33000000), Color(0xE8000000)]))),
+            Positioned(left: 17, top: 16, child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(color: const Color(0xCC17130B), borderRadius: BorderRadius.circular(30), border: Border.all(color: const Color(0x99D7B66C))),
+              child: const Text('FEATURED VIDEO', style: TextStyle(color: Color(0xFFF0D18D), fontSize: 8, letterSpacing: 1.3, fontWeight: FontWeight.w900)),
+            )),
+            const Center(child: Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 62, shadows: [Shadow(color: Colors.black54, blurRadius: 18)])),
+            Positioned(left: 17, right: 17, bottom: 17, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text((item['title'] ?? 'Featured video').toString(), maxLines: 2, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 18, height: 1.12, fontWeight: FontWeight.w900, color: Colors.white)),
+              const SizedBox(height: 5),
+              Text((item['artist'] ?? 'High-Tech Entertainment').toString(), maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Color(0xFFD0D0D0), fontSize: 11)),
+            ])),
+          ])),
+        ),
+      ),
+    ),
+  );
+
+  Widget _videoRow(BuildContext context, Map<String, dynamic> item) => Card(
+    margin: const EdgeInsets.fromLTRB(16, 0, 16, 11),
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: () => _openVideo(context, item),
+      child: Padding(
+        padding: const EdgeInsets.all(9),
+        child: Row(children: [
+          ClipRRect(borderRadius: BorderRadius.circular(12), child: SizedBox(width: 112, height: 82, child: Stack(fit: StackFit.expand, children: [
+            MediaCover(url: item['thumbnail_url']?.toString(), height: 82),
+            const Center(child: Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 34)),
+          ]))),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text((item['title'] ?? 'Video').toString(), maxLines: 2, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, height: 1.2)),
+            const SizedBox(height: 6),
+            Text((item['artist'] ?? 'High-Tech Entertainment').toString(), maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Color(0xFF9BA7B2), fontSize: 10)),
+          ])),
+          IconButton(tooltip: 'Download video', onPressed: () => _downloadVideo(context, item),
+            icon: const Icon(Icons.download_for_offline_outlined, color: Color(0xFFE3BD70), size: 21)),
+        ]),
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) => Column(children: [
-    const Brand(),
-    const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Videos', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)))),
+    const Brand(tagline: 'MUSIC VIDEOS · LIVE SESSIONS · VISUALS'),
+    const Padding(
+      padding: EdgeInsets.fromLTRB(19, 2, 19, 13),
+      child: Align(alignment: Alignment.centerLeft, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('THE VISUAL SIDE', style: TextStyle(color: Color(0xFFE3BD70), fontSize: 8, letterSpacing: 1.7, fontWeight: FontWeight.w900)),
+        SizedBox(height: 5),
+        Text('Watch.', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -.7)),
+        SizedBox(height: 3),
+        Text('Music, moments and stories in motion.', style: TextStyle(color: Color(0xFF9BA7B2), fontSize: 11)),
+      ])),
+    ),
     Expanded(child: RetryFutureBuilder<List<Map<String, dynamic>>>(
       future: () => rows('videos', 'created_at'),
       builder: (context, snapshot) {
         if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
         if (!snapshot.hasData) return const Busy();
         final items = snapshot.data!;
-        if (items.isEmpty) return const Notice('Published videos will appear here.');
+        if (items.isEmpty) return const Notice('Published High-Tech videos will appear here.');
         return ListView.builder(
+          padding: const EdgeInsets.only(bottom: 22),
           itemCount: items.length,
-          itemBuilder: (context, index) {
-            final item = items[index];
-            return Card(child: ListTile(
-              leading: SizedBox(width: 62, height: 55, child: MediaCover(url: item['thumbnail_url']?.toString(), height: 55)),
-              title: Text((item['title'] ?? 'Video').toString()),
-              subtitle: Text((item['artist'] ?? 'High-Tech Entertainment').toString()),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    tooltip: 'Download video for offline viewing',
-                    icon: const Icon(Icons.download_for_offline_outlined, color: Color(0xFFD4AF37)),
-                    onPressed: () async {
-                      try {
-                        final raw = (item['video_url'] ?? '').toString().trim();
-                        final uri = Uri.tryParse(raw);
-                        final isDirect = uri != null &&
-                            (uri.scheme == 'https' || uri.scheme == 'http') &&
-                            uri.host.isNotEmpty &&
-                            !raw.contains('youtube.com') &&
-                            !raw.contains('youtu.be') &&
-                            !raw.contains('vimeo.com');
-                        if (!isDirect) {
-                          throw StateError('Only direct video-file links can be downloaded. YouTube and Vimeo must be watched online.');
-                        }
-                        await downloadRemoteMedia(
-                          url: raw,
-                          title: (item['title'] ?? 'High-Tech video').toString(),
-                          kind: 'mp4',
-                        );
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Video saved to your Offline media library.')),
-                          );
-                        }
-                      } catch (error) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(friendlyErrorMessage(error))),
-                          );
-                        }
-                      }
-                    },
-                  ),
-                  const Icon(Icons.open_in_new, color: Color(0xFFD4AF37)),
-                ],
-              ),
-              onTap: () async {
-                final raw=(item['video_url']??'').toString();
-                final link=Uri.tryParse(raw);
-                if(link==null||!link.hasScheme)return;
-                final isWebVideo=raw.contains('youtube.com')||raw.contains('youtu.be')||raw.contains('vimeo.com');
-                if(isWebVideo){await launchUrl(link,mode:LaunchMode.externalApplication);return;}
-                if(context.mounted) Navigator.push(context,MaterialPageRoute(builder:(_)=>HteVideoPlayerPage(url:raw,title:(item['title']??'Video').toString())));
-              },
-            ));
-          },
+          itemBuilder: (context, index) => index == 0 ? _featured(context, items[index]) : _videoRow(context, items[index]),
         );
       },
     )),
