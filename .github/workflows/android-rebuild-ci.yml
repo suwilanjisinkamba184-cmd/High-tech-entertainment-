@@ -46,7 +46,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Publish clean build to Appetize
-        if: github.event_name != 'pull_request' && secrets.APPETIZE_API_TOKEN != ''
+        if: github.event_name != 'pull_request'
         uses: appetizeio/github-action-appetize@v1.1.0
         with:
           apiToken: ${{ secrets.APPETIZE_API_TOKEN }}
