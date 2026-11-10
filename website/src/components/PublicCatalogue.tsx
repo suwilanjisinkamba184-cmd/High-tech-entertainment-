@@ -70,17 +70,28 @@ function AudioPlayer({src,title,downloadUrl,onPlay,onEnded}:{src:string;title:st
   const [playing,setPlaying] = useState(false);
   const [current,setCurrent] = useState(0);
   const [duration,setDuration] = useState(0);
+  const [metadataLoaded,setMetadataLoaded] = useState(false);
   const [failed,setFailed] = useState(false);
   const togglePlayback = async () => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (audio.paused) { try { await audio.play(); setFailed(false); } catch { setFailed(true); } }
+    if (audio.paused) { try { if (failed) audio.load(); await audio.play(); setFailed(false); } catch { setFailed(true); } }
     else audio.pause();
+  };
+  const retryPlayback = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    setFailed(false);
+    setMetadataLoaded(false);
+    setDuration(0);
+    audio.load();
+    try { await audio.play(); setFailed(false); } catch { setFailed(true); }
   };
   return <div className="hte-audio-player">
     <audio ref={audioRef} src={src} preload="none"
-      onLoadedMetadata={event=>setDuration(event.currentTarget.duration || 0)}
-      onDurationChange={event=>setDuration(event.currentTarget.duration || 0)}
+      onLoadedMetadata={event=>{setDuration(event.currentTarget.duration || 0);setMetadataLoaded(true);}}
+      onDurationChange={event=>{setDuration(event.currentTarget.duration || 0);setMetadataLoaded(true);}}
+      onCanPlay={()=>{setMetadataLoaded(true);setFailed(false);}}
       onTimeUpdate={event=>setCurrent(event.currentTarget.currentTime)}
       onPlay={()=>{setPlaying(true);onPlay?.();}}
       onPause={()=>setPlaying(false)}
@@ -92,9 +103,9 @@ function AudioPlayer({src,title,downloadUrl,onPlay,onEnded}:{src:string;title:st
         <input className="hte-player-seek" type="range" min="0" max={Math.max(duration,1)} step="0.1" value={Math.min(current,duration || 0)} disabled={!duration} aria-label={"Seek " + title}
           onChange={event=>{const value=Number(event.currentTarget.value);if(audioRef.current){audioRef.current.currentTime=value;setCurrent(value);}}} />
       </div>
-      <span className="hte-player-time">{formatMediaTime(current)} / {formatMediaTime(duration)}</span>
+      <span className="hte-player-time" aria-live="polite">{failed ? "Unavailable" : duration > 0 ? formatMediaTime(current) + " / " + formatMediaTime(duration) : metadataLoaded ? "Duration unavailable" : "Tap play to load duration"}</span>
     </div>
-    {failed && <p className="hte-player-error" role="alert">This audio could not be loaded. Check your connection and try again.</p>}
+    {failed && <div className="hte-player-error" role="alert"><p>This audio could not be loaded. Check your connection and try again.</p><button type="button" className="video-retry-button" onClick={()=>void retryPlayback()}>Retry audio ↻</button></div>}
     <a className="hte-player-download" href={downloadUrl || src} download>Download audio <span aria-hidden="true">↓</span></a>
   </div>;
 }
@@ -104,16 +115,35 @@ function Spotify({url,title}:{url:string;title:string}) {
   const safe = safeHttps(url);
   if (!embed) return safe ? <a className="text-link" href={safe} target="_blank" rel="noopener noreferrer">Open on Spotify ↗</a> : <p className="muted small">Spotify link unavailable.</p>;
   const height = embed.includes('/track/') ? 152 : 352;
-  return <div className="hte-spotify-shell"><iframe title={'Listen to ' + title + ' on Spotify'} src={embed} width="100%" height={height} loading="lazy" allow="encrypted-media; clipboard-write; fullscreen; picture-in-picture" /></div>;
+  const openUrl = safe ? safe.replace('/embed/','/') : '';
+  return <div className="hte-spotify-shell"><iframe title={'Listen to ' + title + ' on Spotify'} src={embed} width="100%" height={height} loading="lazy" allow="encrypted-media; clipboard-write; fullscreen; picture-in-picture" /><a className="text-link spotify-open-link" href={openUrl || safe} target="_blank" rel="noopener noreferrer">Open in Spotify ↗</a></div>;
+}
+
+function videoPoster(value?:string|null) {
+  const safe = safeHttps(value);
+  if (!safe) return '';
+  try {
+    const url = new URL(safe);
+    const host = url.hostname.replace(/^www\./,'').toLowerCase();
+    let id = '';
+    if (host === 'youtu.be') id = url.pathname.split('/').filter(Boolean)[0] || '';
+    else if (['youtube.com','m.youtube.com','music.youtube.com','youtube-nocookie.com'].includes(host)) {
+      const parts = url.pathname.split('/').filter(Boolean);
+      id = url.searchParams.get('v') || (['embed','shorts','live'].includes(parts[0]) ? parts[1] : '');
+    }
+    return /^[A-Za-z0-9_-]{11}$/.test(id) ? 'https://img.youtube.com/vi/' + id + '/hqdefault.jpg' : safe;
+  } catch { return ''; }
 }
 
 function VideoPlayer({url,title,poster}:{url:string;title:string;poster?:string|null}) {
   const safe = safeHttps(url);
   const embed = videoEmbed(url);
-  const safePoster = safeHttps(poster);
+  const safePoster = videoPoster(poster);
   const direct = !!safe && (new URL(safe).pathname.includes('/storage/v1/object/') || /\.(mp4|webm|mov|m4v)$/i.test(new URL(safe).pathname));
   const videoRef = useRef<HTMLVideoElement>(null);
   const [failed,setFailed] = useState(false);
+  const [failureReason,setFailureReason] = useState('');
+  const [metadataLoaded,setMetadataLoaded] = useState(false);
   const [attempt,setAttempt] = useState(0);
   const [playing,setPlaying] = useState(false);
   const [current,setCurrent] = useState(0);
@@ -122,7 +152,7 @@ function VideoPlayer({url,title,poster}:{url:string;title:string;poster?:string|
   const togglePlayback = async () => {
     const video = videoRef.current;
     if (!video) return;
-    if (video.paused) { try { await video.play(); setFailed(false); } catch { setFailed(true); } }
+    if (video.paused) { try { await video.play(); setFailed(false); setFailureReason(''); } catch { setFailureReason('The video could not start. Try again or open the original file.'); setFailed(true); } }
     else video.pause();
   };
   const toggleMute = () => { const video=videoRef.current; if(!video)return; video.muted=!video.muted; setMuted(video.muted); };
@@ -130,20 +160,23 @@ function VideoPlayer({url,title,poster}:{url:string;title:string;poster?:string|
 
   if (embed) return <div className="video-player-shell video-embed-shell"><iframe className="video-embed" title={'Watch ' + title} src={embed} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /><a className="text-link" href={safe || url} target="_blank" rel="noopener noreferrer">Open original video ↗</a></div>;
   if (direct && safe) return <div className="video-player-shell">
-    {failed ? <div className="video-load-error" role="alert"><p>This video could not be loaded.</p><button type="button" className="video-retry-button" onClick={()=>{setFailed(false);setAttempt(value=>value+1)}}>Retry video ↻</button><a className="text-link" href={safe} target="_blank" rel="noopener noreferrer">Open video directly ↗</a></div> : <>
-      <video key={attempt} ref={videoRef} className="video-direct" preload="metadata" playsInline poster={safePoster || undefined} src={safe}
-        onLoadedMetadata={event=>setDuration(event.currentTarget.duration || 0)}
-        onDurationChange={event=>setDuration(event.currentTarget.duration || 0)}
+    {failed ? <div className="video-load-error" role="alert">{safePoster && <img className="video-fallback-poster" src={safePoster} alt={title + ' video preview'} loading="lazy" decoding="async" />}<p>{failureReason || "This video could not be played in the embedded player."}</p><div className="video-error-actions"><button type="button" className="video-retry-button" onClick={()=>{setFailed(false);setFailureReason('');setMetadataLoaded(false);setDuration(0);setAttempt(value=>value+1)}}>Retry video ↻</button><a className="text-link" href={safe} target="_blank" rel="noopener noreferrer">Open video directly ↗</a></div></div> : <>
+      <video key={attempt} ref={videoRef} className="video-direct" preload="none" playsInline poster={safePoster || undefined}
+        onLoadedMetadata={event=>{setDuration(event.currentTarget.duration || 0);setMetadataLoaded(true);}}
+        onDurationChange={event=>{setDuration(event.currentTarget.duration || 0);setMetadataLoaded(true);}}
         onTimeUpdate={event=>setCurrent(event.currentTarget.currentTime)}
-        onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)}
+        onPlay={()=>{setPlaying(true);setFailed(false);setFailureReason('');}} onPause={()=>setPlaying(false)}
         onEnded={()=>{setPlaying(false);setCurrent(0);}}
-        onError={()=>{setFailed(true);setPlaying(false);}} onCanPlay={()=>setFailed(false)} />
+        onError={event=>{const code=event.currentTarget.error?.code;setPlaying(false);if(code===1){setFailed(false);setMetadataLoaded(false);setDuration(0);return;}setFailureReason(code===4?'This browser cannot decode this MP4. Try Chrome or open the original video.':code===2?'The video stream could not be loaded. Check your connection and retry.':'The video could not be decoded by this browser.');setFailed(true);}}
+        onCanPlay={()=>{setFailed(false);setFailureReason('');setMetadataLoaded(true);}}>
+        <source src={safe} type="video/mp4" />
+      </video>
       <div className="hte-video-controls">
         <button type="button" className="hte-player-play" onClick={()=>void togglePlayback()} aria-label={playing ? "Pause " + title : "Play " + title}>{playing ? "Ⅱ" : "▶"}</button>
-        <span className="hte-player-time">{formatMediaTime(current)}</span>
+        <span className="hte-player-time" aria-live="polite">{metadataLoaded ? formatMediaTime(current) : "Ready"}</span>
         <input className="hte-player-seek" type="range" min="0" max={Math.max(duration,1)} step="0.1" value={Math.min(current,duration || 0)} disabled={!duration} aria-label={"Seek " + title}
           onChange={event=>{const value=Number(event.currentTarget.value);if(videoRef.current){videoRef.current.currentTime=value;setCurrent(value);}}} />
-        <span className="hte-player-time">{formatMediaTime(duration)}</span>
+        <span className="hte-player-time">{metadataLoaded ? formatMediaTime(duration) : "Tap play"}</span>
         <button type="button" className="hte-player-utility" onClick={toggleMute} aria-label={muted ? "Unmute video" : "Mute video"}>{muted ? "Unmute" : "Mute"}</button>
         <button type="button" className="hte-player-utility" onClick={fullscreen} aria-label="Enter fullscreen">Full screen</button>
       </div>
@@ -387,6 +420,8 @@ export default function PublicCatalogue() {
       {filteredTracks.length ? <div className="card-grid">{filteredTracks.map(track=>{
         const source = safeHttps(track.audio_url);
         const spotify = spotifyEmbed(track.audio_url);
+        const placeholderTitle = !!spotify && /^spotify track(?:\s+[a-z0-9]{22})?$/i.test(track.title.trim());
+        const placeholderArtist = !!spotify && (!track.artist?.trim() || /^(artist details pending|unknown artist|tba|to be announced)$/i.test(track.artist.trim()));
         const isStorageAudio = !!source && new URL(source).pathname.includes('/storage/v1/object/');
         const isAudioFile = !!source && (isStorageAudio || /\.(mp3|mp4|m4a|wav|aac|ogg|flac|opus|webm)$/i.test(new URL(source).pathname));
         const downloadUrl = source && isStorageAudio ? (()=>{const url=new URL(source);url.searchParams.set('download','1');return url.href})() : source;
@@ -394,8 +429,9 @@ export default function PublicCatalogue() {
         return <article className="media-card" key={track.id}>
           <Cover src={track.cover_url} alt={track.title + ' artwork'} />
           <div className="card-copy">
-            <span className="tag">{track.genre || 'Music'}</span><h3>{track.title}</h3><p className="muted">{track.artist || 'High-Tech Entertainment'}</p>
-            {spotify ? <Spotify url={track.audio_url || ''} title={track.title} /> : isAudioFile ? <AudioPlayer src={source} title={track.title} downloadUrl={downloadUrl || source} onPlay={()=>void recordPlay(track.id)} onEnded={()=>void markCompleted(track.id)} /> : source ? <a className="text-link" href={source} target="_blank" rel="noopener noreferrer">Open audio ↗</a> : <p className="muted small">Audio coming soon.</p>}
+            <span className="tag">{track.genre || 'Music'}</span>{!placeholderTitle && <h3>{track.title}</h3>}{!placeholderArtist && <p className="muted">{track.artist || 'High-Tech Entertainment'}</p>}
+            {spotify && (placeholderTitle || placeholderArtist) && <p className="muted small">Track details are shown in the Spotify player.</p>}
+            {spotify ? <Spotify url={track.audio_url || ''} title={placeholderTitle ? 'this track' : track.title} /> : isAudioFile ? <AudioPlayer src={source} title={track.title} downloadUrl={downloadUrl || source} onPlay={()=>void recordPlay(track.id)} onEnded={()=>void markCompleted(track.id)} /> : source ? <a className="text-link" href={source} target="_blank" rel="noopener noreferrer">Open audio ↗</a> : <p className="muted small">Audio coming soon.</p>}
             <button type="button" className="catalogue-save-button" aria-pressed={saved} onClick={()=>toggleSaved(track.id)}>{saved ? '♥ Saved' : '♡ Save track'}</button>
           </div>
         </article>;

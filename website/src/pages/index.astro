@@ -15,9 +15,9 @@ const organizationSchema = { '@context':'https://schema.org', '@type':'Organizat
       <a href="#music">Music</a><a href="#artists">Artists</a><a href="#releases">Releases</a><a href="#videos">Videos</a><a href="#services">Studio</a><a href="#about">About</a><a href="#feedback">Feedback</a><a href="#booking">Book</a>
     </nav>
     <div class="header-actions"><a class="account-link" href={`${base}account/`}>My account</a><a class="button button-gold header-cta" href="#music">Explore sound</a></div>
-    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu">Menu</button>
+    <button class="menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="mobile-menu"><span class="menu-toggle-icon" aria-hidden="true"><span></span><span></span><span></span></span><span class="menu-toggle-label">Menu</span></button>
   </header>
-  <nav id="mobile-menu" class="mobile-menu" aria-label="Mobile navigation">
+  <nav id="mobile-menu" class="mobile-menu" aria-label="Mobile navigation" aria-hidden="true">
     <a href="#music">Music</a><a href="#artists">Artists</a><a href="#releases">Releases</a><a href="#videos">Videos</a><a href="#services">Studio</a><a href="#about">About HTE</a><a href="#feedback">Feedback survey</a><a href="#booking">Book a service</a><a href={`${base}account/`}>My account</a>
   </nav>
   <main id="top">
@@ -60,9 +60,10 @@ const organizationSchema = { '@context':'https://schema.org', '@type':'Organizat
   <footer class="site-footer"><a class="brand" href="#top"><img src={`${base}high-tech-logo.svg`} alt="" /><span>HIGH-TECH <small>ENTERTAINMENT</small></span></a><p>Music. Beats. Production. Beyond.</p><div class="footer-links"><a href={`${base}account/`}>Account</a><a href={`${base}privacy-policy.html`}>Privacy</a><a href={`${base}terms-of-service.html`}>Terms</a><a href="mailto:suwilanjisinkamba184@gmail.com">Contact</a></div><small>© {new Date().getFullYear()} High-Tech Entertainment. All rights reserved.</small></footer>
   <script is:inline define:vars={{base}}>
     const toggle=document.querySelector('.menu-toggle'), menu=document.querySelector('#mobile-menu');
-    toggle?.addEventListener('click',()=>{const open=toggle.getAttribute('aria-expanded')!=='true';toggle.setAttribute('aria-expanded',String(open));menu?.classList.toggle('is-open',open);toggle.textContent=open?'Close':'Menu';});
-    menu?.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{menu.classList.remove('is-open');toggle?.setAttribute('aria-expanded','false');toggle.textContent='Menu';}));
-    document.addEventListener('keydown',e=>{if(e.key==='Escape'){menu?.classList.remove('is-open');toggle?.setAttribute('aria-expanded','false');toggle.textContent='Menu';}});
+    const setMenuOpen=(open)=>{toggle?.setAttribute('aria-expanded',String(open));toggle?.setAttribute('aria-label',open?'Close navigation menu':'Open navigation menu');toggle?.classList.toggle('is-open',open);const label=toggle?.querySelector('.menu-toggle-label');if(label)label.textContent=open?'Close':'Menu';menu?.classList.toggle('is-open',open);menu?.setAttribute('aria-hidden',String(!open));};
+    toggle?.addEventListener('click',()=>setMenuOpen(toggle.getAttribute('aria-expanded')!=='true'));
+    menu?.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>setMenuOpen(false)));
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&menu?.classList.contains('is-open')){setMenuOpen(false);toggle?.focus();}});
     // Complete the Supabase OAuth/email callback by forwarding its code or token
     // fragment to the shared account route before the account client consumes it.
     const authNext=new URLSearchParams(window.location.search).get('next');
