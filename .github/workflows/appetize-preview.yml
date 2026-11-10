@@ -6,6 +6,12 @@ on:
       - High-Tech Entertainment - Android Release & OTA
     types: [completed]
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "Successful GitHub Actions run ID containing the Android APK artifact"
+        required: true
+        type: string
 
 permissions:
   actions: read
@@ -15,35 +21,36 @@ jobs:
   upload-to-appetize:
     name: Publish Android build to Appetize
     if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'main'
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_branch == 'main'
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Download APK artifact from completed Android build
         uses: actions/download-artifact@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ inputs.source_run_id || github.event.workflow_run.id }}
           path: appetize-artifacts
           merge-multiple: true
 
-      - name: Locate signed High-Tech Entertainment APK
+      - name: Locate signed Android APK
         id: apk
         shell: bash
         run: |
-          APK="$(find appetize-artifacts -type f -name 'High-Tech-Entertainment-v*-SU.apk' -print -quit)"
+          APK="$(find appetize-artifacts -type f -name '*.apk' -print -quit)"
           if [ -z "$APK" ]; then
-            echo "found=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::This Android run did not publish a full APK artifact (it may have been an OTA patch). Appetize upload skipped."
-            exit 0
+            echo "::error::No APK was found in the selected workflow run's artifacts."
+            find appetize-artifacts -maxdepth 4 -type f -print || true
+            exit 1
           fi
-          echo "found=true" >> "$GITHUB_OUTPUT"
           echo "path=$APK" >> "$GITHUB_OUTPUT"
           echo "Selected APK: $APK"
 
       - name: Upload Android APK to Appetize
-        if: steps.apk.outputs.found == 'true'
         id: appetize
         uses: appetizeio/github-action-appetize@v1.1.0
         with:
@@ -52,21 +59,20 @@ jobs:
           appFile: ${{ steps.apk.outputs.path }}
           platform: android
           fileType: apk
-          note: "High-Tech Entertainment automated preview - commit ${{ github.event.workflow_run.head_sha }}"
+          note: "High-Tech Entertainment preview from workflow run ${{ inputs.source_run_id || github.event.workflow_run.id }}"
 
       - name: Publish simulator link in workflow summary
-        if: steps.apk.outputs.found == 'true'
         shell: bash
         env:
           APPETIZE_PUBLIC_KEY: ${{ steps.appetize.outputs.publicKey }}
-          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id || github.event.workflow_run.id }}
         run: |
           {
             echo "## High-Tech Entertainment - Live Android Preview"
             echo
             echo "**Simulator:** https://appetize.io/app/$APPETIZE_PUBLIC_KEY"
             echo
-            echo "**Source commit:** `$SOURCE_SHA`"
+            echo "**Source workflow run:** $SOURCE_RUN_ID"
             echo
             echo "Open the simulator link in Chrome to test the Android app."
           } >> "$GITHUB_STEP_SUMMARY"
