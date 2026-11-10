@@ -1,0 +1,26 @@
+name: high_tech_ui
+description: Flutter presentation module for High-Tech Entertainment Android 3.1.
+publish_to: 'none'
+version: 3.1.0+30
+environment:
+  sdk: '>=3.13.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_svg: ^2.3.2
+  video_player: ^2.14.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  module:
+    androidX: true
+    androidPackage: com.hightechentertainment.flutterui
+    iosBundleIdentifier: com.hightechentertainment.flutterui
+  uses-material-design: true
+  assets:
+    - assets/high-tech-logo.svg

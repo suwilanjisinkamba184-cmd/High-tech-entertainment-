@@ -71,6 +71,44 @@ class SponsoredAudioRepository(
         }
     }
 
+    suspend fun updateCampaign(
+        id: String,
+        title: String,
+        audioUrl: String,
+        startsAt: String?,
+        endsAt: String?,
+        priority: Int
+    ): Result<Unit> = runCatching {
+        require(currentUserId() != null) { "Sign in as an administrator." }
+        require(title.isNotBlank() && audioUrl.startsWith("https://")) {
+            "Enter a campaign title and secure audio URL."
+        }
+        val body = JSONObject()
+            .put("title", title.trim().take(150))
+            .put("audio_url", audioUrl.trim())
+            .put("priority", priority.coerceIn(0, 1000))
+            .put("starts_at", startsAt?.takeIf(String::isNotBlank) ?: JSONObject.NULL)
+            .put("ends_at", endsAt?.takeIf(String::isNotBlank) ?: JSONObject.NULL)
+        val response = client.request(
+            "PATCH", "/rest/v1/audio_ads",
+            mapOf("id" to "eq.$id", "is_published" to "eq.false"),
+            body.toString(), mapOf("Prefer" to "return=representation")
+        )
+        check(response.isSuccessful) { "Could not update campaign (HTTP ${response.statusCode})." }
+        check(JSONArray(response.body).length() > 0) { "Campaign not found, or it is already published. Unpublish it before editing." }
+    }
+
+    suspend fun deleteCampaign(id: String): Result<Unit> = runCatching {
+        require(currentUserId() != null) { "Sign in as an administrator." }
+        val response = client.request(
+            "DELETE", "/rest/v1/audio_ads",
+            mapOf("id" to "eq.$id", "is_published" to "eq.false"),
+            headers = mapOf("Prefer" to "return=representation")
+        )
+        check(response.isSuccessful) { "Could not delete campaign (HTTP ${response.statusCode})." }
+        check(JSONArray(response.body).length() > 0) { "Campaign not found, or it is published. Unpublish it before deletion." }
+    }
+
     suspend fun setCampaignPublished(id: String, published: Boolean): Result<Unit> = runCatching {
         require(currentUserId() != null)
         val response = client.request("PATCH", "/rest/v1/audio_ads", mapOf("id" to "eq.$id"),

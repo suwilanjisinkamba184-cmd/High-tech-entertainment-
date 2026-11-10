@@ -107,10 +107,15 @@ class SupabaseRestClient(
     ): Response = withContext(Dispatchers.IO) {
         require(segment(bucket) == bucket)
         require(objectPath.isNotBlank() && !objectPath.startsWith("/") && !objectPath.contains(".."))
-        require(contentType.startsWith("video/"))
+        require(
+            contentType.startsWith("video/") ||
+                contentType.startsWith("audio/") ||
+                contentType in setOf("image/jpeg", "image/png", "image/webp", "image/avif")
+        ) { "Unsupported media content type." }
+        require(maxBytes > 0L) { "A valid upload size limit is required." }
         val descriptor = context.contentResolver.openAssetFileDescriptor(uri, "r")
         val length = descriptor?.use { it.length } ?: -1L
-        require(length <= 0L || length <= maxBytes) { "Selected video exceeds the upload size limit." }
+        require(length <= 0L || length <= maxBytes) { "Selected media exceeds the upload size limit." }
         val encodedPath = objectPath.split("/").joinToString("/") { encode(it).replace("+", "%20") }
         val requestBody = object : RequestBody() {
             override fun contentType() = contentType.toMediaType()
@@ -123,10 +128,10 @@ class SupabaseRestClient(
                         val count = input.read(buffer)
                         if (count < 0) break
                         total += count
-                        require(total <= maxBytes) { "Selected video exceeds the upload size limit." }
+                        require(total <= maxBytes) { "Selected media exceeds the upload size limit." }
                         sink.write(buffer, 0, count)
                     }
-                } ?: error("Could not read the selected video file.")
+                } ?: error("Could not read the selected media file.")
             }
         }
         val request = Request.Builder()
