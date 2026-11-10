@@ -55,7 +55,7 @@ jobs:
         uses: appetizeio/github-action-appetize@v1.1.0
         with:
           apiToken: ${{ secrets.APPETIZE_API_TOKEN }}
-          publicKey: ${{ secrets.APPETIZE_PUBLIC_KEY }}
+          publicKey: zx6aumhthcok64vx3yoc3udqqm
           appFile: ${{ steps.apk.outputs.path }}
           platform: android
           fileType: apk
