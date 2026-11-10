@@ -1,14 +1,25 @@
 pluginManagement {
     repositories { google(); mavenCentral(); gradlePluginPortal() }
 }
+
+// Keep AGP and KGP declarations in the root project plugins block so their
+// implementation classes share the project plugin classloader. Putting KGP
+// in the settings plugins block isolates it from AGP's BaseExtension API.
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    val storageUrl = System.getenv("FLUTTER_STORAGE_BASE_URL") ?: "https://storage.googleapis.com"
     repositories {
         google()
         mavenCentral()
-        // LiveKit's AudioSwitch transitive dependency is hosted on JitPack.
+        maven("$storageUrl/download.flutter.io")
         maven { url = uri("https://jitpack.io") }
     }
 }
 rootProject.name = "HighTechEntertainment"
 include(":app")
+
+val flutterInclude = settingsDir.parentFile.resolve("flutter-ui/.android/include_flutter.groovy")
+require(flutterInclude.isFile) {
+    "Flutter module bootstrap is missing. Run flutter pub get in ../flutter-ui first."
+}
+apply(from = flutterInclude)

@@ -38,7 +38,7 @@ Two additive production schema changes have been applied:
 The migration source is `database/2026-11-07-high-tech-entertainment-3.1.sql`. Existing production music, users and storage objects were not reset or rewritten. The app still uses only the publishable key; RLS is authoritative.
 
 ## Build and validation
-Requires JDK 17, Android SDK 36 and Gradle 9.8.2.
+Requires JDK 17, Android SDK 36, Build Tools 36.0.0 and Gradle 8.14.3 (provisioned by GitHub Actions). The CI workflows invoke the provisioned `gradle` executable directly; this project does not currently use a Gradle wrapper.
 
 ```bash
 gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
