@@ -19,7 +19,7 @@ android {
         versionName = "4.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
-    sourceSets.getByName("main").res.srcDir(startupRes)
+    sourceSets.getByName("main").res.srcDir(startupRes.get().asFile)
     buildFeatures { compose = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
