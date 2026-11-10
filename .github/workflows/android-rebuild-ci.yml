@@ -1,0 +1,54 @@
+name: High-Tech Entertainment — Clean Android Rebuild
+on:
+  push:
+    branches: [rebuild/android-clean-foundation]
+    paths:
+      - "android-rebuild/**"
+      - ".github/workflows/android-rebuild-ci.yml"
+  pull_request:
+    paths:
+      - "android-rebuild/**"
+      - ".github/workflows/android-rebuild-ci.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: hte-clean-android-rebuild-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    name: Compile clean native foundation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.8.2"
+      - uses: android-actions/setup-android@v3
+      - name: Validate bundled startup recording
+        run: |
+          test -s mobile-app/assets/high-tech-startup.mp3
+          file mobile-app/assets/high-tech-startup.mp3
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 mobile-app/assets/high-tech-startup.mp3 | awk '$1 >= 12 && $1 <= 18 {ok=1} END {exit !ok}'
+      - name: Compile and test
+        working-directory: android-rebuild
+        run: gradle --no-daemon --stacktrace :app:assembleDebug :app:testDebugUnitTest
+      - name: Upload debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hte-clean-rebuild-debug
+          path: android-rebuild/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Publish clean build to Appetize
+        if: github.event_name != 'pull_request' && secrets.APPETIZE_API_TOKEN != ''
+        uses: appetizeio/github-action-appetize@v1.1.0
+        with:
+          apiToken: ${{ secrets.APPETIZE_API_TOKEN }}
+          publicKey: zx6aumhthcok64vx3yoc3udqqm
+          appPath: android-rebuild/app/build/outputs/apk/debug/app-debug.apk
