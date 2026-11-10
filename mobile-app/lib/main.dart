@@ -1533,9 +1533,11 @@ class HteEditorialRelease extends StatelessWidget {
     future: () => rows('releases', 'created_at'),
     builder: (context, snapshot) {
       if (snapshot.hasError) return Notice(friendlyErrorMessage(snapshot.error!));
-      if (!snapshot.hasData) return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16), child: SizedBox(height: 230, child: Busy()),
-      );
+      if (!snapshot.hasData) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16), child: SizedBox(height: 230, child: Busy()),
+        );
+      }
       final items = snapshot.data!;
       if (items.isEmpty) {
         return Padding(
@@ -1927,38 +1929,6 @@ class VideoPreviewList extends StatelessWidget {
   );
 }
 
-
-class _HomeQuickAction extends StatelessWidget {
-  const _HomeQuickAction({required this.icon, required this.title, required this.subtitle, required this.onTap});
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(16),
-    child: Container(
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141517),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF34302A)),
-      ),
-      child: Row(children: [
-        Icon(icon, color: const Color(0xFFD9B96E), size: 22),
-        const SizedBox(width: 9),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 3),
-          Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 9, color: Color(0xFF9B978F))),
-        ])),
-      ]),
-    ),
-  );
-}
 
 class ArtistsTab extends StatelessWidget {
   const ArtistsTab({super.key});
