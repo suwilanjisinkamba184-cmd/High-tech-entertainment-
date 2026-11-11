@@ -20,16 +20,17 @@ cp -R website/dist/. dist/
 cp -R assets admin account dist/
 
 # Convert the repository's source AAC into the normalized MP3 served by the website.
-test -s assets/booking-confirmation.mp3 || { echo "Missing source booking-confirmation.aac" >&2; exit 1; }
+test -s assets/booking-confirmation.aac || { echo "Missing source booking-confirmation.aac" >&2; exit 1; }
 if ! command -v ffmpeg >/dev/null 2>&1; then
   sudo apt-get update
   sudo apt-get install -y ffmpeg
 fi
-SOURCE_AUDIO_DURATION="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 assets/booking-confirmation.mp3)"
-ffmpeg -y -i assets/booking-confirmation.mp3 -af "highpass=f=35,lowpass=f=18000,loudnorm=I=-16:TP=-1.5:LRA=11,alimiter=limit=0.891,atrim=duration=${SOURCE_AUDIO_DURATION},asetpts=PTS-STARTPTS" -ar 44100 -ac 2 -codec:a libmp3lame -b:a 192k -write_xing 1 dist/assets/booking-confirmation.mp3
-rm -f dist/assets/booking-confirmation.mp3
+SOURCE_AUDIO_DURATION="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 assets/booking-confirmation.aac)"
+ffmpeg -y -i assets/booking-confirmation.aac -af "highpass=f=35,lowpass=f=18000,loudnorm=I=-16:TP=-1.5:LRA=11,alimiter=limit=0.891,atrim=duration=${SOURCE_AUDIO_DURATION},asetpts=PTS-STARTPTS" -ar 44100 -ac 2 -codec:a libmp3lame -b:a 192k -write_xing 1 dist/assets/booking-confirmation.mp3
+rm -f dist/assets/booking-confirmation.aac
 test -s dist/assets/booking-confirmation.mp3 || { echo "MP3 conversion failed" >&2; exit 1; }
-test ! -e dist/assets/booking-confirmation.mp3 || { echo "Source AAC must not be published" >&2; exit 1; }
+test ! -e dist/assets/booking-confirmation.aac || { echo "Source AAC must not be published" >&2; exit 1; }
+
 cp app-download.html robots.txt sitemap.xml account-deletion.html privacy-policy.html high-tech-logo.svg dist/
 
 for file in terms-of-service.html; do
