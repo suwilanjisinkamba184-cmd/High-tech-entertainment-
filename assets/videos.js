@@ -13,9 +13,9 @@ function videoEmbed(value){
 }
 const featured=[
  {id:'zm-bitter-truth-2026',title:'Bitter Truth',artist:'Yo Maps',description:'Official music video • released 6 November 2026',video_url:'https://www.youtube.com/watch?v=DINvroKkqn0',thumbnail_url:'https://i.ytimg.com/vi/DINvroKkqn0/hqdefault.jpg',featured:true},
- {id:'zm-nkankala-free-2026',title:'Nkankala Free',artist:'Way Dee ft. Xaven',description:'New Zambian release • 6 November 2026',search_url:'https://www.youtube.com/results?search_query=Way+Dee+Xaven+Nkankala+Free+official+video',featured:true},
- {id:'zm-international-baby-2026',title:'International Baby',artist:'76 Drums ft. Blood Kid YVOK',description:'New Zambian release • 3 November 2026',search_url:'https://www.youtube.com/results?search_query=76+Drums+Blood+Kid+YVOK+International+Baby+official+video',featured:true},
- {id:'zm-dear-mutima-2026',title:'Dear Mutima',artist:'Frank Ro ft. Kell Kay',description:'New Zambian–Malawian collaboration • November 2026',search_url:'https://www.youtube.com/results?search_query=Frank+Ro+Kell+Kay+Dear+Mutima+official+video',featured:true},
+ {id:'zm-nkankala-free-2026',title:'Nkankala Free',artist:'Way Dee ft. Xaven',description:'New Zambian release • 6 November 2026',video_url:'https://www.youtube.com/watch?v=bvbTTtQKCsI',featured:true},
+ {id:'zm-international-baby-2026',title:'International Baby',artist:'76 Drums ft. Blood Kid YVOK',description:'New Zambian release • 3 November 2026',video_url:'https://www.youtube.com/watch?v=V0wBwSPHYvE',featured:true},
+ {id:'zm-dear-mutima-2026',title:'Dear Mutima',artist:'Frank Ro ft. Kell Kay',description:'New Zambian–Malawian collaboration • November 2026',video_url:'https://www.youtube.com/watch?v=8HAJA43fta8',featured:true},
  {id:'zm-pa-duty-2026',title:'Pa Duty',artist:'Ace Trap ft. Natasha Chansa',description:'New Zambian release • November 2026',search_url:'https://www.youtube.com/results?search_query=Ace+Trap+Natasha+Chansa+Pa+Duty+official+video',featured:true},
  {id:'zm-final-destination-2026',title:'Final Destination',artist:'Shenky',description:'New Zambian release • November 2026',search_url:'https://www.youtube.com/results?search_query=Shenky+Final+Destination+official+video',featured:true}
 ];
