@@ -37,6 +37,8 @@ jobs:
           test -s assets/site.css
           test -s assets/videos.js
           test -s assets/booking-confirmation.aac
+          grep -q 'booking-confirmation.mp3' assets/app.js
+          grep -q 'booking-confirmation.mp3' scripts/build-website.sh
           test -s account/index.html
           grep -q '<div id="account-login" class="account-login-card">' account/index.html
           grep -q 'Supabase could not initialise in this browser' assets/app.js
@@ -62,10 +64,10 @@ jobs:
           grep -q "client.rpc('hte_is_admin')" assets/admin-upload.js
           grep -q 'async function profileLoad' assets/app.js
           grep -q 'profiles.*insert' assets/app.js
-          grep -q 'assets/app.js?v=15' index.html
+          grep -q 'assets/app.js?v=15' website/src/pages/index.astro
           grep -q 'entertainment-enhancements.css' account/index.html
-          grep -q 'id="primary-navigation"' index.html
-          grep -q 'class="menu-toggle"' index.html
+          grep -q 'id="primary-navigation"' website/src/pages/index.astro
+          grep -q 'class="menu-toggle"' website/src/pages/index.astro
           grep -q 'assets/app.js?v=15' admin/index.html
           grep -q 'assets/admin-upload.js?v=20261109-session1' admin/index.html
           grep -q 'authNext' website/src/pages/index.astro
