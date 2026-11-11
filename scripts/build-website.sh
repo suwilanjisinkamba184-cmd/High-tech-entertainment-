@@ -51,10 +51,11 @@ import xml.etree.ElementTree as ET
 root = Path("dist")
 homepage = (root / "index.html").read_text(encoding="utf-8")
 required_homepage_markers = (
-    "Made to move.",
-    "site-header",
+    "Sound that",
+    "topbar",
     "high-tech-logo.svg",
-    "images/brand/high-tech-hero.svg",
+    "assets/app.js?v=15",
+    "public-tracks",
     "supabase-config.js",
     "_astro/",
 )

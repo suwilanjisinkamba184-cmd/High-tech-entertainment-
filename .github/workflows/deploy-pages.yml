@@ -27,7 +27,7 @@ jobs:
           test -s website/astro.config.mjs
           test -s website/src/pages/index.astro
           test -s website/public/images/brand/high-tech-hero.svg
-          grep -q 'images/brand/high-tech-hero.svg' website/src/pages/index.astro
+          grep -q 'hero-photo' website/src/pages/index.astro
           python -c "import xml.etree.ElementTree as ET; ET.parse('website/public/images/brand/high-tech-hero.svg')"
           test -s website/src/components/PublicCatalogue.tsx
           test -s supabase-config.js
@@ -62,7 +62,7 @@ jobs:
           grep -q "client.rpc('hte_is_admin')" assets/admin-upload.js
           grep -q 'async function profileLoad' assets/app.js
           grep -q 'profiles.*insert' assets/app.js
-          grep -q 'entertainment-enhancements.css' index.html
+          grep -q 'assets/app.js?v=15' index.html
           grep -q 'entertainment-enhancements.css' account/index.html
           grep -q 'id="primary-navigation"' index.html
           grep -q 'class="menu-toggle"' index.html
