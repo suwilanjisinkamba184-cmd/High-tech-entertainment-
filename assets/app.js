@@ -186,7 +186,7 @@ function tableRender(){let t=$('#admin-tracks');if(t)t.innerHTML=tracks.length?t
   return {saved:true,notified,error:notificationError};
 }function playBookingConfirmation(statusElement){
   if(!statusElement)return;
-  const audio=new Audio(new URL(siteBasePath()+'assets/booking-confirmation.aac',location.origin).href);
+  const audio=new Audio(new URL(siteBasePath()+'assets/booking-confirmation.mp3',location.origin).href);
   audio.preload='auto';
   const showRetry=()=>{
     if(statusElement.querySelector('[data-play-booking-sound]'))return;
