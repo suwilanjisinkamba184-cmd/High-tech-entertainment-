@@ -1,3 +1,0 @@
-High-Tech Entertainment v2.2.0 SU flavour
-
-Semantic app version remains 2.2.0. SU is the Android product flavour suffix shown in the app version label and release name. Android still requires a numeric versionCode, so pubspec.yaml remains 2.2.0+17; the UI intentionally displays 2.2.0 SU rather than the internal build number. The SU APK is built with flutter build apk --flavor su. Release tag: v2.2.0-SU. Application ID remains com.hightechentertainment.app; no applicationIdSuffix is added, so this is an update channel for the same installed app, not a separately installable app. The database migration in database/changes must be reviewed and applied before notifications and video uploads can work in production. No production database change is performed by this branch.
