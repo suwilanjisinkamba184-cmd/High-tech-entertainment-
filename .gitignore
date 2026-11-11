@@ -1,3 +1,13 @@
 .netlify/
 node_modules/
 .DS_Store
+
+.dart_tool/
+build/
+**/.gradle/
+**/local.properties
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+*.jks
+*.keystore
+*.p12
