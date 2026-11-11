@@ -17,6 +17,8 @@ npm --prefix website run build
 rm -rf dist
 mkdir -p dist
 cp -R website/dist/. dist/
+# Publish the maintained root homepage HTML over the generated Astro landing page.
+install -D -m 0644 index.html dist/index.html
 cp -R assets admin account dist/
 cp app-download.html robots.txt sitemap.xml account-deletion.html privacy-policy.html high-tech-logo.svg dist/
 
@@ -41,8 +43,7 @@ for file in index.html app-download.html robots.txt sitemap.xml supabase-config.
 done
 test -s dist/images/brand/high-tech-hero.svg || { echo "Missing published HTE hero artwork." >&2; exit 1; }
 
-# Catch "UI regenerated but nothing changed": the published artifact must
-# contain the Astro homepage, not the legacy root HTML.
+# Verify the uploaded root homepage is the actual GitHub Pages landing page.
 python - <<'PY'
 from pathlib import Path
 import re
@@ -51,12 +52,12 @@ import xml.etree.ElementTree as ET
 root = Path("dist")
 homepage = (root / "index.html").read_text(encoding="utf-8")
 required_homepage_markers = (
-    "Made to move.",
-    "site-header",
+    "Sound that",
+    "hero-art",
     "high-tech-logo.svg",
-    "images/brand/high-tech-hero.svg",
+    "public-tracks",
     "supabase-config.js",
-    "_astro/",
+    "assets/app.js",
 )
 missing_homepage = [marker for marker in required_homepage_markers if marker not in homepage]
 if missing_homepage:
