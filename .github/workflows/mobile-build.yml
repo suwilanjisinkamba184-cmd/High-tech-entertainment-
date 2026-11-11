@@ -6,13 +6,15 @@ on:
     paths:
       - 'mobile-app/lib/**'
       - 'mobile-app/test/**'
-      - 'mobile-app/assets/**'
       - 'mobile-app/pubspec.yaml'
       - 'mobile-app/shorebird.yaml'
   pull_request:
     branches: [main]
     paths:
-      - 'mobile-app/**'
+      - 'mobile-app/lib/**'
+      - 'mobile-app/test/**'
+      - 'mobile-app/pubspec.yaml'
+      - 'mobile-app/shorebird.yaml'
   workflow_dispatch:
     inputs:
       operation:
@@ -32,7 +34,6 @@ permissions:
 
 jobs:
   android:
-    if: hashFiles('mobile-app/pubspec.yaml') != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
