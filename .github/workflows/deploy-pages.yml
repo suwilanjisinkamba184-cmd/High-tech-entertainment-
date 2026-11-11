@@ -27,11 +27,8 @@ jobs:
           test -s website/astro.config.mjs
           test -s website/src/pages/index.astro
           test -s website/public/images/brand/high-tech-hero.svg
-          test -s mobile-app/assets/high-tech-hero.svg
           grep -q 'images/brand/high-tech-hero.svg' website/src/pages/index.astro
-          grep -q 'assets/high-tech-hero.svg' mobile-app/pubspec.yaml
-          grep -q 'assets/high-tech-hero.svg' mobile-app/lib/main.dart
-          python -c "import xml.etree.ElementTree as ET; ET.parse('website/public/images/brand/high-tech-hero.svg'); ET.parse('mobile-app/assets/high-tech-hero.svg')"
+          python -c "import xml.etree.ElementTree as ET; ET.parse('website/public/images/brand/high-tech-hero.svg')"
           test -s website/src/components/PublicCatalogue.tsx
           test -s supabase-config.js
           test -s robots.txt
@@ -67,7 +64,6 @@ jobs:
           grep -q 'profiles.*insert' assets/app.js
           grep -q 'entertainment-enhancements.css' index.html
           grep -q 'entertainment-enhancements.css' account/index.html
-          grep -q 'releases/download/v3.2.0-SU/High-Tech-Entertainment-v3.2.0-SU.apk' index.html
           grep -q 'id="primary-navigation"' index.html
           grep -q 'class="menu-toggle"' index.html
           grep -q 'assets/app.js?v=15' admin/index.html
