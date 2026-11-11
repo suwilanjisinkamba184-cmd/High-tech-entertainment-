@@ -1,0 +1,17 @@
+/* HTE account experience: consistent with the public studio identity. */
+:root{--account-bg:#090a0b;--account-panel:#111214;--account-line:rgba(212,179,109,.22);--account-gold:#d4b36d;--account-silver:#b9b7b1}
+.account-page{background:radial-gradient(ellipse at 12% 0%,rgba(212,179,109,.09),transparent 32%),#090a0b;color:#f3efe6}
+.account-topbar{background:rgba(9,10,11,.96);border-bottom:1px solid var(--account-line)}
+.account-brand small{color:var(--account-silver);letter-spacing:.16em}
+.account-heading{border-radius:4px;border-color:var(--account-line);background:linear-gradient(90deg,#090a0bf5 0%,#090a0be8 58%,#090a0b99 100%),url('../images/brand/high-tech-hero.svg') center 38%/cover no-repeat}
+.account-layout{gap:16px}.account-aside,.account-main-card,.account-login-card,.account-security{border-radius:4px;border-color:var(--account-line);background:linear-gradient(145deg,#151514,#101112);box-shadow:0 18px 50px #0005}
+.account-aside{top:100px}.account-aside-brand{border-radius:3px;border-color:var(--account-line);background:linear-gradient(#090b0dcc,#090b0dcc),url('../images/brand/high-tech-hero.svg') center/cover no-repeat}
+.account-aside-links a{border-radius:3px;border-color:rgba(212,179,109,.17)}.account-aside-links a:hover{color:#f5e7bf;border-color:var(--account-gold)}
+.account-login-card h2,.account-main-card h2,.account-security h2,.account-aside h2{font-family:Georgia,'Times New Roman',serif;font-weight:500;letter-spacing:-.025em}
+.account-profile-avatar{border-radius:4px;border-color:var(--account-gold);background:linear-gradient(145deg,#29251d,#101316)}
+.account-form-grid .field input,.account-form-grid .field textarea{border-radius:3px;background:#090a0b;border-color:rgba(185,183,177,.28);color:#f3efe6}
+.account-page .btn{border-radius:3px}.account-page .btn.gold{background:var(--account-gold);border-color:var(--account-gold);color:#11100d}.account-page .btn:hover{border-color:#f5e7bf}.account-page .status{min-height:1.4em}
+.account-security-icon{border-radius:3px;color:#f5e7bf}.account-footer{border-color:var(--account-line)}
+.account-page :focus-visible{outline:2px solid #f5e7bf!important;outline-offset:3px!important}
+@media(max-width:760px){.account-layout{gap:14px}.account-aside{border-radius:4px}.account-nav{min-height:72px}}
+@media(prefers-reduced-motion:reduce){.account-page *{transition:none!important;animation:none!important}}

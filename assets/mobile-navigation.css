@@ -12,7 +12,8 @@
  .navlinks.is-open{display:grid;grid-template-columns:1fr;gap:4px}
  .navlinks a{display:block;padding:12px 10px;border-radius:9px;white-space:normal}
  .navlinks a:hover,.navlinks a:focus-visible{background:rgba(217,185,110,.09)}
- .account-nav .menu-toggle{order:2}\n .account-nav [data-logout]{order:3}
+ .account-nav .menu-toggle{order:2}
+ .account-nav [data-logout]{order:3}
  .account-nav .navlinks{order:4}
 }
 @media(prefers-reduced-motion:reduce){.menu-toggle span{transition:none}}

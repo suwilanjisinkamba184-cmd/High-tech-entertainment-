@@ -1,0 +1,19 @@
+/* Founder Studio — align dashboard accents with HTE obsidian / gold / silver identity. */
+.admin-page{--admin-panel:#111214;--admin-line:rgba(212,179,109,.2);--admin-cyan:#d4b36d;--admin-gold:#f5e7bf;background:#090a0b;color:#f3efe6}
+.admin-topbar{background:rgba(9,10,11,.96);border-bottom-color:var(--admin-line)}
+.admin-sidebar{background:rgba(12,13,14,.98);border-right-color:var(--admin-line)}
+.admin-nav-item{border-radius:4px;color:#b9b7b1}.admin-nav-item:hover{background:rgba(212,179,109,.08);color:#f5e7bf;border-color:rgba(212,179,109,.2)}
+.admin-nav-item.active{color:#f5e7bf;background:linear-gradient(100deg,rgba(212,179,109,.14),rgba(212,179,109,.04));border-color:rgba(212,179,109,.25);box-shadow:inset 3px 0 0 var(--admin-cyan)}
+.admin-nav-icon{border-radius:3px;background:#211d15;color:#f5e7bf}
+.admin-sidebar-bottom{border-radius:4px;border-color:var(--admin-line);background:linear-gradient(130deg,#211d15,#101112)}
+.admin-stat-card,.admin-welcome-banner{border-radius:4px;border-color:var(--admin-line);background:linear-gradient(145deg,#171716,#101112);box-shadow:0 18px 45px #0005}
+.admin-welcome-banner{background:radial-gradient(ellipse at 75% 40%,rgba(212,179,109,.12),transparent 38%),linear-gradient(115deg,#171716,#0b0c0d 65%,#171716)}
+.admin-welcome-banner .eyebrow,.admin-section-label>div>span,.admin-table-heading>div>span,.admin-inbox-toolbar>span{color:#d4b36d}
+.admin-banner-ring{border-color:#d4b36d55;box-shadow:0 0 35px #d4b36d14,inset 0 0 35px #d4b36d0d}.admin-banner-ring:before,.admin-banner-ring:after{border-color:#d4b36d66}
+.admin-banner-art strong{color:#f5e7bf;text-shadow:0 0 30px #d4b36d33}.admin-banner-art strong span{color:#b9b7b1}
+.admin-main-top h1,.admin-section-label h2{font-family:Georgia,'Times New Roman',serif;font-weight:500;letter-spacing:-.035em}
+.admin-user-chip{border-radius:4px;border-color:var(--admin-line);background:#111214}.admin-user-avatar{border-radius:3px;background:linear-gradient(145deg,#f5e7bf,#b9b7b1);color:#11100d}
+.admin-page .btn{border-radius:3px}.admin-page .btn.gold{background:#d4b36d;border-color:#d4b36d;color:#11100d}
+.admin-page :focus-visible{outline:2px solid #f5e7bf!important;outline-offset:3px!important}
+@media(max-width:900px){.admin-workspace{grid-template-columns:1fr}.admin-sidebar{position:relative;top:auto;height:auto;min-height:0;border-right:0;border-bottom:1px solid var(--admin-line)}}
+@media(prefers-reduced-motion:reduce){.admin-view{animation:none}.admin-page *{transition:none!important}}
