@@ -1,7 +1,6 @@
 package com.hightechentertainment.app.data
 
 import io.github.jan.supabase.auth.auth
-import io.github.jan.supabase.from
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.storage.storage
@@ -104,7 +103,7 @@ class FounderStudioRepository {
         val audioUrl = uploadStream("hte-audio", path, input, size, mimeType)
         try {
             client.from("tracks").insert(
-                TrackInsertDto(title.trim(), artist.trim().ifBlank { "High-Tech Entertainment" }, genre.trim().ifBlank { null }, audioUrl, coverUrl, false)
+                TrackInsertDto(title.trim(), artist.trim().ifBlank { "High-Tech Entertainment" }, genre.trim().takeIf { it.isNotEmpty() }, audioUrl, coverUrl, false)
             )
         } catch (error: Throwable) {
             runCatching { client.storage.from("hte-audio").delete(path) }
@@ -129,7 +128,7 @@ class FounderStudioRepository {
         val videoUrl = uploadStream("hte-videos", path, input, size, mimeType)
         try {
             client.from("videos").insert(
-                VideoInsertDto(title.trim(), description.trim().ifBlank { null }, artist.trim().ifBlank { null }, videoUrl, thumbnailUrl, false)
+                VideoInsertDto(title.trim(), description.trim().takeIf { it.isNotEmpty() }, artist.trim().takeIf { it.isNotEmpty() }, videoUrl, thumbnailUrl, false)
             )
         } catch (error: Throwable) {
             runCatching { client.storage.from("hte-videos").delete(path) }
