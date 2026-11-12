@@ -12,6 +12,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hightechentertainment.app.data.AuthRepository
@@ -29,7 +32,13 @@ private val MemberPanel = Color(0xFF121418)
 private val MemberMuted = Color(0xFF8B929D)
 
 @Composable
-fun MemberCenter(configured: Boolean) {
+fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
+    val context = LocalContext.current
+    val settingsStore = remember(context) { AppSettingsStore(context) }
+    var notificationsEnabled by remember { mutableStateOf(settingsStore.notificationsEnabled) }
+    var autoplayNext by remember { mutableStateOf(settingsStore.autoplayNext) }
+    var dataSaver by remember { mutableStateOf(settingsStore.dataSaver) }
+    var showFounderStudio by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -144,6 +153,17 @@ fun MemberCenter(configured: Boolean) {
                     }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.Logout, null); Spacer(Modifier.width(8.dp)); Text("Sign out") }
                 }
             }
+            if (role.equals("owner", true)) {
+                item {
+                    MemberCard {
+                        Text("Founder Studio", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Upload and manage HTE music, videos and artwork. Access is verified by the server-side owner role.", color = MemberMuted, fontSize = 12.sp)
+                        Button(onClick = { showFounderStudio = true }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MemberGold, contentColor = Color.Black)) {
+                            Icon(Icons.Outlined.AdminPanelSettings, null); Spacer(Modifier.width(8.dp)); Text("Open Founder Studio")
+                        }
+                    }
+                }
+            }
             item { Text("BOOKING HISTORY", color = MemberGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
             if (bookings.isEmpty()) {
                 item { Text("Your booking requests will appear here.", color = MemberMuted, fontSize = 12.sp) }
@@ -157,7 +177,9 @@ fun MemberCenter(configured: Boolean) {
                 }
             }
             item { Text("NOTIFICATIONS", color = MemberGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
-            if (notifications.isEmpty()) {
+            if (!notificationsEnabled) {
+                item { Text("In-app notifications are disabled in settings.", color = MemberMuted, fontSize = 12.sp) }
+            } else if (notifications.isEmpty()) {
                 item { Text("No account notifications yet.", color = MemberMuted, fontSize = 12.sp) }
             } else {
                 items(notifications, key = { it.id }) { notification ->
@@ -166,6 +188,22 @@ fun MemberCenter(configured: Boolean) {
                         Text(notification.body, color = MemberMuted, fontSize = 12.sp)
                     }
                 }
+            }
+        }
+        item { Text("APP SETTINGS", color = MemberGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
+        item {
+            PreferenceRow("Notifications", "Show account and booking updates in the app", notificationsEnabled) {
+                notificationsEnabled = it; settingsStore.notificationsEnabled = it; onSettingsChanged()
+            }
+        }
+        item {
+            PreferenceRow("Autoplay next track", "Continue through the current music queue", autoplayNext) {
+                autoplayNext = it; settingsStore.autoplayNext = it; onSettingsChanged()
+            }
+        }
+        item {
+            PreferenceRow("Data saver", "Do not start downloads over metered mobile data", dataSaver) {
+                dataSaver = it; settingsStore.dataSaver = it; onSettingsChanged()
             }
         }
         if (statusMessage != null) item { Text(statusMessage!!, color = MemberGold, fontSize = 12.sp) }
@@ -202,6 +240,28 @@ fun MemberCenter(configured: Boolean) {
                 }
             }, isWorking = isWorking
         )
+    }
+}
+
+    if (showFounderStudio) {
+        Dialog(onDismissRequest = { showFounderStudio = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Surface(Modifier.fillMaxSize(), color = Color(0xFF08090B)) {
+                FounderStudioScreen(onClose = { showFounderStudio = false })
+            }
+        }
+    }
+}
+
+@Composable
+private fun PreferenceRow(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Card(colors = CardDefaults.cardColors(containerColor = MemberPanel), shape = RoundedCornerShape(14.dp)) {
+        Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(title, color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text(subtitle, color = MemberMuted, fontSize = 11.sp)
+            }
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
+        }
     }
 }
 

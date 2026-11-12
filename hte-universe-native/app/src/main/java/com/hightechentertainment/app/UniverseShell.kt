@@ -68,6 +68,9 @@ fun UniverseShell() {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val offlineManager = remember(context) { OfflineDownloadManager(context) }
+    val settingsStore = remember(context) { AppSettingsStore(context) }
+    var settingsRevision by remember { mutableStateOf(0) }
+    val autoplayNext = remember(settingsRevision) { settingsStore.autoplayNext }
     var downloads by remember { mutableStateOf<List<OfflineDownloadRecord>>(emptyList()) }
     var favouriteTrackIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     val configured = BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()
@@ -117,7 +120,7 @@ fun UniverseShell() {
         scope.launch {
             try {
                 if (url.isNullOrBlank()) error("This item has no download URL yet.")
-                withContext(Dispatchers.IO) { offlineManager.enqueue(url, title, mediaType) }
+                withContext(Dispatchers.IO) { offlineManager.enqueue(url, title, mediaType, allowMetered = !settingsStore.dataSaver) }
                 downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
                 Toast.makeText(context, "Download started: $title", Toast.LENGTH_SHORT).show()
             } catch (error: Throwable) {
@@ -189,12 +192,12 @@ fun UniverseShell() {
                         else selectedTrack = TrackDto(record.id.toString(), record.title, artist = "Downloaded", audioUrl = record.localUri)
                     }
                 )
-                UniverseTab.ACCOUNT -> AccountScreen(configured = configured)
+                UniverseTab.ACCOUNT -> AccountScreen(configured = configured, onSettingsChanged = { settingsRevision++ })
             }
         }
     }
 
-    selectedTrack?.let { AudioPlayerDialog(track = it, queue = tracks, onDismiss = { selectedTrack = null }) }
+    selectedTrack?.let { AudioPlayerDialog(track = it, queue = if (autoplayNext) tracks else listOf(it), onDismiss = { selectedTrack = null }) }
     selectedVideo?.let { VideoPlayerDialog(video = it, onDismiss = { selectedVideo = null }) }
 }
 

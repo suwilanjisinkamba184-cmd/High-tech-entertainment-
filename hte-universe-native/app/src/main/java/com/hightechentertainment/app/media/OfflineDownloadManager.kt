@@ -19,7 +19,7 @@ class OfflineDownloadManager(context: Context) {
     private val manager = appContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
     private val preferences = appContext.getSharedPreferences("hte_universe_offline_downloads", Context.MODE_PRIVATE)
 
-    fun enqueue(url: String, title: String, mediaType: String): Long {
+    fun enqueue(url: String, title: String, mediaType: String, allowMetered: Boolean = true): Long {
         val uri = Uri.parse(url)
         require(uri.scheme == "https" || uri.scheme == "http") { "This media item does not have a valid download URL." }
         val safeName = title.replace(Regex("[^A-Za-z0-9._-]"), "_").trim('_').take(64).ifBlank { "hte_media" }
@@ -29,7 +29,7 @@ class OfflineDownloadManager(context: Context) {
             .setTitle(title)
             .setDescription("Downloading from HTE Universe")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setAllowedOverMetered(true)
+            .setAllowedOverMetered(allowMetered)
             .setAllowedOverRoaming(false)
             .setDestinationInExternalFilesDir(appContext, folder, "$safeName.$extension")
         val id = manager.enqueue(request)
