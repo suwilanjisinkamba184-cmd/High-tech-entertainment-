@@ -72,6 +72,16 @@ fun VoiceAssistantDialog(
     val currentOnNavigate by rememberUpdatedState(onNavigate)
     val currentOnSearch by rememberUpdatedState(onSearch)
     val toolContext = remember { VoiceToolContext() }
+    var session by remember { mutableStateOf<ConversationSession?>(null) }
+    var isConnecting by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf("Disconnected") }
+    var mode by remember { mutableStateOf("listening") }
+    var muted by remember { mutableStateOf(false) }
+    var audioLevel by remember { mutableStateOf(0f) }
+    var userTranscript by remember { mutableStateOf("") }
+    var agentResponse by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
     SideEffect {
         toolContext.tracks = currentTracks
         toolContext.favourites = currentFavourites
@@ -82,16 +92,6 @@ fun VoiceAssistantDialog(
         toolContext.onAgentResponse = { agentResponse = it }
         toolContext.onError = { errorMessage = it; status = "Error" }
     }
-
-    var session by remember { mutableStateOf<ConversationSession?>(null) }
-    var isConnecting by remember { mutableStateOf(false) }
-    var status by remember { mutableStateOf("Disconnected") }
-    var mode by remember { mutableStateOf("listening") }
-    var muted by remember { mutableStateOf(false) }
-    var audioLevel by remember { mutableStateOf(0f) }
-    var userTranscript by remember { mutableStateOf("") }
-    var agentResponse by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val microphonePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) startVoiceSession(scope, context, toolContext,
