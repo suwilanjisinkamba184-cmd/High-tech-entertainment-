@@ -1,7 +1,7 @@
 package com.hightechentertainment.app.data
 
 import io.github.jan.supabase.auth.auth
-import io.github.jan.supabase.from
+import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
