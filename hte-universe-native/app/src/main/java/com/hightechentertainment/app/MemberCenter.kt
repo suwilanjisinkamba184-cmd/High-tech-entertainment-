@@ -28,6 +28,7 @@ import com.hightechentertainment.app.data.BookingDto
 import com.hightechentertainment.app.data.MemberRepository
 import com.hightechentertainment.app.data.NotificationDto
 import com.hightechentertainment.app.data.ProfileDto
+import com.hightechentertainment.app.data.SupabaseClientProvider
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch

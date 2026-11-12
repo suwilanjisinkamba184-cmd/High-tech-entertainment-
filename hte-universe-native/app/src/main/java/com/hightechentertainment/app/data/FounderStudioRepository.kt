@@ -179,7 +179,7 @@ class FounderStudioRepository {
                 }
                 channel.close()
             } catch (error: Throwable) {
-                channel.close(error)
+                channel.close()
                 throw error
             }
         }
@@ -192,7 +192,7 @@ class FounderStudioRepository {
             client.storage.from(bucketId).publicUrl(path)
         } catch (error: Throwable) {
             producer.cancel()
-            channel.close(error)
+            channel.close()
             throw error
         }
     }
