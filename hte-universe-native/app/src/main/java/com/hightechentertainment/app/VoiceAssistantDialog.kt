@@ -41,6 +41,11 @@ fun VoiceAssistantDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val currentTracks by rememberUpdatedState(tracks)
+    val currentOnPlay by rememberUpdatedState(onPlay)
+    val currentOnNavigate by rememberUpdatedState(onNavigate)
+    val currentOnSearch by rememberUpdatedState(onSearch)
+    val currentOnDismiss by rememberUpdatedState(onDismiss)
     var transcript by remember { mutableStateOf("") }
     var response by remember { mutableStateOf("Try: play a song, pause music, next track, open videos, or search an artist.") }
     var isListening by remember { mutableStateOf(false) }
@@ -70,27 +75,27 @@ fun VoiceAssistantDialog(
         when {
             lower.startsWith("play ") && lower !in listOf("play music", "play audio") -> {
                 val query = command.substringAfter(' ').trim()
-                val match = tracks.firstOrNull { it.title.contains(query, true) || it.artist.contains(query, true) }
-                if (match != null) { response = "Playing ${match.title}."; onPlay(match) }
+                val match = currentTracks.firstOrNull { it.title.contains(query, true) || it.artist.contains(query, true) }
+                if (match != null) { response = "Playing ${match.title}."; currentOnPlay(match); currentOnDismiss() }
                 else response = "I couldn't find a published track matching '$query'."
             }
             lower in listOf("play", "play music", "resume", "resume music") -> { HtePlaybackController.resume(); response = "Resuming music." }
             lower in listOf("pause", "pause music", "stop music") -> { HtePlaybackController.pause(); response = "Music paused." }
             lower in listOf("next", "next track", "skip") -> { HtePlaybackController.next(); response = "Moving to the next track." }
             lower in listOf("previous", "previous track", "go back") -> { HtePlaybackController.previous(); response = "Moving to the previous track." }
-            lower.startsWith("search ") -> { onSearch(command.substringAfter(' ').trim()); response = "Opening search." }
-            lower.contains("open video") || lower.contains("show video") -> { onNavigate("VIDEOS"); response = "Opening videos." }
-            lower.contains("open library") || lower.contains("my library") -> { onNavigate("LIBRARY"); response = "Opening your library." }
-            lower.contains("open account") || lower.contains("open settings") -> { onNavigate("ACCOUNT"); response = "Opening your account and settings." }
-            lower.contains("founder studio") -> { onNavigate("ACCOUNT"); response = "Open Founder Studio from your owner account card." }
-            lower.contains("open home") || lower == "home" -> { onNavigate("HOME"); response = "Opening Home." }
-            lower.contains("discover") || lower.contains("open search") -> { onNavigate("DISCOVER"); response = "Opening Discover." }
+            lower.startsWith("search ") -> { currentOnSearch(command.substringAfter(' ').trim()); response = "Opening search."; currentOnDismiss() }
+            lower.contains("open video") || lower.contains("show video") -> { currentOnNavigate("VIDEOS"); response = "Opening videos."; currentOnDismiss() }
+            lower.contains("open library") || lower.contains("my library") -> { currentOnNavigate("LIBRARY"); response = "Opening your library."; currentOnDismiss() }
+            lower.contains("open account") || lower.contains("open settings") -> { currentOnNavigate("ACCOUNT"); response = "Opening your account and settings."; currentOnDismiss() }
+            lower.contains("founder studio") -> { currentOnNavigate("ACCOUNT"); response = "Open Founder Studio from your owner account card."; currentOnDismiss() }
+            lower.contains("open home") || lower == "home" -> { currentOnNavigate("HOME"); response = "Opening Home."; currentOnDismiss() }
+            lower.contains("discover") || lower.contains("open search") -> { currentOnNavigate("DISCOVER"); response = "Opening Discover."; currentOnDismiss() }
             lower == "help" || lower.contains("what can you do") -> response = "Commands: play [song], pause music, resume music, next track, previous track, open videos, open library, open account, open Founder Studio, or search [artist/song]."
             else -> response = "I didn't recognise that command. Say 'help' to hear the available commands."
         }
     }
 
-    DisposableEffect(recognizer, tracks) {
+    DisposableEffect(recognizer) {
         val listener = object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) { isListening = true; response = "Listening…" }
             override fun onBeginningOfSpeech() { isListening = true }
