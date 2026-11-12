@@ -32,8 +32,23 @@ function videoCard(video){
 }
 async function load(){
  el.innerHTML='<div class="empty" role="status">Loading official videos…</div>';
- let own=[],sourceError=false;
- if(db){try{const {data,error}=await db.from('videos').select('id,title,artist,description,video_url,thumbnail_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60);if(error)throw error;own=data||[]}catch(error){sourceError=true;console.warn('HTE public video catalogue unavailable; showing curated YouTube releases.',error)}}
+ let own=[],sourceError=false,timeoutId;
+ if(db){
+  try{
+   const request=db.from('videos').select('id,title,artist,description,video_url,thumbnail_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60);
+   const {data,error}=await Promise.race([
+    request,
+    new Promise((_,reject)=>{timeoutId=window.setTimeout(()=>reject(new Error('HTE video catalogue request timed out after 12 seconds.')),12000)})
+   ]);
+   if(error)throw error;
+   own=data||[];
+  }catch(error){
+   sourceError=true;
+   console.warn('HTE public video catalogue unavailable; showing curated YouTube releases.',error);
+  }finally{
+   if(timeoutId)window.clearTimeout(timeoutId);
+  }
+ }
  const ids=new Set(own.map(v=>{const u=safeHttps(v.video_url);return u?videoEmbed(u).split('/embed/')[1]?.split('?')[0]:''}).filter(Boolean));
  const curated=featured.filter(v=>{const id=videoEmbed(v.video_url).split('/embed/')[1]?.split('?')[0];return !id||!ids.has(id)});
  const cards=[...own.map(v=>videoCard(v)).filter(Boolean),...curated.map(v=>videoCard(v)).filter(Boolean)];
