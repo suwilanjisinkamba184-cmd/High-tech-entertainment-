@@ -147,7 +147,6 @@ body{background-color:#07090e;background-image:radial-gradient(ellipse at 12% 12
 .field input,.field textarea,.field select{border-radius:12px;padding:13px 14px}
 .btn{border-radius:13px;padding:12px 19px}.btn.gold{background:linear-gradient(115deg,#f8dfa2,#d0a34e 65%,#a8792f);box-shadow:0 9px 30px rgba(226,189,112,.18)}
 .footer{padding:30px 0;border-top:1px solid rgba(115,220,255,.18);background:#05080dbd}
-.hte-progress{position:fixed;z-index:80;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--gold),var(--electric));box-shadow:0 0 12px #73dcff88}
 .hte-backtop{position:fixed;right:22px;bottom:22px;z-index:40;width:46px;height:46px;border-radius:50%;border:1px solid #73dcff66;background:#0d1823;color:#eafaff;font-size:1.25rem;box-shadow:0 8px 30px #0008;opacity:0;pointer-events:none;transform:translateY(10px);transition:.2s}
 .hte-backtop.visible{opacity:1;pointer-events:auto;transform:none}
 .catalog-tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 22px;padding:15px;border:1px solid #73dcff2b;border-radius:18px;background:linear-gradient(110deg,#142333c9,#0c121bd9)}
