@@ -34,6 +34,7 @@ import androidx.media3.ui.PlayerView
 import io.github.jan.supabase.auth.auth
 import com.hightechentertainment.app.data.AuthRepository
 import com.hightechentertainment.app.data.EntertainmentCatalogRepository
+import com.hightechentertainment.app.data.MemberRepository
 import com.hightechentertainment.app.data.SupabaseClientProvider
 import com.hightechentertainment.app.data.TrackDto
 import com.hightechentertainment.app.data.TrackRepository
@@ -68,6 +69,7 @@ fun UniverseShell() {
     val context = LocalContext.current
     val offlineManager = remember(context) { OfflineDownloadManager(context) }
     var downloads by remember { mutableStateOf<List<OfflineDownloadRecord>>(emptyList()) }
+    var favouriteTrackIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     val configured = BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()
 
     fun refreshCatalogue() {
@@ -91,7 +93,24 @@ fun UniverseShell() {
 
     LaunchedEffect(configured) { refreshCatalogue() }
     LaunchedEffect(selectedTab) {
-        if (selectedTab == UniverseTab.LIBRARY) downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
+        if (selectedTab == UniverseTab.LIBRARY) {
+            downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
+            if (configured) {
+                favouriteTrackIds = runCatching { withContext(Dispatchers.IO) { MemberRepository().getFavouriteTrackIds() } }.getOrDefault(emptySet())
+            }
+        }
+    }
+
+    fun toggleFavourite(track: TrackDto) {
+        scope.launch {
+            try {
+                if (track.id in favouriteTrackIds) withContext(Dispatchers.IO) { MemberRepository().removeFavourite(track.id) }
+                else withContext(Dispatchers.IO) { MemberRepository().addFavourite(track.id) }
+                favouriteTrackIds = if (track.id in favouriteTrackIds) favouriteTrackIds - track.id else favouriteTrackIds + track.id
+            } catch (error: Throwable) {
+                Toast.makeText(context, error.message?.take(120) ?: "Sign in to save favourites.", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     fun startDownload(url: String?, title: String, mediaType: String) {
@@ -143,12 +162,14 @@ fun UniverseShell() {
                     onVideos = { selectedTab = UniverseTab.VIDEOS },
                     onPlayTrack = { selectedTrack = it }, onPlayVideo = { selectedVideo = it },
                     onDownloadTrack = { startDownload(it.audioUrl, it.title, "audio") },
+                    favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     onDownloadVideo = { startDownload(it.videoUrl, it.title, "video") },
                     onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.DISCOVER -> DiscoverScreen(
                     tracks = tracks, isLoading = isLoading, error = catalogueError,
-                    onPlay = { selectedTrack = it }, onDownload = { startDownload(it.audioUrl, it.title, "audio") }, onRefresh = ::refreshCatalogue
+                    onPlay = { selectedTrack = it }, onDownload = { startDownload(it.audioUrl, it.title, "audio") },
+                    favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite, onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.VIDEOS -> VideosScreen(
                     videos = videos, isLoading = isLoading, error = catalogueError,
@@ -157,6 +178,10 @@ fun UniverseShell() {
                 UniverseTab.LIBRARY -> LibraryScreen(
                     onSignIn = { selectedTab = UniverseTab.ACCOUNT },
                     downloads = downloads,
+                    favouriteTracks = tracks.filter { it.id in favouriteTrackIds },
+                    onPlayFavourite = { selectedTrack = it },
+                    onToggleFavourite = ::toggleFavourite,
+                    onDownloadFavourite = { startDownload(it.audioUrl, it.title, "audio") },
                     onRemoveDownload = { record -> scope.launch { withContext(Dispatchers.IO) { offlineManager.remove(record.id) }; downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() } } },
                     onPlayDownload = { record ->
                         if (record.localUri.isNullOrBlank()) Toast.makeText(context, "This download is not ready yet.", Toast.LENGTH_SHORT).show()
@@ -193,7 +218,8 @@ private fun HomeScreen(
     tracks: List<TrackDto>, videos: List<VideoDto>, isLoading: Boolean,
     onExplore: () -> Unit, onVideos: () -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
-    onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit, onRefresh: () -> Unit
+    onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
+    favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
 ) {
     LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         item {
@@ -220,7 +246,7 @@ private fun HomeScreen(
         if (tracks.isEmpty()) {
             item { EmptyCatalogueState("No published tracks yet", isLoading, onRefresh) }
         } else {
-            items(tracks.take(4), key = { it.id }) { track -> TrackRow(track = track, onPlay = { onPlayTrack(track) }, onDownload = { onDownloadTrack(track) }) }
+            items(tracks.take(4), key = { it.id }) { track -> TrackRow(track = track, onPlay = { onPlayTrack(track) }, onDownload = { onDownloadTrack(track) }, isFavourite = track.id in favouriteTrackIds, onToggleFavourite = { onToggleFavourite(track) }) }
         }
         item { SectionHeading("LATEST VIDEOS", "See all", onVideos) }
         if (videos.isEmpty()) {
@@ -232,7 +258,7 @@ private fun HomeScreen(
 }
 
 @Composable
-private fun DiscoverScreen(tracks: List<TrackDto>, isLoading: Boolean, error: String?, onPlay: (TrackDto) -> Unit, onDownload: (TrackDto) -> Unit, onRefresh: () -> Unit) {
+private fun DiscoverScreen(tracks: List<TrackDto>, isLoading: Boolean, error: String?, onPlay: (TrackDto) -> Unit, onDownload: (TrackDto) -> Unit, favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit) {
     var query by remember { mutableStateOf("") }
     var selectedGenre by remember { mutableStateOf("All") }
     val genres = listOf("All") + tracks.mapNotNull { it.genre?.takeIf(String::isNotBlank) }.distinct().sorted()
@@ -259,7 +285,7 @@ private fun DiscoverScreen(tracks: List<TrackDto>, isLoading: Boolean, error: St
             EmptyCatalogueState(if (isLoading) "Loading music catalogue…" else "No matching music found", isLoading, onRefresh)
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
-                items(filtered, key = { it.id }) { track -> TrackRow(track = track, onPlay = { onPlay(track) }, onDownload = { onDownload(track) }) }
+                items(filtered, key = { it.id }) { track -> TrackRow(track = track, onPlay = { onPlay(track) }, onDownload = { onDownload(track) }, isFavourite = track.id in favouriteTrackIds, onToggleFavourite = { onToggleFavourite(track) }) }
             }
         }
     }
@@ -283,7 +309,7 @@ private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: Stri
 }
 
 @Composable
-private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit) {
+private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit, isFavourite: Boolean, onToggleFavourite: () -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(48.dp).background(ShellGold.copy(alpha = .12f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
@@ -295,6 +321,7 @@ private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit
                 Text(track.artist, color = ShellMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 track.genre?.let { Text(it, color = ShellGold, fontSize = 10.sp) }
             }
+            IconButton(onClick = onToggleFavourite) { Icon(if (isFavourite) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder, "Toggle favourite", tint = if (isFavourite) ShellGold else ShellSilver) }
             IconButton(onClick = onDownload) { Icon(Icons.Outlined.Download, "Download ${track.title}", tint = ShellSilver) }
             IconButton(onClick = onPlay) { Icon(Icons.Outlined.PlayCircle, "Play ${track.title}", tint = ShellGold, modifier = Modifier.size(28.dp)) }
         }
@@ -323,6 +350,10 @@ private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: () -> Unit
 private fun LibraryScreen(
     onSignIn: () -> Unit,
     downloads: List<OfflineDownloadRecord>,
+    favouriteTracks: List<TrackDto>,
+    onPlayFavourite: (TrackDto) -> Unit,
+    onToggleFavourite: (TrackDto) -> Unit,
+    onDownloadFavourite: (TrackDto) -> Unit,
     onRemoveDownload: (OfflineDownloadRecord) -> Unit,
     onPlayDownload: (OfflineDownloadRecord) -> Unit
 ) {
@@ -331,7 +362,14 @@ private fun LibraryScreen(
             Text("Your Library", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
             Text("Your music, saved your way.", color = ShellMuted, fontSize = 13.sp)
         }
-        item { LibraryTile(Icons.Outlined.FavoriteBorder, "Favourites", "Your saved tracks and artists") }
+        item { Text("FAVOURITES", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
+        if (favouriteTracks.isEmpty()) {
+            item { Text("Sign in and tap the heart on a track to save it here.", color = ShellMuted, fontSize = 12.sp) }
+        } else {
+            items(favouriteTracks, key = { it.id }) { track ->
+                TrackRow(track = track, onPlay = { onPlayFavourite(track) }, onDownload = { onDownloadFavourite(track) }, isFavourite = true, onToggleFavourite = { onToggleFavourite(track) })
+            }
+        }
         item { LibraryTile(Icons.Outlined.QueueMusic, "Playlists", "Build and organise your listening") }
         item { LibraryTile(Icons.Outlined.History, "Listening history", "Return to what you played") }
         item { Text("OFFLINE DOWNLOADS", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }

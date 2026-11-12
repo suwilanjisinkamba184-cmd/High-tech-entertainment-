@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.sp
 import com.hightechentertainment.app.data.AuthRepository
 import com.hightechentertainment.app.data.BookingDto
 import com.hightechentertainment.app.data.MemberRepository
+import com.hightechentertainment.app.data.NotificationDto
 import com.hightechentertainment.app.data.ProfileDto
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.collect
@@ -37,6 +38,7 @@ fun MemberCenter(configured: Boolean) {
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var bookings by remember { mutableStateOf<List<BookingDto>>(emptyList()) }
+    var notifications by remember { mutableStateOf<List<NotificationDto>>(emptyList()) }
     var role by remember { mutableStateOf("member") }
     var showProfileEditor by remember { mutableStateOf(false) }
     var showBookingForm by remember { mutableStateOf(false) }
@@ -55,11 +57,13 @@ fun MemberCenter(configured: Boolean) {
             val repo = MemberRepository()
             profile = runCatching { repo.getMyProfile() }.getOrNull()
             bookings = runCatching { repo.getMyBookings() }.getOrDefault(emptyList())
+            notifications = runCatching { repo.getNotifications() }.getOrDefault(emptyList())
             role = runCatching { repo.getCurrentRole() }.getOrDefault("member")
             email = auth.currentUserOrNull()?.email.orEmpty()
         } else if (!isSignedIn) {
             profile = null
             bookings = emptyList()
+            notifications = emptyList()
             role = "member"
         }
     }
@@ -149,6 +153,17 @@ fun MemberCenter(configured: Boolean) {
                         Text(booking.bookingType, color = Color.White, fontWeight = FontWeight.SemiBold)
                         Text(booking.requestedDate ?: "Date to be confirmed", color = MemberMuted, fontSize = 12.sp)
                         Text("Status: ${booking.status}", color = MemberGold, fontSize = 11.sp)
+                    }
+                }
+            }
+            item { Text("NOTIFICATIONS", color = MemberGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
+            if (notifications.isEmpty()) {
+                item { Text("No account notifications yet.", color = MemberMuted, fontSize = 12.sp) }
+            } else {
+                items(notifications, key = { it.id }) { notification ->
+                    MemberCard {
+                        Text(notification.title, color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Text(notification.body, color = MemberMuted, fontSize = 12.sp)
                     }
                 }
             }
