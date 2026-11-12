@@ -1,6 +1,7 @@
 package com.hightechentertainment.app
 
 import android.os.Bundle
+import android.media.MediaPlayer
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -10,6 +11,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -25,6 +27,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -61,6 +65,16 @@ private fun HteUniverseApp() {
 
 @Composable
 private fun UniverseSplash(onFinished: () -> Unit) {
+    val context = LocalContext.current
+    DisposableEffect(context) {
+        val audioId = context.resources.getIdentifier("hte_universe_intro", "raw", context.packageName)
+        val player = if (audioId != 0) MediaPlayer.create(context, audioId) else null
+        player?.start()
+        onDispose {
+            try { player?.stop() } catch (_: IllegalStateException) { }
+            player?.release()
+        }
+    }
     var elapsed by remember { mutableIntStateOf(0) }
     val transition = rememberInfiniteTransition(label = "universe-motion")
     val orbit by transition.animateFloat(0f, 360f,
@@ -79,7 +93,7 @@ private fun UniverseSplash(onFinished: () -> Unit) {
         StarField(Modifier.fillMaxSize(), orbit)
         Column(Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 36.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text("♛", color = Gold, fontSize = 58.sp, fontWeight = FontWeight.Light)
+            Image(painter = painterResource(R.drawable.ic_hte_crown), contentDescription = "HTE Universe crown", modifier = Modifier.size(width = 76.dp, height = 52.dp))
             Spacer(Modifier.height(8.dp))
             Text("HTE", color = Silver, fontSize = 48.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 8.sp)
             Text("UNIVERSE", color = Gold, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 7.sp)
