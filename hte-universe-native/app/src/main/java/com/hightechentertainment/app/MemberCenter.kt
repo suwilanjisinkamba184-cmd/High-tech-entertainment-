@@ -241,7 +241,6 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
             }, isWorking = isWorking
         )
     }
-}
 
     if (showFounderStudio) {
         Dialog(onDismissRequest = { showFounderStudio = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
