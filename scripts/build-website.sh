@@ -64,7 +64,8 @@ import xml.etree.ElementTree as ET
 root = Path("dist")
 homepage = (root / "index.html").read_text(encoding="utf-8")
 required_homepage_markers = (
-    "Welcome to HTE Universe",
+    "Welcome to",
+    "HTE Universe.",
     "topbar",
     "high-tech-logo.svg",
     "assets/app.js?v=15",
