@@ -221,9 +221,8 @@ fun UniverseShell() {
                     "ACCOUNT" -> UniverseTab.ACCOUNT
                     else -> UniverseTab.DISCOVER
                 }
-                showVoiceAssistant = false
             },
-            onSearch = { searchQuery = it; selectedTab = UniverseTab.DISCOVER; showVoiceAssistant = false },
+            onSearch = { searchQuery = it; selectedTab = UniverseTab.DISCOVER },
             onDismiss = { showVoiceAssistant = false }
         )
     }
