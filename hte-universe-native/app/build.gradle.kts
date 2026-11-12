@@ -12,7 +12,23 @@ val supabasePublishableKey = providers.gradleProperty("SUPABASE_PUBLISHABLE_KEY"
     .orElse(providers.environmentVariable("SUPABASE_PUBLISHABLE_KEY"))
     .orElse("")
 
+val releaseKeystorePath = providers.environmentVariable("ANDROID_KEYSTORE_PATH").orNull
+val releaseStorePassword = providers.environmentVariable("ANDROID_STORE_PASSWORD").orNull
+val releaseKeyAlias = providers.environmentVariable("ANDROID_KEY_ALIAS").orNull
+val releaseKeyPassword = providers.environmentVariable("ANDROID_KEY_PASSWORD").orNull
+
 android {
+    if (!releaseKeystorePath.isNullOrBlank()) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     namespace = "com.hightechentertainment.app"
     compileSdk = 36
     defaultConfig {
@@ -29,6 +45,9 @@ android {
         debug { applicationIdSuffix = ".dev"; versionNameSuffix = "-dev" }
         release {
             isMinifyEnabled = true
+            if (!releaseKeystorePath.isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
