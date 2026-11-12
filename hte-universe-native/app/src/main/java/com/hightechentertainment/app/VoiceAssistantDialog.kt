@@ -38,6 +38,7 @@ import io.github.jan.supabase.functions.functions
 import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -88,9 +89,9 @@ fun VoiceAssistantDialog(
         toolContext.onPlayFavourites = currentOnPlayFavourites
         toolContext.onNavigate = currentOnNavigate
         toolContext.onSearch = currentOnSearch
-        toolContext.onUserTranscript = { userTranscript = it }
-        toolContext.onAgentResponse = { agentResponse = it }
-        toolContext.onError = { errorMessage = it; status = "Error" }
+        toolContext.onUserTranscript = { value -> scope.launch { userTranscript = value } }
+        toolContext.onAgentResponse = { value -> scope.launch { agentResponse = value } }
+        toolContext.onError = { value -> scope.launch { errorMessage = value; status = "Error" } }
     }
 
     val microphonePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
