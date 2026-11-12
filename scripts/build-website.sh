@@ -68,7 +68,8 @@ required_homepage_markers = (
     "HTE Universe.",
     "topbar",
     "high-tech-logo.svg",
-    "assets/app.js?v=15",
+    "assets/app.js?v=16",
+    "assets/videos.js?v=5",
     "public-tracks",
     "supabase-config.js",
     "_astro/",
@@ -121,6 +122,118 @@ for stylesheet in root.rglob("*.css"):
 if missing:
     raise SystemExit("\n".join(missing))
 print("Astro homepage markers, sitemap XML, local HTML references, and CSS assets are valid.")
+PY
+
+
+# Validate section anchors and JavaScript syntax in the exact files that will be published.
+python - <<'PY'
+from html.parser import HTMLParser
+from pathlib import Path
+from urllib.parse import urlsplit, unquote
+import subprocess
+import tempfile
+
+root = Path("dist")
+
+class PageAudit(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.ids = set()
+        self.hrefs = []
+        self.inline_scripts = []
+        self.current_script = None
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if attrs.get("id"):
+            self.ids.add(attrs["id"])
+        if tag == "a" and attrs.get("href"):
+            self.hrefs.append(attrs["href"])
+        if tag == "script":
+            self.current_script = {
+                "src": attrs.get("src"),
+                "type": (attrs.get("type") or "").lower(),
+                "body": "",
+            }
+
+    def handle_data(self, data):
+        if self.current_script is not None and not self.current_script["src"]:
+            self.current_script["body"] += data
+
+    def handle_endtag(self, tag):
+        if tag == "script" and self.current_script is not None:
+            item = self.current_script
+            if (not item["src"] and item["type"] not in (
+                "application/ld+json", "application/json", "application/manifest+json"
+            ) and item["body"].strip()):
+                self.inline_scripts.append(item["body"])
+            self.current_script = None
+
+pages = sorted(root.rglob("*.html"))
+audits = {}
+for page in pages:
+    audit = PageAudit()
+    audit.feed(page.read_text(encoding="utf-8"))
+    audits[page.resolve()] = audit
+
+broken_anchors = []
+for page in pages:
+    for href in audits[page.resolve()].hrefs:
+        if href.startswith(("https://", "http://", "mailto:", "tel:", "data:", "javascript:", "//")):
+            continue
+        parts = urlsplit(href)
+        if not parts.fragment:
+            continue
+        raw_path = unquote(parts.path)
+        if raw_path.startswith("/High-tech-entertainment-/"):
+            target = root / raw_path[len("/High-tech-entertainment-/"):].lstrip("/")
+        elif raw_path.startswith("/"):
+            target = root / raw_path.lstrip("/")
+        elif raw_path:
+            target = (page.parent / raw_path).resolve()
+        else:
+            target = page
+        if target.is_dir():
+            target = target / "index.html"
+        if target.exists() and target.suffix.lower() == ".html":
+            target_audit = audits.get(target.resolve())
+            if target_audit is None:
+                target_audit = PageAudit()
+                target_audit.feed(target.read_text(encoding="utf-8"))
+            if parts.fragment not in target_audit.ids:
+                broken_anchors.append(f"{page}: {href} -> missing #{parts.fragment}")
+
+if broken_anchors:
+    raise SystemExit("\n".join(broken_anchors))
+
+syntax_failures = []
+for script in sorted((root / "assets").glob("*.js")):
+    result = subprocess.run(["node", "--check", str(script)], capture_output=True, text=True)
+    if result.returncode:
+        syntax_failures.append(f"{script}: {result.stderr or result.stdout}")
+
+with tempfile.TemporaryDirectory(prefix="hte-inline-js-") as tmp:
+    counter = 0
+    for page in pages:
+        for source in audits[page.resolve()].inline_scripts:
+            counter += 1
+            path = Path(tmp) / f"inline-{counter}.js"
+            path.write_text(source, encoding="utf-8")
+            result = subprocess.run(["node", "--check", str(path)], capture_output=True, text=True)
+            if result.returncode:
+                syntax_failures.append(f"{page}: {result.stderr or result.stdout}")
+
+if syntax_failures:
+    raise SystemExit("\n".join(syntax_failures))
+
+app_js = (root / "assets/app.js").read_text(encoding="utf-8")
+video_js = (root / "assets/videos.js").read_text(encoding="utf-8")
+if "The music catalogue is taking too long to respond" not in app_js:
+    raise SystemExit("Public music catalogue timeout fallback is missing.")
+if "HTE video catalogue request timed out after 12 seconds" not in video_js:
+    raise SystemExit("Public video catalogue timeout fallback is missing.")
+
+print(f"Verified {len(pages)} HTML pages, internal anchor targets, external asset JS, inline JS, and catalogue timeout fallbacks.")
 PY
 
 echo "Astro + React website build output prepared in dist/"
