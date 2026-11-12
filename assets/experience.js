@@ -1,8 +1,7 @@
 (()=>{'use strict';
 const $=s=>document.querySelector(s);
-const progress=document.createElement('div');progress.className='hte-progress';progress.setAttribute('aria-hidden','true');document.body.append(progress);
 const top=document.createElement('button');top.className='hte-backtop';top.type='button';top.setAttribute('aria-label','Back to top');top.textContent='↑';document.body.append(top);
-const update=()=>{const max=document.documentElement.scrollHeight-innerHeight;progress.style.width=(max>0?Math.min(100,scrollY/max*100):0)+'%';top.classList.toggle('visible',scrollY>500)};
+const update=()=>{top.classList.toggle('visible',scrollY>500)};
 addEventListener('scroll',update,{passive:true});addEventListener('resize',update);update();top.addEventListener('click',()=>scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}));
 const heroArt=$('.hero-art');if(heroArt&&!heroArt.querySelector('.hte-orbit-label')){const label=document.createElement('span');label.className='hte-orbit-label';label.textContent='SOUND • CULTURE • INNOVATION';heroArt.append(label)}
 const tracks=$('#public-tracks');
