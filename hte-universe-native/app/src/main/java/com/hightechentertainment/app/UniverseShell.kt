@@ -1,6 +1,7 @@
 package com.hightechentertainment.app
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -38,7 +39,11 @@ import com.hightechentertainment.app.data.TrackDto
 import com.hightechentertainment.app.data.TrackRepository
 import com.hightechentertainment.app.data.VideoDto
 import com.hightechentertainment.app.media.HtePlaybackController
+import com.hightechentertainment.app.media.OfflineDownloadManager
+import com.hightechentertainment.app.media.OfflineDownloadRecord
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private val ShellGold = Color(0xFFD6B15E)
 private val ShellSilver = Color(0xFFC4CAD2)
@@ -60,6 +65,9 @@ fun UniverseShell() {
     var selectedTrack by remember { mutableStateOf<TrackDto?>(null) }
     var selectedVideo by remember { mutableStateOf<VideoDto?>(null) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val offlineManager = remember(context) { OfflineDownloadManager(context) }
+    var downloads by remember { mutableStateOf<List<OfflineDownloadRecord>>(emptyList()) }
     val configured = BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()
 
     fun refreshCatalogue() {
@@ -82,6 +90,22 @@ fun UniverseShell() {
     }
 
     LaunchedEffect(configured) { refreshCatalogue() }
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == UniverseTab.LIBRARY) downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
+    }
+
+    fun startDownload(url: String?, title: String, mediaType: String) {
+        scope.launch {
+            try {
+                if (url.isNullOrBlank()) error("This item has no download URL yet.")
+                withContext(Dispatchers.IO) { offlineManager.enqueue(url, title, mediaType) }
+                downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
+                Toast.makeText(context, "Download started: $title", Toast.LENGTH_SHORT).show()
+            } catch (error: Throwable) {
+                Toast.makeText(context, error.message?.take(120) ?: "Download could not start.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     Scaffold(
         containerColor = ShellBackground,
@@ -118,17 +142,28 @@ fun UniverseShell() {
                     onExplore = { selectedTab = UniverseTab.DISCOVER },
                     onVideos = { selectedTab = UniverseTab.VIDEOS },
                     onPlayTrack = { selectedTrack = it }, onPlayVideo = { selectedVideo = it },
+                    onDownloadTrack = { startDownload(it.audioUrl, it.title, "audio") },
+                    onDownloadVideo = { startDownload(it.videoUrl, it.title, "video") },
                     onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.DISCOVER -> DiscoverScreen(
                     tracks = tracks, isLoading = isLoading, error = catalogueError,
-                    onPlay = { selectedTrack = it }, onRefresh = ::refreshCatalogue
+                    onPlay = { selectedTrack = it }, onDownload = { startDownload(it.audioUrl, it.title, "audio") }, onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.VIDEOS -> VideosScreen(
                     videos = videos, isLoading = isLoading, error = catalogueError,
-                    onPlay = { selectedVideo = it }, onRefresh = ::refreshCatalogue
+                    onPlay = { selectedVideo = it }, onDownload = { startDownload(it.videoUrl, it.title, "video") }, onRefresh = ::refreshCatalogue
                 )
-                UniverseTab.LIBRARY -> LibraryScreen(onSignIn = { selectedTab = UniverseTab.ACCOUNT })
+                UniverseTab.LIBRARY -> LibraryScreen(
+                    onSignIn = { selectedTab = UniverseTab.ACCOUNT },
+                    downloads = downloads,
+                    onRemoveDownload = { record -> scope.launch { withContext(Dispatchers.IO) { offlineManager.remove(record.id) }; downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() } } },
+                    onPlayDownload = { record ->
+                        if (record.localUri.isNullOrBlank()) Toast.makeText(context, "This download is not ready yet.", Toast.LENGTH_SHORT).show()
+                        else if (record.mediaType == "video") selectedVideo = VideoDto(record.id.toString(), record.title, videoUrl = record.localUri)
+                        else selectedTrack = TrackDto(record.id.toString(), record.title, artist = "Downloaded", audioUrl = record.localUri)
+                    }
+                )
                 UniverseTab.ACCOUNT -> AccountScreen(configured = configured)
             }
         }
@@ -157,7 +192,8 @@ private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit) {
 private fun HomeScreen(
     tracks: List<TrackDto>, videos: List<VideoDto>, isLoading: Boolean,
     onExplore: () -> Unit, onVideos: () -> Unit,
-    onPlayTrack: (TrackDto) -> Unit, onPlayVideo: (VideoDto) -> Unit, onRefresh: () -> Unit
+    onPlayTrack: (TrackDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
+    onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit, onRefresh: () -> Unit
 ) {
     LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         item {
@@ -184,19 +220,19 @@ private fun HomeScreen(
         if (tracks.isEmpty()) {
             item { EmptyCatalogueState("No published tracks yet", isLoading, onRefresh) }
         } else {
-            items(tracks.take(4), key = { it.id }) { track -> TrackRow(track = track, onPlay = { onPlayTrack(track) }) }
+            items(tracks.take(4), key = { it.id }) { track -> TrackRow(track = track, onPlay = { onPlayTrack(track) }, onDownload = { onDownloadTrack(track) }) }
         }
         item { SectionHeading("LATEST VIDEOS", "See all", onVideos) }
         if (videos.isEmpty()) {
             item { Text("Published HTE videos will appear here.", color = ShellMuted, fontSize = 13.sp) }
         } else {
-            items(videos.take(2), key = { it.id }) { video -> VideoRow(video = video, onPlay = { onPlayVideo(video) }) }
+            items(videos.take(2), key = { it.id }) { video -> VideoRow(video = video, onPlay = { onPlayVideo(video) }, onDownload = { onDownloadVideo(video) }) }
         }
     }
 }
 
 @Composable
-private fun DiscoverScreen(tracks: List<TrackDto>, isLoading: Boolean, error: String?, onPlay: (TrackDto) -> Unit, onRefresh: () -> Unit) {
+private fun DiscoverScreen(tracks: List<TrackDto>, isLoading: Boolean, error: String?, onPlay: (TrackDto) -> Unit, onDownload: (TrackDto) -> Unit, onRefresh: () -> Unit) {
     var query by remember { mutableStateOf("") }
     var selectedGenre by remember { mutableStateOf("All") }
     val genres = listOf("All") + tracks.mapNotNull { it.genre?.takeIf(String::isNotBlank) }.distinct().sorted()
@@ -223,14 +259,14 @@ private fun DiscoverScreen(tracks: List<TrackDto>, isLoading: Boolean, error: St
             EmptyCatalogueState(if (isLoading) "Loading music catalogue…" else "No matching music found", isLoading, onRefresh)
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
-                items(filtered, key = { it.id }) { track -> TrackRow(track = track, onPlay = { onPlay(track) }) }
+                items(filtered, key = { it.id }) { track -> TrackRow(track = track, onPlay = { onPlay(track) }, onDownload = { onDownload(track) }) }
             }
         }
     }
 }
 
 @Composable
-private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: String?, onPlay: (VideoDto) -> Unit, onRefresh: () -> Unit) {
+private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: String?, onPlay: (VideoDto) -> Unit, onDownload: (VideoDto) -> Unit, onRefresh: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         Text("Videos", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         Text("Watch HTE visuals, performances and stories.", color = ShellMuted, fontSize = 13.sp)
@@ -240,14 +276,14 @@ private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: Stri
             EmptyCatalogueState(if (isLoading) "Loading video catalogue…" else "No published videos yet", isLoading, onRefresh)
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
-                items(videos, key = { it.id }) { video -> VideoRow(video = video, onPlay = { onPlay(video) }) }
+                items(videos, key = { it.id }) { video -> VideoRow(video = video, onPlay = { onPlay(video) }, onDownload = { onDownload(video) }) }
             }
         }
     }
 }
 
 @Composable
-private fun TrackRow(track: TrackDto, onPlay: () -> Unit) {
+private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(48.dp).background(ShellGold.copy(alpha = .12f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
@@ -259,13 +295,14 @@ private fun TrackRow(track: TrackDto, onPlay: () -> Unit) {
                 Text(track.artist, color = ShellMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 track.genre?.let { Text(it, color = ShellGold, fontSize = 10.sp) }
             }
+            IconButton(onClick = onDownload) { Icon(Icons.Outlined.Download, "Download ${track.title}", tint = ShellSilver) }
             IconButton(onClick = onPlay) { Icon(Icons.Outlined.PlayCircle, "Play ${track.title}", tint = ShellGold, modifier = Modifier.size(28.dp)) }
         }
     }
 }
 
 @Composable
-private fun VideoRow(video: VideoDto, onPlay: () -> Unit) {
+private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: () -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(62.dp, 52.dp).background(ShellGold.copy(alpha = .12f), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
@@ -276,22 +313,48 @@ private fun VideoRow(video: VideoDto, onPlay: () -> Unit) {
                 Text(video.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 12.sp)
             }
+            IconButton(onClick = onDownload) { Icon(Icons.Outlined.Download, "Download ${video.title}", tint = ShellSilver) }
             Icon(Icons.Outlined.PlayArrow, "Play video", tint = ShellGold)
         }
     }
 }
 
 @Composable
-private fun LibraryScreen(onSignIn: () -> Unit) {
+private fun LibraryScreen(
+    onSignIn: () -> Unit,
+    downloads: List<OfflineDownloadRecord>,
+    onRemoveDownload: (OfflineDownloadRecord) -> Unit,
+    onPlayDownload: (OfflineDownloadRecord) -> Unit
+) {
     LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Text("Your Library", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
             Text("Your music, saved your way.", color = ShellMuted, fontSize = 13.sp)
         }
         item { LibraryTile(Icons.Outlined.FavoriteBorder, "Favourites", "Your saved tracks and artists") }
-        item { LibraryTile(Icons.Outlined.Download, "Offline downloads", "Music and videos available without data") }
         item { LibraryTile(Icons.Outlined.QueueMusic, "Playlists", "Build and organise your listening") }
         item { LibraryTile(Icons.Outlined.History, "Listening history", "Return to what you played") }
+        item { Text("OFFLINE DOWNLOADS", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
+        if (downloads.isEmpty()) {
+            item { Text("No offline downloads yet. Use the download icon beside a track or video to save it.", color = ShellMuted, fontSize = 12.sp) }
+        } else {
+            items(downloads, key = { it.id }) { record ->
+                Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(16.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(if (record.mediaType == "video") Icons.Outlined.VideoLibrary else Icons.Outlined.MusicNote, null, tint = ShellGold)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(record.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("${record.mediaType.uppercase()} · ${record.status}", color = ShellMuted, fontSize = 11.sp)
+                        }
+                        if (record.status == "Downloaded" && !record.localUri.isNullOrBlank()) {
+                            IconButton(onClick = { onPlayDownload(record) }) { Icon(Icons.Outlined.PlayArrow, "Play offline", tint = ShellGold) }
+                        }
+                        IconButton(onClick = { onRemoveDownload(record) }) { Icon(Icons.Outlined.Delete, "Remove download", tint = ShellMuted) }
+                    }
+                }
+            }
+        }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(18.dp)) {
                 Column(Modifier.fillMaxWidth().padding(18.dp)) {
@@ -436,8 +499,8 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
     val context = LocalContext.current
     var controller by remember { mutableStateOf<MediaController?>(null) }
     var playbackError by remember { mutableStateOf<String?>(null) }
-    val validQueue = remember(queue, track.id) {
-        queue.filter { candidate ->
+    val validQueue = remember(queue, track.id, track.audioUrl) {
+        if (track.audioUrl?.startsWith("http", ignoreCase = true) != true) emptyList() else queue.filter { candidate ->
             runCatching { Uri.parse(candidate.audioUrl.orEmpty()).scheme in listOf("https", "http") }.getOrDefault(false)
         }.map { candidate ->
             MediaItem.Builder()
@@ -500,7 +563,7 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
 @Composable
 private fun VideoPlayerDialog(video: VideoDto, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val validUrl = runCatching { Uri.parse(video.videoUrl).scheme in listOf("https", "http") }.getOrDefault(false)
+    val validUrl = runCatching { Uri.parse(video.videoUrl).scheme in listOf("https", "http", "content", "file") }.getOrDefault(false)
     val player = remember(video.id) {
         ExoPlayer.Builder(context).build().apply {
             if (validUrl) { setMediaItem(MediaItem.fromUri(video.videoUrl)); prepare(); playWhenReady = true }
