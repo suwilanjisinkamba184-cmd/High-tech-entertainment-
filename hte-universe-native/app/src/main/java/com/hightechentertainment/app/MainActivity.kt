@@ -3,9 +3,11 @@ package com.hightechentertainment.app
 import android.os.Bundle
 import android.content.Intent
 import android.media.MediaPlayer
+import android.media.PlaybackParams
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -85,6 +87,8 @@ private fun UniverseSplash(onFinished: () -> Unit) {
     DisposableEffect(context) {
         val audioId = context.resources.getIdentifier("hte_universe_intro", "raw", context.packageName)
         val player = if (audioId != 0) MediaPlayer.create(context, audioId) else null
+        // The packaged stereo MP3 is 14.054s; pitch-preserving 0.937x playback aligns it to the 15s splash.
+        runCatching { player?.setPlaybackParams(PlaybackParams().setSpeed(0.937f).setPitch(1.0f)) }
         player?.start()
         onDispose {
             try { player?.stop() } catch (_: IllegalStateException) { }
@@ -95,10 +99,10 @@ private fun UniverseSplash(onFinished: () -> Unit) {
     val transition = rememberInfiniteTransition(label = "universe-motion")
     val orbit by transition.animateFloat(0f, 360f,
         infiniteRepeatable(tween(9000, easing = FastOutSlowInEasing)), label = "orbit")
-    val headsetTilt by transition.animateFloat(-13f, 13f,
-        infiniteRepeatable(tween(2400), RepeatMode.Reverse), label = "headset")
-    val cameraTilt by transition.animateFloat(12f, -12f,
-        infiniteRepeatable(tween(2700), RepeatMode.Reverse), label = "camera")
+    val headsetSpin by transition.animateFloat(0f, 360f,
+        infiniteRepeatable(tween(5200, easing = LinearEasing)), label = "headset-spin")
+    val cameraSpin by transition.animateFloat(360f, 0f,
+        infiniteRepeatable(tween(6100, easing = LinearEasing)), label = "camera-spin")
     val captions = listOf("Beyond the sound…", "Beyond the rhythm…", "Beyond boundaries…", "This is our universe.")
     LaunchedEffect(Unit) {
         while (elapsed < 15) { delay(1000); elapsed++ }
@@ -122,11 +126,12 @@ private fun UniverseSplash(onFinished: () -> Unit) {
                     drawCircle(Gold, radius = 4.dp.toPx(),
                         center = androidx.compose.ui.geometry.Offset(size.width * .5f, 4.dp.toPx()))
                 }
-                Icon(Icons.Outlined.Headphones, "Rotating headphones", tint = Gold,
-                    modifier = Modifier.size(112.dp).graphicsLayer { rotationY = headsetTilt; rotationZ = -headsetTilt / 3 })
-                Icon(Icons.Outlined.Videocam, "Orbiting video camera", tint = Silver,
-                    modifier = Modifier.align(Alignment.BottomEnd).size(58.dp)
-                        .graphicsLayer { rotationY = cameraTilt; rotationZ = cameraTilt })
+                Icon(Icons.Outlined.Headphones, "Spinning headphones", tint = Gold,
+                    modifier = Modifier.size(112.dp).graphicsLayer { rotationZ = headsetSpin })
+                Icon(Icons.Outlined.Videocam, "Spinning video camera", tint = Silver,
+                    modifier = Modifier.align(Alignment.BottomEnd).size(58.dp).graphicsLayer { rotationZ = cameraSpin })
+                Icon(Icons.Outlined.VideoLibrary, "Orbiting video library", tint = Gold.copy(alpha = .8f),
+                    modifier = Modifier.align(Alignment.TopEnd).size(36.dp).graphicsLayer { rotationZ = -orbit })
                 Icon(Icons.Outlined.AutoAwesome, "Orbiting star", tint = Gold,
                     modifier = Modifier.align(Alignment.TopStart).size(30.dp).graphicsLayer { rotationZ = orbit })
             }
@@ -156,67 +161,5 @@ private fun StarField(modifier: Modifier, rotation: Float) {
             drawCircle(Gold.copy(alpha = .28f * pulse), radius = (1.4f + index % 3).dp.toPx(),
                 center = androidx.compose.ui.geometry.Offset(size.width * point.first, size.height * point.second))
         }
-    }
-}
-
-@Composable
-private fun UniverseHome() {
-    var selected by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Home", "Discover", "Videos", "Library", "Account")
-    val icons = listOf(Icons.Outlined.Home, Icons.Outlined.Explore, Icons.Outlined.VideoLibrary,
-        Icons.Outlined.LibraryMusic, Icons.Outlined.Person)
-    Scaffold(containerColor = Obsidian, bottomBar = {
-        NavigationBar(containerColor = Panel, contentColor = Gold) {
-            tabs.forEachIndexed { index, label ->
-                NavigationBarItem(selected = selected == index, onClick = { selected = index },
-                    icon = { Icon(icons[index], contentDescription = label) }, label = { Text(label, fontSize = 10.sp) },
-                    colors = NavigationBarItemDefaults.colors(selectedIconColor = Gold, selectedTextColor = Gold,
-                        unselectedIconColor = Muted, unselectedTextColor = Muted, indicatorColor = Gold.copy(alpha = .12f)))
-            }
-        }
-    }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("HTE UNIVERSE", color = Gold, fontSize = 12.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
-                    Text("The Pride of Africa", color = Silver, fontSize = 11.sp)
-                }
-                IconButton(onClick = {}) { Icon(Icons.Outlined.NotificationsNone, "Notifications", tint = Silver) }
-                IconButton(onClick = {}) { Icon(Icons.Outlined.Search, "Search", tint = Silver) }
-            }
-            Spacer(Modifier.height(28.dp))
-            Text(tabs[selected], color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(18.dp))
-            Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(22.dp)) {
-                Column(Modifier.fillMaxWidth().padding(22.dp)) {
-                    Text("WELCOME TO YOUR UNIVERSE", color = Gold, fontSize = 10.sp, letterSpacing = 1.8.sp)
-                    Spacer(Modifier.height(10.dp))
-                    Text("Music. Creativity. Connection.", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Discover music, artists and visual entertainment from High-Tech Entertainment.",
-                        color = Silver, fontSize = 13.sp)
-                    Spacer(Modifier.height(18.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        FeaturePill(Icons.Outlined.Headphones, "Music")
-                        FeaturePill(Icons.Outlined.Videocam, "Videos")
-                        FeaturePill(Icons.Outlined.GraphicEq, "Studio")
-                    }
-                }
-            }
-            Spacer(Modifier.height(24.dp))
-            Text("EXPLORE HTE", color = Silver, fontSize = 11.sp, letterSpacing = 2.sp)
-            Spacer(Modifier.height(12.dp))
-            Text("Your entertainment universe is taking shape.", color = Muted, fontSize = 13.sp)
-        }
-    }
-}
-
-@Composable
-private fun FeaturePill(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String) {
-    Row(Modifier.clip(RoundedCornerShape(50)).background(Gold.copy(alpha = .10f))
-        .padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, contentDescription = label, tint = Gold, modifier = Modifier.size(17.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(label, color = Silver, fontSize = 11.sp)
     }
 }
