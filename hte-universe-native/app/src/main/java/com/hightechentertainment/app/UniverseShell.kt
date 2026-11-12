@@ -22,10 +22,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaController
 import androidx.media3.ui.PlayerView
 import io.github.jan.supabase.auth.auth
 import com.hightechentertainment.app.data.AuthRepository
@@ -34,6 +37,7 @@ import com.hightechentertainment.app.data.SupabaseClientProvider
 import com.hightechentertainment.app.data.TrackDto
 import com.hightechentertainment.app.data.TrackRepository
 import com.hightechentertainment.app.data.VideoDto
+import com.hightechentertainment.app.media.HtePlaybackController
 import kotlinx.coroutines.launch
 
 private val ShellGold = Color(0xFFD6B15E)
@@ -130,7 +134,7 @@ fun UniverseShell() {
         }
     }
 
-    selectedTrack?.let { AudioPlayerDialog(track = it, onDismiss = { selectedTrack = null }) }
+    selectedTrack?.let { AudioPlayerDialog(track = it, queue = tracks, onDismiss = { selectedTrack = null }) }
     selectedVideo?.let { VideoPlayerDialog(video = it, onDismiss = { selectedVideo = null }) }
 }
 
@@ -318,7 +322,92 @@ private fun LibraryTile(icon: androidx.compose.ui.graphics.vector.ImageVector, t
 
 @Composable
 private fun AccountScreen(configured: Boolean) {
-    MemberCenter(configured = configured)
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var createAccount by remember { mutableStateOf(false) }
+    var isSignedIn by remember { mutableStateOf(false) }
+    var statusMessage by remember { mutableStateOf<String?>(null) }
+    val auth = remember(configured) { if (configured) runCatching { SupabaseClientProvider.client.auth }.getOrNull() else null }
+
+    LaunchedEffect(auth) {
+        if (auth != null) {
+            isSignedIn = auth.currentUserOrNull() != null
+            auth.sessionStatus.collect { isSignedIn = auth.currentUserOrNull() != null }
+        }
+    }
+
+    LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item {
+            Text("Account", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("Your HTE Universe membership.", color = ShellMuted, fontSize = 13.sp)
+        }
+        if (!configured || auth == null) {
+            item {
+                Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(18.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(18.dp)) {
+                        Icon(Icons.Outlined.Lock, null, tint = ShellGold, modifier = Modifier.size(28.dp))
+                        Spacer(Modifier.height(8.dp))
+                        Text("Secure account connection required", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Text("This build needs the Supabase project URL and publishable key supplied through protected build configuration. No secret service key belongs in the APK.", color = ShellMuted, fontSize = 12.sp)
+                    }
+                }
+            }
+        } else if (isSignedIn) {
+            item {
+                Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(18.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(18.dp)) {
+                        Icon(Icons.Outlined.AccountCircle, null, tint = ShellGold, modifier = Modifier.size(34.dp))
+                        Spacer(Modifier.height(8.dp))
+                        Text("You're signed in", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                        Text(auth.currentUserOrNull()?.email ?: "HTE member", color = ShellSilver, fontSize = 13.sp)
+                        Spacer(Modifier.height(14.dp))
+                        OutlinedButton(onClick = {
+                            scope.launch { runCatching { AuthRepository().signOut() }.onSuccess { statusMessage = "You have signed out." }.onFailure { statusMessage = "Sign-out failed. Try again." } }
+                        }) { Icon(Icons.Outlined.Logout, null); Spacer(Modifier.width(8.dp)); Text("Sign out") }
+                    }
+                }
+            }
+        } else {
+            item {
+                Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(18.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(if (createAccount) "Create your HTE account" else "Welcome back", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                        OutlinedTextField(value = email, onValueChange = { email = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Email address") }, singleLine = true)
+                        OutlinedTextField(value = password, onValueChange = { password = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Password") }, singleLine = true)
+                        Button(onClick = {
+                            scope.launch {
+                                statusMessage = null
+                                runCatching {
+                                    if (createAccount) AuthRepository().signUp(email, password) else AuthRepository().signIn(email, password)
+                                }.onSuccess {
+                                    isSignedIn = auth.currentUserOrNull() != null
+                                    statusMessage = if (createAccount && !isSignedIn) "Account created. Check your email if confirmation is required." else "Account request completed."
+                                }.onFailure { statusMessage = it.message?.take(180) ?: "Authentication failed. Please try again." }
+                            }
+                        }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = ShellGold, contentColor = ShellBackground)) {
+                            Text(if (createAccount) "Create account" else "Sign in")
+                        }
+                        OutlinedButton(onClick = {
+                            scope.launch {
+                                runCatching { AuthRepository().signInWithGoogle() }
+                                    .onSuccess { statusMessage = "Continue Google sign-in in your browser, then return to HTE Universe." }
+                                    .onFailure { statusMessage = it.message?.take(180) ?: "Google sign-in could not start." }
+                            }
+                        }, modifier = Modifier.fillMaxWidth()) { Text("Continue with Google") }
+                        TextButton(onClick = { createAccount = !createAccount; statusMessage = null }) {
+                            Text(if (createAccount) "Already have an account? Sign in" else "New to HTE? Create an account", color = ShellGold)
+                        }
+                    }
+                }
+            }
+        }
+        if (statusMessage != null) item { Text(statusMessage!!, color = ShellGold, fontSize = 12.sp) }
+        item {
+            Text("Settings, bookings, profile details and Founder Studio access will appear here as their account services are connected.", color = ShellMuted, fontSize = 12.sp)
+        }
+    }
 }
 
 @Composable
@@ -343,35 +432,66 @@ private fun SectionHeading(title: String, action: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun AudioPlayerDialog(track: TrackDto, onDismiss: () -> Unit) {
+private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val validUrl = runCatching { Uri.parse(track.audioUrl.orEmpty()).scheme in listOf("https", "http") }.getOrDefault(false)
-    val player = remember(track.id) {
-        ExoPlayer.Builder(context).build().apply {
-            if (validUrl) { setMediaItem(MediaItem.fromUri(track.audioUrl!!)); prepare(); playWhenReady = true }
-        }
-    }
+    var controller by remember { mutableStateOf<MediaController?>(null) }
     var playbackError by remember { mutableStateOf<String?>(null) }
-    DisposableEffect(player) {
-        val listener = object : Player.Listener {
-            override fun onPlayerError(error: PlaybackException) { playbackError = "Playback failed. Check the audio URL or network connection." }
+    val validQueue = remember(queue, track.id) {
+        queue.filter { candidate ->
+            runCatching { Uri.parse(candidate.audioUrl.orEmpty()).scheme in listOf("https", "http") }.getOrDefault(false)
+        }.map { candidate ->
+            MediaItem.Builder()
+                .setMediaId(candidate.id)
+                .setUri(candidate.audioUrl!!)
+                .setMediaMetadata(MediaMetadata.Builder().setTitle(candidate.title).setArtist(candidate.artist).build())
+                .build()
         }
-        player.addListener(listener)
-        onDispose { player.removeListener(listener); player.release() }
     }
+    val fallbackItem = remember(track.id) {
+        MediaItem.Builder().setMediaId(track.id).setUri(track.audioUrl.orEmpty())
+            .setMediaMetadata(MediaMetadata.Builder().setTitle(track.title).setArtist(track.artist).build()).build()
+    }
+
+    DisposableEffect(context) {
+        val future = HtePlaybackController.connect(context, { connected -> controller = connected }, { error ->
+            playbackError = error.message?.take(160) ?: "The background player could not start."
+        })
+        onDispose {
+            controller = null
+            HtePlaybackController.release(future)
+        }
+    }
+
+    LaunchedEffect(controller, track.id) {
+        val player = controller ?: return@LaunchedEffect
+        val items = if (validQueue.isNotEmpty()) validQueue else listOf(fallbackItem)
+        val startIndex = items.indexOfFirst { it.mediaId == track.id }.coerceAtLeast(0)
+        player.setMediaItems(items, startIndex, C.TIME_UNSET)
+        player.prepare()
+        player.play()
+    }
+
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize(), color = ShellBackground) {
             Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.Center) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("NOW PLAYING", color = ShellGold, fontSize = 11.sp, letterSpacing = 2.sp, modifier = Modifier.weight(1f))
+                    Text("NOW PLAYING · BACKGROUND ENABLED", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.2.sp, modifier = Modifier.weight(1f))
                     IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close player", tint = ShellSilver) }
                 }
                 Text(track.title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 Text(track.artist, color = ShellMuted, fontSize = 14.sp)
                 Spacer(Modifier.height(20.dp))
-                if (validUrl) AndroidView(factory = { PlayerView(it).apply { this.player = player; useController = true } }, modifier = Modifier.fillMaxWidth().height(180.dp))
-                else Text("This track does not have a valid audio URL yet.", color = ShellGold)
+                if (controller != null) {
+                    AndroidView(
+                        factory = { PlayerView(it).apply { player = controller; useController = true } },
+                        update = { it.player = controller },
+                        modifier = Modifier.fillMaxWidth().height(190.dp)
+                    )
+                } else {
+                    CircularProgressIndicator(color = ShellGold, modifier = Modifier.align(Alignment.CenterHorizontally))
+                }
                 playbackError?.let { Text(it, color = ShellGold, fontSize = 12.sp) }
+                Text("Playback continues when you leave this screen. Use the Android media notification to control it.", color = ShellMuted, fontSize = 11.sp)
             }
         }
     }
