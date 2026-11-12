@@ -56,7 +56,7 @@ jobs:
           grep -q 'id="auth-mode-toggle"' account/index.html
           grep -q 'id="forgot-password"' account/index.html
           grep -q 'id="password-update-form"' account/index.html
-          grep -q 'assets/app.js?v=15' account/index.html
+          grep -q 'assets/app.js?v=16' account/index.html
           grep -q 'onAuthStateChange' assets/app.js
           grep -q "rpc('hte_is_admin')" assets/app.js
           grep -q 'HTE_SUPABASE_CLIENT' assets/app.js
@@ -64,11 +64,14 @@ jobs:
           grep -q "client.rpc('hte_is_admin')" assets/admin-upload.js
           grep -q 'async function profileLoad' assets/app.js
           grep -q 'profiles.*insert' assets/app.js
-          grep -q 'assets/app.js?v=15' website/src/pages/index.astro
+          grep -q 'assets/app.js?v=16' website/src/pages/index.astro
+          grep -q 'assets/videos.js?v=5' website/src/pages/index.astro
+          grep -q 'The music catalogue is taking too long to respond' assets/app.js
+          grep -q 'HTE video catalogue request timed out after 12 seconds' assets/videos.js
           grep -q 'entertainment-enhancements.css' account/index.html
           grep -q 'id="primary-navigation"' website/src/pages/index.astro
           grep -q 'class="menu-toggle"' website/src/pages/index.astro
-          grep -q 'assets/app.js?v=15' admin/index.html
+          grep -q 'assets/app.js?v=16' admin/index.html
           grep -q 'assets/admin-upload.js?v=20261109-session1' admin/index.html
           grep -q 'authNext' website/src/pages/index.astro
           grep -q 'callbackParams.delete' website/src/pages/index.astro
