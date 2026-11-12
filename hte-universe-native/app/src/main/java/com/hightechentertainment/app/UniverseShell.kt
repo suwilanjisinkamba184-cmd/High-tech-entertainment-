@@ -27,13 +27,13 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import io.github.jan.supabase.auth.auth
 import com.hightechentertainment.app.data.AuthRepository
 import com.hightechentertainment.app.data.EntertainmentCatalogRepository
 import com.hightechentertainment.app.data.SupabaseClientProvider
 import com.hightechentertainment.app.data.TrackDto
 import com.hightechentertainment.app.data.TrackRepository
 import com.hightechentertainment.app.data.VideoDto
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 private val ShellGold = Color(0xFFD6B15E)
@@ -411,7 +411,7 @@ private fun EmptyCatalogueState(message: String, isLoading: Boolean, onRefresh: 
     Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             if (isLoading) CircularProgressIndicator(color = ShellGold, modifier = Modifier.size(24.dp))
-            else Icon(Icons.Outlined.MusicNote, null, tint = ShellMuted, modifier = Modifier.size(28.dp))
+            else Icon(Icons.Outlined.MusicOff, null, tint = ShellMuted, modifier = Modifier.size(28.dp))
             Spacer(Modifier.height(8.dp))
             Text(message, color = ShellSilver, fontSize = 12.sp)
             if (!isLoading) TextButton(onClick = onRefresh) { Icon(Icons.Outlined.Refresh, null); Spacer(Modifier.width(5.dp)); Text("Retry") }
