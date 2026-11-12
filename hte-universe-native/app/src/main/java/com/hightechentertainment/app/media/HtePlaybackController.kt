@@ -30,10 +30,12 @@ object HtePlaybackController {
         return future
     }
 
+    fun isConnected(): Boolean = activeController != null
     fun pause() { activeController?.pause() }
     fun resume() { activeController?.play() }
     fun next() { activeController?.seekToNextMediaItem() }
     fun previous() { activeController?.seekToPreviousMediaItem() }
+    fun stop() { activeController?.let { it.pause(); it.seekTo(0) } }
 
     fun release(future: ListenableFuture<MediaController>) {
         synchronized(this) {

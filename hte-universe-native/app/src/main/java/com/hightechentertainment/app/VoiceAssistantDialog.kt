@@ -1,15 +1,12 @@
 package com.hightechentertainment.app
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Bundle
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -17,133 +14,275 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import com.hightechentertainment.app.data.SupabaseClientProvider
 import com.hightechentertainment.app.data.TrackDto
 import com.hightechentertainment.app.media.HtePlaybackController
+import io.elevenlabs.ClientTool
+import io.elevenlabs.ClientToolResult
+import io.elevenlabs.ConversationClient
+import io.elevenlabs.ConversationConfig
+import io.elevenlabs.ConversationOverrides
+import io.elevenlabs.ConversationSession
+import io.elevenlabs.Overrides
+import io.elevenlabs.models.ConversationMode
+import io.elevenlabs.models.ConversationStatus
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.functions.functions
+import io.ktor.client.statement.bodyAsText
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 private val VoiceGold = Color(0xFFD6B15E)
 private val VoicePanel = Color(0xFF121418)
 private val VoiceMuted = Color(0xFF8B929D)
 
+@Serializable
+private data class VoiceTokenResponse(
+    val token: String,
+    @SerialName("user_id") val userId: String
+)
+
 @Composable
 fun VoiceAssistantDialog(
     tracks: List<TrackDto>,
-    onPlay: (TrackDto) -> Unit,
+    favouriteTracks: List<TrackDto>,
+    onPlayFavourites: (List<TrackDto>) -> Unit,
     onNavigate: (String) -> Unit,
     onSearch: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val currentTracks by rememberUpdatedState(tracks)
-    val currentOnPlay by rememberUpdatedState(onPlay)
+    val currentFavourites by rememberUpdatedState(favouriteTracks)
+    val currentOnPlayFavourites by rememberUpdatedState(onPlayFavourites)
     val currentOnNavigate by rememberUpdatedState(onNavigate)
     val currentOnSearch by rememberUpdatedState(onSearch)
-    val currentOnDismiss by rememberUpdatedState(onDismiss)
-    var transcript by remember { mutableStateOf("") }
-    var response by remember { mutableStateOf("Try: play a song, pause music, next track, open videos, or search an artist.") }
-    var isListening by remember { mutableStateOf(false) }
-    val recognizer = remember(context) {
-        if (SpeechRecognizer.isRecognitionAvailable(context)) SpeechRecognizer.createSpeechRecognizer(context) else null
-    }
-    val speechIntent = remember {
-        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en")
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-        }
-    }
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) {
-            transcript = ""
-            response = "Listening…"
-            isListening = true
-            recognizer?.startListening(speechIntent)
-        } else response = "Microphone permission is needed for voice commands."
+    val toolContext = remember { VoiceToolContext() }
+    SideEffect {
+        toolContext.tracks = currentTracks
+        toolContext.favourites = currentFavourites
+        toolContext.onPlayFavourites = currentOnPlayFavourites
+        toolContext.onNavigate = currentOnNavigate
+        toolContext.onSearch = currentOnSearch
     }
 
-    fun executeCommand(raw: String) {
-        val command = raw.trim()
-        val lower = command.lowercase()
-        when {
-            lower.startsWith("play ") && lower !in listOf("play music", "play audio") -> {
-                val query = command.substringAfter(' ').trim()
-                val match = currentTracks.firstOrNull { it.title.contains(query, true) || it.artist.contains(query, true) }
-                if (match != null) { response = "Playing ${match.title}."; currentOnPlay(match); currentOnDismiss() }
-                else response = "I couldn't find a published track matching '$query'."
-            }
-            lower in listOf("play", "play music", "resume", "resume music") -> { HtePlaybackController.resume(); response = "Resuming music." }
-            lower in listOf("pause", "pause music", "stop music") -> { HtePlaybackController.pause(); response = "Music paused." }
-            lower in listOf("next", "next track", "skip") -> { HtePlaybackController.next(); response = "Moving to the next track." }
-            lower in listOf("previous", "previous track", "go back") -> { HtePlaybackController.previous(); response = "Moving to the previous track." }
-            lower.startsWith("search ") -> { currentOnSearch(command.substringAfter(' ').trim()); response = "Opening search."; currentOnDismiss() }
-            lower.contains("open video") || lower.contains("show video") -> { currentOnNavigate("VIDEOS"); response = "Opening videos."; currentOnDismiss() }
-            lower.contains("open library") || lower.contains("my library") -> { currentOnNavigate("LIBRARY"); response = "Opening your library."; currentOnDismiss() }
-            lower.contains("open account") || lower.contains("open settings") -> { currentOnNavigate("ACCOUNT"); response = "Opening your account and settings."; currentOnDismiss() }
-            lower.contains("founder studio") -> { currentOnNavigate("ACCOUNT"); response = "Open Founder Studio from your owner account card."; currentOnDismiss() }
-            lower.contains("open home") || lower == "home" -> { currentOnNavigate("HOME"); response = "Opening Home."; currentOnDismiss() }
-            lower.contains("discover") || lower.contains("open search") -> { currentOnNavigate("DISCOVER"); response = "Opening Discover."; currentOnDismiss() }
-            lower == "help" || lower.contains("what can you do") -> response = "Commands: play [song], pause music, resume music, next track, previous track, open videos, open library, open account, open Founder Studio, or search [artist/song]."
-            else -> response = "I didn't recognise that command. Say 'help' to hear the available commands."
+    var session by remember { mutableStateOf<ConversationSession?>(null) }
+    var isConnecting by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf("Disconnected") }
+    var mode by remember { mutableStateOf("listening") }
+    var muted by remember { mutableStateOf(false) }
+    var audioLevel by remember { mutableStateOf(0f) }
+    var userTranscript by remember { mutableStateOf("") }
+    var agentResponse by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val microphonePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) startVoiceSession(scope, context, toolContext,
+            onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
+            onSession = { active -> session = active; isConnecting = false },
+            onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = error }
+        ) else errorMessage = "Microphone permission is required for Voice Companion."
+    }
+
+    fun connect() {
+        if (session != null || isConnecting) return
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
+        } else {
+            startVoiceSession(scope, context, toolContext,
+                onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
+                onSession = { active -> session = active; isConnecting = false },
+                onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = error }
+            )
         }
     }
 
-    DisposableEffect(recognizer) {
-        val listener = object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) { isListening = true; response = "Listening…" }
-            override fun onBeginningOfSpeech() { isListening = true }
-            override fun onRmsChanged(rmsdB: Float) = Unit
-            override fun onBufferReceived(buffer: ByteArray?) = Unit
-            override fun onEndOfSpeech() { isListening = false }
-            override fun onError(error: Int) { isListening = false; response = "Speech recognition error ($error). Tap the microphone and try again." }
-            override fun onResults(results: Bundle?) {
-                isListening = false
-                val spoken = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
-                transcript = spoken
-                if (spoken.isNotBlank()) executeCommand(spoken) else response = "I didn't hear a command. Please try again."
-            }
-            override fun onPartialResults(partialResults: Bundle?) {
-                transcript = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
-            }
-            override fun onEvent(eventType: Int, params: Bundle?) = Unit
+    LaunchedEffect(session) {
+        val active = session ?: return@LaunchedEffect
+        launch { active.status.collect { status = it.name.lowercase().replace('_', ' ') } }
+        launch { active.mode.collect { mode = it.name.lowercase() } }
+        launch { active.isMuted.collect { muted = it } }
+        launch { active.audioLevel.collect { audioLevel = it } }
+    }
+
+    DisposableEffect(session) {
+        val active = session
+        onDispose {
+            if (active != null) CoroutineScope(Dispatchers.Main.immediate).launch { runCatching { active.endSession() } }
         }
-        recognizer?.setRecognitionListener(listener)
-        onDispose { recognizer?.destroy() }
     }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxWidth().padding(20.dp), color = VoicePanel, shape = RoundedCornerShape(24.dp)) {
-            Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Surface(Modifier.fillMaxWidth().padding(18.dp), color = VoicePanel, shape = RoundedCornerShape(26.dp)) {
+            Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("HTE ASSISTANT", color = VoiceGold, fontSize = 11.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close assistant", tint = Color.White) }
+                    Column(Modifier.weight(1f)) {
+                        Text("HIGH-TECH ENTERTAINMENT", color = VoiceGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold)
+                        Text("Voice Companion", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    }
+                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close Voice Companion", tint = Color.White) }
                 }
-                Icon(Icons.Outlined.GraphicEq, null, tint = VoiceGold, modifier = Modifier.size(48.dp))
-                Text("Voice command centre", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                Text("Control music and navigate HTE Universe with your voice.", color = VoiceMuted, fontSize = 12.sp)
-                if (recognizer == null) {
-                    Text("Speech recognition is not available on this device.", color = VoiceGold, fontSize = 12.sp)
-                } else {
-                    Text(if (transcript.isBlank()) "Say a command" else "“$transcript”", color = Color.White, fontWeight = FontWeight.SemiBold)
-                    Button(onClick = {
-                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                            transcript = ""; response = "Listening…"; isListening = true; recognizer.startListening(speechIntent)
-                        } else permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                    }, enabled = !isListening, colors = ButtonDefaults.buttonColors(containerColor = VoiceGold, contentColor = Color.Black)) {
-                        Icon(if (isListening) Icons.Outlined.MicOff else Icons.Outlined.Mic, null)
-                        Spacer(Modifier.width(8.dp)); Text(if (isListening) "Listening…" else "Start listening")
+                val orbScale = 1f + (audioLevel.coerceIn(0f, 1f) * 0.22f)
+                Box(Modifier.size(94.dp).graphicsLayer { scaleX = orbScale; scaleY = orbScale }.clip(CircleShape).background(VoiceGold.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Outlined.GraphicEq, null, tint = VoiceGold, modifier = Modifier.size(48.dp))
+                }
+                Text(status.replaceFirstChar { it.uppercase() } + if (session != null) " · ${mode.replaceFirstChar { it.uppercase() }}" else "", color = VoiceGold, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text("Talk naturally to discover music, control playback and navigate HTE Universe.", color = VoiceMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
+
+                if (userTranscript.isNotBlank()) {
+                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1B2026)), shape = RoundedCornerShape(14.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                            Text("YOU", color = VoiceMuted, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+                            Text(userTranscript, color = Color.White, fontSize = 12.sp)
+                        }
                     }
                 }
-                Text(response, color = VoiceGold, fontSize = 12.sp)
-                Text("Voice commands use the Android speech recognizer. Generative AI chat is not connected in this build.", color = VoiceMuted, fontSize = 10.sp)
+                if (agentResponse.isNotBlank()) {
+                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF201D17)), shape = RoundedCornerShape(14.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                            Text("VOICE COMPANION", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+                            Text(agentResponse, color = Color.White, fontSize = 12.sp)
+                        }
+                    }
+                }
+                errorMessage?.let { Text(it, color = Color(0xFFFFA8A8), fontSize = 11.sp, textAlign = TextAlign.Center) }
+
+                if (isConnecting) LinearProgressIndicator(Modifier.fillMaxWidth(), color = VoiceGold)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (session == null) {
+                        Button(onClick = { connect() }, enabled = !isConnecting, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = VoiceGold, contentColor = Color.Black)) {
+                            Icon(Icons.Outlined.Mic, null); Spacer(Modifier.width(8.dp)); Text(if (isConnecting) "Connecting…" else "Start talking")
+                        }
+                    } else {
+                        OutlinedButton(onClick = { scope.launch { session?.toggleMute() } }, modifier = Modifier.weight(1f)) {
+                            Icon(if (muted) Icons.Outlined.MicOff else Icons.Outlined.Mic, null); Spacer(Modifier.width(6.dp)); Text(if (muted) "Unmute" else "Mute")
+                        }
+                        Button(onClick = { session = null; status = "Disconnecting" }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8E3434), contentColor = Color.White)) {
+                            Icon(Icons.Outlined.CallEnd, null); Spacer(Modifier.width(6.dp)); Text("End session")
+                        }
+                    }
+                }
+                Text("Your private session is authenticated through HTE Supabase. The ElevenLabs API key stays server-side.", color = VoiceMuted, fontSize = 9.sp, textAlign = TextAlign.Center)
             }
+        }
+    }
+
+    // Keep the callbacks current for the registered SDK client tools.
+    @Suppress("UNUSED_VARIABLE") val activeMode = mode
+}
+
+private class VoiceToolContext {
+    var tracks: List<TrackDto> = emptyList()
+    var favourites: List<TrackDto> = emptyList()
+    var onPlayFavourites: (List<TrackDto>) -> Unit = {}
+    var onNavigate: (String) -> Unit = {}
+    var onSearch: (String) -> Unit = {}
+}
+
+private fun startVoiceSession(
+    scope: CoroutineScope,
+    context: android.content.Context,
+    toolContext: VoiceToolContext,
+    onConnecting: () -> Unit,
+    onSession: (ConversationSession) -> Unit,
+    onFailure: (String) -> Unit
+) {
+    scope.launch {
+        onConnecting()
+        try {
+            val user = SupabaseClientProvider.client.auth.currentUserOrNull()
+                ?: error("Sign in to use the High-Tech Entertainment Voice Companion.")
+            val response = SupabaseClientProvider.client.functions.invoke("elevenlabs-voice-token")
+            val token = Json { ignoreUnknownKeys = true }.decodeFromString<VoiceTokenResponse>(response.bodyAsText())
+            check(token.token.isNotBlank()) { "The voice service did not return a conversation token." }
+
+            val clientTools = mapOf(
+                "control_playback" to object : ClientTool {
+                    override suspend fun execute(parameters: Map<String, Any>): ClientToolResult? {
+                        val action = parameters["action"] as? String ?: return ClientToolResult.failure("Missing playback action.")
+                        return withContext(Dispatchers.Main.immediate) {
+                            if (action == "play_favourites") {
+                                val favourites = toolContext.favourites
+                                if (favourites.isEmpty()) ClientToolResult.failure("There are no saved favourites in the current library.")
+                                else {
+                                    toolContext.onPlayFavourites(favourites)
+                                    ClientToolResult.success("Started the saved favourites queue with ${favourites.size} tracks.")
+                                }
+                            } else if (!HtePlaybackController.isConnected()) {
+                                ClientToolResult.failure("There is no active music player session yet.")
+                            } else {
+                                when (action) {
+                                    "pause" -> HtePlaybackController.pause()
+                                    "resume" -> HtePlaybackController.resume()
+                                    "next" -> HtePlaybackController.next()
+                                    "previous" -> HtePlaybackController.previous()
+                                    "stop" -> HtePlaybackController.stop()
+                                    else -> return@withContext ClientToolResult.failure("Unsupported playback action: $action")
+                                }
+                                ClientToolResult.success("Playback action '$action' executed by HTE Universe.")
+                            }
+                        }
+                    }
+                },
+                "navigate_app" to object : ClientTool {
+                    override suspend fun execute(parameters: Map<String, Any>): ClientToolResult? {
+                        val destination = parameters["destination"] as? String ?: return ClientToolResult.failure("Missing app destination.")
+                        val target = when (destination) {
+                            "Home" -> "HOME"
+                            "Discover" -> "DISCOVER"
+                            "Videos" -> "VIDEOS"
+                            "Library", "Favourites", "Downloads" -> "LIBRARY"
+                            "Bookings", "Profile", "Founder Studio" -> "ACCOUNT"
+                            "Voice Companion" -> null
+                            "App Updates" -> return ClientToolResult.failure("The App Updates page is not available in this build.")
+                            else -> return ClientToolResult.failure("Unknown app destination: $destination")
+                        }
+                        if (target != null) withContext(Dispatchers.Main.immediate) { toolContext.onNavigate(target) }
+                        return ClientToolResult.success(if (destination == "Founder Studio") "Opened Account. Founder Studio is shown only when the native app verifies the signed-in owner role." else if (destination == "Voice Companion") "Voice Companion is already open." else "Opened $destination.")
+                    }
+                },
+                "search_catalogue" to object : ClientTool {
+                    override suspend fun execute(parameters: Map<String, Any>): ClientToolResult? {
+                        val query = (parameters["query"] as? String)?.trim().orEmpty()
+                        if (query.isBlank()) return ClientToolResult.failure("Enter a song, artist or genre to search.")
+                        val matches = toolContext.tracks.filter { track ->
+                            track.title.contains(query, true) || track.artist.contains(query, true) || track.genre.orEmpty().contains(query, true)
+                        }
+                        withContext(Dispatchers.Main.immediate) { toolContext.onSearch(query) }
+                        val summary = if (matches.isEmpty()) "No matching published tracks are currently loaded for '$query'. Discover search has been opened." else
+                            "Found ${matches.size} published track(s): ${matches.take(5).joinToString { "${it.title} by ${it.artist}" }}. Discover search has been opened."
+                        return ClientToolResult.success(summary)
+                    }
+                }
+            )
+
+            val config = ConversationConfig(
+                conversationToken = token.token,
+                userId = token.userId.ifBlank { user.id },
+                textOnly = false,
+                audioInputSampleRate = 16000,
+                overrides = Overrides(conversation = ConversationOverrides(textOnly = false)),
+                clientTools = clientTools
+            )
+            val active = ConversationClient.startSession(config, context)
+            onSession(active)
+        } catch (error: Throwable) {
+            onFailure(error.message?.take(220) ?: "Could not connect to the HTE Voice Companion.")
         }
     }
 }

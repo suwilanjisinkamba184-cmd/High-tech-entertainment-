@@ -64,6 +64,7 @@ fun UniverseShell() {
     var isLoading by remember { mutableStateOf(false) }
     var catalogueError by remember { mutableStateOf<String?>(null) }
     var selectedTrack by remember { mutableStateOf<TrackDto?>(null) }
+    var selectedTrackQueue by remember { mutableStateOf<List<TrackDto>?>(null) }
     var selectedVideo by remember { mutableStateOf<VideoDto?>(null) }
     var showVoiceAssistant by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -97,13 +98,9 @@ fun UniverseShell() {
     }
 
     LaunchedEffect(configured) { refreshCatalogue() }
-    LaunchedEffect(selectedTab) {
-        if (selectedTab == UniverseTab.LIBRARY) {
-            downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
-            if (configured) {
-                favouriteTrackIds = runCatching { withContext(Dispatchers.IO) { MemberRepository().getFavouriteTrackIds() } }.getOrDefault(emptySet())
-            }
-        }
+    LaunchedEffect(selectedTab, showVoiceAssistant) {
+        if (selectedTab == UniverseTab.LIBRARY) downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
+        if (configured) favouriteTrackIds = runCatching { withContext(Dispatchers.IO) { MemberRepository().getFavouriteTrackIds() } }.getOrDefault(emptySet())
     }
 
     fun toggleFavourite(track: TrackDto) {
@@ -165,7 +162,7 @@ fun UniverseShell() {
                     tracks = tracks, videos = videos, isLoading = isLoading,
                     onExplore = { selectedTab = UniverseTab.DISCOVER },
                     onVideos = { selectedTab = UniverseTab.VIDEOS },
-                    onPlayTrack = { selectedTrack = it }, onPlayVideo = { selectedVideo = it },
+                    onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it) }, onPlayVideo = { selectedVideo = it },
                     onDownloadTrack = { startDownload(it.audioUrl, it.title, "audio") },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     onDownloadVideo = { startDownload(it.videoUrl, it.title, "video") },
@@ -173,7 +170,7 @@ fun UniverseShell() {
                 )
                 UniverseTab.DISCOVER -> DiscoverScreen(
                     tracks = tracks, isLoading = isLoading, error = catalogueError,
-                    onPlay = { selectedTrack = it }, onDownload = { startDownload(it.audioUrl, it.title, "audio") },
+                    onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it) }, onDownload = { startDownload(it.audioUrl, it.title, "audio") },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     initialQuery = searchQuery, onQueryChanged = { searchQuery = it }, onRefresh = ::refreshCatalogue
                 )
@@ -185,14 +182,18 @@ fun UniverseShell() {
                     onSignIn = { selectedTab = UniverseTab.ACCOUNT },
                     downloads = downloads,
                     favouriteTracks = tracks.filter { it.id in favouriteTrackIds },
-                    onPlayFavourite = { selectedTrack = it },
+                    onPlayFavourite = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks.filter { track -> track.id in favouriteTrackIds } else listOf(it) },
                     onToggleFavourite = ::toggleFavourite,
                     onDownloadFavourite = { startDownload(it.audioUrl, it.title, "audio") },
                     onRemoveDownload = { record -> scope.launch { withContext(Dispatchers.IO) { offlineManager.remove(record.id) }; downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() } } },
                     onPlayDownload = { record ->
                         if (record.localUri.isNullOrBlank()) Toast.makeText(context, "This download is not ready yet.", Toast.LENGTH_SHORT).show()
                         else if (record.mediaType == "video") selectedVideo = VideoDto(record.id.toString(), record.title, videoUrl = record.localUri)
-                        else selectedTrack = TrackDto(record.id.toString(), record.title, artist = "Downloaded", audioUrl = record.localUri)
+                        else {
+                            val offlineTrack = TrackDto(record.id.toString(), record.title, artist = "Downloaded", audioUrl = record.localUri)
+                            selectedTrack = offlineTrack
+                            selectedTrackQueue = listOf(offlineTrack)
+                        }
                     }
                 )
                 UniverseTab.ACCOUNT -> AccountScreen(configured = configured, onSettingsChanged = { settingsRevision++ })
@@ -200,12 +201,18 @@ fun UniverseShell() {
         }
     }
 
-    selectedTrack?.let { AudioPlayerDialog(track = it, queue = if (autoplayNext) tracks else listOf(it), onDismiss = { selectedTrack = null }) }
+    selectedTrack?.let { AudioPlayerDialog(track = it, queue = selectedTrackQueue ?: if (autoplayNext) tracks else listOf(it), onDismiss = { selectedTrack = null; selectedTrackQueue = null }) }
     selectedVideo?.let { VideoPlayerDialog(video = it, onDismiss = { selectedVideo = null }) }
     if (showVoiceAssistant) {
         VoiceAssistantDialog(
             tracks = tracks,
-            onPlay = { selectedTrack = it; showVoiceAssistant = false },
+            favouriteTracks = tracks.filter { it.id in favouriteTrackIds },
+            onPlayFavourites = { favourites ->
+                favourites.firstOrNull()?.let { first ->
+                    selectedTrack = first
+                    selectedTrackQueue = if (autoplayNext) favourites else listOf(first)
+                }
+            },
             onNavigate = { destination ->
                 selectedTab = when (destination) {
                     "HOME" -> UniverseTab.HOME
