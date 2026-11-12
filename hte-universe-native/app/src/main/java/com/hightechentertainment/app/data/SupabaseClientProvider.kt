@@ -33,7 +33,7 @@ object SupabaseClientProvider {
             }
             install(Postgrest)
             install(Storage)
-        install(Functions)
+            install(Functions)
         }
     }
 }
