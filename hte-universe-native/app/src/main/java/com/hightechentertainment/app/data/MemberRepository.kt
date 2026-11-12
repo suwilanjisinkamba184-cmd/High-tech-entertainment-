@@ -12,7 +12,8 @@ data class ProfileDto(
     @SerialName("display_name") val displayName: String = "",
     val bio: String = "",
     val phone: String = "",
-    @SerialName("avatar_url") val avatarUrl: String = ""
+    @SerialName("avatar_url") val avatarUrl: String = "",
+    @SerialName("updated_at") val updatedAt: String = java.time.Instant.now().toString()
 )
 
 @Serializable
@@ -84,6 +85,20 @@ class MemberRepository {
             .select { filter { eq("id", userId) } }
             .decodeList<ProfileDto>()
             .firstOrNull()
+    }
+
+    suspend fun saveMyProfile(displayName: String, bio: String, phone: String, avatarUrl: String = "") {
+        val userId = requireUserId()
+        client.from("profiles").upsert(
+            ProfileDto(
+                id = userId,
+                displayName = displayName.trim(),
+                bio = bio.trim(),
+                phone = phone.trim(),
+                avatarUrl = avatarUrl.trim(),
+                updatedAt = java.time.Instant.now().toString()
+            )
+        )
     }
 
     suspend fun getMyBookings(): List<BookingDto> {
