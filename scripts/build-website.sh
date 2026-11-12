@@ -31,7 +31,7 @@ rm -f dist/assets/booking-confirmation.aac
 test -s dist/assets/booking-confirmation.mp3 || { echo "MP3 conversion failed" >&2; exit 1; }
 test ! -e dist/assets/booking-confirmation.aac || { echo "Source AAC must not be published" >&2; exit 1; }
 
-cp app-download.html robots.txt sitemap.xml account-deletion.html privacy-policy.html high-tech-logo.svg dist/
+cp app-download.html robots.txt sitemap.xml account-deletion.html privacy-policy.html high-tech-logo.svg music-spotlight.html dist/
 
 for file in terms-of-service.html; do
   if [ ! -s "$file" ]; then
@@ -47,7 +47,7 @@ done
 
 touch dist/.nojekyll
 
-for file in index.html app-download.html robots.txt sitemap.xml supabase-config.js account-deletion.html privacy-policy.html terms-of-service.html admin/index.html account/index.html assets/site.css assets/app.js assets/videos.js assets/booking-confirmation.mp3 high-tech-logo.svg; do
+for file in index.html app-download.html robots.txt sitemap.xml supabase-config.js account-deletion.html privacy-policy.html music-spotlight.html terms-of-service.html admin/index.html account/index.html assets/site.css assets/app.js assets/videos.js assets/booking-confirmation.mp3 high-tech-logo.svg; do
   # Original artwork must be present in the actual published output.
 
   test -s "dist/$file" || { echo "Missing required build output: $file" >&2; exit 1; }
@@ -64,7 +64,8 @@ import xml.etree.ElementTree as ET
 root = Path("dist")
 homepage = (root / "index.html").read_text(encoding="utf-8")
 required_homepage_markers = (
-    "Sound that",
+    "Welcome to",
+    "HTE Universe.",
     "topbar",
     "high-tech-logo.svg",
     "assets/app.js?v=16",
