@@ -65,6 +65,8 @@ fun UniverseShell() {
     var catalogueError by remember { mutableStateOf<String?>(null) }
     var selectedTrack by remember { mutableStateOf<TrackDto?>(null) }
     var selectedVideo by remember { mutableStateOf<VideoDto?>(null) }
+    var showVoiceAssistant by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val offlineManager = remember(context) { OfflineDownloadManager(context) }
@@ -157,7 +159,7 @@ fun UniverseShell() {
         }
     ) { insets ->
         Column(Modifier.fillMaxSize().padding(insets)) {
-            UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER })
+            UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true })
             when (selectedTab) {
                 UniverseTab.HOME -> HomeScreen(
                     tracks = tracks, videos = videos, isLoading = isLoading,
@@ -172,7 +174,8 @@ fun UniverseShell() {
                 UniverseTab.DISCOVER -> DiscoverScreen(
                     tracks = tracks, isLoading = isLoading, error = catalogueError,
                     onPlay = { selectedTrack = it }, onDownload = { startDownload(it.audioUrl, it.title, "audio") },
-                    favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite, onRefresh = ::refreshCatalogue
+                    favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
+                    initialQuery = searchQuery, onQueryChanged = { searchQuery = it }, onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.VIDEOS -> VideosScreen(
                     videos = videos, isLoading = isLoading, error = catalogueError,
@@ -199,10 +202,28 @@ fun UniverseShell() {
 
     selectedTrack?.let { AudioPlayerDialog(track = it, queue = if (autoplayNext) tracks else listOf(it), onDismiss = { selectedTrack = null }) }
     selectedVideo?.let { VideoPlayerDialog(video = it, onDismiss = { selectedVideo = null }) }
+    if (showVoiceAssistant) {
+        VoiceAssistantDialog(
+            tracks = tracks,
+            onPlay = { selectedTrack = it; showVoiceAssistant = false },
+            onNavigate = { destination ->
+                selectedTab = when (destination) {
+                    "HOME" -> UniverseTab.HOME
+                    "VIDEOS" -> UniverseTab.VIDEOS
+                    "LIBRARY" -> UniverseTab.LIBRARY
+                    "ACCOUNT" -> UniverseTab.ACCOUNT
+                    else -> UniverseTab.DISCOVER
+                }
+                showVoiceAssistant = false
+            },
+            onSearch = { searchQuery = it; selectedTab = UniverseTab.DISCOVER; showVoiceAssistant = false },
+            onDismiss = { showVoiceAssistant = false }
+        )
+    }
 }
 
 @Composable
-private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit) {
+private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, onVoice: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().background(ShellBackground).padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -212,6 +233,7 @@ private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit) {
             Text("The Pride of Africa", color = ShellSilver, fontSize = 11.sp)
         }
         IconButton(onClick = onSearch) { Icon(Icons.Outlined.Search, "Search", tint = ShellSilver) }
+        IconButton(onClick = onVoice) { Icon(Icons.Outlined.Mic, "Voice assistant", tint = ShellGold) }
         IconButton(onClick = onNotifications) { Icon(Icons.Outlined.NotificationsNone, "Notifications", tint = ShellSilver) }
     }
 }
@@ -261,8 +283,9 @@ private fun HomeScreen(
 }
 
 @Composable
-private fun DiscoverScreen(tracks: List<TrackDto>, isLoading: Boolean, error: String?, onPlay: (TrackDto) -> Unit, onDownload: (TrackDto) -> Unit, favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit) {
-    var query by remember { mutableStateOf("") }
+private fun DiscoverScreen(tracks: List<TrackDto>, isLoading: Boolean, error: String?, onPlay: (TrackDto) -> Unit, onDownload: (TrackDto) -> Unit, favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, initialQuery: String, onQueryChanged: (String) -> Unit, onRefresh: () -> Unit) {
+    var query by remember { mutableStateOf(initialQuery) }
+    LaunchedEffect(initialQuery) { query = initialQuery }
     var selectedGenre by remember { mutableStateOf("All") }
     val genres = listOf("All") + tracks.mapNotNull { it.genre?.takeIf(String::isNotBlank) }.distinct().sorted()
     val filtered = tracks.filter { track ->
@@ -274,7 +297,7 @@ private fun DiscoverScreen(tracks: List<TrackDto>, isLoading: Boolean, error: St
         Text("Discover", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         Text("Find your next favourite sound.", color = ShellMuted, fontSize = 13.sp)
         Spacer(Modifier.height(16.dp))
-        OutlinedTextField(value = query, onValueChange = { query = it }, modifier = Modifier.fillMaxWidth(),
+        OutlinedTextField(value = query, onValueChange = { query = it; onQueryChanged(it) }, modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Search tracks or artists") }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true)
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -562,7 +585,7 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
         })
         onDispose {
             controller = null
-            HtePlaybackController.release(future)
+            // Keep the app-scoped controller connected so background and voice controls remain available.
         }
     }
 
