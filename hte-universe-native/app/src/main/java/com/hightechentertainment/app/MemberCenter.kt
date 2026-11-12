@@ -1,5 +1,11 @@
 package com.hightechentertainment.app
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -39,6 +45,11 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
     var autoplayNext by remember { mutableStateOf(settingsStore.autoplayNext) }
     var dataSaver by remember { mutableStateOf(settingsStore.dataSaver) }
     var showFounderStudio by remember { mutableStateOf(false) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        notificationsEnabled = granted
+        settingsStore.notificationsEnabled = granted
+        onSettingsChanged()
+    }
     val scope = rememberCoroutineScope()
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -192,8 +203,12 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
         }
         item { Text("APP SETTINGS", color = MemberGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
         item {
-            PreferenceRow("Notifications", "Show account and booking updates in the app", notificationsEnabled) {
-                notificationsEnabled = it; settingsStore.notificationsEnabled = it; onSettingsChanged()
+            PreferenceRow("Notifications", "Show account and booking updates in the app", notificationsEnabled) { enabled ->
+                if (enabled && Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    notificationsEnabled = enabled; settingsStore.notificationsEnabled = enabled; onSettingsChanged()
+                }
             }
         }
         item {
@@ -233,6 +248,7 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
                         .onSuccess {
                             bookings = MemberRepository().getMyBookings()
                             statusMessage = "Your booking request has been submitted."
+                            if (settingsStore.notificationsEnabled) AppNotificationHelper.show(context, "Booking request received", "Your HTE booking request has been submitted.")
                             showBookingForm = false
                         }
                         .onFailure { statusMessage = it.message?.take(180) ?: "Booking request failed. Please retry." }
