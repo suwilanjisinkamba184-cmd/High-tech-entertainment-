@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -113,11 +114,9 @@ private fun UniverseSplash(onFinished: () -> Unit) {
         StarField(Modifier.fillMaxSize(), orbit)
         Column(Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 36.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Image(painter = painterResource(R.drawable.ic_hte_crown), contentDescription = "HTE Universe crown", modifier = Modifier.size(width = 76.dp, height = 52.dp))
+            Image(painter = painterResource(R.drawable.ht_logo), contentDescription = "High-Tech Entertainment official logo", contentScale = ContentScale.Fit, modifier = Modifier.size(142.dp))
             Spacer(Modifier.height(8.dp))
-            Text("HTE", color = Silver, fontSize = 48.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 8.sp)
             Text("UNIVERSE", color = Gold, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 7.sp)
-            Text("HIGH-TECH ENTERTAINMENT", color = Silver, fontSize = 10.sp, letterSpacing = 2.4.sp)
             Spacer(Modifier.height(44.dp))
             Box(Modifier.size(230.dp), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxSize().graphicsLayer { rotationZ = orbit }) {
