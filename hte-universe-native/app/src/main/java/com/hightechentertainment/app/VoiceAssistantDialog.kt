@@ -33,8 +33,6 @@ import io.elevenlabs.ConversationConfig
 import io.elevenlabs.ConversationOverrides
 import io.elevenlabs.ConversationSession
 import io.elevenlabs.Overrides
-import io.elevenlabs.models.ConversationMode
-import io.elevenlabs.models.ConversationStatus
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.functions.functions
 import io.ktor.client.statement.bodyAsText
@@ -43,6 +41,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -79,6 +78,9 @@ fun VoiceAssistantDialog(
         toolContext.onPlayFavourites = currentOnPlayFavourites
         toolContext.onNavigate = currentOnNavigate
         toolContext.onSearch = currentOnSearch
+        toolContext.onUserTranscript = { userTranscript = it }
+        toolContext.onAgentResponse = { agentResponse = it }
+        toolContext.onError = { errorMessage = it; status = "Error" }
     }
 
     var session by remember { mutableStateOf<ConversationSession?>(null) }
@@ -192,6 +194,9 @@ private class VoiceToolContext {
     var onPlayFavourites: (List<TrackDto>) -> Unit = {}
     var onNavigate: (String) -> Unit = {}
     var onSearch: (String) -> Unit = {}
+    var onUserTranscript: (String) -> Unit = {}
+    var onAgentResponse: (String) -> Unit = {}
+    var onError: (String) -> Unit = {}
 }
 
 private fun startVoiceSession(
@@ -277,7 +282,10 @@ private fun startVoiceSession(
                 textOnly = false,
                 audioInputSampleRate = 16000,
                 overrides = Overrides(conversation = ConversationOverrides(textOnly = false)),
-                clientTools = clientTools
+                clientTools = clientTools,
+                onUserTranscriptEvent = { text, _ -> toolContext.onUserTranscript(text) },
+                onAgentResponseEvent = { text, _ -> toolContext.onAgentResponse(text) },
+                onError = { code, message -> toolContext.onError(message ?: "Voice service error ($code).") }
             )
             val active = ConversationClient.startSession(config, context)
             onSession(active)
