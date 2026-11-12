@@ -145,12 +145,14 @@ jobs:
           APK_SHA256="$(sha256sum "$SIGNED_APK" | awk '{print $1}')"
           test "${#CERT_SHA256}" -eq 64 || { echo "::error::Could not extract signer SHA-256."; exit 1; }
 
-          # Compare against the latest publicly published production APK, not just the keystore.
-          # The latest official production release at this commit is v3.2.0-SU.
-          PRODUCTION_APK="$RUNNER_TEMP/production-v3.2.0-SU.apk"
-          curl --fail --location --retry 3 --retry-delay 2 \
-            "https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/v3.2.0-SU/High-Tech-Entertainment-v3.2.0-SU.apk" \
-            --output "$PRODUCTION_APK"
+          # Resolve the latest published production APK dynamically. Never hard-code a
+          # version tag: the release history may use a different version family.
+          RELEASE_JSON="$(curl --fail --silent --show-error --location --retry 3 \
+            "https://api.github.com/repos/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases?per_page=20")"
+          PRODUCTION_URL="$(printf '%s' "$RELEASE_JSON" | python3 -c 'import json,sys; releases=json.load(sys.stdin); matches=[a["browser_download_url"] for r in releases if not r.get("draft") and not r.get("prerelease") for a in r.get("assets",[]) if a.get("name","").lower().endswith(".apk")]; print(matches[0] if matches else "")')"
+          test -n "$PRODUCTION_URL" || { echo "::error::No public production APK asset was found to verify install-over compatibility."; exit 1; }
+          PRODUCTION_APK="$RUNNER_TEMP/production-reference.apk"
+          curl --fail --location --retry 3 --retry-delay 2 "$PRODUCTION_URL" --output "$PRODUCTION_APK"
           PRODUCTION_BADGING="$("$SDK_BUILD_TOOLS/aapt" dump badging "$PRODUCTION_APK")"
           printf '%s\n' "$PRODUCTION_BADGING" | grep -F "package: name='com.hightechentertainment.app'" >/dev/null || {
             echo "::error::Reference production APK package ID does not match."
@@ -168,7 +170,7 @@ jobs:
             echo "::error::Native candidate signer differs from the latest production APK. Install-over compatibility is not established."
             exit 1
           fi
-          echo "PASS: native candidate signer exactly matches production v3.2.0-SU."
+          echo "PASS: native candidate signer exactly matches the latest published production APK."
 
           FINAL_APK="$RUNNER_TEMP/High-Tech-Entertainment-native-v3.2.1.apk"
           mv "$SIGNED_APK" "$FINAL_APK"
@@ -186,7 +188,7 @@ jobs:
               "sha256": os.environ["APK_SHA256"],
               "certificateSha256": os.environ["CERT_SHA256"],
               "productionSignerMatch": os.environ["CERT_SHA256"] == os.environ["PRODUCTION_CERT_SHA256"],
-              "comparedProductionRelease": "v3.2.0-SU",
+              "comparedProductionRelease": "latest published production APK",
               "channel": "candidate",
               "releaseNotes": "High-Tech Entertainment native Android 3.2.1 signed candidate."
           }
