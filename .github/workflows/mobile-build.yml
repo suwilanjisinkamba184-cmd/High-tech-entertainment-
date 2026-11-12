@@ -6,13 +6,15 @@ on:
     paths:
       - 'mobile-app/lib/**'
       - 'mobile-app/test/**'
-      - 'mobile-app/assets/**'
       - 'mobile-app/pubspec.yaml'
       - 'mobile-app/shorebird.yaml'
   pull_request:
     branches: [main]
     paths:
-      - 'mobile-app/**'
+      - 'mobile-app/lib/**'
+      - 'mobile-app/test/**'
+      - 'mobile-app/pubspec.yaml'
+      - 'mobile-app/shorebird.yaml'
   workflow_dispatch:
     inputs:
       operation:

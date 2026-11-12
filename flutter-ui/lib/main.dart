@@ -1,0 +1,3203 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:video_player/video_player.dart';
+import 'studio_services_screen.dart';
+
+const _gold = Color(0xFFC5A45A);
+const _black = Color(0xFF090909);
+const _surface = Color(0xFF151515);
+
+const _startupChannel = MethodChannel('com.hightechentertainment.app/startup');
+
+/// Official four-colour Google mark. Keep the provider identity recognizable;
+/// the surrounding control uses the High-Tech gold/obsidian design system.
+class _GoogleBrandMark extends StatelessWidget {
+  const _GoogleBrandMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return SvgPicture.string(
+      '''
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.44a5.5 5.5 0 0 1-2.39 3.61v2.94h3.87c2.27-2.09 3.57-5.17 3.57-8.79z"/>
+        <path fill="#34A853" d="M12 24c3.24 0 5.96-1.08 7.95-2.94l-3.87-2.94c-1.08.72-2.45 1.15-4.08 1.15-3.14 0-5.8-2.12-6.75-4.98H1.25v3.03A12 12 0 0 0 12 24z"/>
+        <path fill="#FBBC05" d="M5.25 14.29a7.22 7.22 0 0 1 0-4.58V6.68H1.25a12 12 0 0 0 0 10.64l4-3.03z"/>
+        <path fill="#EA4335" d="M12 4.73c1.77 0 3.36.61 4.61 1.82l3.45-3.45C17.95 1.14 15.24 0 12 0A12 12 0 0 0 1.25 6.68l4 3.03C6.2 6.85 8.86 4.73 12 4.73z"/>
+      </svg>
+      ''',
+      width: 22,
+      height: 22,
+      fit: BoxFit.contain,
+    );
+  }
+}
+
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const HighTechEntertainmentApp());
+}
+
+class HighTechEntertainmentApp extends StatelessWidget {
+  const HighTechEntertainmentApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'HTE Universe',
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: _black,
+        colorScheme: const ColorScheme.dark(
+          primary: _gold,
+          secondary: _gold,
+          surface: _surface,
+        ),
+        useMaterial3: true,
+        fontFamily: 'Roboto',
+        splashFactory: InkSparkle.splashFactory,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: _black,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 19,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.2,
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: _surface,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+          labelStyle: const TextStyle(color: Colors.white60),
+          hintStyle: const TextStyle(color: Colors.white38),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Colors.white12),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Colors.white12),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: _gold, width: 1.4),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFFFB4AB)),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFFFB4AB), width: 1.4),
+          ),
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: _surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: Colors.white12),
+          ),
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: _surface,
+          modalBackgroundColor: _surface,
+          showDragHandle: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          backgroundColor: const Color(0xFF24211B),
+          contentTextStyle: const TextStyle(color: Colors.white),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        dividerTheme: const DividerThemeData(
+          color: Colors.white12,
+          thickness: 1,
+          space: 1,
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+            backgroundColor: _gold,
+            foregroundColor: _black,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            textStyle: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.3),
+          ),
+        ),
+        iconTheme: const IconThemeData(color: _gold, size: 22),
+        navigationBarTheme: NavigationBarThemeData(
+          iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+            color: states.contains(WidgetState.selected) ? _gold : Colors.white54,
+            size: 23,
+          )),
+          labelTextStyle: WidgetStateProperty.all(
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.3),
+          ),
+          indicatorColor: _gold.withValues(alpha: 0.14),
+          backgroundColor: _surface,
+        ),
+      ),
+      home: const StartupExperience(),
+    );
+  }
+}
+
+class StartupExperience extends StatefulWidget {
+  const StartupExperience({super.key});
+
+  @override
+  State<StartupExperience> createState() => _StartupExperienceState();
+}
+
+class _StartupExperienceState extends State<StartupExperience>
+    with TickerProviderStateMixin {
+  static const _duration = Duration(seconds: 15);
+  late final AnimationController _motion = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2600),
+  )..repeat(reverse: true);
+  late final AnimationController _progress = AnimationController(
+    vsync: this,
+    duration: _duration,
+  );
+  Timer? _timer;
+  bool _finished = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startExperience();
+  }
+
+  Future<void> _startExperience() async {
+    // Arm a hard fallback first: a stalled native bridge cannot trap the user
+    // on the splash. If audio starts successfully, rebase to its confirmed
+    // native start so the visual transition and 15-second audio cue stay in sync.
+    _armSplashDeadline();
+
+    try {
+      final audioStarted =
+          await _startupChannel.invokeMethod<bool>('playStartup');
+      if (!mounted || _finished) return;
+      if (audioStarted == true) {
+        _armSplashDeadline();
+      }
+    } on PlatformException {
+      // Audio is optional in module previews; the fallback deadline remains.
+    } on MissingPluginException {
+      // Native audio is unavailable in a standalone Flutter preview.
+    }
+  }
+
+  void _armSplashDeadline() {
+    _timer?.cancel();
+    _progress.forward(from: 0);
+    _timer = Timer(_duration, _finishExperience);
+  }
+
+  void _finishExperience() {
+    if (!mounted || _finished) return;
+    _finished = true;
+    _timer?.cancel();
+    _progress.value = 1.0;
+    unawaited(_stopStartup());
+    setState(() {});
+  }
+
+  Future<void> _stopStartup() async {
+    try {
+      await _startupChannel.invokeMethod<void>('stopStartup');
+    } on PlatformException {
+      // The UI must still complete if native audio has already stopped.
+    } on MissingPluginException {
+      // Expected in standalone Flutter widget previews.
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    unawaited(_stopStartup());
+    _motion.dispose();
+    _progress.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_finished) return const AppRouterScreen();
+
+    return Scaffold(
+      body: AnimatedBuilder(
+        animation: Listenable.merge([_motion, _progress]),
+        builder: (context, _) {
+          final pulse = 0.96 + (_motion.value * 0.055);
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment(0, -0.18),
+                    radius: 0.95,
+                    colors: [Color(0xFF292012), _black, _black],
+                    stops: [0, 0.58, 1],
+                  ),
+                ),
+              ),
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Transform.scale(
+                      scale: pulse,
+                      child: Container(
+                        width: 184,
+                        height: 184,
+                        padding: const EdgeInsets.all(23),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: _gold.withValues(alpha: 0.62),
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _gold.withValues(
+                                alpha: 0.08 + (_motion.value * 0.12),
+                              ),
+                              blurRadius: 38,
+                              spreadRadius: 8,
+                            ),
+                          ],
+                        ),
+                        child: SvgPicture.asset(
+                          'assets/high-tech-logo.svg',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 34),
+                    const Text(
+                      'HIGH-TECH',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 5.2,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    const Text(
+                      'ENTERTAINMENT',
+                      style: TextStyle(
+                        color: _gold,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 4.3,
+                      ),
+                    ),
+                    const SizedBox(height: 42),
+                    SizedBox(
+                      width: 190,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: LinearProgressIndicator(
+                          value: _progress.value,
+                          minHeight: 3,
+                          backgroundColor: Colors.white.withValues(alpha: 0.12),
+                          valueColor:
+                              const AlwaysStoppedAnimation<Color>(_gold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      _startupStatus(_progress.value),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.58),
+                        fontSize: 10,
+                        letterSpacing: 1.6,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 36,
+                child: Text(
+                  'MUSIC  •  BEATS  •  PRODUCTION  •  BEYOND',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.38),
+                    fontSize: 9,
+                    letterSpacing: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  String _startupStatus(double progress) {
+    if (progress < 0.25) return 'PREPARING YOUR EXPERIENCE';
+    if (progress < 0.55) return 'LOADING THE STUDIO';
+    if (progress < 0.82) return 'TUNING THE EXPERIENCE';
+    return 'ALMOST READY';
+  }
+}
+
+const _appChannel = MethodChannel('com.hightechentertainment.app/data');
+
+class AppRouterScreen extends StatefulWidget {
+  const AppRouterScreen({super.key});
+
+  @override
+  State<AppRouterScreen> createState() => _AppRouterScreenState();
+}
+
+class _AppRouterScreenState extends State<AppRouterScreen>
+    with WidgetsBindingObserver {
+  bool _loading = true;
+  bool _authenticated = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadSession();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Google OAuth is completed by the existing native Activity. Refresh the
+    // shared Supabase session when Flutter becomes foreground again.
+    if (state == AppLifecycleState.resumed) {
+      _loadSession();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  Future<void> _loadSession() async {
+    try {
+      final session = await _appChannel.invokeMapMethod<String, dynamic>('getSession');
+      if (!mounted) return;
+      setState(() {
+        _authenticated = session?['authenticated'] == true;
+        _loading = false;
+        _error = null;
+      });
+    } on PlatformException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = error.message ?? 'Could not connect to account services.';
+      });
+    } on MissingPluginException {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'The native application services are not available.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: _gold)),
+      );
+    }
+    if (!_authenticated) {
+      return AuthScreen(onAuthenticated: _loadSession, error: _error);
+    }
+    return const ListenerHomeScreen();
+  }
+}
+
+class AuthScreen extends StatefulWidget {
+  const AuthScreen({super.key, required this.onAuthenticated, this.error});
+
+  final Future<void> Function() onAuthenticated;
+  final String? error;
+
+  @override
+  State<AuthScreen> createState() => _AuthScreenState();
+}
+
+class _AuthScreenState extends State<AuthScreen> {
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  bool _createAccount = false;
+  bool _busy = false;
+  String? _message;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        _createAccount ? 'signUp' : 'signIn',
+        {'email': _email.text.trim(), 'password': _password.text},
+      );
+      if (!mounted) return;
+      if (response?['success'] == true) {
+        final session = response?['session'];
+        if (session is Map && session['authenticated'] == true) {
+          await widget.onAuthenticated();
+        } else {
+          setState(() => _message =
+              response?['message']?.toString() ??
+              'Account created. Check your email, then sign in.');
+        }
+      } else {
+        setState(() => _message =
+            response?['message']?.toString() ?? 'Sign-in was unsuccessful.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Account request failed.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _requestPasswordReset() async {
+    if (_email.text.trim().isEmpty) {
+      setState(() => _message = 'Enter your email address first.');
+      return;
+    }
+    setState(() { _busy = true; _message = null; });
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'requestPasswordReset', {'email': _email.text.trim()});
+      if (mounted) {
+        setState(() => _message = response?['message']?.toString()
+            ?? (response?['success'] == true ? 'Check your email for reset instructions.' : 'Password reset could not be requested.'));
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Password reset could not be requested.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _startGoogleSignIn() async {
+    setState(() => _busy = true);
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>('startGoogleOAuth');
+      if (response?['success'] != true && mounted) {
+        setState(() => _message = response?['message']?.toString() ?? 'Google sign-in could not be started.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Google sign-in could not be started.');
+    } on MissingPluginException {
+      if (mounted) setState(() => _message = 'Google sign-in is unavailable in this build.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(26),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: SvgPicture.asset(
+                      'assets/high-tech-logo.svg',
+                      width: 104,
+                      height: 104,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'WELCOME TO HIGH-TECH',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.6,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Sign in to discover music, artists and original productions.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white60, height: 1.5),
+                  ),
+                  const SizedBox(height: 30),
+                  TextField(
+                    controller: _email,
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
+                    decoration: const InputDecoration(
+                      labelText: 'Email address',
+                      prefixIcon: Icon(Icons.email_outlined),
+                      filled: true,
+                      fillColor: _surface,
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: _password,
+                    obscureText: true,
+                    autofillHints: const [AutofillHints.password],
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: Icon(Icons.lock_outline),
+                      filled: true,
+                      fillColor: _surface,
+                      border: OutlineInputBorder(),
+                    ),
+                    onSubmitted: (_) => _submit(),
+                  ),
+                  if (_message != null || widget.error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      _message ?? widget.error!,
+                      style: const TextStyle(color: Color(0xFFFFB4AB)),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  FilledButton(
+                    onPressed: _busy ? null : _submit,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _gold,
+                      foregroundColor: _black,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: _busy
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(_createAccount ? 'CREATE ACCOUNT' : 'SIGN IN'),
+                  ),
+                  if (!_createAccount)
+                    TextButton(
+                      onPressed: _busy ? null : _requestPasswordReset,
+                      child: const Text('Forgot password?'),
+                    ),
+                  TextButton(
+                    onPressed: _busy
+                        ? null
+                        : () => setState(() {
+                              _createAccount = !_createAccount;
+                              _message = null;
+                            }),
+                    child: Text(_createAccount
+                        ? 'Already have an account? Sign in'
+                        : 'New here? Create an account'),
+                  ),
+                  const Divider(height: 30, color: Colors.white24),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _startGoogleSignIn,
+                    icon: const _GoogleBrandMark(),
+                    label: const Text('Continue with Google'),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Google sign-in opens securely and returns to this Flutter app.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white38, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ListenerHomeScreen extends StatefulWidget {
+  const ListenerHomeScreen({super.key});
+
+  @override
+  State<ListenerHomeScreen> createState() => _ListenerHomeScreenState();
+}
+
+class _ListenerHomeScreenState extends State<ListenerHomeScreen> {
+  int _tab = 0;
+  bool _loading = true;
+  String? _error;
+  List<Map<String, dynamic>> _tracks = [];
+  List<Map<String, dynamic>> _artists = [];
+  List<Map<String, dynamic>> _releases = [];
+  List<Map<String, dynamic>> _videos = [];
+  Set<String> _favourites = {};
+  Set<String> _followedArtists = {};
+  Map<String, dynamic>? _nowPlayingTrack;
+  bool _isPlaying = false;
+  String _searchQuery = '';
+  int _refreshGeneration = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<List<Map<String, dynamic>>> _loadList(String method) async {
+    final rows = await _appChannel.invokeListMethod<dynamic>(method);
+    return (rows ?? [])
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
+  Future<void> _openVoiceCompanion() async {
+    if (mounted) setState(() => _tab = 4);
+  }
+
+  void _navigateFromVoice(String destination) {
+    final key = destination.toLowerCase();
+    final nextTab = switch (key) {
+      'music' || 'home' || 'artists' || 'releases' || 'albums' || 'videos' => 0,
+      'library' || 'favourites' || 'favorites' => 1,
+      'studio' || 'services' || 'booking' => 2,
+      'profile' || 'account' || 'founder studio' => 3,
+      'voice' || 'voice companion' => 4,
+      _ => 0,
+    };
+    if (mounted) setState(() => _tab = nextTab);
+  }
+
+  void _searchFromVoice(String query) {
+    if (mounted) setState(() {
+      _searchQuery = query;
+      _tab = 0;
+    });
+  }
+
+  Future<void> _showSearch() async {
+    final controller = TextEditingController(text: _searchQuery);
+    final query = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Search music'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Track, artist or genre'),
+          onSubmitted: (value) => Navigator.pop(dialogContext, value),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, ''), child: const Text('CLEAR')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, controller.text), child: const Text('SEARCH')),
+        ],
+      ),
+    );
+    if (query != null && mounted) setState(() => _searchQuery = query.trim());
+    controller.dispose();
+  }
+
+  Future<void> _refresh() async {
+    final generation = ++_refreshGeneration;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    final warnings = <String>[];
+    var tracksResponse = <String, dynamic>{};
+    var tracks = <Map<String, dynamic>>[];
+
+    try {
+      tracksResponse =
+          await _appChannel.invokeMapMethod<String, dynamic>('getTracks') ?? {};
+      tracks = ((tracksResponse['items'] as List?) ?? [])
+          .whereType<Map>()
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList();
+      final catalogueError = tracksResponse['error']?.toString();
+      if (catalogueError != null && catalogueError.isNotEmpty) {
+        warnings.add('music catalogue');
+      }
+    } catch (_) {
+      warnings.add('music catalogue');
+    }
+
+    Future<List<Map<String, dynamic>>> loadSection(
+      String method,
+      String label,
+    ) async {
+      try {
+        return await _loadList(method);
+      } catch (_) {
+        warnings.add(label);
+        return [];
+      }
+    }
+
+    final artists = await loadSection('getArtists', 'artists');
+    final releases = await loadSection('getReleases', 'releases');
+    final videos = await loadSection('getVideos', 'videos');
+
+    List<String> favourites = [];
+    try {
+      favourites =
+          await _appChannel.invokeListMethod<String>('getFavourites') ?? [];
+    } catch (_) {
+      warnings.add('saved tracks');
+    }
+
+    List<String> followedArtists = [];
+    try {
+      followedArtists =
+          await _appChannel.invokeListMethod<String>('getFollowedArtists') ?? [];
+    } catch (_) {
+      warnings.add('followed artists');
+    }
+
+    if (!mounted || generation != _refreshGeneration) return;
+
+    final hasContent = tracks.isNotEmpty ||
+        artists.isNotEmpty ||
+        releases.isNotEmpty ||
+        videos.isNotEmpty;
+
+    setState(() {
+      _tracks = tracks;
+      _artists = artists;
+      _releases = releases;
+      _videos = videos;
+      _favourites = favourites.toSet();
+      _followedArtists = followedArtists.toSet();
+      _error = hasContent || warnings.isEmpty
+          ? null
+          : 'Could not load your library. Check your connection and try again.';
+      _loading = false;
+    });
+
+    if (warnings.isNotEmpty && hasContent && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Some sections could not be refreshed: ${warnings.join(', ')}.',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _playTrack(Map<String, dynamic> track) async {
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'playTrack',
+        {'trackId': track['id']?.toString() ?? ''},
+      );
+      if (response?['success'] == true && mounted) {
+        setState(() {
+          _nowPlayingTrack = track;
+          _isPlaying = true;
+        });
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response?['message']?.toString() ?? 'Playback could not start.')),
+        );
+      }
+    } on PlatformException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message ?? 'Playback could not start.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _togglePlayback() async {
+    final method = _isPlaying ? 'pausePlayback' : 'resumePlayback';
+    try {
+      final state = await _appChannel.invokeMapMethod<String, dynamic>(method);
+      if (mounted) setState(() => _isPlaying = state?['playing'] == true);
+    } on PlatformException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message ?? 'Player control failed.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _playVideo(Map<String, dynamic> video) async {
+    final videoUrl = video['videoUrl']?.toString() ?? '';
+    final uri = Uri.tryParse(videoUrl);
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This video does not have a valid secure playback URL.')),
+      );
+      return;
+    }
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => FlutterVideoPlayerScreen(
+          videoUrl: uri.toString(),
+          title: video['title']?.toString() ?? 'High-Tech Video',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _downloadTrack(Map<String, dynamic> track) async {
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'downloadTrack',
+        {'trackId': track['id']?.toString() ?? ''},
+      );
+      if (mounted) {
+        final message = response?['success'] == true
+            ? 'Download added to Android download manager.'
+            : response?['message']?.toString() ?? 'This track is not available for download.';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } on PlatformException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message ?? 'Download could not start.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleFavourite(String trackId) async {
+    final save = !_favourites.contains(trackId);
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'setFavourite',
+        {'trackId': trackId, 'saved': save},
+      );
+      if (response?['success'] == true && mounted) {
+        setState(() {
+          if (save) {
+            _favourites.add(trackId);
+          } else {
+            _favourites.remove(trackId);
+          }
+        });
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response?['message']?.toString() ?? 'Could not update saved music.')),
+        );
+      }
+    } on PlatformException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message ?? 'Could not update saved music.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleArtistFollow(String artistId) async {
+    final follow = !_followedArtists.contains(artistId);
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'setArtistFollow', {'artistId': artistId, 'follow': follow});
+      if (response?['success'] == true && mounted) {
+        setState(() {
+          if (follow) {
+            _followedArtists.add(artistId);
+          } else {
+            _followedArtists.remove(artistId);
+          }
+        });
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response?['message']?.toString() ?? 'Could not update artist follow.')));
+      }
+    } on PlatformException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message ?? 'Could not update artist follow.')));
+    }
+  }
+
+  Future<void> _skipTrack(String method) async {
+    try {
+      final state = await _appChannel.invokeMapMethod<String, dynamic>(method);
+      final mediaId = state?['mediaId']?.toString();
+      Map<String, dynamic>? selectedTrack;
+      for (final track in _tracks) {
+        if (track['id']?.toString() == mediaId) {
+          selectedTrack = track;
+          break;
+        }
+      }
+      if (mounted) {
+        setState(() {
+          if (selectedTrack != null) _nowPlayingTrack = selectedTrack;
+          _isPlaying = state?['playing'] == true;
+        });
+      }
+    } on PlatformException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message ?? 'Playback could not be changed.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _skipNext() => _skipTrack('nextTrack');
+
+  Future<void> _skipPrevious() => _skipTrack('previousTrack');
+
+  Future<void> _signOut() async {
+    try {
+      await _appChannel.invokeMethod<void>('signOut');
+      if (mounted) {
+        setState(() {
+          _tracks = [];
+          _artists = [];
+          _releases = [];
+          _videos = [];
+          _favourites = {};
+          _followedArtists = {};
+          _tab = 0;
+        });
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => AuthScreen(onAuthenticated: () async {
+            if (!mounted) return;
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const ListenerHomeScreen()),
+            );
+          })),
+          (_) => false,
+        );
+      }
+    } on PlatformException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message ?? 'Sign-out failed.')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final titles = ['Discover', 'Your Library', 'Studio', 'Profile', 'Voice Companion'];
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(titles[_tab], style: const TextStyle(fontWeight: FontWeight.w800)),
+        actions: [
+          if (_tab == 0)
+            IconButton(
+              tooltip: 'Search music',
+              onPressed: _showSearch,
+              icon: const Icon(Icons.search_rounded),
+            ),
+          IconButton(
+            tooltip: 'Open AI Voice Companion',
+            onPressed: _openVoiceCompanion,
+            icon: const Icon(Icons.graphic_eq_rounded, color: _gold),
+          ),
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: _refresh,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(color: _gold))
+          : _error != null && _tracks.isEmpty && _artists.isEmpty && _releases.isEmpty && _videos.isEmpty
+              ? _ErrorState(message: _error!, onRetry: _refresh)
+              : IndexedStack(
+                  index: _tab,
+                  children: [
+                    _DiscoverPanel(
+                      tracks: _searchQuery.trim().isEmpty
+                          ? _tracks
+                          : _tracks.where((track) =>
+                              ('${track['title'] ?? ''} ${track['artist'] ?? ''} ${track['genre'] ?? ''}')
+                                  .toLowerCase().contains(_searchQuery.toLowerCase())).toList(),
+                      artists: _artists,
+                      followedArtists: _followedArtists,
+                      onArtistFollow: _toggleArtistFollow,
+                      releases: _releases,
+                      videos: _videos,
+                      favourites: _favourites,
+                      onFavourite: _toggleFavourite,
+                      onPlay: _playTrack,
+                      onDownload: _downloadTrack,
+                      onPlayVideo: _playVideo,
+                      onRefresh: _refresh,
+                    ),
+                    _LibraryPanel(
+                      tracks: _tracks,
+                      favourites: _favourites,
+                      onFavourite: _toggleFavourite,
+                      onPlay: _playTrack,
+                      onDownload: _downloadTrack,
+                      onRefresh: _refresh,
+                    ),
+                    const StudioServicesScreen(),
+                    _ProfilePanel(onSignOut: _signOut),
+                    _VoiceCompanionPanel(
+                      onNavigate: _navigateFromVoice,
+                      onSearch: _searchFromVoice,
+                    ),
+                  ],
+                ),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_nowPlayingTrack != null)
+            _NowPlayingBar(
+              track: _nowPlayingTrack!,
+              playing: _isPlaying,
+              onToggle: _togglePlayback,
+              onPrevious: _skipPrevious,
+              onNext: _skipNext,
+            ),
+          NavigationBar(
+        backgroundColor: _surface,
+        indicatorColor: _gold.withValues(alpha: 0.18),
+        selectedIndex: _tab,
+        onDestinationSelected: (index) => setState(() => _tab = index),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore), label: 'Discover'),
+          NavigationDestination(icon: Icon(Icons.favorite_border), selectedIcon: Icon(Icons.favorite), label: 'Library'),
+          NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome), label: 'Studio'),
+          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
+          NavigationDestination(icon: Icon(Icons.graphic_eq_outlined), selectedIcon: Icon(Icons.graphic_eq), label: 'Voice'),
+        ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VoiceCompanionPanel extends StatefulWidget {
+  const _VoiceCompanionPanel({required this.onNavigate, required this.onSearch});
+  final void Function(String destination) onNavigate;
+  final void Function(String query) onSearch;
+
+  @override
+  State<_VoiceCompanionPanel> createState() => _VoiceCompanionPanelState();
+}
+
+class _VoiceCompanionPanelState extends State<_VoiceCompanionPanel> {
+  String _status = 'Ready to connect';
+  String _userTranscript = '';
+  String _agentTranscript = '';
+  bool _connecting = false;
+  bool _connected = false;
+  bool _muted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _appChannel.setMethodCallHandler(_handleNativeEvent);
+  }
+
+  @override
+  void dispose() {
+    _appChannel.setMethodCallHandler(null);
+    if (_connected) {
+      _appChannel.invokeMethod<void>('endVoiceSession');
+    }
+    super.dispose();
+  }
+
+  Future<void> _handleNativeEvent(MethodCall call) async {
+    if (call.method == 'voiceEvent' && call.arguments is Map) {
+      final event = Map<String, dynamic>.from(call.arguments as Map);
+      if (!mounted) return;
+      setState(() {
+        final value = event['value']?.toString() ?? '';
+        switch (event['event']) {
+          case 'status':
+          case 'mode':
+            _status = value;
+            if (value.toLowerCase().contains('disconnect') || value.toLowerCase().contains('error')) {
+              _connected = false;
+              _muted = false;
+            }
+            break;
+          case 'userTranscript':
+            _userTranscript = value;
+            break;
+          case 'agentTranscript':
+            _agentTranscript = value;
+            break;
+        }
+      });
+    } else if (call.method == 'voiceNavigate' && call.arguments is Map) {
+      final args = Map<String, dynamic>.from(call.arguments as Map);
+      widget.onNavigate(args['destination']?.toString() ?? 'Music');
+    } else if (call.method == 'voiceSearch' && call.arguments is Map) {
+      final args = Map<String, dynamic>.from(call.arguments as Map);
+      widget.onSearch(args['query']?.toString() ?? '');
+    }
+  }
+
+  Future<void> _start() async {
+    setState(() { _connecting = true; _status = 'Requesting microphone permission…'; });
+    try {
+      final permission = await _appChannel.invokeMapMethod<String, dynamic>('requestVoicePermission');
+      if (permission?['granted'] != true) {
+        setState(() => _status = permission?['message']?.toString()
+            ?? 'Microphone permission is required for voice conversations.');
+        return;
+      }
+      final response = await _appChannel.invokeMapMethod<String, dynamic>('startVoiceSession');
+      if (response?['success'] == true) {
+        setState(() { _connected = true; _muted = false; });
+      } else {
+        setState(() => _status = response?['message']?.toString()
+            ?? 'Voice session could not be started.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _status = error.message ?? 'Voice session failed.');
+    } on MissingPluginException {
+      if (mounted) setState(() => _status = 'Voice service is unavailable in this build.');
+    } finally {
+      if (mounted) setState(() => _connecting = false);
+    }
+  }
+
+  Future<void> _end() async {
+    try {
+      await _appChannel.invokeMethod<void>('endVoiceSession');
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _status = error.message ?? 'Could not end voice session.');
+    }
+    if (mounted) setState(() { _connected = false; _muted = false; });
+  }
+
+  Future<void> _toggleMute() async {
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'setVoiceMuted', {'muted': !_muted});
+      if (response?['success'] == true) {
+        setState(() => _muted = response?['muted'] == true);
+      } else {
+        setState(() => _status = response?['message']?.toString() ?? 'Microphone control failed.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _status = error.message ?? 'Microphone control failed.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(18),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: _surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: _gold.withValues(alpha: 0.35)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(Icons.graphic_eq_rounded, color: _gold, size: 56),
+              const SizedBox(height: 14),
+              const Text('HIGH-TECH VOICE COMPANION',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: _gold, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+              const SizedBox(height: 8),
+              const Text('Talk to your music assistant. Control playback, explore the catalogue and navigate the app.',
+                textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, height: 1.5)),
+              const SizedBox(height: 20),
+              Center(child: Text(_status, textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w700))),
+              const SizedBox(height: 18),
+              if (!_connected)
+                FilledButton.icon(
+                  onPressed: _connecting ? null : _start,
+                  icon: _connecting
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.mic),
+                  label: Text(_connecting ? 'CONNECTING…' : 'START VOICE SESSION'),
+                  style: FilledButton.styleFrom(backgroundColor: _gold, foregroundColor: _black,
+                    padding: const EdgeInsets.symmetric(vertical: 15)),
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(child: FilledButton.icon(
+                      onPressed: _toggleMute,
+                      icon: Icon(_muted ? Icons.mic_off : Icons.mic),
+                      label: Text(_muted ? 'UNMUTE' : 'MUTE'),
+                      style: FilledButton.styleFrom(backgroundColor: _gold, foregroundColor: _black),
+                    )),
+                    const SizedBox(width: 10),
+                    Expanded(child: OutlinedButton.icon(
+                      onPressed: _end,
+                      icon: const Icon(Icons.call_end),
+                      label: const Text('END SESSION'),
+                    )),
+                  ],
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (_userTranscript.isNotEmpty)
+          _PanelCard(title: 'YOU', child: Text(_userTranscript)),
+        if (_agentTranscript.isNotEmpty)
+          _PanelCard(title: 'HIGH-TECH AI', child: Text(_agentTranscript)),
+      ],
+    );
+  }
+}
+
+class _LibraryPanel extends StatefulWidget {
+  const _LibraryPanel({
+    required this.tracks,
+    required this.favourites,
+    required this.onFavourite,
+    required this.onPlay,
+    required this.onDownload,
+    required this.onRefresh,
+  });
+
+  final List<Map<String, dynamic>> tracks;
+  final Set<String> favourites;
+  final Future<void> Function(String) onFavourite;
+  final Future<void> Function(Map<String, dynamic>) onPlay;
+  final Future<void> Function(Map<String, dynamic>) onDownload;
+  final Future<void> Function() onRefresh;
+
+  @override
+  State<_LibraryPanel> createState() => _LibraryPanelState();
+}
+
+class _LibraryPanelState extends State<_LibraryPanel> {
+  List<Map<String, dynamic>> _playlists = [];
+  List<String> _historyIds = [];
+  bool _loadingPlaylists = true;
+  String? _playlistError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlaylists();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    try {
+      final ids = await _appChannel.invokeListMethod<String>('getListeningHistory') ?? [];
+      if (mounted) setState(() => _historyIds = ids);
+    } on PlatformException {
+      // History is optional; keep the rest of the library available.
+    }
+  }
+
+  Future<void> _loadPlaylists() async {
+    setState(() {
+      _loadingPlaylists = true;
+      _playlistError = null;
+    });
+    try {
+      final rows = await _appChannel.invokeListMethod<dynamic>('getPlaylists');
+      if (!mounted) return;
+      setState(() {
+        _playlists = (rows ?? []).whereType<Map>()
+            .map((row) => Map<String, dynamic>.from(row)).toList();
+        _loadingPlaylists = false;
+      });
+    } on PlatformException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _playlistError = error.message ?? 'Could not load playlists.';
+        _loadingPlaylists = false;
+      });
+    } on MissingPluginException {
+      if (!mounted) return;
+      setState(() {
+        _playlistError = 'Playlist services are unavailable in this build.';
+        _loadingPlaylists = false;
+      });
+    }
+  }
+
+  Future<void> _createPlaylist() async {
+    final name = TextEditingController();
+    final description = TextEditingController();
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Create playlist'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: name, autofocus: true, maxLength: 80,
+              decoration: const InputDecoration(labelText: 'Playlist name')),
+            TextField(controller: description, maxLength: 500,
+              decoration: const InputDecoration(labelText: 'Description')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Create')),
+        ],
+      ),
+    );
+    if (accepted == true && name.text.trim().isNotEmpty) {
+      try {
+        final result = await _appChannel.invokeMapMethod<String, dynamic>('createPlaylist', {
+          'name': name.text.trim(),
+          'description': description.text.trim(),
+        });
+        if (result?['success'] == true) {
+          await _loadPlaylists();
+        } else {
+          _showMessage(result?['message']?.toString() ?? 'Playlist could not be created.');
+        }
+      } on PlatformException catch (error) {
+        _showMessage(error.message ?? 'Playlist could not be created.');
+      }
+    }
+    name.dispose();
+    description.dispose();
+  }
+
+  Future<void> _addTrack(String playlistId, Map<String, dynamic> track) async {
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>('addTrackToPlaylist', {
+        'playlistId': playlistId,
+        'trackId': track['id']?.toString() ?? '',
+      });
+      _showMessage(result?['success'] == true
+          ? 'Track added to playlist.'
+          : result?['message']?.toString() ?? 'Could not add track.');
+    } on PlatformException catch (error) {
+      _showMessage(error.message ?? 'Could not add track.');
+    }
+  }
+
+  Future<List<dynamic>> _loadPlaylistTrackIds(String playlistId) async {
+    return await _appChannel.invokeListMethod<dynamic>(
+      'getPlaylistTracks', {'playlistId': playlistId}) ?? <dynamic>[];
+  }
+
+  Future<void> _removeTrack(String playlistId, String trackId) async {
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>(
+        'removeTrackFromPlaylist', {'playlistId': playlistId, 'trackId': trackId});
+      if (result?['success'] == true) {
+        if (mounted) setState(() {});
+      } else {
+        _showMessage(result?['message']?.toString() ?? 'Could not remove track.');
+      }
+    } on PlatformException catch (error) {
+      _showMessage(error.message ?? 'Could not remove track.');
+    }
+  }
+
+  Future<void> _deletePlaylist(String id) async {
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>('deletePlaylist', {'playlistId': id});
+      if (result?['success'] == true) {
+        await _loadPlaylists();
+      } else {
+        _showMessage(result?['message']?.toString() ?? 'Could not delete playlist.');
+      }
+    } on PlatformException catch (error) {
+      _showMessage(error.message ?? 'Could not delete playlist.');
+    }
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final favourites = widget.tracks.where((track) => widget.favourites.contains(track['id'])).toList();
+    return RefreshIndicator(
+      onRefresh: () async {
+        await widget.onRefresh();
+        await _loadPlaylists();
+        await _loadHistory();
+      },
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Row(
+            children: [
+              const Expanded(child: Text('YOUR PLAYLISTS', style: TextStyle(
+                color: _gold, fontWeight: FontWeight.w800, letterSpacing: 1.2))),
+              FilledButton.icon(onPressed: _createPlaylist, icon: const Icon(Icons.add), label: const Text('Create')),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (_loadingPlaylists)
+            const Center(child: Padding(
+              padding: EdgeInsets.all(18),
+              child: CircularProgressIndicator(color: _gold),
+            ))
+          else if (_playlistError != null)
+            ListTile(
+              leading: const Icon(Icons.error_outline, color: _gold),
+              title: Text(_playlistError!),
+              trailing: IconButton(icon: const Icon(Icons.refresh), onPressed: _loadPlaylists),
+            )
+          else if (_playlists.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 18),
+              child: Text('Create a playlist to organise your favourite music.',
+                style: TextStyle(color: Colors.white60)),
+            )
+          else
+            ..._playlists.map((playlist) => Card(
+              color: _surface,
+              child: ExpansionTile(
+                leading: const Icon(Icons.queue_music_rounded, color: _gold),
+                title: Text(playlist['name']?.toString() ?? 'Playlist'),
+                subtitle: Text(playlist['description']?.toString() ?? ''),
+                trailing: PopupMenuButton<String>(
+                  onSelected: (action) {
+                    if (action == 'add') {
+                      showModalBottomSheet<void>(
+                        context: context,
+                        builder: (sheetContext) => SafeArea(
+                          child: ListView(
+                            shrinkWrap: true,
+                            children: [
+                              const ListTile(title: Text('Add a track')),
+                              ...widget.tracks.map((track) => ListTile(
+                                leading: const Icon(Icons.music_note, color: _gold),
+                                title: Text(track['title']?.toString() ?? 'Untitled'),
+                                subtitle: Text(track['artist']?.toString() ?? ''),
+                                onTap: () {
+                                  Navigator.pop(sheetContext);
+                                  _addTrack(playlist['id'].toString(), track);
+                                },
+                              )),
+                            ],
+                          ),
+                        ),
+                      );
+                    } else if (action == 'delete') {
+                      _deletePlaylist(playlist['id'].toString());
+                    }
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'add', child: Text('Add tracks')),
+                    PopupMenuItem(value: 'delete', child: Text('Delete playlist')),
+                  ],
+                ),
+                children: [
+                  FutureBuilder<List<dynamic>>(
+                    future: _loadPlaylistTrackIds(playlist['id'].toString()),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: CircularProgressIndicator(color: _gold),
+                        );
+                      }
+                      final ids = (snapshot.data ?? []).map((id) => id.toString()).toSet();
+                      final rows = widget.tracks.where((track) => ids.contains(track['id']?.toString())).toList();
+                      if (rows.isEmpty) {
+                        return const ListTile(title: Text('No tracks in this playlist yet.',
+                          style: TextStyle(color: Colors.white54)));
+                      }
+                      return Column(
+                        children: rows.map((track) => ListTile(
+                          title: Text(track['title']?.toString() ?? 'Untitled'),
+                          subtitle: Text(track['artist']?.toString() ?? ''),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: 'Play track',
+                                icon: const Icon(Icons.play_arrow, color: _gold),
+                                onPressed: () => widget.onPlay(track),
+                              ),
+                              IconButton(
+                                tooltip: 'Remove from playlist',
+                                icon: const Icon(Icons.remove_circle_outline, color: Colors.white54),
+                                onPressed: () => _removeTrack(
+                                  playlist['id'].toString(), track['id'].toString()),
+                              ),
+                            ],
+                          ),
+                        )).toList(),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            )),
+          const Divider(height: 34, color: Colors.white12),
+          const Text('RECENTLY PLAYED', style: TextStyle(
+            color: _gold, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+          const SizedBox(height: 8),
+          if (_historyIds.isEmpty)
+            const Text('Tracks you play will appear here.', style: TextStyle(color: Colors.white60))
+          else
+            ..._historyIds.toSet().map((id) {
+              final matches = widget.tracks.where((item) => item['id']?.toString() == id).toList();
+              if (matches.isEmpty) return const SizedBox.shrink();
+              final track = matches.first;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.history, color: _gold),
+                title: Text(track['title']?.toString() ?? 'Untitled'),
+                subtitle: Text(track['artist']?.toString() ?? ''),
+                onTap: () => widget.onPlay(track),
+              );
+            }),
+          const Divider(height: 34, color: Colors.white12),
+          const Text('SAVED TRACKS', style: TextStyle(
+            color: _gold, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+          const SizedBox(height: 8),
+          if (favourites.isEmpty)
+            const Text('Your saved tracks will appear here.', style: TextStyle(color: Colors.white60))
+          else
+            ...favourites.map((track) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.favorite, color: _gold),
+              title: Text(track['title']?.toString() ?? 'Untitled'),
+              subtitle: Text(track['artist']?.toString() ?? ''),
+              onTap: () => widget.onPlay(track),
+              trailing: PopupMenuButton<String>(
+                onSelected: (action) {
+                  if (action == 'remove') widget.onFavourite(track['id'].toString());
+                  if (action == 'download') widget.onDownload(track);
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'download', child: Text('Download')),
+                  PopupMenuItem(value: 'remove', child: Text('Remove from favourites')),
+                ],
+              ),
+            )),
+        ],
+      ),
+    );
+  }
+}
+
+class _MusicList extends StatelessWidget {
+  const _MusicList({
+    required this.tracks,
+    required this.favourites,
+    required this.onFavourite,
+    required this.onPlay,
+    required this.onDownload,
+    required this.onRefresh,
+  });
+
+  final List<Map<String, dynamic>> tracks;
+  final Set<String> favourites;
+  final Future<void> Function(String) onFavourite;
+  final Future<void> Function(Map<String, dynamic>) onPlay;
+  final Future<void> Function(Map<String, dynamic>) onDownload;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    if (tracks.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            const SizedBox(height: 110),
+            Icon(Icons.library_music_outlined, size: 56, color: _gold.withValues(alpha: 0.7)),
+            const SizedBox(height: 16),
+            const Center(child: Text('No published tracks are available yet.', style: TextStyle(color: Colors.white60))),
+          ],
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: tracks.length,
+        separatorBuilder: (_, __) => const Divider(color: Colors.white12),
+        itemBuilder: (context, index) {
+          final track = tracks[index];
+          final id = track['id']?.toString() ?? '';
+          final cover = track['coverUrl']?.toString();
+          return ListTile(
+            contentPadding: const EdgeInsets.symmetric(vertical: 5),
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: cover != null && cover.startsWith('https://')
+                  ? Image.network(cover, width: 54, height: 54, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _coverPlaceholder())
+                  : _coverPlaceholder(),
+            ),
+            title: Text(track['title']?.toString() ?? 'Untitled', maxLines: 1, overflow: TextOverflow.ellipsis),
+            subtitle: Text([
+              track['artist']?.toString() ?? 'High-Tech Entertainment',
+              if ((track['genre']?.toString() ?? '').isNotEmpty) track['genre'].toString(),
+            ].join(' • '), maxLines: 1, overflow: TextOverflow.ellipsis),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: 'Download track',
+                  onPressed: id.isEmpty ? null : () => onDownload(track),
+                  icon: const Icon(Icons.download_outlined, color: Colors.white70),
+                ),
+                IconButton(
+                  tooltip: favourites.contains(id) ? 'Remove from favourites' : 'Add to favourites',
+                  onPressed: id.isEmpty ? null : () => onFavourite(id),
+                  icon: Icon(
+                    favourites.contains(id) ? Icons.favorite : Icons.favorite_border,
+                    color: favourites.contains(id) ? _gold : Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+            onTap: () => onPlay(track),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _coverPlaceholder() => Container(
+        width: 54,
+        height: 54,
+        color: _surface,
+        child: const Icon(Icons.music_note, color: _gold),
+      );
+}
+
+class _ArtistList extends StatelessWidget {
+  const _ArtistList({
+    required this.artists,
+    required this.followedArtists,
+    required this.onFollow,
+  });
+  final List<Map<String, dynamic>> artists;
+  final Set<String> followedArtists;
+  final Future<void> Function(String) onFollow;
+
+  @override
+  Widget build(BuildContext context) {
+    if (artists.isEmpty) {
+      return const Center(child: Text('No published artists yet.', style: TextStyle(color: Colors.white60)));
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: artists.length,
+      separatorBuilder: (_, __) => const Divider(color: Colors.white12),
+      itemBuilder: (context, index) {
+        final artist = artists[index];
+        final image = artist['imageUrl']?.toString();
+        return ListTile(
+          leading: CircleAvatar(
+            backgroundColor: _surface,
+            backgroundImage: image != null && image.startsWith('https://') ? NetworkImage(image) : null,
+            child: image == null || !image.startsWith('https://')
+                ? const Icon(Icons.person, color: _gold)
+                : null,
+          ),
+          title: Text(artist['name']?.toString() ?? 'Artist'),
+          subtitle: Text(artist['bio']?.toString() ?? '', maxLines: 2, overflow: TextOverflow.ellipsis),
+          trailing: IconButton(
+            tooltip: followedArtists.contains(artist['id']?.toString()) ? 'Unfollow artist' : 'Follow artist',
+            onPressed: () => onFollow(artist['id']?.toString() ?? ''),
+            icon: Icon(
+              followedArtists.contains(artist['id']?.toString()) ? Icons.person_remove_alt_1 : Icons.person_add_alt_1,
+              color: _gold,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DiscoverPanel extends StatelessWidget {
+  const _DiscoverPanel({
+    required this.tracks,
+    required this.artists,
+    required this.followedArtists,
+    required this.onArtistFollow,
+    required this.releases,
+    required this.videos,
+    required this.favourites,
+    required this.onFavourite,
+    required this.onPlay,
+    required this.onDownload,
+    required this.onPlayVideo,
+    required this.onRefresh,
+  });
+
+  final List<Map<String, dynamic>> tracks;
+  final List<Map<String, dynamic>> artists;
+  final Set<String> followedArtists;
+  final Future<void> Function(String) onArtistFollow;
+  final List<Map<String, dynamic>> releases;
+  final List<Map<String, dynamic>> videos;
+  final Set<String> favourites;
+  final Future<void> Function(String) onFavourite;
+  final Future<void> Function(Map<String, dynamic>) onPlay;
+  final Future<void> Function(Map<String, dynamic>) onDownload;
+  final Future<void> Function(Map<String, dynamic>) onPlayVideo;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 4,
+      child: Column(
+        children: [
+          const TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            tabs: [
+              Tab(text: 'Music'),
+              Tab(text: 'Artists'),
+              Tab(text: 'Releases'),
+              Tab(text: 'Videos'),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _MusicList(
+                  tracks: tracks,
+                  favourites: favourites,
+                  onFavourite: onFavourite,
+                  onPlay: onPlay,
+                  onDownload: onDownload,
+                  onRefresh: onRefresh,
+                ),
+                _ArtistList(artists: artists, followedArtists: followedArtists, onFollow: onArtistFollow),
+                _ReleaseList(releases: releases),
+                _VideoList(videos: videos, onPlay: onPlayVideo),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReleaseList extends StatelessWidget {
+  const _ReleaseList({required this.releases});
+  final List<Map<String, dynamic>> releases;
+
+  @override
+  Widget build(BuildContext context) {
+    if (releases.isEmpty) {
+      return const Center(child: Text('No published releases yet.', style: TextStyle(color: Colors.white60)));
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: releases.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final release = releases[index];
+        final cover = release['coverUrl']?.toString();
+        return Card(
+          color: _surface,
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(10),
+            leading: cover != null && cover.startsWith('https://')
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(cover, width: 62, height: 62, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.album, color: _gold, size: 42)),
+                  )
+                : const Icon(Icons.album, color: _gold, size: 42),
+            title: Text(release['title']?.toString() ?? 'Untitled release',
+              style: const TextStyle(fontWeight: FontWeight.w800)),
+            subtitle: Text([
+              if ((release['releaseDate']?.toString() ?? '').isNotEmpty) release['releaseDate'].toString(),
+              if ((release['description']?.toString() ?? '').isNotEmpty) release['description'].toString(),
+            ].join(' • '), maxLines: 3, overflow: TextOverflow.ellipsis),
+            trailing: (release['spotifyUrl']?.toString() ?? '').startsWith('https://open.spotify.com/')
+                ? IconButton(
+                    tooltip: 'Open on Spotify',
+                    icon: const Icon(Icons.open_in_new, color: _gold),
+                    onPressed: () => _appChannel.invokeMethod<void>(
+                      'openSpotifyLink', {'url': release['spotifyUrl']}),
+                  )
+                : null,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _VideoList extends StatelessWidget {
+  const _VideoList({required this.videos, required this.onPlay});
+  final List<Map<String, dynamic>> videos;
+  final Future<void> Function(Map<String, dynamic>) onPlay;
+
+  @override
+  Widget build(BuildContext context) {
+    if (videos.isEmpty) {
+      return const Center(child: Text('No published videos yet.', style: TextStyle(color: Colors.white60)));
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: videos.length,
+      separatorBuilder: (_, __) => const Divider(color: Colors.white12),
+      itemBuilder: (context, index) {
+        final video = videos[index];
+        final thumb = video['thumbnailUrl']?.toString();
+        return ListTile(
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: thumb != null && thumb.startsWith('https://')
+                ? Image.network(thumb, width: 76, height: 54, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _videoPlaceholder())
+                : _videoPlaceholder(),
+          ),
+          title: Text(video['title']?.toString() ?? 'Video'),
+          subtitle: Text(video['artist']?.toString() ?? 'High-Tech Entertainment'),
+          trailing: const Icon(Icons.play_circle_outline, color: _gold),
+          onTap: () => onPlay(video),
+        );
+      },
+    );
+  }
+
+  Widget _videoPlaceholder() => Container(
+        width: 76,
+        height: 54,
+        color: _surface,
+        child: const Icon(Icons.play_circle_outline, color: _gold),
+      );
+}
+
+class _NowPlayingBar extends StatelessWidget {
+  const _NowPlayingBar({
+    required this.track,
+    required this.playing,
+    required this.onToggle,
+    required this.onPrevious,
+    required this.onNext,
+  });
+
+  final Map<String, dynamic> track;
+  final bool playing;
+  final Future<void> Function() onToggle;
+  final Future<void> Function() onPrevious;
+  final Future<void> Function() onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF211A10),
+      padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
+      child: Row(
+        children: [
+          const Icon(Icons.graphic_eq, color: _gold),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(track['title']?.toString() ?? 'Now playing',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(track['artist']?.toString() ?? 'High-Tech Entertainment',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white60, fontSize: 11)),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Previous track',
+            onPressed: onPrevious,
+            icon: const Icon(Icons.skip_previous_rounded, color: _gold),
+          ),
+          IconButton(
+            tooltip: playing ? 'Pause' : 'Resume',
+            onPressed: onToggle,
+            icon: Icon(playing ? Icons.pause_rounded : Icons.play_arrow_rounded, color: _gold),
+          ),
+          IconButton(
+            tooltip: 'Next track',
+            onPressed: onNext,
+            icon: const Icon(Icons.skip_next_rounded, color: _gold),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfilePanel extends StatefulWidget {
+  const _ProfilePanel({required this.onSignOut});
+  final Future<void> Function() onSignOut;
+
+  @override
+  State<_ProfilePanel> createState() => _ProfilePanelState();
+}
+
+class _ProfilePanelState extends State<_ProfilePanel> {
+  final _displayName = TextEditingController();
+  final _bio = TextEditingController();
+  final _phone = TextEditingController();
+  final _bookingName = TextEditingController();
+  final _bookingEmail = TextEditingController();
+  final _bookingType = TextEditingController(text: 'Music production');
+  final _bookingDate = TextEditingController();
+  final _bookingMessage = TextEditingController();
+  bool _loading = true;
+  bool _saving = false;
+  String? _message;
+  String _avatarUrl = '';
+  List<Map<String, dynamic>> _bookings = [];
+  Map<String, dynamic>? _founder;
+  Map<String, dynamic> _preferences = {
+    'autoplay': true,
+    'shuffle': false,
+    'crossfadeSeconds': 0,
+    'audioQuality': 'high',
+    'wifiOnlyDownloads': true,
+    'releaseNotifications': true,
+    'artistNotifications': true,
+    'promotionalNotifications': false,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _displayName.dispose();
+    _bio.dispose();
+    _phone.dispose();
+    _bookingName.dispose();
+    _bookingEmail.dispose();
+    _bookingType.dispose();
+    _bookingDate.dispose();
+    _bookingMessage.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final profile = await _appChannel.invokeMapMethod<String, dynamic>('getProfile');
+      final bookings = await _appChannel.invokeListMethod<dynamic>('getMyBookings') ?? [];
+      final preferences = await _appChannel.invokeMapMethod<String, dynamic>('getAppPreferences');
+      final founder = await _appChannel.invokeMapMethod<String, dynamic>('getFounderData');
+      if (!mounted) return;
+      _displayName.text = profile?['displayName']?.toString() ?? '';
+      _bio.text = profile?['bio']?.toString() ?? '';
+      _phone.text = profile?['phone']?.toString() ?? '';
+      _avatarUrl = profile?['avatarUrl']?.toString() ?? '';
+      setState(() {
+        _bookings = bookings.whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList();
+        if (preferences != null) _preferences = {..._preferences, ...preferences};
+        _founder = founder?['authorized'] == true ? founder : null;
+        _loading = false;
+      });
+    } on PlatformException catch (error) {
+      if (mounted) setState(() {
+        _message = error.message ?? 'Could not load account information.';
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _savePreferences() async {
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>(
+        'saveAppPreferences', _preferences);
+      if (result?['success'] != true && mounted) {
+        setState(() => _message = result?['message']?.toString() ?? 'Settings could not be saved.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Settings could not be saved.');
+    }
+  }
+
+  Future<void> _updatePreference(String key, dynamic value) async {
+    setState(() => _preferences[key] = value);
+    await _savePreferences();
+  }
+
+  Future<void> _saveProfile() async {
+    setState(() { _saving = true; _message = null; });
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>('saveProfile', {
+        'displayName': _displayName.text,
+        'bio': _bio.text,
+        'phone': _phone.text,
+        'avatarUrl': _avatarUrl,
+      });
+      if (mounted) setState(() => _message = result?['success'] == true
+          ? 'Profile saved.'
+          : result?['message']?.toString() ?? 'Profile could not be saved.');
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Profile could not be saved.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _changePassword() async {
+    final password = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Change password'),
+        content: TextField(
+          controller: password,
+          obscureText: true,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'New password (8+ characters)'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('UPDATE')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      if (password.text.length < 8) {
+        if (mounted) setState(() => _message = 'Use a password with at least 8 characters.');
+      } else {
+        try {
+          final response = await _appChannel.invokeMapMethod<String, dynamic>(
+            'updatePassword', {'password': password.text});
+          if (mounted) setState(() => _message = response?['success'] == true
+              ? 'Password updated successfully.'
+              : response?['message']?.toString() ?? 'Password update failed.');
+        } on PlatformException catch (error) {
+          if (mounted) setState(() => _message = error.message ?? 'Password update failed.');
+        }
+      }
+    }
+    password.dispose();
+  }
+
+  Future<void> _submitBooking() async {
+    setState(() { _saving = true; _message = null; });
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>('submitBooking', {
+        'name': _bookingName.text,
+        'email': _bookingEmail.text,
+        'bookingType': _bookingType.text,
+        'requestedDate': _bookingDate.text.trim().isEmpty ? null : _bookingDate.text.trim(),
+        'message': _bookingMessage.text,
+      });
+      if (result?['success'] == true) {
+        _bookingName.clear();
+        _bookingEmail.clear();
+        _bookingDate.clear();
+        _bookingMessage.clear();
+        await _load();
+      }
+      if (mounted) setState(() => _message = result?['success'] == true
+          ? 'Your booking request has been submitted.'
+          : result?['message']?.toString() ?? 'Booking could not be submitted.');
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Booking could not be submitted.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _editDraft(Map<String, dynamic> draft) async {
+    final table = draft['table']?.toString() ?? '';
+    final id = draft['id']?.toString() ?? '';
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'getDraftDetails', {'table': table, 'id': id});
+      if (response?['success'] != true) {
+        if (mounted) setState(() => _message = response?['message']?.toString() ?? 'Could not load draft.');
+        return;
+      }
+      final fields = Map<String, dynamic>.from(response?['draft'] as Map? ?? {});
+      final title = TextEditingController(text: fields['title']?.toString() ?? fields['name']?.toString() ?? '');
+      final artist = TextEditingController(text: fields['artist']?.toString() ?? '');
+      final description = TextEditingController(text: fields['description']?.toString() ?? fields['bio']?.toString() ?? '');
+      final mediaUrl = TextEditingController(text: fields['audio_url']?.toString() ?? fields['video_url']?.toString() ?? '');
+      final genre = TextEditingController(text: fields['genre']?.toString() ?? '');
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: _surface,
+          title: Text('Edit ${draft['title'] ?? 'draft'}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: title, decoration: InputDecoration(
+                  labelText: table == 'artists' ? 'Artist name' : 'Title')),
+                if (table == 'tracks' || table == 'videos')
+                  TextField(controller: artist, decoration: const InputDecoration(labelText: 'Artist')),
+                if (table == 'artists' || table == 'releases' || table == 'videos')
+                  TextField(controller: description, maxLines: 3, decoration: InputDecoration(
+                    labelText: table == 'artists' ? 'Biography' : 'Description')),
+                if (table == 'tracks' || table == 'videos') ...[
+                  TextField(controller: mediaUrl, readOnly: true, decoration: const InputDecoration(labelText: 'Uploaded media URL')),
+                  TextButton.icon(
+                    onPressed: () async {
+                      final url = await _pickAndUploadFounderMedia(table == 'tracks' ? 'Track' : 'Video');
+                      if (url != null) mediaUrl.text = url;
+                    },
+                    icon: const Icon(Icons.upload_file),
+                    label: const Text('REPLACE MEDIA FILE'),
+                  ),
+                ],
+                if (table == 'tracks')
+                  TextField(controller: genre, decoration: const InputDecoration(labelText: 'Genre')),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('SAVE CHANGES')),
+          ],
+        ),
+      );
+      if (confirmed == true) {
+        final updated = await _appChannel.invokeMapMethod<String, dynamic>('updateDraft', {
+          'table': table,
+          'id': id,
+          'title': title.text.trim(),
+          'artist': artist.text.trim(),
+          'description': description.text.trim(),
+          'mediaUrl': mediaUrl.text.trim(),
+          'genre': genre.text.trim(),
+        });
+        if (updated?['success'] == true) {
+          await _load();
+        } else if (mounted) {
+          setState(() => _message = updated?['message']?.toString() ?? 'Draft update failed.');
+        }
+      }
+      title.dispose();
+      artist.dispose();
+      description.dispose();
+      mediaUrl.dispose();
+      genre.dispose();
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Draft update failed.');
+    }
+  }
+
+  Future<void> _deleteDraft(Map<String, dynamic> draft) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete unpublished draft?'),
+        content: const Text('This permanently deletes the selected unpublished item. Published content cannot be deleted from this action.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('DELETE')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>('deleteDraft', {
+        'table': draft['table'], 'id': draft['id'],
+      });
+      if (response?['success'] == true) {
+        await _load();
+      } else if (mounted) {
+        setState(() => _message = response?['message']?.toString() ?? 'Draft deletion failed.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Draft deletion failed.');
+    }
+  }
+
+  Future<void> _setDraftPublished(Map<String, dynamic> draft) async {
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>('setDraftPublished', {
+        'table': draft['table'], 'id': draft['id'], 'published': true,
+      });
+      if (response?['success'] == true) {
+        await _load();
+      } else if (mounted) {
+        setState(() => _message = response?['message']?.toString() ?? 'Publishing was rejected.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Publishing was rejected.');
+    }
+  }
+
+  Future<void> _createCampaign() async {
+    final title = TextEditingController();
+    final audioUrl = TextEditingController();
+    final startsAt = TextEditingController();
+    final endsAt = TextEditingController();
+    final priority = TextEditingController(text: '0');
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: _surface,
+        title: const Text('Create sponsored audio campaign'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: title, decoration: const InputDecoration(labelText: 'Campaign title')),
+              TextField(controller: audioUrl, readOnly: true,
+                decoration: const InputDecoration(labelText: 'Uploaded campaign audio URL')),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () async {
+                    final url = await _pickAndUploadFounderMedia('Track');
+                    if (url != null) audioUrl.text = url;
+                  },
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('UPLOAD CAMPAIGN AUDIO'),
+                ),
+              ),
+              TextField(controller: startsAt, decoration: const InputDecoration(labelText: 'Start time (ISO 8601, optional)')),
+              TextField(controller: endsAt, decoration: const InputDecoration(labelText: 'End time (ISO 8601, optional)')),
+              TextField(controller: priority, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Priority (0–1000)')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('SAVE CAMPAIGN')),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      title.dispose(); audioUrl.dispose(); startsAt.dispose(); endsAt.dispose(); priority.dispose();
+      return;
+    }
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>('createCampaign', {
+        'title': title.text.trim(),
+        'audioUrl': audioUrl.text.trim(),
+        'startsAt': startsAt.text.trim().isEmpty ? null : startsAt.text.trim(),
+        'endsAt': endsAt.text.trim().isEmpty ? null : endsAt.text.trim(),
+        'priority': int.tryParse(priority.text.trim()) ?? 0,
+      });
+      if (result?['success'] == true) {
+        if (mounted) setState(() => _message = 'Campaign saved as unpublished.');
+        await _load();
+      } else if (mounted) {
+        setState(() => _message = result?['message']?.toString() ?? 'Campaign could not be saved.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Campaign could not be saved.');
+    } finally {
+      title.dispose(); audioUrl.dispose(); startsAt.dispose(); endsAt.dispose(); priority.dispose();
+    }
+  }
+
+  Future<void> _editCampaign(Map<String, dynamic> campaign) async {
+    final title = TextEditingController(text: campaign['title']?.toString() ?? '');
+    final audioUrl = TextEditingController(text: campaign['audioUrl']?.toString() ?? '');
+    final startsAt = TextEditingController(text: campaign['startsAt']?.toString() ?? '');
+    final endsAt = TextEditingController(text: campaign['endsAt']?.toString() ?? '');
+    final priority = TextEditingController(text: (campaign['priority'] ?? 0).toString());
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: _surface,
+        title: const Text('Edit sponsored audio campaign'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: title, decoration: const InputDecoration(labelText: 'Campaign title')),
+              TextField(controller: audioUrl, decoration: const InputDecoration(labelText: 'Secure audio URL')),
+              TextField(controller: startsAt, decoration: const InputDecoration(labelText: 'Start time (ISO 8601, optional)')),
+              TextField(controller: endsAt, decoration: const InputDecoration(labelText: 'End time (ISO 8601, optional)')),
+              TextField(controller: priority, keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Priority (0–1000)')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('SAVE')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      try {
+        final result = await _appChannel.invokeMapMethod<String, dynamic>('updateCampaign', {
+          'id': campaign['id'],
+          'title': title.text.trim(),
+          'audioUrl': audioUrl.text.trim(),
+          'startsAt': startsAt.text.trim().isEmpty ? null : startsAt.text.trim(),
+          'endsAt': endsAt.text.trim().isEmpty ? null : endsAt.text.trim(),
+          'priority': int.tryParse(priority.text.trim()) ?? 0,
+        });
+        if (result?['success'] == true) {
+          if (mounted) setState(() => _message = 'Campaign updated.');
+          await _load();
+        } else if (mounted) {
+          setState(() => _message = result?['message']?.toString() ?? 'Campaign update failed.');
+        }
+      } on PlatformException catch (error) {
+        if (mounted) setState(() => _message = error.message ?? 'Campaign update failed.');
+      }
+    }
+    title.dispose(); audioUrl.dispose(); startsAt.dispose(); endsAt.dispose(); priority.dispose();
+  }
+
+  Future<void> _deleteCampaign(Map<String, dynamic> campaign) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete unpublished campaign?'),
+        content: const Text('Only unpublished campaigns can be deleted. Published campaigns must be unpublished first.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('DELETE')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>(
+        'deleteCampaign', {'id': campaign['id']});
+      if (result?['success'] == true) {
+        await _load();
+      } else if (mounted) {
+        setState(() => _message = result?['message']?.toString() ?? 'Campaign deletion failed.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Campaign deletion failed.');
+    }
+  }
+
+  Future<void> _setCampaignPublished(Map<String, dynamic> campaign, bool published) async {
+    try {
+      final result = await _appChannel.invokeMapMethod<String, dynamic>('setCampaignPublished', {
+        'id': campaign['id'],
+        'published': published,
+      });
+      if (result?['success'] == true) {
+        if (mounted) setState(() => _message = published ? 'Campaign published.' : 'Campaign unpublished.');
+        await _load();
+      } else if (mounted) {
+        setState(() => _message = result?['message']?.toString() ?? 'Campaign update failed.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Campaign update failed.');
+    }
+  }
+
+  Future<void> _updateBooking(Map<String, dynamic> booking, String status) async {
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>('updateBookingStatus', {
+        'id': booking['id'], 'status': status,
+      });
+      if (response?['success'] == true) {
+        await _load();
+      } else if (mounted) {
+        setState(() => _message = response?['message']?.toString() ?? 'Booking update failed.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Booking update failed.');
+    }
+  }
+
+  Future<String?> _pickAndUploadFounderMedia(String kind) async {
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'pickAndUploadMedia', {'kind': kind == 'Track' ? 'audio' : 'video'});
+      if (response?['success'] == true) {
+        _showFounderMessage('Media uploaded securely.');
+        return response?['url']?.toString();
+      }
+      if (response?['cancelled'] != true) {
+        _showFounderMessage(response?['message']?.toString() ?? 'Upload failed.');
+      }
+    } on PlatformException catch (error) {
+      _showFounderMessage(error.message ?? 'Upload failed.');
+    } on MissingPluginException {
+      _showFounderMessage('Media picker is unavailable in this build.');
+    }
+    return null;
+  }
+
+  void _showFounderMessage(String message) {
+    if (!mounted) return;
+    setState(() => _message = message);
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'pickAndUploadMedia', {'kind': 'image'});
+      if (response?['success'] == true) {
+        _avatarUrl = response?['url']?.toString() ?? '';
+        _showFounderMessage('Profile picture uploaded. Save your profile to apply it.');
+      } else if (response?['cancelled'] != true) {
+        _showFounderMessage(response?['message']?.toString() ?? 'Profile picture upload failed.');
+      }
+    } on PlatformException catch (error) {
+      _showFounderMessage(error.message ?? 'Profile picture upload failed.');
+    } on MissingPluginException {
+      _showFounderMessage('Image picker is unavailable in this build.');
+    }
+  }
+
+  Future<String?> _pickAndUploadArtwork() async {
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(
+        'pickAndUploadMedia', {'kind': 'artwork'});
+      if (response?['success'] == true) return response?['url']?.toString();
+      if (response?['cancelled'] != true) {
+        _showFounderMessage(response?['message']?.toString() ?? 'Artwork upload failed.');
+      }
+    } on PlatformException catch (error) {
+      _showFounderMessage(error.message ?? 'Artwork upload failed.');
+    }
+    return null;
+  }
+
+  Future<void> _createContent(String kind) async {
+    final title = TextEditingController();
+    final secondary = TextEditingController();
+    final details = TextEditingController();
+    final genre = TextEditingController();
+    final coverUrl = TextEditingController();
+    final releaseDate = TextEditingController();
+    final spotifyUrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: _surface,
+        title: Text('Create ' + kind.toLowerCase()),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: title, decoration: InputDecoration(
+                labelText: kind == 'Artist' ? 'Artist name' : 'Title')),
+              if (kind == 'Track' || kind == 'Video')
+                TextField(controller: secondary, decoration: const InputDecoration(labelText: 'Artist')),
+              if (kind == 'Track' || kind == 'Video') ...[
+                TextField(controller: details, readOnly: true, decoration: InputDecoration(
+                  labelText: kind == 'Track' ? 'Uploaded audio URL' : 'Uploaded video URL')),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      final url = await _pickAndUploadFounderMedia(kind);
+                      if (url != null) details.text = url;
+                    },
+                    icon: const Icon(Icons.upload_file),
+                    label: Text(kind == 'Track' ? 'CHOOSE AND UPLOAD AUDIO' : 'CHOOSE AND UPLOAD VIDEO'),
+                  ),
+                ),
+              ],
+              if (kind == 'Track')
+                TextField(controller: genre, decoration: const InputDecoration(labelText: 'Genre')),
+              if (kind == 'Artist' || kind == 'Release')
+                TextField(controller: details, decoration: InputDecoration(
+                  labelText: kind == 'Artist' ? 'Biography' : 'Description')),
+              if (kind == 'Release') ...[
+                TextField(controller: coverUrl, readOnly: true,
+                  decoration: const InputDecoration(labelText: 'Release artwork URL')),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      final url = await _pickAndUploadArtwork();
+                      if (url != null) coverUrl.text = url;
+                    },
+                    icon: const Icon(Icons.image_outlined),
+                    label: const Text('UPLOAD RELEASE ARTWORK'),
+                  ),
+                ),
+                TextField(controller: releaseDate,
+                  decoration: const InputDecoration(labelText: 'Release date (YYYY-MM-DD)')),
+                TextField(controller: spotifyUrl,
+                  decoration: const InputDecoration(labelText: 'Spotify release URL (optional)')),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('SAVE DRAFT')),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      title.dispose(); secondary.dispose(); details.dispose(); genre.dispose();
+      coverUrl.dispose(); releaseDate.dispose(); spotifyUrl.dispose();
+      return;
+    }
+    final method = switch (kind) {
+      'Track' => 'createTrack',
+      'Artist' => 'createArtist',
+      'Release' => 'createRelease',
+      _ => 'createVideo',
+    };
+    final Map<String, dynamic> args = switch (kind) {
+      'Track' => {'title': title.text, 'artist': secondary.text, 'audioUrl': details.text, 'genre': genre.text},
+      'Artist' => {'name': title.text, 'bio': details.text},
+      'Release' => {'title': title.text, 'description': details.text, 'coverUrl': coverUrl.text, 'releaseDate': releaseDate.text, 'spotifyUrl': spotifyUrl.text},
+      _ => {'title': title.text, 'artist': secondary.text, 'videoUrl': details.text, 'description': ''},
+    };
+    try {
+      final response = await _appChannel.invokeMapMethod<String, dynamic>(method, args);
+      if (response?['success'] == true) {
+        setState(() => _message = kind + ' draft saved.');
+        await _load();
+      } else if (mounted) {
+        setState(() => _message = response?['message']?.toString() ?? 'Could not save draft.');
+      }
+    } on PlatformException catch (error) {
+      if (mounted) setState(() => _message = error.message ?? 'Could not save draft.');
+    } finally {
+      title.dispose(); secondary.dispose(); details.dispose(); genre.dispose();
+      coverUrl.dispose(); releaseDate.dispose(); spotifyUrl.dispose();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) return const Center(child: CircularProgressIndicator(color: _gold));
+    final overview = _founder?['overview'] is Map
+        ? Map<String, dynamic>.from(_founder!['overview'] as Map)
+        : <String, dynamic>{};
+    final drafts = ((_founder?['drafts'] as List?) ?? [])
+        .whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList();
+    final founderBookings = ((_founder?['bookings'] as List?) ?? [])
+        .whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList();
+    final campaigns = ((_founder?['campaigns'] as List?) ?? [])
+        .whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList();
+    return ListView(
+      padding: const EdgeInsets.all(18),
+      children: [
+        const Text('YOUR ACCOUNT', style: TextStyle(color: _gold, fontSize: 11, letterSpacing: 1.8, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 12),
+        _PanelCard(
+          title: 'Profile details',
+          child: Column(
+            children: [
+              TextField(controller: _displayName, decoration: const InputDecoration(labelText: 'Display name')),
+              TextField(controller: _bio, decoration: const InputDecoration(labelText: 'Bio'), maxLines: 3),
+              TextField(controller: _phone, decoration: const InputDecoration(labelText: 'Phone number'), keyboardType: TextInputType.phone),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: _pickAndUploadAvatar,
+                  icon: const Icon(Icons.add_a_photo_outlined),
+                  label: const Text('UPLOAD PROFILE PHOTO'),
+                ),
+              ),
+              const SizedBox(height: 14),
+              FilledButton(onPressed: _saving ? null : _saveProfile,
+                style: FilledButton.styleFrom(backgroundColor: _gold, foregroundColor: _black),
+                child: const Text('SAVE PROFILE')),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _saving ? null : _changePassword,
+                icon: const Icon(Icons.lock_reset),
+                label: const Text('CHANGE PASSWORD'),
+              ),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (dialogContext) => AlertDialog(
+                      title: const Text('Request account deletion'),
+                      content: const Text('This opens the official High-Tech Entertainment deletion request page. You will be asked to verify ownership of your account.'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
+                        FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('CONTINUE')),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    await _appChannel.invokeMethod<void>('openAccountDeletion');
+                  }
+                },
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('REQUEST ACCOUNT DELETION'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        _PanelCard(
+          title: 'App preferences',
+          child: Column(
+            children: [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Autoplay next track'),
+                value: _preferences['autoplay'] == true,
+                activeThumbColor: _gold,
+                onChanged: (value) => _updatePreference('autoplay', value),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Shuffle playback'),
+                value: _preferences['shuffle'] == true,
+                activeThumbColor: _gold,
+                onChanged: (value) => _updatePreference('shuffle', value),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Wi-Fi only downloads'),
+                value: _preferences['wifiOnlyDownloads'] != false,
+                activeThumbColor: _gold,
+                onChanged: (value) => _updatePreference('wifiOnlyDownloads', value),
+              ),
+              const SizedBox(height: 6),
+              const Text('Autoplay, shuffle and Wi-Fi-only download rules are applied by the Android playback and download services.',
+                style: TextStyle(color: Colors.white54, fontSize: 11)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        _PanelCard(
+          title: 'Request a booking',
+          child: Column(
+            children: [
+              TextField(controller: _bookingName, decoration: const InputDecoration(labelText: 'Your name')),
+              TextField(controller: _bookingEmail, decoration: const InputDecoration(labelText: 'Email'), keyboardType: TextInputType.emailAddress),
+              TextField(controller: _bookingType, decoration: const InputDecoration(labelText: 'Booking type')),
+              TextField(controller: _bookingDate, decoration: const InputDecoration(labelText: 'Requested date (YYYY-MM-DD)')),
+              TextField(controller: _bookingMessage, decoration: const InputDecoration(labelText: 'Tell us about your project'), maxLines: 3),
+              const SizedBox(height: 14),
+              FilledButton(onPressed: _saving ? null : _submitBooking,
+                style: FilledButton.styleFrom(backgroundColor: _gold, foregroundColor: _black),
+                child: const Text('SUBMIT BOOKING')),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        _PanelCard(
+          title: 'My bookings',
+          child: _bookings.isEmpty
+              ? const Text('Your booking requests will appear here.', style: TextStyle(color: Colors.white60))
+              : Column(
+                  children: _bookings.map((booking) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(booking['type']?.toString() ?? 'Booking'),
+                    subtitle: Text((booking['requestedDate'] ?? 'Date not specified').toString() + ' • ' + (booking['status'] ?? 'pending').toString()),
+                  )).toList(),
+                ),
+        ),
+        if (_message != null) ...[
+          const SizedBox(height: 12),
+          Text(_message!, style: const TextStyle(color: _gold)),
+        ],
+        if (_founder != null) ...[
+          const SizedBox(height: 28),
+          const Text('FOUNDER STUDIO', style: TextStyle(color: _gold, fontSize: 11, letterSpacing: 1.8, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 12),
+          _PanelCard(
+            title: 'Studio overview',
+            child: Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: overview.entries.map((entry) => Chip(
+                label: Text(entry.key.toUpperCase() + ': ' + entry.value.toString()),
+                backgroundColor: const Color(0xFF302515),
+                labelStyle: const TextStyle(color: _gold),
+              )).toList(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _PanelCard(
+            title: 'Create content drafts',
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ['Track', 'Artist', 'Release', 'Video'].map((kind) => OutlinedButton(
+                onPressed: () => _createContent(kind),
+                child: Text('NEW ' + kind.toUpperCase()),
+              )).toList(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _PanelCard(
+            title: 'Unpublished content',
+            child: drafts.isEmpty
+                ? const Text('No drafts awaiting publication.', style: TextStyle(color: Colors.white60))
+                : Column(
+                    children: drafts.map((draft) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(draft['title']?.toString() ?? 'Untitled'),
+                      subtitle: Text(draft['table']?.toString() ?? ''),
+                      trailing: Wrap(
+                        spacing: 2,
+                        children: [
+                          IconButton(tooltip: 'Edit draft', onPressed: () => _editDraft(draft),
+                            icon: const Icon(Icons.edit_outlined, color: _gold)),
+                          IconButton(tooltip: 'Delete draft', onPressed: () => _deleteDraft(draft),
+                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent)),
+                          TextButton(onPressed: () => _setDraftPublished(draft), child: const Text('PUBLISH')),
+                        ],
+                      ),
+                    )).toList(),
+                  ),
+          ),
+          const SizedBox(height: 12),
+          _PanelCard(
+            title: 'Sponsored audio campaigns',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _createCampaign,
+                    icon: const Icon(Icons.campaign_outlined),
+                    label: const Text('NEW CAMPAIGN'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (campaigns.isEmpty)
+                  const Text('No campaigns found.', style: TextStyle(color: Colors.white60))
+                else
+                  ...campaigns.map((campaign) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(campaign['title']?.toString() ?? 'Untitled campaign'),
+                    subtitle: Text('Priority: ${campaign['priority'] ?? 0} • ${campaign['isPublished'] == true ? 'Published' : 'Draft'}'),
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (action) {
+                        final published = campaign['isPublished'] == true;
+                        if (action == 'publish') _setCampaignPublished(campaign, true);
+                        if (action == 'unpublish') _setCampaignPublished(campaign, false);
+                        if (action == 'edit' && !published) _editCampaign(campaign);
+                        if (action == 'delete' && !published) _deleteCampaign(campaign);
+                      },
+                      itemBuilder: (_) => [
+                        if (campaign['isPublished'] == true)
+                          const PopupMenuItem(value: 'unpublish', child: Text('Unpublish'))
+                        else ...[
+                          const PopupMenuItem(value: 'publish', child: Text('Publish')),
+                          const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                          const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                        ],
+                      ],
+                      child: Icon(campaign['isPublished'] == true ? Icons.public : Icons.public_off, color: _gold),
+                    ),
+                  )),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _PanelCard(
+            title: 'Booking management',
+            child: founderBookings.isEmpty
+                ? const Text('No booking requests.', style: TextStyle(color: Colors.white60))
+                : Column(
+                    children: founderBookings.map((booking) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(booking['name']?.toString() ?? 'Client'),
+                      subtitle: Text((booking['type'] ?? 'Booking').toString() + ' • ' + (booking['status'] ?? 'pending').toString()),
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (status) => _updateBooking(booking, status),
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'confirmed', child: Text('Confirm')),
+                          PopupMenuItem(value: 'declined', child: Text('Decline')),
+                          PopupMenuItem(value: 'completed', child: Text('Complete')),
+                        ],
+                      ),
+                    )).toList(),
+                  ),
+          ),
+        ],
+        const SizedBox(height: 20),
+        OutlinedButton.icon(
+          onPressed: () => _appChannel.invokeMethod<void>('shareApp'),
+          icon: const Icon(Icons.share_outlined),
+          label: const Text('SHARE HIGH-TECH ENTERTAINMENT'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(onPressed: widget.onSignOut, icon: const Icon(Icons.logout), label: const Text('SIGN OUT')),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+}
+
+class _PanelCard extends StatelessWidget {
+  const _PanelCard({required this.title, required this.child});
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(17),
+      decoration: BoxDecoration(
+        color: _surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message, required this.onRetry});
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off, color: _gold, size: 42),
+            const SizedBox(height: 16),
+            Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
+            const SizedBox(height: 18),
+            FilledButton(onPressed: onRetry, child: const Text('TRY AGAIN')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+/// Flutter-owned video playback screen. Native Android remains responsible
+/// only for the shared audio MediaSession; video presentation is Flutter UI.
+class FlutterVideoPlayerScreen extends StatefulWidget {
+  const FlutterVideoPlayerScreen({
+    super.key,
+    required this.videoUrl,
+    required this.title,
+  });
+
+  final String videoUrl;
+  final String title;
+
+  @override
+  State<FlutterVideoPlayerScreen> createState() => _FlutterVideoPlayerScreenState();
+}
+
+class _FlutterVideoPlayerScreenState extends State<FlutterVideoPlayerScreen> {
+  VideoPlayerController? _controller;
+  String? _error;
+  bool _loading = true;
+  bool _fullscreen = false;
+  int _loadGeneration = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeVideo();
+  }
+
+  Future<void> _initializeVideo() async {
+    final generation = ++_loadGeneration;
+    final uri = Uri.tryParse(widget.videoUrl);
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'This video link is invalid or insecure. Please contact the publisher.';
+        });
+      }
+      return;
+    }
+
+    final previous = _controller;
+    final next = VideoPlayerController.networkUrl(uri);
+    _controller = next;
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    await previous?.dispose();
+
+    try {
+      await next.initialize();
+      if (!mounted || generation != _loadGeneration) {
+        await next.dispose();
+        return;
+      }
+      setState(() => _loading = false);
+      await next.play();
+    } catch (_) {
+      if (!mounted || generation != _loadGeneration) return;
+      setState(() {
+        _loading = false;
+        _error = 'This video could not be loaded. Check your connection and try again.';
+      });
+      await next.dispose();
+      if (identical(_controller, next)) _controller = null;
+    }
+  }
+
+  Future<void> _toggleFullscreen() async {
+    final entering = !_fullscreen;
+    try {
+      await SystemChrome.setPreferredOrientations(
+        entering
+            ? const [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]
+            : const [DeviceOrientation.portraitUp],
+      );
+      await SystemChrome.setEnabledSystemUIMode(
+        entering ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
+      );
+      if (mounted) setState(() => _fullscreen = entering);
+    } on PlatformException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Fullscreen mode is unavailable on this device.')),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _loadGeneration++;
+    final active = _controller;
+    _controller = null;
+    if (active != null) unawaited(active.dispose());
+    if (_fullscreen) {
+      unawaited(SystemChrome.setPreferredOrientations(const [DeviceOrientation.portraitUp]));
+      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+    }
+    super.dispose();
+  }
+
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final hours = duration.inHours;
+    return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    final ready = !_loading && controller != null && controller.value.isInitialized;
+    return Scaffold(
+      backgroundColor: _black,
+      appBar: _fullscreen
+          ? null
+          : AppBar(
+              backgroundColor: _black,
+              title: Text(
+                widget.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              actions: [
+                IconButton(
+                  tooltip: 'Enter fullscreen',
+                  onPressed: ready ? _toggleFullscreen : null,
+                  icon: const Icon(Icons.fullscreen),
+                ),
+              ],
+            ),
+      body: SafeArea(
+        top: !_fullscreen,
+        bottom: !_fullscreen,
+        child: _error != null
+            ? Padding(
+                padding: const EdgeInsets.all(28),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.video_library_outlined, size: 54, color: _gold),
+                      const SizedBox(height: 16),
+                      Text(_error!, textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white70)),
+                      const SizedBox(height: 18),
+                      OutlinedButton.icon(
+                        onPressed: _initializeVideo,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('TRY AGAIN'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : !ready
+                ? const Center(child: CircularProgressIndicator(color: _gold))
+                : _fullscreen
+                    ? _buildFullscreen(controller)
+                    : _buildRegular(controller),
+      ),
+    );
+  }
+
+  Widget _buildFullscreen(VideoPlayerController controller) {
+    return ColoredBox(
+      color: Colors.black,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Center(
+            child: AspectRatio(
+              aspectRatio: controller.value.aspectRatio,
+              child: VideoPlayer(controller),
+            ),
+          ),
+          Positioned(
+            top: 12,
+            right: 12,
+            child: IconButton.filledTonal(
+              tooltip: 'Exit fullscreen',
+              onPressed: _toggleFullscreen,
+              icon: const Icon(Icons.fullscreen_exit),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRegular(VideoPlayerController controller) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              alignment: Alignment.topRight,
+              children: [
+                AspectRatio(
+                  aspectRatio: controller.value.aspectRatio,
+                  child: VideoPlayer(controller),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: IconButton.filledTonal(
+                    tooltip: 'Enter fullscreen',
+                    onPressed: _toggleFullscreen,
+                    icon: const Icon(Icons.fullscreen),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            widget.title,
+            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 14),
+          ValueListenableBuilder<VideoPlayerValue>(
+            valueListenable: controller,
+            builder: (context, value, _) => Column(
+              children: [
+                VideoProgressIndicator(
+                  controller,
+                  allowScrubbing: true,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  colors: const VideoProgressColors(
+                    playedColor: _gold,
+                    bufferedColor: Colors.white30,
+                    backgroundColor: Colors.white12,
+                  ),
+                ),
+                Row(
+                  children: [
+                    Text(_formatDuration(value.position),
+                        style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                    const Spacer(),
+                    IconButton.filled(
+                      onPressed: () {
+                        if (value.isPlaying) {
+                          controller.pause();
+                        } else {
+                          controller.play();
+                        }
+                      },
+                      style: IconButton.styleFrom(
+                        backgroundColor: _gold,
+                        foregroundColor: _black,
+                      ),
+                      icon: Icon(value.isPlaying ? Icons.pause : Icons.play_arrow),
+                    ),
+                    const Spacer(),
+                    Text(_formatDuration(value.duration),
+                        style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
