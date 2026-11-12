@@ -270,8 +270,8 @@ addEventListener('keydown',function(e){if(e.key==='Escape'&&n){n.classList.remov
 addEventListener('pointermove',function(e){var c=e.target.closest&&e.target.closest('.cards>*,.service-card,.team-card,.step,.panel');if(c){var r=c.getBoundingClientRect();c.style.setProperty('--mx',(e.clientX-r.left)+'px');c.style.setProperty('--my',(e.clientY-r.top)+'px')}},{passive:true});var pg=document.getElementById('progress');addEventListener('scroll',function(){var h=document.documentElement;if(pg){var maxScroll=Math.max(1,h.scrollHeight-h.clientHeight);pg.style.width=(h.scrollTop/maxScroll*100)+'%'}},{passive:true});var els=document.querySelectorAll('.reveal');if('IntersectionObserver'in window){var io=new IntersectionObserver(function(a){a.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12});els.forEach(function(e){io.observe(e)})}else{els.forEach(function(e){e.classList.add('in')})}})();
 
   </script>
-  <script is:inline src={`${base}assets/app.js?v=15`}></script>
-  <script is:inline src={`${base}assets/videos.js?v=4`}></script>
+  <script is:inline src={`${base}assets/app.js?v=16`}></script>
+  <script is:inline src={`${base}assets/videos.js?v=5`}></script>
   <script is:inline define:vars={{base}}>
     const authNext = new URLSearchParams(window.location.search).get('next');
     if (authNext === 'account' || authNext === 'admin') {
