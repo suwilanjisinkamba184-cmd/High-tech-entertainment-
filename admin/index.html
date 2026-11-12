@@ -8,16 +8,16 @@
   <title>Founder Studio · High Tech Entertainment</title>
   <link rel="stylesheet" href="../assets/site.css?v=20261101-2">
   <link rel="stylesheet" href="../assets/admin.css?v=20261109-marketing1">
-  <link rel="stylesheet" href="../assets/professional-admin.css?v=1"><link rel="stylesheet" href="../assets/premium-refresh.css?v=1">
   <link rel="stylesheet" href="../assets/admin-enhancements.css?v=1">
+  <link rel="stylesheet" href="../assets/founder-studio-v2.css?v=20261112-1">
 </head>
 <body class="admin-page">
 <a class="skip" href="#main">Skip to content</a>
 <header class="topbar admin-topbar">
   <div class="admin-topbar-inner">
-    <a class="brand" href="../" aria-label="High Tech Entertainment public website">
-      <span class="brand-mark">HT</span>
-      <span>HIGH TECH <small>ENTERTAINMENT · FOUNDER STUDIO</small></span>
+    <a class="brand admin-brand" href="../" aria-label="High Tech Entertainment public website">
+      <img class="admin-brand-logo" src="../high-tech-logo.svg" alt="">
+      <span>HIGH-TECH <small>ENTERTAINMENT · FOUNDER STUDIO</small></span>
     </a>
     <div class="admin-top-actions">
       <span class="admin-live"><i></i> PRIVATE WORKSPACE</span>
@@ -53,27 +53,33 @@
 </section>
 
 <div id="admin-app" class="admin-workspace" hidden>
-  <aside class="admin-sidebar" aria-label="Founder studio navigation">
-    <div class="admin-side-heading">WORKSPACE</div>
-    <button class="admin-nav-item active" data-tab="overview"><span class="admin-nav-icon">⌂</span><span>Overview</span><b>01</b></button>
-    <button class="admin-nav-item" data-tab="videos"><span class="admin-nav-icon">▶</span><span>Video manager</span><b>03</b></button>
-    <button class="admin-nav-item" data-tab="tracks"><span class="admin-nav-icon">♫</span><span>Music manager</span><b>02</b></button>
-    <button class="admin-nav-item" data-tab="artists"><span class="admin-nav-icon">♙</span><span>Artists</span><b>03</b></button>
-    <button class="admin-nav-item" data-tab="releases"><span class="admin-nav-icon">▣</span><span>Releases</span><b>04</b></button>
-    <button class="admin-nav-item" data-tab="inbox"><span class="admin-nav-icon">✉</span><span>Inbox</span><b>05</b></button>
-    <div class="admin-side-heading admin-side-gap">SYSTEM</div>
-    <button class="admin-nav-item hte-ai-nav" data-tab="ads"><span class="admin-nav-icon">🎙</span><span>AI Ad Studio</span><b>07</b></button>
-    <button class="admin-nav-item hte-ai-nav" data-tab="marketing"><span class="admin-nav-icon">✦</span><span>AI Marketing Agent</span><b>08</b></button>
-    <button class="admin-nav-item" data-tab="settings"><span class="admin-nav-icon">⚙</span><span>Settings</span><b>06</b></button>
-    <a class="admin-nav-item" href="../account/"><span class="admin-nav-icon">◉</span><span>Profile & account</span><b>↗</b></a>
-    <a class="admin-nav-item" href="../"><span class="admin-nav-icon">↗</span><span>Public website</span><b>↗</b></a>
+  <aside class="admin-sidebar" id="admin-sidebar" aria-label="Founder studio navigation">
+    <div class="admin-sidebar-brand"><img src="../high-tech-logo.svg" alt=""><span><strong>FOUNDER STUDIO</strong><small>PRIVATE WORKSPACE</small></span></div>
+    <nav class="admin-sidebar-nav" aria-label="Founder workspace">
+      <div class="admin-side-heading">WORKSPACE</div>
+      <button class="admin-nav-item active" data-tab="overview" aria-current="page"><span class="admin-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7"/></svg></span><span>Overview</span></button>
+      <div class="admin-side-heading">CONTENT</div>
+      <button class="admin-nav-item" data-tab="tracks"><span class="admin-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13M9 18c0 1.1-1.8 2-4 2s-4-.9-4-2 1.8-2 4-2 4 .9 4 2Zm12-2c0 1.1-1.8 2-4 2s-4-.9-4-2 1.8-2 4-2 4 .9 4 2Z"/></svg></span><span>Music catalogue</span></button>
+      <button class="admin-nav-item" data-tab="videos"><span class="admin-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg></span><span>Video library</span></button>
+      <button class="admin-nav-item" data-tab="artists"><span class="admin-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21a6 6 0 0 1 12 0M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 6"/></svg></span><span>Artists</span></button>
+      <button class="admin-nav-item" data-tab="releases"><span class="admin-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><span>Releases</span></button>
+      <div class="admin-side-heading">GROWTH</div>
+      <button class="admin-nav-item" data-tab="inbox"><span class="admin-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM4 13h4l2 3h4l2-3h4"/></svg></span><span>Enquiries inbox</span></button>
+      <button class="admin-nav-item hte-ai-nav" data-tab="ads"><span class="admin-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v4M5 5l3 3M3 12h4M5 19l3-3M12 17v4M16 16l3 3M17 12h4M16 8l3-3M9 12h6"/></svg></span><span>AI Ad Studio</span></button>
+      <button class="admin-nav-item hte-ai-nav" data-tab="marketing"><span class="admin-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 11 18-8-8 18-2-8-8-2z"/></svg></span><span>AI Marketing Agent</span></button>
+      <div class="admin-side-heading">ACCOUNT</div>
+      <button class="admin-nav-item" data-tab="settings"><span class="admin-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.8 1.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.1h-2.6v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-1.8-1.8.1-.1A1.7 1.7 0 0 0 8 15a1.7 1.7 0 0 0-1.5-1H6.4v-2.6h.1A1.7 1.7 0 0 0 8 10a1.7 1.7 0 0 0-.3-1.9l-.1-.1 1.8-1.8.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V5h2.6v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.8 1.8-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1v2.6h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></span><span>Settings</span></button>
+      <a class="admin-nav-item" href="../account/"><span class="admin-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><span>My account</span><span class="admin-nav-external" aria-hidden="true">↗</span></a>
+      <a class="admin-nav-item" href="../"><span class="admin-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></span><span>Public website</span><span class="admin-nav-external" aria-hidden="true">↗</span></a>
+    </nav>
     <div class="admin-sidebar-bottom"><div class="admin-status-orb"></div><div><strong>STUDIO SECURE</strong><small>Founder access only</small></div></div>
   </aside>
+  <button class="admin-nav-backdrop" type="button" data-admin-nav-close aria-label="Close navigation"></button>
 
   <main id="main" class="admin-main">
     <div class="admin-main-top">
       <div><div class="eyebrow">HIGH TECH ENTERTAINMENT / CONTROL ROOM</div><h1 id="view-title">Overview</h1><p id="admin-date" class="admin-date">Your creative operations, in one place.</p></div>
-      <div class="admin-main-actions"><span class="admin-user-chip"><span class="admin-user-avatar">HT</span><span><strong data-user-name>Founder</strong><small>Founder account</small></span></span><button class="btn" id="refresh-admin" type="button">↻ Refresh data</button></div>
+      <div class="admin-main-actions"><button class="admin-menu-toggle" id="admin-menu-toggle" type="button" aria-controls="admin-sidebar" aria-expanded="false" aria-label="Open studio navigation"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Menu</span></button><span class="admin-user-chip"><span class="admin-user-avatar">HT</span><span><strong data-user-name>Founder</strong><small>Founder account</small></span></span><button class="btn" id="refresh-admin" type="button">↻ Refresh data</button></div>
     </div>
     <div class="status admin-global-status" id="admin-status" role="status" aria-live="polite"></div>
 
@@ -248,7 +254,8 @@
 <script src="../assets/app.js?v=16"></script>
 <script src="../assets/admin-upload.js?v=20261109-session1"></script>
 <script src="../assets/admin-video.js?v=20261109-rpc1"></script>
-<script src="../assets/admin-ui.js?v=20261101-2"></script>
+<script src="../assets/admin-ui.js?v=20261112-1"></script>
+<script src="../assets/founder-studio-navigation.js?v=20261112-1"></script>
 <script src="../assets/admin-enhancements.js?v=20261109-rpc1"></script>
 <script src="../assets/ai-ad-studio.js?v=20261109-rpc1"></script>
 <script src="../assets/ai-marketing-agent.js?v=20261109-rpc1"></script>
