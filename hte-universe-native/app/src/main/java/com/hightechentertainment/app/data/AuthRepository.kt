@@ -1,6 +1,7 @@
 package com.hightechentertainment.app.data
 
-import io.github.jan.supabase.auth.providers.Email
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.builtin.Email
 
 /**
  * Authentication operations for member accounts.

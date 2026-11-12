@@ -3,7 +3,6 @@ package com.hightechentertainment.app.data
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.query.filter.eq
 
 @Serializable
 data class ArtistDto(
