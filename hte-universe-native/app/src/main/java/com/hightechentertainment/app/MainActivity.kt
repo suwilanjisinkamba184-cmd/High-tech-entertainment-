@@ -125,7 +125,7 @@ private fun UniverseSplash(onFinished: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(.72f).height(3.dp).clip(CircleShape),
                 color = Gold, trackColor = Silver.copy(alpha = .18f))
             Spacer(Modifier.height(10.dp))
-            Text("PREPARING YOUR UNIVERSE  •  $elapsed / 15", color = Muted, fontSize = 9.sp, letterSpacing = 1.2.sp)
+            Text("PREPARING YOUR UNIVERSE  •  ${((elapsed / 15f) * 100).toInt()}%", color = Muted, fontSize = 9.sp, letterSpacing = 1.2.sp)
         }
     }
 }
