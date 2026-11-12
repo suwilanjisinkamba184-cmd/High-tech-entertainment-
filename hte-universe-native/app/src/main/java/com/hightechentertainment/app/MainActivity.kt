@@ -1,6 +1,7 @@
 package com.hightechentertainment.app
 
 import android.os.Bundle
+import android.content.Intent
 import android.media.MediaPlayer
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,6 +35,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import io.github.jan.supabase.auth.handleDeeplinks
+import com.hightechentertainment.app.data.SupabaseClientProvider
 
 private val Obsidian = Color(0xFF08090B)
 private val Panel = Color(0xFF121418)
@@ -44,9 +47,22 @@ private val Muted = Color(0xFF8B929D)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleSupabaseIntent(intent)
         window.statusBarColor = android.graphics.Color.rgb(8, 9, 11)
         window.navigationBarColor = android.graphics.Color.rgb(8, 9, 11)
         setContent { HteUniverseApp() }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleSupabaseIntent(intent)
+    }
+
+    private fun handleSupabaseIntent(intent: Intent) {
+        if (BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()) {
+            runCatching { SupabaseClientProvider.client.handleDeeplinks(intent) }
+        }
     }
 }
 
@@ -58,7 +74,7 @@ private fun HteUniverseApp() {
         surface = Panel, onPrimary = Obsidian, onBackground = Color.White, onSurface = Color.White
     )) {
         Surface(Modifier.fillMaxSize(), color = Obsidian) {
-            if (!splashFinished) UniverseSplash { splashFinished = true } else UniverseHome()
+            if (!splashFinished) UniverseSplash { splashFinished = true } else UniverseShell()
         }
     }
 }

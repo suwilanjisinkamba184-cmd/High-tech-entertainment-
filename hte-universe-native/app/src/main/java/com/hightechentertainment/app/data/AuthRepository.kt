@@ -1,12 +1,12 @@
 package com.hightechentertainment.app.data
 
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.Email
 
 /**
  * Authentication operations for member accounts.
- * Authorization for Founder Studio must be enforced by trusted app_metadata/RLS,
- * never by a client-side role flag or user-editable profile metadata.
+ * Founder access is enforced by trusted Supabase roles and RLS, not by client-side flags.
  */
 class AuthRepository {
     suspend fun signIn(email: String, password: String) {
@@ -25,6 +25,10 @@ class AuthRepository {
             this.email = email.trim()
             this.password = password
         }
+    }
+
+    suspend fun signInWithGoogle() {
+        SupabaseClientProvider.client.auth.signInWith(Google)
     }
 
     suspend fun signOut() {
