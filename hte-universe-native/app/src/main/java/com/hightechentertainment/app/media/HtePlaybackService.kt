@@ -33,10 +33,10 @@ class HtePlaybackService : MediaSessionService() {
     override fun onDestroy() {
         HteAudioEffects.release()
         activeAudioSessionId = 0
-        player?.release()
-        player = null
         mediaSession?.release()
         mediaSession = null
+        player?.release()
+        player = null
         super.onDestroy()
     }
 

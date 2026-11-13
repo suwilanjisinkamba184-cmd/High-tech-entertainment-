@@ -55,7 +55,7 @@ private val VoiceMuted = Color(0xFF8B929D)
 @Serializable
 private data class VoiceTokenResponse(
     val token: String,
-    @SerialName("user_id") val userId: String
+    @SerialName("user_id") val userId: String = ""
 )
 
 @Composable
@@ -100,7 +100,7 @@ fun VoiceAssistantDialog(
         if (granted) startVoiceSession(scope, context, toolContext,
             onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
             onSession = { active -> session = active; isConnecting = false },
-            onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = error }
+            onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = voiceFailureMessage(error) }
         ) else errorMessage = "Microphone permission is required for Voice Companion."
     }
 
@@ -112,7 +112,7 @@ fun VoiceAssistantDialog(
             startVoiceSession(scope, context, toolContext,
                 onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
                 onSession = { active -> session = active; isConnecting = false },
-                onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = error }
+                onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = voiceFailureMessage(error) }
             )
         }
     }
@@ -295,5 +295,17 @@ private fun startVoiceSession(
         } catch (error: Throwable) {
             onFailure(error.message?.take(220) ?: "Could not connect to the HTE Voice Companion.")
         }
+    }
+}
+
+
+private fun voiceFailureMessage(message: String): String {
+    val normalized = message.lowercase()
+    return when {
+        "convai_write" in normalized || "missing permission" in normalized || "401" in normalized || "502" in normalized ->
+            "Voice service authentication failed. The HTE ElevenLabs API key must include Conversational AI (ConvAI) write permission. Please update the key stored in Supabase and try again."
+        "sign in" in normalized || "unauthorized" in normalized ->
+            "Please sign in again, then reconnect Voice Companion."
+        else -> message.take(220).ifBlank { "Could not connect to the HTE Voice Companion. Please try again." }
     }
 }

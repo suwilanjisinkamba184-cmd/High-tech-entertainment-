@@ -31,6 +31,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
 import androidx.media3.ui.PlayerView
+import androidx.media3.ui.AspectRatioFrameLayout
 import io.github.jan.supabase.auth.auth
 import com.hightechentertainment.app.data.AuthRepository
 import com.hightechentertainment.app.data.EntertainmentCatalogRepository
@@ -44,6 +45,7 @@ import com.hightechentertainment.app.media.OfflineDownloadManager
 import com.hightechentertainment.app.media.OfflineDownloadRecord
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 private val ShellGold = Color(0xFFD6B15E)
@@ -264,54 +266,129 @@ private fun HomeScreen(
 }
 
 @Composable
-private fun DiscoverScreen(tracks: List<TrackDto>, isLoading: Boolean, error: String?, onPlay: (TrackDto) -> Unit, onDownload: (TrackDto) -> Unit, favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, initialQuery: String, onQueryChanged: (String) -> Unit, onRefresh: () -> Unit) {
+private fun DiscoverScreen(
+    tracks: List<TrackDto>, isLoading: Boolean, error: String?,
+    onPlay: (TrackDto) -> Unit, onDownload: (TrackDto) -> Unit,
+    favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit,
+    initialQuery: String, onQueryChanged: (String) -> Unit, onRefresh: () -> Unit
+) {
     var query by remember { mutableStateOf(initialQuery) }
-    LaunchedEffect(initialQuery) { query = initialQuery }
     var selectedGenre by remember { mutableStateOf("All") }
+    LaunchedEffect(initialQuery) { query = initialQuery }
     val genres = listOf("All") + tracks.mapNotNull { it.genre?.takeIf(String::isNotBlank) }.distinct().sorted()
     val filtered = tracks.filter { track ->
-        val matchesQuery = query.isBlank() || track.title.contains(query, true) || track.artist.contains(query, true)
-        val matchesGenre = selectedGenre == "All" || track.genre.equals(selectedGenre, true)
-        matchesQuery && matchesGenre
+        val q = query.trim()
+        (q.isBlank() || track.title.contains(q, true) || track.artist.contains(q, true) || track.genre.orEmpty().contains(q, true)) &&
+            (selectedGenre == "All" || track.genre.equals(selectedGenre, true))
     }
-    Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-        Text("Discover", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        Text("Find your next favourite sound.", color = ShellMuted, fontSize = 13.sp)
-        Spacer(Modifier.height(16.dp))
-        OutlinedTextField(value = query, onValueChange = { query = it; onQueryChanged(it) }, modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Search tracks or artists") }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true)
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            genres.take(6).forEach { genre ->
-                FilterChip(selected = selectedGenre == genre, onClick = { selectedGenre = genre }, label = { Text(genre) })
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().background(ShellBackground),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text("SIGNAL / DISCOVERY", color = ShellGold, fontSize = 10.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+                Text("Find your frequency.", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.Bold)
+                Text("Explore the HTE sound across artists and genres.", color = ShellMuted, fontSize = 12.sp)
             }
         }
-        Spacer(Modifier.height(12.dp))
-        if (error != null) Text(error, color = ShellGold, fontSize = 12.sp)
-        if (filtered.isEmpty()) {
-            EmptyCatalogueState(if (isLoading) "Loading music catalogue…" else "No matching music found", isLoading, onRefresh)
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
-                items(filtered, key = { it.id }) { track -> TrackRow(track = track, onPlay = { onPlay(track) }, onDownload = { onDownload(track) }, isFavourite = track.id in favouriteTrackIds, onToggleFavourite = { onToggleFavourite(track) }) }
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(20.dp)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("THE HTE CATALOGUE", color = ShellGold, fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = query, onValueChange = { query = it; onQueryChanged(it) },
+                        modifier = Modifier.fillMaxWidth(), singleLine = true,
+                        placeholder = { Text("Search songs, artists or genres") },
+                        leadingIcon = { Icon(Icons.Outlined.Search, null, tint = ShellGold) },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = ShellGold, unfocusedBorderColor = Color.White.copy(alpha = .12f),
+                            focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                            cursorColor = ShellGold
+                        )
+                    )
+                    Text("FILTER BY GENRE", color = ShellMuted, fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
+                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        items(genres, key = { it }) { genre ->
+                            FilterChip(
+                                selected = selectedGenre == genre,
+                                onClick = { selectedGenre = genre },
+                                label = { Text(genre, fontSize = 11.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = ShellGold.copy(alpha = .18f),
+                                    selectedLabelColor = ShellGold,
+                                    labelColor = ShellSilver
+                                )
+                            )
+                        }
+                    }
+                }
             }
+        }
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("CURATED FOR YOU", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("${filtered.size} matching tracks", color = ShellMuted, fontSize = 11.sp)
+                }
+                TextButton(onClick = onRefresh, enabled = !isLoading) {
+                    Icon(Icons.Outlined.Refresh, null, tint = ShellGold, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp)); Text("Refresh", color = ShellGold, fontSize = 11.sp)
+                }
+            }
+        }
+        if (error != null) item { Text(error, color = ShellGold, fontSize = 12.sp) }
+        if (filtered.isEmpty()) item {
+            EmptyCatalogueState(if (isLoading) "Loading the HTE catalogue…" else "No tracks match this search yet.", isLoading, onRefresh)
+        } else items(filtered, key = { it.id }) { track ->
+            TrackRow(track, { onPlay(track) }, { onDownload(track) }, track.id in favouriteTrackIds, { onToggleFavourite(track) })
         }
     }
 }
 
 @Composable
 private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: String?, onPlay: (VideoDto) -> Unit, onDownload: (VideoDto) -> Unit, onRefresh: () -> Unit) {
-    Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-        Text("Videos", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        Text("Watch HTE visuals, performances and stories.", color = ShellMuted, fontSize = 13.sp)
-        Spacer(Modifier.height(14.dp))
-        if (error != null) Text(error, color = ShellGold, fontSize = 12.sp)
-        if (videos.isEmpty()) {
-            EmptyCatalogueState(if (isLoading) "Loading video catalogue…" else "No published videos yet", isLoading, onRefresh)
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
-                items(videos, key = { it.id }) { video -> VideoRow(video = video, onPlay = { onPlay(video) }, onDownload = { onDownload(video) }) }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().background(ShellBackground),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text("HTE VISUAL NETWORK", color = ShellGold, fontSize = 10.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+                Text("Watch the culture.", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.Bold)
+                Text("Music videos, performances and stories from the HTE universe.", color = ShellMuted, fontSize = 12.sp)
             }
         }
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(20.dp)) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(54.dp).background(ShellGold.copy(alpha = .13f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Outlined.PlayCircle, null, tint = ShellGold, modifier = Modifier.size(30.dp))
+                    }
+                    Spacer(Modifier.width(13.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("CINEMATIC PLAYBACK", color = ShellGold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+                        Text("Fullscreen-ready video", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Adaptive streaming with retry controls", color = ShellMuted, fontSize = 10.sp)
+                    }
+                }
+            }
+        }
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("LATEST RELEASES", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text("${videos.size} published videos", color = ShellMuted, fontSize = 11.sp)
+                }
+                TextButton(onClick = onRefresh, enabled = !isLoading) { Icon(Icons.Outlined.Refresh, null, tint = ShellGold); Text("Retry", color = ShellGold) }
+            }
+        }
+        if (error != null) item { Text(error, color = ShellGold, fontSize = 12.sp) }
+        if (videos.isEmpty()) item { EmptyCatalogueState(if (isLoading) "Loading videos…" else "No published videos yet.", isLoading, onRefresh) }
+        else items(videos, key = { it.id }) { video -> VideoRow(video, { onPlay(video) }, { onDownload(video) }) }
     }
 }
 
@@ -337,18 +414,26 @@ private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit
 
 @Composable
 private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: () -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(62.dp, 52.dp).background(ShellGold.copy(alpha = .12f), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.PlayCircle, null, tint = ShellGold, modifier = Modifier.size(30.dp))
+    Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.fillMaxWidth().height(164.dp).background(
+                androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF392D1D), Color(0xFF171B22), Color(0xFF0D1117))),
+                RoundedCornerShape(13.dp)
+            ), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.Movie, null, tint = ShellGold.copy(alpha = .72f), modifier = Modifier.size(52.dp))
+                Box(Modifier.align(Alignment.Center).size(48.dp).background(Color.Black.copy(alpha = .52f), RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Outlined.PlayArrow, "Play ${video.title}", tint = Color.White, modifier = Modifier.size(30.dp))
+                }
+                Text("HTE VISUALS", color = ShellSilver, fontSize = 8.sp, letterSpacing = 1.6.sp, modifier = Modifier.align(Alignment.BottomStart).padding(10.dp))
             }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(video.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 12.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(video.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 11.sp)
+                }
+                IconButton(onClick = onDownload) { Icon(Icons.Outlined.Download, "Download ${video.title}", tint = ShellSilver) }
+                IconButton(onClick = onPlay) { Icon(Icons.Outlined.PlayCircle, "Play ${video.title}", tint = ShellGold, modifier = Modifier.size(28.dp)) }
             }
-            IconButton(onClick = onDownload) { Icon(Icons.Outlined.Download, "Download ${video.title}", tint = ShellSilver) }
-            Icon(Icons.Outlined.PlayArrow, "Play video", tint = ShellGold)
         }
     }
 }
@@ -364,52 +449,68 @@ private fun LibraryScreen(
     onRemoveDownload: (OfflineDownloadRecord) -> Unit,
     onPlayDownload: (OfflineDownloadRecord) -> Unit
 ) {
-    LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
         item {
-            Text("Your Library", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text("Your music, saved your way.", color = ShellMuted, fontSize = 13.sp)
-        }
-        item { Text("FAVOURITES", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
-        if (favouriteTracks.isEmpty()) {
-            item { Text("Sign in and tap the heart on a track to save it here.", color = ShellMuted, fontSize = 12.sp) }
-        } else {
-            items(favouriteTracks, key = { it.id }) { track ->
-                TrackRow(track = track, onPlay = { onPlayFavourite(track) }, onDownload = { onDownloadFavourite(track) }, isFavourite = true, onToggleFavourite = { onToggleFavourite(track) })
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text("YOUR PERSONAL COLLECTION", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold)
+                Text("Your Library.", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.Bold)
+                Text("Saved music and downloads, ready when you are.", color = ShellMuted, fontSize = 12.sp)
             }
         }
-        item { LibraryTile(Icons.Outlined.QueueMusic, "Playlists", "Build and organise your listening") }
-        item { LibraryTile(Icons.Outlined.History, "Listening history", "Return to what you played") }
-        item { Text("OFFLINE DOWNLOADS", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
-        if (downloads.isEmpty()) {
-            item { Text("No offline downloads yet. Use the download icon beside a track or video to save it.", color = ShellMuted, fontSize = 12.sp) }
-        } else {
-            items(downloads, key = { it.id }) { record ->
-                Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(16.dp)) {
-                    Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(20.dp)) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    LibraryMetric("${favouriteTracks.size}", "FAVOURITES", Modifier.weight(1f))
+                    Box(Modifier.width(1.dp).height(38.dp).background(Color.White.copy(alpha = .1f)))
+                    LibraryMetric("${downloads.count { it.status == "Downloaded" }}", "OFFLINE", Modifier.weight(1f))
+                    Box(Modifier.width(1.dp).height(38.dp).background(Color.White.copy(alpha = .1f)))
+                    LibraryMetric("${downloads.size}", "IN QUEUE", Modifier.weight(1f))
+                }
+            }
+        }
+        item { Text("FAVOURITES", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold) }
+        if (favouriteTracks.isEmpty()) item {
+            LibraryEmptyCard("No favourites saved", "Tap the heart on any published track to keep it in your collection.", onSignIn, "Open account")
+        } else items(favouriteTracks, key = { it.id }) { track ->
+            TrackRow(track, { onPlayFavourite(track) }, { onDownloadFavourite(track) }, true, { onToggleFavourite(track) })
+        }
+        item { Text("OFFLINE DOWNLOADS", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold) }
+        if (downloads.isEmpty()) item {
+            LibraryEmptyCard("Nothing downloaded yet", "Use the download action on a track or video to save it for offline playback.", onSignIn, "Manage account")
+        } else items(downloads, key = { it.id }) { record ->
+            Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(16.dp)) {
+                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(42.dp).background(ShellGold.copy(alpha = .12f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
                         Icon(if (record.mediaType == "video") Icons.Outlined.VideoLibrary else Icons.Outlined.MusicNote, null, tint = ShellGold)
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(record.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${record.mediaType.uppercase()} · ${record.status}", color = ShellMuted, fontSize = 11.sp)
-                        }
-                        if (record.status == "Downloaded" && !record.localUri.isNullOrBlank()) {
-                            IconButton(onClick = { onPlayDownload(record) }) { Icon(Icons.Outlined.PlayArrow, "Play offline", tint = ShellGold) }
-                        }
-                        IconButton(onClick = { onRemoveDownload(record) }) { Icon(Icons.Outlined.Delete, "Remove download", tint = ShellMuted) }
                     }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(record.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${record.mediaType.uppercase()} · ${record.status}", color = ShellMuted, fontSize = 10.sp)
+                    }
+                    if (record.status == "Downloaded" && !record.localUri.isNullOrBlank()) IconButton(onClick = { onPlayDownload(record) }) { Icon(Icons.Outlined.PlayArrow, "Play offline", tint = ShellGold) }
+                    IconButton(onClick = { onRemoveDownload(record) }) { Icon(Icons.Outlined.DeleteOutline, "Remove download", tint = ShellMuted) }
                 }
             }
         }
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(18.dp)) {
-                Column(Modifier.fillMaxWidth().padding(18.dp)) {
-                    Text("Sign in to sync your library", color = Color.White, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(6.dp))
-                    Text("Favourites, playlists and listening history are stored in your account.", color = ShellMuted, fontSize = 12.sp)
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedButton(onClick = onSignIn) { Text("Open account") }
-                }
-            }
+    }
+}
+
+@Composable
+private fun LibraryMetric(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(value, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = ShellMuted, fontSize = 8.sp, letterSpacing = 1.sp)
+    }
+}
+
+@Composable
+private fun LibraryEmptyCard(title: String, description: String, onAction: () -> Unit, action: String) {
+    Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(16.dp)) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(title, color = Color.White, fontWeight = FontWeight.SemiBold)
+            Text(description, color = ShellMuted, fontSize = 11.sp)
+            TextButton(onClick = onAction) { Text(action, color = ShellGold) }
         }
     }
 }
@@ -459,62 +560,180 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
     val context = LocalContext.current
     var controller by remember { mutableStateOf<MediaController?>(null) }
     var playbackError by remember { mutableStateOf<String?>(null) }
+    var position by remember { mutableStateOf(0L) }
+    var duration by remember { mutableStateOf(0L) }
+    var isPlaying by remember { mutableStateOf(false) }
+    var isBuffering by remember { mutableStateOf(false) }
     val validQueue = remember(queue, track.id, track.audioUrl) {
-        if (track.audioUrl?.startsWith("http", ignoreCase = true) != true) emptyList() else queue.filter { candidate ->
-            runCatching { Uri.parse(candidate.audioUrl.orEmpty()).scheme in listOf("https", "http") }.getOrDefault(false)
+        queue.filter { candidate ->
+            val url = candidate.audioUrl.orEmpty()
+            url.startsWith("https://", true) || url.startsWith("http://", true)
         }.map { candidate ->
-            MediaItem.Builder()
-                .setMediaId(candidate.id)
-                .setUri(candidate.audioUrl!!)
-                .setMediaMetadata(MediaMetadata.Builder().setTitle(candidate.title).setArtist(candidate.artist).build())
-                .build()
+            MediaItem.Builder().setMediaId(candidate.id).setUri(candidate.audioUrl!!)
+                .setMediaMetadata(MediaMetadata.Builder().setTitle(candidate.title).setArtist(candidate.artist).build()).build()
         }
     }
-    val fallbackItem = remember(track.id) {
-        MediaItem.Builder().setMediaId(track.id).setUri(track.audioUrl.orEmpty())
-            .setMediaMetadata(MediaMetadata.Builder().setTitle(track.title).setArtist(track.artist).build()).build()
-    }
-
     DisposableEffect(context) {
-        val future = HtePlaybackController.connect(context, { connected -> controller = connected }, { error ->
-            playbackError = error.message?.take(160) ?: "The background player could not start."
+        HtePlaybackController.connect(context, { controller = it }, { error ->
+            playbackError = error.message?.take(160) ?: "The background audio service could not start."
         })
-        onDispose {
-            controller = null
-            // Keep the app-scoped controller connected so background and voice controls remain available.
+        onDispose { controller = null }
+    }
+    LaunchedEffect(controller, track.id, track.audioUrl, validQueue) {
+        val player = controller ?: return@LaunchedEffect
+        if (track.audioUrl.isNullOrBlank() || !track.audioUrl.startsWith("http", true)) {
+            playbackError = "This track does not have a valid audio stream URL yet."
+            return@LaunchedEffect
+        }
+        val items = if (validQueue.isNotEmpty()) validQueue else listOf(
+            MediaItem.Builder().setMediaId(track.id).setUri(track.audioUrl)
+                .setMediaMetadata(MediaMetadata.Builder().setTitle(track.title).setArtist(track.artist).build()).build()
+        )
+        val startIndex = items.indexOfFirst { it.mediaId == track.id }.coerceAtLeast(0)
+        runCatching { player.setMediaItems(items, startIndex, C.TIME_UNSET); player.prepare(); player.play() }
+            .onFailure { playbackError = it.message?.take(160) ?: "Unable to start this track." }
+    }
+    LaunchedEffect(controller) {
+        while (controller != null) {
+            val player = controller
+            position = player?.currentPosition?.coerceAtLeast(0L) ?: 0L
+            duration = player?.duration?.takeIf { it > 0 && it != C.TIME_UNSET } ?: 0L
+            isPlaying = player?.isPlaying == true
+            isBuffering = player?.playbackState == Player.STATE_BUFFERING
+            delay(400)
         }
     }
-
-    LaunchedEffect(controller, track.id) {
-        val player = controller ?: return@LaunchedEffect
-        val items = if (validQueue.isNotEmpty()) validQueue else listOf(fallbackItem)
-        val startIndex = items.indexOfFirst { it.mediaId == track.id }.coerceAtLeast(0)
-        player.setMediaItems(items, startIndex, C.TIME_UNSET)
-        player.prepare()
-        player.play()
-    }
-
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize(), color = ShellBackground) {
-            Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.Center) {
+            Column(Modifier.fillMaxSize().padding(horizontal = 22.dp, vertical = 18.dp), verticalArrangement = Arrangement.SpaceBetween) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("NOW PLAYING · BACKGROUND ENABLED", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.2.sp, modifier = Modifier.weight(1f))
-                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close player", tint = ShellSilver) }
+                    Column(Modifier.weight(1f)) {
+                        Text("HTE AUDIO / NOW PLAYING", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
+                        Text("Premium listening session", color = ShellMuted, fontSize = 11.sp)
+                    }
+                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.KeyboardArrowDown, "Minimise player", tint = ShellSilver, modifier = Modifier.size(28.dp)) }
                 }
-                Text(track.title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text(track.artist, color = ShellMuted, fontSize = 14.sp)
-                Spacer(Modifier.height(20.dp))
-                if (controller != null) {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(Modifier.size(236.dp).background(
+                        androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF58452B), Color(0xFF1A2028), Color(0xFF101216))),
+                        RoundedCornerShape(28.dp)
+                    ), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Outlined.Headphones, null, tint = ShellGold.copy(alpha = .88f), modifier = Modifier.size(104.dp))
+                        Text("HIGH-TECH ENTERTAINMENT", color = ShellSilver.copy(alpha = .75f), fontSize = 8.sp, letterSpacing = 2.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(14.dp))
+                    }
+                    Text(track.title, color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(track.artist, color = ShellSilver, fontSize = 13.sp)
+                    if (isBuffering) LinearProgressIndicator(Modifier.fillMaxWidth(.72f), color = ShellGold)
+                    Slider(
+                        value = position.coerceAtMost(duration.coerceAtLeast(1L)).toFloat(),
+                        onValueChange = { controller?.seekTo(it.toLong()) },
+                        valueRange = 0f..duration.coerceAtLeast(1L).toFloat(),
+                        enabled = controller != null && duration > 0,
+                        colors = SliderDefaults.colors(thumbColor = ShellGold, activeTrackColor = ShellGold, inactiveTrackColor = ShellMuted.copy(alpha = .35f))
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(formatMediaTime(position), color = ShellMuted, fontSize = 10.sp)
+                        Text(formatMediaTime(duration), color = ShellMuted, fontSize = 10.sp)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { controller?.seekToPreviousMediaItem() }, enabled = controller != null) { Icon(Icons.Outlined.SkipPrevious, "Previous track", tint = ShellSilver, modifier = Modifier.size(34.dp)) }
+                        Spacer(Modifier.width(18.dp))
+                        FilledIconButton(
+                            onClick = { if (isPlaying) controller?.pause() else controller?.play() },
+                            enabled = controller != null,
+                            modifier = Modifier.size(68.dp),
+                            colors = IconButtonDefaults.filledIconButtonColors(containerColor = ShellGold, contentColor = ShellBackground)
+                        ) { Icon(if (isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow, if (isPlaying) "Pause" else "Play", modifier = Modifier.size(34.dp)) }
+                        Spacer(Modifier.width(18.dp))
+                        IconButton(onClick = { controller?.seekToNextMediaItem() }, enabled = controller != null) { Icon(Icons.Outlined.SkipNext, "Next track", tint = ShellSilver, modifier = Modifier.size(34.dp)) }
+                    }
+                    Text("QUEUE · ${validQueue.size.coerceAtLeast(1)} TRACKS", color = ShellMuted, fontSize = 9.sp, letterSpacing = 1.4.sp)
+                    playbackError?.let { Text(it, color = Color(0xFFFFB3A8), fontSize = 11.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
+                }
+                Text("Playback stays active in the background. Use the Android media notification to control it outside HTE Universe.", color = ShellMuted, fontSize = 10.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            }
+        }
+    }
+}
+
+private fun formatMediaTime(milliseconds: Long): String {
+    val totalSeconds = (milliseconds / 1000L).coerceAtLeast(0L)
+    return "%d:%02d".format(totalSeconds / 60L, totalSeconds % 60L)
+}
+
+@Composable
+private fun VideoPlayerDialog(video: VideoDto, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val validUrl = remember(video.videoUrl) {
+        runCatching {
+            val uri = Uri.parse(video.videoUrl)
+            uri.scheme in listOf("https", "http", "content", "file") && !video.videoUrl.isBlank()
+        }.getOrDefault(false)
+    }
+    val player = remember(video.id, video.videoUrl) {
+        ExoPlayer.Builder(context).build().apply {
+            if (validUrl) {
+                setMediaItem(MediaItem.fromUri(video.videoUrl))
+                prepare()
+                playWhenReady = true
+            }
+        }
+    }
+    var playbackError by remember { mutableStateOf<String?>(null) }
+    var isBuffering by remember { mutableStateOf(false) }
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onPlayerError(error: PlaybackException) {
+                playbackError = "Video playback failed. Check the connection or retry the stream."
+            }
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                isBuffering = playbackState == Player.STATE_BUFFERING
+                if (playbackState == Player.STATE_READY) playbackError = null
+            }
+        }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener); player.release() }
+    }
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(Modifier.fillMaxSize(), color = Color.Black) {
+            Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 12.dp, vertical = 10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 10.sp)
+                    }
+                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close video", tint = Color.White) }
+                }
+                Spacer(Modifier.height(8.dp))
+                if (validUrl) {
                     AndroidView(
-                        factory = { PlayerView(it).apply { player = controller; useController = true } },
-                        update = { it.player = controller },
-                        modifier = Modifier.fillMaxWidth().height(190.dp)
+                        factory = { viewContext -> PlayerView(viewContext).apply {
+                            this.player = player
+                            useController = true
+                            controllerAutoShow = true
+                            controllerHideOnTouch = true
+                            controllerShowTimeoutMs = 3500
+                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                            setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                            keepScreenOn = true
+                        } },
+                        update = { view -> view.player = player },
+                        modifier = Modifier.fillMaxWidth().weight(1f)
                     )
                 } else {
-                    CircularProgressIndicator(color = ShellGold, modifier = Modifier.align(Alignment.CenterHorizontally))
+                    Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                        Text("This video does not have a valid playback URL.", color = ShellGold)
+                    }
                 }
-                playbackError?.let { Text(it, color = ShellGold, fontSize = 12.sp) }
-                Text("Playback continues when you leave this screen. Use the Android media notification to control it.", color = ShellMuted, fontSize = 11.sp)
+                if (isBuffering) LinearProgressIndicator(Modifier.fillMaxWidth(), color = ShellGold)
+                playbackError?.let { message ->
+                    Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(14.dp)) {
+                        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(message, color = ShellSilver, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                            TextButton(onClick = { playbackError = null; player.prepare(); player.playWhenReady = true }) { Text("Retry", color = ShellGold) }
+                        }
+                    }
+                }
             }
         }
     }
