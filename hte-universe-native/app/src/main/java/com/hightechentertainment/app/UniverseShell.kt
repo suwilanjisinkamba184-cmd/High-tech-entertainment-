@@ -11,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.automirrored.outlined.QueueMusic
 import androidx.compose.material3.*
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +59,7 @@ private enum class UniverseTab(val label: String) {
     HOME("Home"), DISCOVER("Discover"), VIDEOS("Videos"), LIBRARY("Library"), ACCOUNT("Account")
 }
 
+@OptIn(markerClass = [UnstableApi::class])
 @Composable
 fun UniverseShell() {
     var selectedTab by remember { mutableStateOf(UniverseTab.HOME) }
