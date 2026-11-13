@@ -41,9 +41,7 @@ class AuthRepository {
             )
             return false
         }
-        val option = GetSignInWithGoogleOption.Builder()
-            .setServerClientId(webClientId)
-            .build()
+        val option = GetSignInWithGoogleOption.Builder(webClientId).build()
         val request = GetCredentialRequest.Builder()
             .addCredentialOption(option)
             .build()

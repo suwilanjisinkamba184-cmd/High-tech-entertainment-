@@ -2,9 +2,17 @@ package com.hightechentertainment.app
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import coil.compose.AsyncImage
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -235,9 +243,15 @@ private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, on
         Modifier.fillMaxWidth().background(ShellBackground).padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Image(
+            painter = painterResource(R.drawable.ht_logo),
+            contentDescription = "High-Tech Entertainment",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(42.dp).padding(end = 8.dp)
+        )
         Column(Modifier.weight(1f)) {
             Text("HTE UNIVERSE", color = ShellGold, fontSize = 12.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
-            Text("The Pride of Africa", color = ShellSilver, fontSize = 11.sp)
+            Text("THE PRIDE OF AFRICA", color = ShellSilver, fontSize = 9.sp, letterSpacing = 1.2.sp)
         }
         IconButton(onClick = onSearch) { Icon(Icons.Outlined.Search, "Search", tint = ShellSilver) }
         IconButton(onClick = onVoice) { Icon(Icons.Outlined.Mic, "Voice assistant", tint = ShellGold) }
@@ -253,23 +267,43 @@ private fun HomeScreen(
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
 ) {
-    LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    LazyColumn(contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item {
-            Text("YOUR UNIVERSE, YOUR SOUND", color = ShellMuted, fontSize = 10.sp, letterSpacing = 2.sp)
-            Text("Beyond the ordinary.", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.Bold)
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text("WELCOME TO YOUR UNIVERSE", color = ShellGold, fontSize = 9.sp, letterSpacing = 2.2.sp, fontWeight = FontWeight.Bold)
+                Text("Beyond the ordinary.", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.Bold)
+                Text("Music, visuals and culture — all in one place.", color = ShellMuted, fontSize = 12.sp)
+            }
         }
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(22.dp)) {
-                Column(Modifier.fillMaxWidth().padding(22.dp)) {
-                    Text("HIGH-TECH ENTERTAINMENT", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(10.dp))
-                    Text("Music. Beats. Production. Beyond.", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Discover releases, artists and visual entertainment in one connected space.", color = ShellSilver, fontSize = 13.sp)
-                    Spacer(Modifier.height(18.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Button(onClick = onExplore, colors = ButtonDefaults.buttonColors(containerColor = ShellGold, contentColor = ShellBackground)) { Text("Explore music") }
-                        OutlinedButton(onClick = onVideos, colors = ButtonDefaults.outlinedButtonColors(contentColor = ShellSilver)) { Text("Watch videos") }
+            Card(shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = ShellPanel)) {
+                Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF352713), Color(0xFF17130D), Color(0xFF101216)))).padding(20.dp)) {
+                    Image(painter = painterResource(R.drawable.ic_hte_crown), contentDescription = null,
+                        modifier = Modifier.align(Alignment.TopEnd).size(112.dp).alpha(.20f))
+                    Column(Modifier.fillMaxWidth(.88f)) {
+                        Text("HIGH-TECH ENTERTAINMENT", color = ShellGold, fontSize = 9.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(9.dp))
+                        Text("Music. Beats. Production. Beyond.", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 28.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Discover new sounds, watch exclusive visuals and experience the HTE universe.", color = ShellSilver, fontSize = 12.sp, lineHeight = 18.sp)
+                        Spacer(Modifier.height(17.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            Button(onClick = onExplore, colors = ButtonDefaults.buttonColors(containerColor = ShellGold, contentColor = ShellBackground), shape = RoundedCornerShape(13.dp)) {
+                                Icon(Icons.Outlined.Explore, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Explore music", fontSize = 11.sp)
+                            }
+                            OutlinedButton(onClick = onVideos, border = androidx.compose.foundation.BorderStroke(1.dp, ShellGold.copy(alpha = .5f)), shape = RoundedCornerShape(13.dp)) {
+                                Icon(Icons.Outlined.PlayCircle, null, tint = ShellGold, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text("Watch", color = ShellSilver, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("Afrobeat", "Dancehall", "Drill", "Gospel").forEach { genre ->
+                    Surface(shape = RoundedCornerShape(50), color = ShellPanel, border = androidx.compose.foundation.BorderStroke(1.dp, ShellGold.copy(alpha = .20f))) {
+                        Text(genre, color = ShellSilver, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
                     }
                 }
             }
@@ -278,13 +312,80 @@ private fun HomeScreen(
         if (tracks.isEmpty()) {
             item { EmptyCatalogueState("No published tracks yet", isLoading, onRefresh) }
         } else {
-            items(tracks.take(4), key = { it.id }) { track -> TrackRow(track = track, onPlay = { onPlayTrack(track) }, onDownload = { onDownloadTrack(track) }, isFavourite = track.id in favouriteTrackIds, onToggleFavourite = { onToggleFavourite(track) }) }
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(end = 4.dp)) {
+                    items(tracks.take(10), key = { it.id }) { track ->
+                        MusicFeatureCard(track, track.id in favouriteTrackIds, { onPlayTrack(track) }, { onToggleFavourite(track) }, { onDownloadTrack(track) })
+                    }
+                }
+            }
         }
         item { SectionHeading("LATEST VIDEOS", "See all", onVideos) }
         if (videos.isEmpty()) {
-            item { Text("Published HTE videos will appear here.", color = ShellMuted, fontSize = 13.sp) }
+            item { Text("Published HTE videos will appear here.", color = ShellMuted, fontSize = 12.sp) }
         } else {
-            items(videos.take(2), key = { it.id }) { video -> VideoRow(video = video, onPlay = { onPlayVideo(video) }, onDownload = { onDownloadVideo(video) }) }
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(end = 4.dp)) {
+                    items(videos.take(8), key = { it.id }) { video -> VideoFeatureCard(video, { onPlayVideo(video) }, { onDownloadVideo(video) }) }
+                }
+            }
+        }
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(20.dp)) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Image(painter = painterResource(R.drawable.ic_hte_crown), contentDescription = null, modifier = Modifier.size(42.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("THE HTE EXPERIENCE", color = ShellGold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+                        Text("A universe built around sound and creativity.", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Icon(Icons.Outlined.AutoAwesome, null, tint = ShellGold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MusicFeatureCard(track: TrackDto, favourite: Boolean, onPlay: () -> Unit, onFavourite: () -> Unit, onDownload: () -> Unit) {
+    Card(modifier = Modifier.width(158.dp), shape = RoundedCornerShape(19.dp), colors = CardDefaults.cardColors(containerColor = ShellPanel)) {
+        Column {
+            Box(Modifier.fillMaxWidth().height(142.dp).background(Brush.linearGradient(listOf(Color(0xFF59401D), Color(0xFF17130D))))) {
+                if (!track.coverUrl.isNullOrBlank()) AsyncImage(model = track.coverUrl, contentDescription = "${track.title} cover artwork", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Album, null, tint = ShellGold.copy(alpha = .85f), modifier = Modifier.size(58.dp)) }
+                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .58f)))))
+                IconButton(onClick = onFavourite, modifier = Modifier.align(Alignment.TopEnd)) { Icon(if (favourite) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder, "Save ${track.title}", tint = if (favourite) ShellGold else Color.White) }
+                Surface(onClick = onPlay, shape = RoundedCornerShape(50), color = ShellGold, modifier = Modifier.align(Alignment.BottomStart).padding(10.dp)) {
+                    Icon(Icons.Outlined.PlayArrow, "Play ${track.title}", tint = ShellBackground, modifier = Modifier.padding(7.dp).size(19.dp))
+                }
+                IconButton(onClick = onDownload, modifier = Modifier.align(Alignment.BottomEnd)) { Icon(Icons.Outlined.Download, "Download ${track.title}", tint = Color.White) }
+            }
+            Column(Modifier.padding(horizontal = 11.dp, vertical = 10.dp)) {
+                Text(track.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(track.artist, color = ShellMuted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                track.genre?.let { Text(it.uppercase(), color = ShellGold, fontSize = 8.sp, letterSpacing = 1.sp) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VideoFeatureCard(video: VideoDto, onPlay: () -> Unit, onDownload: () -> Unit) {
+    Card(modifier = Modifier.width(218.dp), shape = RoundedCornerShape(19.dp), colors = CardDefaults.cardColors(containerColor = ShellPanel)) {
+        Column {
+            Box(Modifier.fillMaxWidth().height(126.dp).background(Brush.linearGradient(listOf(Color(0xFF44331A), Color(0xFF15171B))))) {
+                if (!video.thumbnailUrl.isNullOrBlank()) AsyncImage(model = video.thumbnailUrl, contentDescription = "${video.title} thumbnail", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Movie, null, tint = ShellGold, modifier = Modifier.size(48.dp)) }
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .20f)))
+                Surface(onClick = onPlay, shape = RoundedCornerShape(50), color = ShellGold.copy(alpha = .96f), modifier = Modifier.align(Alignment.Center)) {
+                    Icon(Icons.Outlined.PlayArrow, "Watch ${video.title}", tint = ShellBackground, modifier = Modifier.padding(9.dp).size(22.dp))
+                }
+                IconButton(onClick = onDownload, modifier = Modifier.align(Alignment.TopEnd)) { Icon(Icons.Outlined.Download, "Download ${video.title}", tint = Color.White) }
+            }
+            Column(Modifier.padding(11.dp)) {
+                Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 10.sp)
+            }
         }
     }
 }
@@ -345,8 +446,9 @@ private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: Stri
 private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit, isFavourite: Boolean, onToggleFavourite: () -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp).background(ShellGold.copy(alpha = .12f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.MusicNote, null, tint = ShellGold, modifier = Modifier.size(25.dp))
+            Box(Modifier.size(54.dp).clip(RoundedCornerShape(13.dp)).background(ShellGold.copy(alpha = .12f)), contentAlignment = Alignment.Center) {
+                if (!track.coverUrl.isNullOrBlank()) AsyncImage(model = track.coverUrl, contentDescription = "${track.title} cover artwork", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                else Icon(Icons.Outlined.MusicNote, null, tint = ShellGold, modifier = Modifier.size(25.dp))
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -365,8 +467,9 @@ private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit
 private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: () -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(62.dp, 52.dp).background(ShellGold.copy(alpha = .12f), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.PlayCircle, null, tint = ShellGold, modifier = Modifier.size(30.dp))
+            Box(Modifier.size(76.dp, 62.dp).clip(RoundedCornerShape(11.dp)).background(ShellGold.copy(alpha = .12f)), contentAlignment = Alignment.Center) {
+                if (!video.thumbnailUrl.isNullOrBlank()) AsyncImage(model = video.thumbnailUrl, contentDescription = "${video.title} thumbnail", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                else Icon(Icons.Outlined.PlayCircle, null, tint = ShellGold, modifier = Modifier.size(30.dp))
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -529,6 +632,13 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
                 }
                 Text(track.title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 Text(track.artist, color = ShellMuted, fontSize = 14.sp)
+                Spacer(Modifier.height(20.dp))
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(220.dp).clip(RoundedCornerShape(26.dp)).background(Brush.linearGradient(listOf(Color(0xFF493719), ShellPanel))), contentAlignment = Alignment.Center) {
+                        if (!track.coverUrl.isNullOrBlank()) AsyncImage(model = track.coverUrl, contentDescription = "${track.title} cover artwork", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        else Icon(Icons.Outlined.Album, null, tint = ShellGold, modifier = Modifier.size(84.dp))
+                    }
+                }
                 Spacer(Modifier.height(20.dp))
                 if (controller != null) {
                     AndroidView(
