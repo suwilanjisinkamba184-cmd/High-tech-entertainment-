@@ -57,10 +57,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.6.0'
+      - name: Compile clean Compose application
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Run unit tests
+        run: gradle --no-daemon :app:testDebugUnitTest
       - name: Run Android lint
         run: |
           set +e
-          gradle --no-daemon :app:lintRelease
+          gradle --no-daemon :app:lintRelease --console=plain
           lint_status=$?
           report="app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt"
           if [[ -f "$report" ]]; then
@@ -68,10 +72,6 @@ jobs:
             cat "$report"
           fi
           exit "$lint_status"
-      - name: Compile clean Compose application
-        run: gradle --no-daemon :app:assembleDebug
-      - name: Run unit tests
-        run: gradle --no-daemon :app:testDebugUnitTest
       - name: Validate existing production signing configuration
         run: |
           test -n "$ANDROID_KEYSTORE_BASE64"
