@@ -84,9 +84,26 @@ jobs:
           set -euo pipefail
           APK_SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
           curl -fsSL "$PREVIOUS_APK_URL" -o "$RUNNER_TEMP/previous-hte-release.apk"
-          OLD_CERT="$("$APK_SIGNER" verify --print-certs "$RUNNER_TEMP/previous-hte-release.apk" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print $2; exit}')"
-          NEW_CERT="$("$APK_SIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print $2; exit}')"
-          if [[ -z "$OLD_CERT" || "$OLD_CERT" != "$NEW_CERT" ]]; then
+          test -s "$RUNNER_TEMP/previous-hte-release.apk"
+          test -s app/build/outputs/apk/release/app-release.apk
+
+          # Build Tools 37 emits "V2 Signer: certificate SHA-256 digest" in
+          # verbose mode, while older apksigner versions used "Signer #1 ...".
+          # Capture both stdout and stderr and parse the digest label, not one
+          # version-specific prefix. Never skip or weaken the equality check.
+          OLD_VERIFY="$("$APK_SIGNER" verify --verbose --print-certs "$RUNNER_TEMP/previous-hte-release.apk" 2>&1)"
+          NEW_VERIFY="$("$APK_SIGNER" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk 2>&1)"
+          OLD_CERT="$(printf '%s\n' "$OLD_VERIFY" | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          NEW_CERT="$(printf '%s\n' "$NEW_VERIFY" | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          if [[ -z "$OLD_CERT" || -z "$NEW_CERT" ]]; then
+            echo "Unable to extract both signing certificate fingerprints. Refusing to publish."
+            echo "Previous signer output: $(printf '%s\n' "$OLD_VERIFY" | grep -E 'certificate SHA-256 digest:' | head -n 1 || true)"
+            echo "New signer output: $(printf '%s\n' "$NEW_VERIFY" | grep -E 'certificate SHA-256 digest:' | head -n 1 || true)"
+            exit 1
+          fi
+          echo "Previous release certificate SHA-256: $OLD_CERT"
+          echo "New release certificate SHA-256:      $NEW_CERT"
+          if [[ "$OLD_CERT" != "$NEW_CERT" ]]; then
             echo "Production signing certificate does not match v2.2.10-SU. Refusing to publish."
             exit 1
           fi
