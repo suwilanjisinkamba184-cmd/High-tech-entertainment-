@@ -41,7 +41,7 @@ fun HteButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, 
 @Composable
 fun HteChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     FilterChip(
-        selected, onClick, modifier,
+        selected = selected, onClick = onClick, modifier = modifier,
         label = { Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1) },
         colors = FilterChipDefaults.filterChipColors(
             containerColor = HteColors.PanelRaised, labelColor = HteColors.Silver,
@@ -101,7 +101,7 @@ fun HteShelfSkeleton(modifier: Modifier = Modifier, count: Int = 4, size: Dp = 1
 @Composable
 private fun HteStateMessage(icon: ImageVector, tint: Color, title: String, message: String, actionLabel: String?, onAction: (() -> Unit)?, modifier: Modifier) {
     Column(modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Icon(icon, null, tint, Modifier.size(40.dp))
+        Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(40.dp))
         Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
         Text(message, style = MaterialTheme.typography.bodyMedium, color = HteColors.Muted, textAlign = TextAlign.Center)
         if (actionLabel != null && onAction != null) HteButton(actionLabel, onAction)
