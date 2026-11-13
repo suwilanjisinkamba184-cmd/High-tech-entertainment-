@@ -118,31 +118,18 @@ jobs:
               'implementation("io.elevenlabs:elevenlabs-android:0.13.1")',
               'implementation("io.elevenlabs:elevenlabs-android:0.13.1")\n\n    // Native Google sign-in via Credential Manager and Google Play services.\n    implementation("androidx.credentials:credentials:1.6.0")\n    implementation("androidx.credentials:credentials-play-services-auth:1.6.0")\n    implementation("com.google.android.libraries.identity.googleid:googleid:1.2.1")')
 
-          replace_once(".github/workflows/hte-universe-compose.yml",
-              "      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}",
-              "      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}\n      GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}")
+          workflow_path = Path(".github/workflows/hte-universe-compose.yml")
+          lines = workflow_path.read_text().splitlines()
+          if not any("GOOGLE_WEB_CLIENT_ID:" in line for line in lines):
+              i = next(i for i, line in enumerate(lines) if line.strip().startswith("SUPABASE_PUBLISHABLE_KEY:"))
+              lines.insert(i + 1, "      GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}")
+              workflow_path.write_text("\n".join(lines) + "\n")
 
           p = "hte-universe-native/app/src/main/java/com/hightechentertainment/app/MainActivity.kt"
           main = Path(p).read_text()
           main = main.replace("import android.media.PlaybackParams", "import android.media.PlaybackParams\nimport android.util.Log\nimport android.widget.Toast", 1)
-          old = textwrap.dedent("""\
-              private fun handleSupabaseIntent(intent: Intent) {
-                  if (BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()) {
-                      runCatching { SupabaseClientProvider.client.handleDeeplinks(intent) }
-                  }
-              }""")
-          new = textwrap.dedent("""\
-              private fun handleSupabaseIntent(intent: Intent) {
-                  val callback = intent.data ?: return
-                  if (callback.scheme != "com.hightechentertainment.app" || callback.host != "auth-callback") return
-                  if (BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()) {
-                      runCatching { SupabaseClientProvider.client.handleDeeplinks(intent) }
-                          .onFailure { error ->
-                              Log.e("HTEAuth", "Supabase app callback could not be processed", error)
-                              Toast.makeText(this, "Sign-in could not be completed. Please try again.", Toast.LENGTH_LONG).show()
-                          }
-                  }
-              }""")
+          old = "    private fun handleSupabaseIntent(intent: Intent) {\n        if (BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()) {\n            runCatching { SupabaseClientProvider.client.handleDeeplinks(intent) }\n        }\n    }"
+          new = "    private fun handleSupabaseIntent(intent: Intent) {\n        val callback = intent.data ?: return\n        if (callback.scheme != \"com.hightechentertainment.app\" || callback.host != \"auth-callback\") return\n        if (BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()) {\n            runCatching { SupabaseClientProvider.client.handleDeeplinks(intent) }\n                .onFailure { error ->\n                    Log.e(\"HTEAuth\", \"Supabase app callback could not be processed\", error)\n                    Toast.makeText(this, \"Sign-in could not be completed. Please try again.\", Toast.LENGTH_LONG).show()\n                }\n        }\n    }"
           if main.count(old) != 1:
               raise SystemExit("MainActivity callback handler did not match exactly")
           Path(p).write_text(main.replace(old, new, 1))
