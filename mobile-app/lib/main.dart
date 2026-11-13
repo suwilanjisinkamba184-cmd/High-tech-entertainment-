@@ -1131,14 +1131,6 @@ class _MainScreenState extends State<MainScreen> {
   ];
   // Mount tabs on first visit to avoid six simultaneous catalogue loads on low-RAM phones.
   final Set<int> _visitedTabs = <int>{0};
-  static const _items = [
-    (Icons.space_dashboard_rounded, 'Home'),
-    (Icons.explore_rounded, 'Discover'),
-    (Icons.album_rounded, 'Releases'),
-    (Icons.library_music_rounded, 'Library'),
-    (Icons.person_rounded, 'Profile'),
-    (Icons.grid_view_rounded, 'More'),
-  ];
 
   @override
   Widget build(BuildContext context) => Scaffold(
