@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -73,14 +74,25 @@ fun FounderStudioScreen(onClose: () -> Unit) {
     val thumbnailPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { thumbnailUri = it; status = null }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("FOUNDER STUDIO", color = FounderGold, fontSize = 11.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
-                Text("Content control centre", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Card(colors = CardDefaults.cardColors(containerColor = FounderPanel), shape = RoundedCornerShape(22.dp)) {
+            Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF352818), FounderPanel, Color(0xFF0D1117)))).padding(17.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("HTE UNIVERSE / PRIVATE CONSOLE", color = FounderGold, fontSize = 9.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold)
+                            Text("Founder Studio", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                        }
+                        IconButton(onClick = onClose) { Icon(Icons.Outlined.Close, "Close Founder Studio", tint = Color.White) }
+                    }
+                    Text("Owner-only content control. New uploads remain drafts until you approve publication.", color = FounderMuted, fontSize = 11.sp)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FounderMetric(tracks.size.toString(), "MUSIC", Modifier.weight(1f))
+                        FounderMetric(videos.size.toString(), "VIDEOS", Modifier.weight(1f))
+                        FounderMetric(if (isLoading) "SYNC" else "LIVE", "CATALOGUE", Modifier.weight(1f))
+                    }
+                }
             }
-            IconButton(onClick = onClose) { Icon(Icons.Outlined.Close, "Close Founder Studio", tint = Color.White) }
         }
-        Text("Owner-only uploads. New content is saved as a draft until you publish it.", color = FounderMuted, fontSize = 11.sp)
         Spacer(Modifier.height(12.dp))
         TabRow(selectedTabIndex = selectedTab, containerColor = FounderPanel, contentColor = FounderGold) {
             Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Music") })
@@ -221,6 +233,15 @@ private fun FounderContentRow(title: String, subtitle: String, published: Boolea
                 IconButton(onClick = onDelete) { Icon(Icons.Outlined.Delete, "Delete content", tint = FounderMuted) }
             }
         }
+    }
+}
+
+
+@Composable
+private fun FounderMetric(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(modifier.background(Color.White.copy(alpha = .035f), RoundedCornerShape(12.dp)).padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = FounderMuted, fontSize = 8.sp, letterSpacing = 1.sp)
     }
 }
 
