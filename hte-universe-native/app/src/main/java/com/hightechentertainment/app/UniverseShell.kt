@@ -1,6 +1,10 @@
 package com.hightechentertainment.app
 
 import android.net.Uri
+import android.content.pm.ActivityInfo
+import android.content.ContextWrapper
+import android.content.Context
+import android.app.Activity
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -664,6 +668,12 @@ private fun formatMediaTime(milliseconds: Long): String {
 @Composable
 private fun VideoPlayerDialog(video: VideoDto, onDismiss: () -> Unit) {
     val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+    DisposableEffect(activity) {
+        val previousOrientation = activity?.requestedOrientation
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
+        onDispose { if (previousOrientation != null) activity?.requestedOrientation = previousOrientation }
+    }
     val validUrl = remember(video.videoUrl) {
         runCatching {
             val uri = Uri.parse(video.videoUrl)
@@ -737,4 +747,11 @@ private fun VideoPlayerDialog(video: VideoDto, onDismiss: () -> Unit) {
             }
         }
     }
+}
+
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
