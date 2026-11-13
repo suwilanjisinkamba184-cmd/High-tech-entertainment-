@@ -10,159 +10,129 @@ jobs:
   patch-auth:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out selected repair branch
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Patch native sign-in, callback handling and account form
+      - name: Patch app authentication and account UI
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import textwrap
 
           def replace_once(path, old, new):
               p = Path(path)
-              source = p.read_text()
-              count = source.count(old)
-              if count != 1:
-                  raise SystemExit(f"Expected exactly one match in {path}; found {count}")
-              p.write_text(source.replace(old, new, 1))
+              s = p.read_text()
+              n = s.count(old)
+              if n != 1:
+                  raise SystemExit(f"Expected one match in {path}, found {n}")
+              p.write_text(s.replace(old, new, 1))
 
-          # Supabase callback configuration and Custom Tabs fallback.
-          replace_once(
-              "hte-universe-native/app/src/main/java/com/hightechentertainment/app/data/SupabaseClientProvider.kt",
-              "import io.github.jan.supabase.auth.FlowType",
-              "import io.github.jan.supabase.auth.FlowType\nimport io.github.jan.supabase.auth.ExternalAuthAction"
-          )
-          replace_once(
-              "hte-universe-native/app/src/main/java/com/hightechentertainment/app/data/SupabaseClientProvider.kt",
-              "object SupabaseClientProvider {",
-              'object SupabaseClientProvider {\n    const val AUTH_REDIRECT_URI = "com.hightechentertainment.app://auth-callback"'
-          )
-          replace_once(
-              "hte-universe-native/app/src/main/java/com/hightechentertainment/app/data/SupabaseClientProvider.kt",
-              'host = "auth-callback"',
-              'host = "auth-callback"\n                defaultExternalAuthAction = ExternalAuthAction.CustomTabs()'
-          )
+          p = "hte-universe-native/app/src/main/java/com/hightechentertainment/app/data/SupabaseClientProvider.kt"
+          replace_once(p, "import io.github.jan.supabase.auth.FlowType", "import io.github.jan.supabase.auth.FlowType\nimport io.github.jan.supabase.auth.ExternalAuthAction")
+          replace_once(p, "object SupabaseClientProvider {", 'object SupabaseClientProvider {\n    const val AUTH_REDIRECT_URI = "com.hightechentertainment.app://auth-callback"')
+          replace_once(p, 'host = "auth-callback"', 'host = "auth-callback"\n                defaultExternalAuthAction = ExternalAuthAction.CustomTabs()')
 
-          # Replace the old browser-only Google call with native Credential Manager + Play Services.
-          Path("hte-universe-native/app/src/main/java/com/hightechentertainment/app/data/AuthRepository.kt").write_text("""package com.hightechentertainment.app.data
+          auth_source = textwrap.dedent("""\
+              package com.hightechentertainment.app.data
 
-          import android.content.Context
-          import androidx.credentials.CredentialManager
-          import androidx.credentials.CustomCredential
-          import androidx.credentials.GetCredentialRequest
-          import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
-          import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-          import com.hightechentertainment.app.BuildConfig
-          import io.github.jan.supabase.auth.auth
-          import io.github.jan.supabase.auth.providers.Google
-          import io.github.jan.supabase.auth.providers.builtin.Email
-          import io.github.jan.supabase.auth.providers.builtin.IDToken
+              import android.content.Context
+              import androidx.credentials.CredentialManager
+              import androidx.credentials.CustomCredential
+              import androidx.credentials.GetCredentialRequest
+              import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+              import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+              import com.hightechentertainment.app.BuildConfig
+              import io.github.jan.supabase.auth.auth
+              import io.github.jan.supabase.auth.providers.Google
+              import io.github.jan.supabase.auth.providers.builtin.Email
+              import io.github.jan.supabase.auth.providers.builtin.IDToken
 
-          /**
-           * Authentication operations for member accounts.
-           * Founder access is enforced by trusted Supabase roles and RLS, not by client-side flags.
-           */
-          class AuthRepository {
-              suspend fun signIn(email: String, password: String) {
-                  require(email.isNotBlank()) { "Enter your email address." }
-                  require(password.isNotEmpty()) { "Enter your password." }
-                  SupabaseClientProvider.client.auth.signInWith(Email) {
-                      this.email = email.trim()
-                      this.password = password
+              /** Member authentication. Founder access remains enforced by Supabase roles and RLS. */
+              class AuthRepository {
+                  suspend fun signIn(email: String, password: String) {
+                      require(email.isNotBlank()) { "Enter your email address." }
+                      require(password.isNotEmpty()) { "Enter your password." }
+                      SupabaseClientProvider.client.auth.signInWith(Email) {
+                          this.email = email.trim()
+                          this.password = password
+                      }
+                  }
+
+                  suspend fun signUp(email: String, password: String) {
+                      require(email.isNotBlank()) { "Enter your email address." }
+                      require(password.length >= 8) { "Use a password with at least 8 characters." }
+                      SupabaseClientProvider.client.auth.signUpWith(Email) {
+                          this.email = email.trim()
+                          this.password = password
+                      }
+                  }
+
+                  suspend fun signInWithGoogle(context: Context): Boolean {
+                      val webClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID.trim()
+                      if (webClientId.isBlank()) {
+                          SupabaseClientProvider.client.auth.signInWith(
+                              Google,
+                              redirectUrl = SupabaseClientProvider.AUTH_REDIRECT_URI
+                          )
+                          return false
+                      }
+                      val option = GetSignInWithGoogleOption.Builder()
+                          .setServerClientId(webClientId)
+                          .build()
+                      val request = GetCredentialRequest.Builder()
+                          .addCredentialOption(option)
+                          .build()
+                      val response = CredentialManager.create(context).getCredential(context, request)
+                      val credential = response.credential
+                      require(credential is CustomCredential &&
+                          credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                          "Google did not return a supported sign-in credential. Please try again."
+                      }
+                      val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                      SupabaseClientProvider.client.auth.signInWith(IDToken) {
+                          idToken = googleCredential.idToken
+                          provider = Google
+                      }
+                      return true
+                  }
+
+                  suspend fun signOut() {
+                      SupabaseClientProvider.client.auth.signOut()
                   }
               }
+              """)
+          Path("hte-universe-native/app/src/main/java/com/hightechentertainment/app/data/AuthRepository.kt").write_text(auth_source)
 
-              suspend fun signUp(email: String, password: String) {
-                  require(email.isNotBlank()) { "Enter your email address." }
-                  require(password.length >= 8) { "Use a password with at least 8 characters." }
-                  SupabaseClientProvider.client.auth.signUpWith(Email) {
-                      this.email = email.trim()
-                      this.password = password
-                  }
-              }
-
-              /**
-               * Returns true when native Google Credential Manager sign-in completed.
-               * If no Google Web OAuth client ID is configured, use Supabase OAuth with
-               * the explicit Android callback URI so the browser returns to this app.
-               */
-              suspend fun signInWithGoogle(context: Context): Boolean {
-                  val webClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID.trim()
-                  if (webClientId.isBlank()) {
-                      SupabaseClientProvider.client.auth.signInWith(
-                          Google,
-                          redirectUrl = SupabaseClientProvider.AUTH_REDIRECT_URI
-                      )
-                      return false
-                  }
-
-                  val option = GetSignInWithGoogleOption.Builder()
-                      .setServerClientId(webClientId)
-                      .build()
-                  val request = GetCredentialRequest.Builder()
-                      .addCredentialOption(option)
-                      .build()
-                  val response = CredentialManager.create(context).getCredential(context, request)
-                  val credential = response.credential
-                  require(
-                      credential is CustomCredential &&
-                          credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-                  ) {
-                      "Google did not return a supported sign-in credential. Please try again."
-                  }
-
-                  val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                  SupabaseClientProvider.client.auth.signInWith(IDToken) {
-                      idToken = googleCredential.idToken
-                      provider = Google
-                  }
-                  return true
-              }
-
-              suspend fun signOut() {
-                  SupabaseClientProvider.client.auth.signOut()
-              }
-          }
-          """.replace(/^          /gm, ""))
-
-          # Wire the Web OAuth client ID into BuildConfig; it is a public OAuth client identifier.
-          replace_once(
-              "hte-universe-native/app/build.gradle.kts",
+          p = "hte-universe-native/app/build.gradle.kts"
+          replace_once(p,
               'val supabasePublishableKey = providers.gradleProperty("SUPABASE_PUBLISHABLE_KEY")\n    .orElse(providers.environmentVariable("SUPABASE_PUBLISHABLE_KEY"))\n    .orElse("")',
-              'val supabasePublishableKey = providers.gradleProperty("SUPABASE_PUBLISHABLE_KEY")\n    .orElse(providers.environmentVariable("SUPABASE_PUBLISHABLE_KEY"))\n    .orElse("")\nval googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID")\n    .orElse(providers.environmentVariable("GOOGLE_WEB_CLIENT_ID"))\n    .orElse("")'
-          )
-          replace_once(
-              "hte-universe-native/app/build.gradle.kts",
-              'buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\\\"" + supabasePublishableKey.get() + "\\\"")',
-              'buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\\\"" + supabasePublishableKey.get() + "\\\"")\n        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\\\"" + googleWebClientId.get() + "\\\"")'
-          )
-          replace_once(
-              "hte-universe-native/app/build.gradle.kts",
+              'val supabasePublishableKey = providers.gradleProperty("SUPABASE_PUBLISHABLE_KEY")\n    .orElse(providers.environmentVariable("SUPABASE_PUBLISHABLE_KEY"))\n    .orElse("")\nval googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID")\n    .orElse(providers.environmentVariable("GOOGLE_WEB_CLIENT_ID"))\n    .orElse("")')
+          gradle = Path(p).read_text().splitlines()
+          i = next(i for i, line in enumerate(gradle) if 'buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY"' in line)
+          gradle.insert(i + 1, r'        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"" + googleWebClientId.get() + "\"")')
+          Path(p).write_text("\n".join(gradle) + "\n")
+          replace_once(p,
               'implementation("io.elevenlabs:elevenlabs-android:0.13.1")',
-              'implementation("io.elevenlabs:elevenlabs-android:0.13.1")\n\n    // Native Google sign-in via Credential Manager and Google Play services.\n    implementation("androidx.credentials:credentials:1.6.0")\n    implementation("androidx.credentials:credentials-play-services-auth:1.6.0")\n    implementation("com.google.android.libraries.identity.googleid:googleid:1.2.1")'
-          )
+              'implementation("io.elevenlabs:elevenlabs-android:0.13.1")\n\n    // Native Google sign-in via Credential Manager and Google Play services.\n    implementation("androidx.credentials:credentials:1.6.0")\n    implementation("androidx.credentials:credentials-play-services-auth:1.6.0")\n    implementation("com.google.android.libraries.identity.googleid:googleid:1.2.1")')
 
-          # Pass the non-secret OAuth client ID from a GitHub Actions repository variable.
-          replace_once(
-              ".github/workflows/hte-universe-compose.yml",
+          replace_once(".github/workflows/hte-universe-compose.yml",
               "      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}",
-              "      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}\n      GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}"
-          )
+              "      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}\n      GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}")
 
-          # Use the Android deep-link intent only for the registered callback, and never hide callback failures.
-          main_path = Path("hte-universe-native/app/src/main/java/com/hightechentertainment/app/MainActivity.kt")
-          main = main_path.read_text()
+          p = "hte-universe-native/app/src/main/java/com/hightechentertainment/app/MainActivity.kt"
+          main = Path(p).read_text()
           main = main.replace("import android.media.PlaybackParams", "import android.media.PlaybackParams\nimport android.util.Log\nimport android.widget.Toast", 1)
-          old_handler = """    private fun handleSupabaseIntent(intent: Intent) {
+          old = textwrap.dedent("""\
+              private fun handleSupabaseIntent(intent: Intent) {
                   if (BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()) {
                       runCatching { SupabaseClientProvider.client.handleDeeplinks(intent) }
                   }
-              }"""
-          new_handler = """    private fun handleSupabaseIntent(intent: Intent) {
+              }""")
+          new = textwrap.dedent("""\
+              private fun handleSupabaseIntent(intent: Intent) {
                   val callback = intent.data ?: return
                   if (callback.scheme != "com.hightechentertainment.app" || callback.host != "auth-callback") return
                   if (BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()) {
@@ -172,42 +142,27 @@ jobs:
                               Toast.makeText(this, "Sign-in could not be completed. Please try again.", Toast.LENGTH_LONG).show()
                           }
                   }
-              }"""
-          if main.count(old_handler) != 1:
-              raise SystemExit("Could not uniquely locate MainActivity callback handler")
-          main_path.write_text(main.replace(old_handler, new_handler, 1))
+              }""")
+          if main.count(old) != 1:
+              raise SystemExit("MainActivity callback handler did not match exactly")
+          Path(p).write_text(main.replace(old, new, 1))
 
-          # Account UI: mask password, use email/password keyboard types, and invoke native Google sign-in.
-          member_path = Path("hte-universe-native/app/src/main/java/com/hightechentertainment/app/MemberCenter.kt")
-          member = member_path.read_text()
-          replace_once(
-              str(member_path),
-              "import androidx.compose.ui.text.font.FontWeight",
-              "import androidx.compose.ui.text.font.FontWeight\nimport androidx.compose.ui.text.input.PasswordVisualTransformation\nimport androidx.compose.ui.text.input.KeyboardType\nimport androidx.compose.foundation.text.KeyboardOptions"
-          )
-          replace_once(
-              str(member_path),
+          p = "hte-universe-native/app/src/main/java/com/hightechentertainment/app/MemberCenter.kt"
+          replace_once(p, "import androidx.compose.ui.text.font.FontWeight",
+              "import androidx.compose.ui.text.font.FontWeight\nimport androidx.compose.ui.text.input.PasswordVisualTransformation\nimport androidx.compose.ui.text.input.KeyboardType\nimport androidx.compose.foundation.text.KeyboardOptions")
+          replace_once(p,
               'OutlinedTextField(value = email, onValueChange = { email = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Email address") }, singleLine = true)',
-              'OutlinedTextField(value = email, onValueChange = { email = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Email address") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), singleLine = true)'
-          )
-          replace_once(
-              str(member_path),
+              'OutlinedTextField(value = email, onValueChange = { email = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Email address") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), singleLine = true)')
+          replace_once(p,
               'OutlinedTextField(value = password, onValueChange = { password = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Password") }, singleLine = true)',
-              'OutlinedTextField(value = password, onValueChange = { password = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), singleLine = true)'
-          )
-          replace_once(
-              str(member_path),
+              'OutlinedTextField(value = password, onValueChange = { password = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), singleLine = true)')
+          replace_once(p,
               'runCatching { AuthRepository().signInWithGoogle() }\n                                .onSuccess { statusMessage = "Complete Google sign-in in your browser, then return to HTE Universe." }\n                                .onFailure { statusMessage = it.message?.take(180) ?: "Google sign-in could not start." }',
-              'runCatching { AuthRepository().signInWithGoogle(context) }\n                                .onSuccess { usedNativeGoogle ->\n                                    isSignedIn = auth.currentUserOrNull() != null\n                                    statusMessage = if (usedNativeGoogle && isSignedIn) "Google sign-in successful. Welcome to HTE Universe."\n                                        else if (usedNativeGoogle) "Google verification completed. Loading your HTE account…"\n                                        else "Continue in the Google sign-in tab. HTE Universe will reopen automatically when sign-in completes."\n                                }\n                                .onFailure { statusMessage = it.message?.take(180) ?: "Google sign-in could not complete. Check Google Play services and try again." }'
-          )
-          replace_once(
-              str(member_path),
+              'runCatching { AuthRepository().signInWithGoogle(context) }\n                                .onSuccess { native ->\n                                    isSignedIn = auth.currentUserOrNull() != null\n                                    statusMessage = if (native && isSignedIn) "Google sign-in successful. Welcome to HTE Universe." else if (native) "Google verification completed. Loading your HTE account…" else "Continue in the Google sign-in tab. HTE Universe will reopen automatically when sign-in completes."\n                                }\n                                .onFailure { statusMessage = it.message?.take(180) ?: "Google sign-in could not complete. Check Google Play services and try again." }')
+          replace_once(p,
               '}, enabled = !isWorking, modifier = Modifier.fillMaxWidth()) { Text("Continue with Google") }',
-              '}, enabled = !isWorking, modifier = Modifier.fillMaxWidth()) { Text(if (isWorking) "Connecting to Google…" else "Continue with Google") }'
-          )
-          member_path.write_text(member)
+              '}, enabled = !isWorking, modifier = Modifier.fillMaxWidth()) { Text(if (isWorking) "Connecting to Google…" else "Continue with Google") }')
 
-          # Remove this one-time patch workflow after it has applied itself.
           Path(".github/workflows/apply-hte-universe-auth-repair.yml").unlink(missing_ok=True)
           PY
 
@@ -217,5 +172,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add hte-universe-native .github/workflows/hte-universe-compose.yml
           git add -u .github/workflows/apply-hte-universe-auth-repair.yml || true
-          git commit -m "fix(auth): return Google sign-in to HTE Universe and add native Play Services flow"
+          git commit -m "fix(auth): route Google sign-in into HTE Universe and add native Play Services flow"
           git push origin HEAD:${{ github.ref_name }}
