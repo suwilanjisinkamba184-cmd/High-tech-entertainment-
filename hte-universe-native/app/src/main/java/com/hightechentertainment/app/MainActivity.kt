@@ -44,6 +44,7 @@ import kotlinx.coroutines.delay
 import io.github.jan.supabase.auth.handleDeeplinks
 import com.hightechentertainment.app.data.SupabaseClientProvider
 import com.hightechentertainment.app.media.HtePlaybackController
+import com.hightechentertainment.app.ui.design.HteTheme
 
 private val Obsidian = Color(0xFF08090B)
 private val Panel = Color(0xFF121418)
@@ -89,10 +90,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun HteUniverseApp() {
     var splashFinished by remember { mutableStateOf(false) }
-    MaterialTheme(colorScheme = darkColorScheme(
-        primary = Gold, secondary = Silver, background = Obsidian,
-        surface = Panel, onPrimary = Obsidian, onBackground = Color.White, onSurface = Color.White
-    )) {
+    val context = LocalContext.current
+    val reduceMotion = remember(context) { AppSettingsStore(context).reduceMotion }
+    HteTheme(reduceMotion = reduceMotion) {
         Surface(Modifier.fillMaxSize(), color = Obsidian) {
             if (!splashFinished) UniverseSplash { splashFinished = true } else UniverseShell()
         }
