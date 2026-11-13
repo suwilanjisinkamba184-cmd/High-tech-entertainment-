@@ -667,7 +667,7 @@ jobs:
       - name: Build validation APK (non-release checks)
         if: steps.ota_mode.outputs.mode == 'validate'
         working-directory: ${{ runner.temp }}/hte_app
-        run: flutter build apk --flavor su --release --target-platform android-arm,android-arm64 --dart-define="HTE_GOOGLE_WEB_CLIENT_ID="
+        run: flutter build apk --flavor su --debug --target-platform android-arm64 --dart-define="HTE_GOOGLE_WEB_CLIENT_ID="
       - name: Build signed candidate APK (no public release)
         if: steps.ota_mode.outputs.mode == 'candidate'
         working-directory: ${{ runner.temp }}/hte_app
@@ -709,17 +709,31 @@ jobs:
           echo "PASS: APK signature is valid and matches the configured upload certificate."
       - name: Apply official High-Tech Entertainment download filename
         if: steps.ota_mode.outputs.mode == 'release' || steps.ota_mode.outputs.mode == 'validate' || steps.ota_mode.outputs.mode == 'candidate'
+        id: package_apk
         working-directory: ${{ runner.temp }}/hte_app
+        shell: bash
         run: |
-          APK="build/app/outputs/flutter-apk/app-su-release.apk"
+          set -euo pipefail
+          MODE="${{ steps.ota_mode.outputs.mode }}"
+          if [ "$MODE" = "validate" ]; then
+            APK="build/app/outputs/flutter-apk/app-su-debug.apk"
+            NAME="High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU-VALIDATION.apk"
+          elif [ "$MODE" = "candidate" ]; then
+            APK="build/app/outputs/flutter-apk/app-su-release.apk"
+            NAME="High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU-CANDIDATE.apk"
+          else
+            APK="build/app/outputs/flutter-apk/app-su-release.apk"
+            NAME="High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU.apk"
+          fi
           test -s "$APK" || { echo "::error::Expected SU APK was not found: $APK"; find build/app/outputs -maxdepth 5 -type f -print; exit 1; }
-          mv "$APK" "build/app/outputs/flutter-apk/High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU.apk"
+          mv "$APK" "build/app/outputs/flutter-apk/$NAME"
+          echo "path=build/app/outputs/flutter-apk/$NAME" >> "$GITHUB_OUTPUT"
       - name: Upload standalone Android APK
         if: steps.ota_mode.outputs.mode == 'release' || steps.ota_mode.outputs.mode == 'validate' || steps.ota_mode.outputs.mode == 'candidate'
         uses: actions/upload-artifact@v4
         with:
-          name: High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU-APK
-          path: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU.apk
+          name: High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU-${{ steps.ota_mode.outputs.mode }}-APK
+          path: ${{ runner.temp }}/hte_app/${{ steps.package_apk.outputs.path }}
           if-no-files-found: error
           compression-level: 0
 
