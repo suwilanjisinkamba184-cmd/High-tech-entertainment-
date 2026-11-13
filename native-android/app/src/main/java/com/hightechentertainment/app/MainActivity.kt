@@ -467,6 +467,7 @@ private val destinations = listOf(
     AppDestination("Downloads", Icons.Rounded.Download)
 )
 
+@OptIn(UnstableApi::class, ExperimentalApi::class)
 @Composable
 private fun HighTechApp(
     tracks: List<NativeTrack>,
