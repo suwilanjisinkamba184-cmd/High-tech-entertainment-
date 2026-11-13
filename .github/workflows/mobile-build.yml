@@ -47,6 +47,7 @@ jobs:
           flutter-version: '3.47.9'
           cache: true
       - name: Detect Shorebird credentials
+        if: github.event_name != 'pull_request'
         id: shorebird
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
@@ -416,6 +417,7 @@ jobs:
             cd "$RUNNER_TEMP/hte_app"
           fi
       - name: Configure Android upload-key signing
+        if: steps.ota_mode.outputs.mode == 'release'
         id: android_signing
         working-directory: ${{ runner.temp }}/hte_app
         env:
@@ -668,7 +670,7 @@ jobs:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
         run: flutter build apk --flavor su --release --target-platform android-arm,android-arm64 --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Verify release APK signature
-        if: steps.ota_mode.outputs.mode == 'release' || steps.ota_mode.outputs.mode == 'validate'
+        if: steps.ota_mode.outputs.mode == 'release'
         working-directory: ${{ runner.temp }}/hte_app
         env:
           EXPECTED_CERT_SHA256: ${{ steps.android_signing.outputs.release_cert_sha256 }}
