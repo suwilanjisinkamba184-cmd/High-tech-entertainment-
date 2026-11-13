@@ -30,7 +30,7 @@ android {
     }
 
     namespace = "com.hightechentertainment.app"
-    compileSdk = 36
+    compileSdk = 37
     defaultConfig {
         applicationId = "com.hightechentertainment.app"
         minSdk = 26
@@ -71,7 +71,7 @@ kotlin {
 dependencies {
     implementation("io.elevenlabs:elevenlabs-android:0.13.1")
 
-    // Stable Compose BOM line supported by compileSdk 36.
+    // Stable Compose BOM line for the API 37 build.
     val composeBom = platform("androidx.compose:compose-bom:2026.06.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
@@ -82,10 +82,10 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
 
-    // Latest stable AndroidX releases compatible with this API 36 build.
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
-    implementation("androidx.core:core-ktx:1.17.0")
+    // Latest stable AndroidX releases aligned with API 37.
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    implementation("androidx.core:core-ktx:1.19.1")
 
     // Supabase Kotlin 3.9.0 upstream uses Kotlin 2.4.21 and Ktor 3.6.1.
     implementation(platform("io.github.jan-tennert.supabase:bom:3.9.0"))
