@@ -9,6 +9,8 @@ import android.provider.Settings as AndroidSettings
 import androidx.core.content.FileProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -42,7 +44,7 @@ private val SettingsPanel = Color(0xFF121418)
 private val SettingsBackground = Color(0xFF08090B)
 
 @Composable
-fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadManager: OfflineDownloadManager) {
+fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadManager: OfflineDownloadManager, onSettingsChanged: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val updater = remember(context) { HteUpdateManager(context) }
@@ -147,7 +149,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                     }
                     SettingsDivider()
                     SettingsSwitch("Autoplay next track", "Continue through the current queue", autoplay) {
-                        autoplay = it; settingsStore.autoplayNext = it
+                        autoplay = it; settingsStore.autoplayNext = it; onSettingsChanged()
                     }
                     SettingsDivider()
                     SettingsSwitch("Equalizer", "Apply sound processing to HTE music playback", eqEnabled) {
@@ -222,7 +224,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                         downloadQuality = it; settingsStore.downloadQuality = it
                     }
                     SettingsSwitch("Data saver", "Restrict downloads over metered mobile connections", dataSaver) {
-                        dataSaver = it; settingsStore.dataSaver = it
+                        dataSaver = it; settingsStore.dataSaver = it; onSettingsChanged()
                         networkPolicy = if (it) "WIFI_ONLY" else "WIFI_AND_MOBILE"
                         settingsStore.networkPolicy = networkPolicy
                     }
@@ -316,7 +318,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                         startupSound = it; settingsStore.startupSoundEnabled = it
                     }
                     SettingsSwitch("Notifications", "Show account and booking updates", notifications) {
-                        notifications = it; settingsStore.notificationsEnabled = it
+                        notifications = it; settingsStore.notificationsEnabled = it; onSettingsChanged()
                     }
                     Text("HTE Universe keeps its signature dark visual identity. More appearance controls can be added without compromising the brand.", color = SettingsMuted, fontSize = 10.sp)
                 }
@@ -433,7 +435,7 @@ private fun SettingsChoice(title: String, selected: String, options: List<String
 
 @Composable
 private fun SettingsChips(options: List<String>, selected: String, onSelect: (String) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
         options.forEach { option ->
             val label = option.replace("_", " ").replace("WIFI", "Wi-Fi")
             FilterChip(
