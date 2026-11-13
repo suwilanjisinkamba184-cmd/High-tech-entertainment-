@@ -221,7 +221,7 @@ jobs:
           (root / "drawable-nodpi" / "ht_splash_icon.png").write_bytes(
               (Path(os.environ["RUNNER_TEMP"]) / "hte_app" / "assets" / "high-tech-logo.png").read_bytes()
           )
-          app_gradle = root.parent.parent / "build.gradle.kts"
+          app_gradle = root.parent.parent.parent / "build.gradle.kts"
           gradle_text = app_gradle.read_text(encoding="utf-8")
           if "androidx.core:core-splashscreen" not in gradle_text:
               gradle_text += "\ndependencies {\n    implementation(\"androidx.core:core-splashscreen:1.0.1\")\n}\n"
