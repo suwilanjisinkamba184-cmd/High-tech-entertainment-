@@ -1,5 +1,6 @@
 package com.hightechentertainment.app.media
 
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -12,6 +13,12 @@ class HtePlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         val audioPlayer = ExoPlayer.Builder(this).build()
+        activeAudioSessionId = audioPlayer.audioSessionId
+        audioPlayer.addListener(object : Player.Listener {
+            override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                activeAudioSessionId = audioSessionId
+            }
+        })
         player = audioPlayer
         mediaSession = MediaSession.Builder(this, audioPlayer).build()
     }
@@ -19,10 +26,17 @@ class HtePlaybackService : MediaSessionService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
 
     override fun onDestroy() {
+        HteAudioEffects.release()
+        activeAudioSessionId = 0
         player?.release()
         player = null
         mediaSession?.release()
         mediaSession = null
         super.onDestroy()
+    }
+
+    companion object {
+        @Volatile var activeAudioSessionId: Int = 0
+            private set
     }
 }
