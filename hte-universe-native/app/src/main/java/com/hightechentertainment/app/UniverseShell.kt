@@ -51,6 +51,8 @@ import com.hightechentertainment.app.data.VideoDto
 import com.hightechentertainment.app.media.HtePlaybackController
 import com.hightechentertainment.app.media.OfflineDownloadManager
 import com.hightechentertainment.app.media.OfflineDownloadRecord
+import com.hightechentertainment.app.player.Media3PlayerController
+import com.hightechentertainment.app.player.PlayerHost
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -630,6 +632,7 @@ private fun SectionHeading(title: String, action: String, onClick: () -> Unit) {
 @Composable
 private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss: () -> Unit) {
     val context = LocalContext.current
+    val playerScope = rememberCoroutineScope()
     var controller by remember { mutableStateOf<MediaController?>(null) }
     var playbackError by remember { mutableStateOf<String?>(null) }
     val validQueue = remember(queue, track.id, track.audioUrl) {
@@ -639,13 +642,13 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
             MediaItem.Builder()
                 .setMediaId(candidate.id)
                 .setUri(candidate.audioUrl!!)
-                .setMediaMetadata(MediaMetadata.Builder().setTitle(candidate.title).setArtist(candidate.artist).build())
+                .setMediaMetadata(MediaMetadata.Builder().setTitle(candidate.title).setArtist(candidate.artist).setArtworkUri(candidate.coverUrl?.toUri()).build())
                 .build()
         }
     }
     val fallbackItem = remember(track.id) {
         MediaItem.Builder().setMediaId(track.id).setUri(track.audioUrl.orEmpty())
-            .setMediaMetadata(MediaMetadata.Builder().setTitle(track.title).setArtist(track.artist).build()).build()
+            .setMediaMetadata(MediaMetadata.Builder().setTitle(track.title).setArtist(track.artist).setArtworkUri(track.coverUrl?.toUri()).build()).build()
     }
 
     DisposableEffect(context) {
@@ -656,6 +659,11 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
             controller = null
             // Keep the app-scoped controller connected so background and voice controls remain available.
         }
+    }
+
+    val uiController = remember(controller) { controller?.let { Media3PlayerController(it, playerScope) } }
+    DisposableEffect(uiController) {
+        onDispose { uiController?.release() }
     }
 
     LaunchedEffect(controller, track.id) {
@@ -669,32 +677,44 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize(), color = ShellBackground) {
-            Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.Center) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("NOW PLAYING · BACKGROUND ENABLED", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.2.sp, modifier = Modifier.weight(1f))
-                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close player", tint = ShellSilver) }
-                }
-                Text(track.title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text(track.artist, color = ShellMuted, fontSize = 14.sp)
-                Spacer(Modifier.height(20.dp))
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Box(Modifier.size(220.dp).clip(RoundedCornerShape(26.dp)).background(Brush.linearGradient(listOf(Color(0xFF493719), ShellPanel))), contentAlignment = Alignment.Center) {
-                        if (!track.coverUrl.isNullOrBlank()) AsyncImage(model = track.coverUrl, contentDescription = "${track.title} cover artwork", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                        else Icon(Icons.Outlined.Album, null, tint = ShellGold, modifier = Modifier.size(84.dp))
-                    }
-                }
-                Spacer(Modifier.height(20.dp))
-                if (controller != null) {
-                    AndroidView(
-                        factory = { PlayerView(it).apply { player = controller; useController = true } },
-                        update = { it.player = controller },
-                        modifier = Modifier.fillMaxWidth().height(190.dp)
+            Box(Modifier.fillMaxSize()) {
+                if (uiController != null) {
+                    PlayerHost(
+                        controller = uiController,
+                        expanded = true,
+                        onExpandedChange = { expanded -> if (!expanded) onDismiss() },
+                        modifier = Modifier.fillMaxSize(),
+                        artwork = { url, artworkModifier ->
+                            if (!url.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = url,
+                                    contentDescription = "${track.title} cover artwork",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = artworkModifier,
+                                )
+                            } else {
+                                Box(
+                                    artworkModifier.background(Brush.linearGradient(listOf(Color(0xFF493719), ShellPanel))),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(Icons.Outlined.Album, null, tint = ShellGold, modifier = Modifier.size(84.dp))
+                                }
+                            }
+                        },
                     )
                 } else {
-                    CircularProgressIndicator(color = ShellGold, modifier = Modifier.align(Alignment.CenterHorizontally))
+                    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = ShellGold)
+                        Spacer(Modifier.height(16.dp))
+                        Text("Connecting to the HTE playback service…", color = ShellSilver)
+                        playbackError?.let { Text(it, color = ShellGold, fontSize = 12.sp) }
+                        Spacer(Modifier.height(16.dp))
+                        TextButton(onClick = onDismiss) { Text("Close") }
+                    }
                 }
-                playbackError?.let { Text(it, color = ShellGold, fontSize = 12.sp) }
-                Text("Playback continues when you leave this screen. Use the Android media notification to control it.", color = ShellMuted, fontSize = 11.sp)
+                playbackError?.let { error ->
+                    Text(error, color = ShellGold, fontSize = 12.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
+                }
             }
         }
     }
