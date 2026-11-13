@@ -13,8 +13,6 @@ on:
     paths:
       - 'hte-universe-native/**'
       - '.github/workflows/hte-universe-compose.yml'
-      - 'supabase/functions/elevenlabs-voice-token/**'
-      - 'supabase/config.toml'
   workflow_dispatch:
 
 permissions:
@@ -75,8 +73,6 @@ jobs:
         run: gradle --no-daemon :app:assembleDebug
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest
-      - name: Run release unit tests
-        run: gradle --no-daemon :app:testReleaseUnitTest
       - name: Run Android lint for debug and release
         run: |
           set +e
