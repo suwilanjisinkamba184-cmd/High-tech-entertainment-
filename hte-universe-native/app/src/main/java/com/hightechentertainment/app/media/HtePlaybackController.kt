@@ -25,7 +25,15 @@ object HtePlaybackController {
         future.addListener({
             runCatching { future.get() }
                 .onSuccess { controller -> activeController = controller; onConnected(controller) }
-                .onFailure(onError)
+                .onFailure { error ->
+                    synchronized(this) {
+                        if (sharedFuture === future) {
+                            sharedFuture = null
+                            activeController = null
+                        }
+                    }
+                    onError(error)
+                }
         }, MoreExecutors.directExecutor())
         return future
     }

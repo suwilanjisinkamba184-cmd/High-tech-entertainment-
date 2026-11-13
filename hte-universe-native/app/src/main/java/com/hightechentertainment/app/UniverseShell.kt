@@ -420,7 +420,7 @@ private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: () -> Unit
                 androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF392D1D), Color(0xFF171B22), Color(0xFF0D1117))),
                 RoundedCornerShape(13.dp)
             ), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.Movie, null, tint = ShellGold.copy(alpha = .72f), modifier = Modifier.size(52.dp))
+                Icon(Icons.Outlined.VideoLibrary, null, tint = ShellGold.copy(alpha = .72f), modifier = Modifier.size(52.dp))
                 Box(Modifier.align(Alignment.Center).size(48.dp).background(Color.Black.copy(alpha = .52f), RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
                     Icon(Icons.Outlined.PlayArrow, "Play ${video.title}", tint = Color.White, modifier = Modifier.size(30.dp))
                 }
@@ -489,7 +489,7 @@ private fun LibraryScreen(
                         Text("${record.mediaType.uppercase()} · ${record.status}", color = ShellMuted, fontSize = 10.sp)
                     }
                     if (record.status == "Downloaded" && !record.localUri.isNullOrBlank()) IconButton(onClick = { onPlayDownload(record) }) { Icon(Icons.Outlined.PlayArrow, "Play offline", tint = ShellGold) }
-                    IconButton(onClick = { onRemoveDownload(record) }) { Icon(Icons.Outlined.DeleteOutline, "Remove download", tint = ShellMuted) }
+                    IconButton(onClick = { onRemoveDownload(record) }) { Icon(Icons.Outlined.Delete, "Remove download", tint = ShellMuted) }
                 }
             }
         }
@@ -734,41 +734,6 @@ private fun VideoPlayerDialog(video: VideoDto, onDismiss: () -> Unit) {
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun VideoPlayerDialog(video: VideoDto, onDismiss: () -> Unit) {
-    val context = LocalContext.current
-    val validUrl = runCatching { Uri.parse(video.videoUrl).scheme in listOf("https", "http", "content", "file") }.getOrDefault(false)
-    val player = remember(video.id) {
-        ExoPlayer.Builder(context).build().apply {
-            if (validUrl) { setMediaItem(MediaItem.fromUri(video.videoUrl)); prepare(); playWhenReady = true }
-        }
-    }
-    var playbackError by remember { mutableStateOf<String?>(null) }
-    DisposableEffect(player) {
-        val listener = object : Player.Listener {
-            override fun onPlayerError(error: PlaybackException) { playbackError = "Video could not play. Check your connection and try again." }
-        }
-        player.addListener(listener)
-        onDispose { player.removeListener(listener); player.release() }
-    }
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxSize(), color = Color.Black) {
-            Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.Center) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 11.sp)
-                    }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close video", tint = Color.White) }
-                }
-                if (validUrl) AndroidView(factory = { PlayerView(it).apply { this.player = player; useController = true } }, modifier = Modifier.fillMaxWidth().weight(1f))
-                else Text("This video does not have a valid playback URL.", color = ShellGold)
-                playbackError?.let { Text(it, color = ShellGold, fontSize = 12.sp) }
             }
         }
     }
