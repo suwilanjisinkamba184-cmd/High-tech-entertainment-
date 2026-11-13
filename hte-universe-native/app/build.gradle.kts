@@ -64,7 +64,7 @@ android {
 }
 
 dependencies {
-    implementation("io.elevenlabs:elevenlabs-android:0.13.0")
+    implementation("io.elevenlabs:elevenlabs-android:0.13.1")
     val composeBom = platform("androidx.compose:compose-bom:2025.02.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
