@@ -257,11 +257,11 @@ private fun startVoiceSession(
                             "Library", "Favourites", "Downloads" -> "LIBRARY"
                             "Bookings", "Profile", "Founder Studio" -> "ACCOUNT"
                             "Voice Companion" -> null
-                            "App Updates" -> return ClientToolResult.failure("The App Updates page is not available in this build.")
+                            "App Updates" -> "ACCOUNT"
                             else -> return ClientToolResult.failure("Unknown app destination: $destination")
                         }
                         if (target != null) withContext(Dispatchers.Main.immediate) { toolContext.onNavigate(target) }
-                        return ClientToolResult.success(if (destination == "Founder Studio") "Opened Account. Founder Studio is shown only when the native app verifies the signed-in owner role." else if (destination == "Voice Companion") "Voice Companion is already open." else "Opened $destination.")
+                        return ClientToolResult.success(if (destination == "Founder Studio") "Opened Account. Founder Studio is shown only when the native app verifies the signed-in owner role." else if (destination == "Voice Companion") "Voice Companion is already open." else if (destination == "App Updates") "Opened Account. Open Settings, then App Updates to manage this application." else "Opened $destination.")
                     }
                 },
                 "search_catalogue" to object : ClientTool {
