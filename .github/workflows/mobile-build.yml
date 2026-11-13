@@ -19,7 +19,7 @@ on:
         description: "Choose automatic detection, an OTA patch, or a full APK release"
         required: true
         type: choice
-        options: [auto, patch, release, validate]
+        options: [auto, patch, release, validate, candidate]
         default: auto
 
 concurrency:
@@ -47,7 +47,7 @@ jobs:
           flutter-version: '3.47.9'
           cache: true
       - name: Detect Shorebird credentials
-        if: github.event_name != 'pull_request' && inputs.operation != 'validate'
+        if: github.event_name != 'pull_request' && inputs.operation != 'validate' && inputs.operation != 'candidate'
         id: shorebird
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
@@ -417,7 +417,7 @@ jobs:
             cd "$RUNNER_TEMP/hte_app"
           fi
       - name: Configure Android upload-key signing
-        if: steps.ota_mode.outputs.mode == 'release'
+        if: steps.ota_mode.outputs.mode == 'release' || steps.ota_mode.outputs.mode == 'candidate'
         id: android_signing
         working-directory: ${{ runner.temp }}/hte_app
         env:
@@ -668,8 +668,14 @@ jobs:
         if: steps.ota_mode.outputs.mode == 'validate'
         working-directory: ${{ runner.temp }}/hte_app
         run: flutter build apk --flavor su --release --target-platform android-arm,android-arm64 --dart-define="HTE_GOOGLE_WEB_CLIENT_ID="
+      - name: Build signed candidate APK (no public release)
+        if: steps.ota_mode.outputs.mode == 'candidate'
+        working-directory: ${{ runner.temp }}/hte_app
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: flutter build apk --flavor su --release --target-platform android-arm,android-arm64 --dart-define="HTE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
       - name: Verify release APK signature
-        if: steps.ota_mode.outputs.mode == 'release'
+        if: steps.ota_mode.outputs.mode == 'release' || steps.ota_mode.outputs.mode == 'candidate'
         working-directory: ${{ runner.temp }}/hte_app
         env:
           EXPECTED_CERT_SHA256: ${{ steps.android_signing.outputs.release_cert_sha256 }}
@@ -702,14 +708,14 @@ jobs:
           fi
           echo "PASS: APK signature is valid and matches the configured upload certificate."
       - name: Apply official High-Tech Entertainment download filename
-        if: steps.ota_mode.outputs.mode == 'release' || steps.ota_mode.outputs.mode == 'validate'
+        if: steps.ota_mode.outputs.mode == 'release' || steps.ota_mode.outputs.mode == 'validate' || steps.ota_mode.outputs.mode == 'candidate'
         working-directory: ${{ runner.temp }}/hte_app
         run: |
           APK="build/app/outputs/flutter-apk/app-su-release.apk"
           test -s "$APK" || { echo "::error::Expected SU APK was not found: $APK"; find build/app/outputs -maxdepth 5 -type f -print; exit 1; }
           mv "$APK" "build/app/outputs/flutter-apk/High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU.apk"
       - name: Upload standalone Android APK
-        if: steps.ota_mode.outputs.mode == 'release' || steps.ota_mode.outputs.mode == 'validate'
+        if: steps.ota_mode.outputs.mode == 'release' || steps.ota_mode.outputs.mode == 'validate' || steps.ota_mode.outputs.mode == 'candidate'
         uses: actions/upload-artifact@v4
         with:
           name: High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU-APK
