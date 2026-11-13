@@ -35,9 +35,11 @@ import io.elevenlabs.ConversationConfig
 import io.elevenlabs.ConversationOverrides
 import io.elevenlabs.ConversationSession
 import io.elevenlabs.Overrides
+import io.elevenlabs.TtsOverrides
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.functions.functions
 import io.ktor.client.statement.bodyAsText
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
@@ -74,6 +76,16 @@ fun VoiceAssistantDialog(
     val currentOnPlayFavourites by rememberUpdatedState(onPlayFavourites)
     val currentOnNavigate by rememberUpdatedState(onNavigate)
     val currentOnSearch by rememberUpdatedState(onSearch)
+    val settingsStore = remember(context) { AppSettingsStore(context) }
+    var selectedVoiceId by remember(settingsStore) { mutableStateOf(settingsStore.voiceAssistantVoiceId) }
+    var voiceMenuExpanded by remember { mutableStateOf(false) }
+    val selectedVoice = VoiceAssistantVoices.find(selectedVoiceId) ?: VoiceAssistantVoices.default
+    LaunchedEffect(selectedVoiceId) {
+        if (selectedVoiceId != selectedVoice.id) {
+            selectedVoiceId = selectedVoice.id
+            settingsStore.voiceAssistantVoiceId = selectedVoice.id
+        }
+    }
     val toolContext = remember { VoiceToolContext() }
     var session by remember { mutableStateOf<ConversationSession?>(null) }
     var isConnecting by remember { mutableStateOf(false) }
@@ -97,7 +109,7 @@ fun VoiceAssistantDialog(
     }
 
     val microphonePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) startVoiceSession(scope, context, toolContext,
+        if (granted) startVoiceSession(scope, context, toolContext, selectedVoiceId,
             onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
             onSession = { active -> session = active; isConnecting = false },
             onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = error }
@@ -109,7 +121,7 @@ fun VoiceAssistantDialog(
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
         } else {
-            startVoiceSession(scope, context, toolContext,
+            startVoiceSession(scope, context, toolContext, selectedVoiceId,
                 onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
                 onSession = { active -> session = active; isConnecting = false },
                 onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = error }
@@ -148,6 +160,40 @@ fun VoiceAssistantDialog(
                 }
                 Text(status.replaceFirstChar { it.uppercase() } + if (session != null) " · ${mode.replaceFirstChar { it.uppercase() }}" else "", color = VoiceGold, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Text("Talk naturally to discover music, control playback and navigate HTE Universe.", color = VoiceMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("ASSISTANT VOICE", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+                    Box {
+                        OutlinedButton(
+                            onClick = { voiceMenuExpanded = true },
+                            enabled = session == null && !isConnecting,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                                Text(selectedVoice.label, color = Color.White, fontSize = 12.sp)
+                                Text(selectedVoice.description, color = VoiceMuted, fontSize = 10.sp)
+                            }
+                            Icon(Icons.Outlined.ExpandMore, contentDescription = "Choose assistant voice", tint = VoiceGold)
+                        }
+                        DropdownMenu(expanded = voiceMenuExpanded, onDismissRequest = { voiceMenuExpanded = false }) {
+                            VoiceAssistantVoices.all.forEach { choice ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(choice.label, fontWeight = FontWeight.SemiBold)
+                                            Text(choice.description, color = VoiceMuted, fontSize = 10.sp)
+                                        }
+                                    },
+                                    onClick = {
+                                        selectedVoiceId = choice.id
+                                        settingsStore.voiceAssistantVoiceId = choice.id
+                                        voiceMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    Text("Your choice is saved and used for the next voice session.", color = VoiceMuted, fontSize = 9.sp)
+                }
 
                 if (userTranscript.isNotBlank()) {
                     Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1B2026)), shape = RoundedCornerShape(14.dp)) {
@@ -206,6 +252,7 @@ private fun startVoiceSession(
     scope: CoroutineScope,
     context: android.content.Context,
     toolContext: VoiceToolContext,
+    voiceId: String,
     onConnecting: () -> Unit,
     onSession: (ConversationSession) -> Unit,
     onFailure: (String) -> Unit
@@ -231,18 +278,15 @@ private fun startVoiceSession(
                                     toolContext.onPlayFavourites(favourites)
                                     ClientToolResult.success("Started the saved favourites queue with ${favourites.size} tracks.")
                                 }
-                            } else if (!HtePlaybackController.isConnected()) {
-                                ClientToolResult.failure("There is no active music player session yet.")
-                            } else {
-                                when (action) {
-                                    "pause" -> HtePlaybackController.pause()
-                                    "resume" -> HtePlaybackController.resume()
-                                    "next" -> HtePlaybackController.next()
-                                    "previous" -> HtePlaybackController.previous()
-                                    "stop" -> HtePlaybackController.stop()
-                                    else -> return@withContext ClientToolResult.failure("Unsupported playback action: $action")
-                                }
+                            } else if (HtePlaybackController.performAction(action)) {
                                 ClientToolResult.success("Playback action '$action' executed by HTE Universe.")
+                            } else {
+                                ClientToolResult.failure(when (action) {
+                                    "next" -> "There is no next track in the current playback queue."
+                                    "previous" -> "There is no active track to return from."
+                                    "pause", "resume", "stop" -> "There is no active track in the music player yet."
+                                    else -> "Unsupported playback action: $action"
+                                })
                             }
                         }
                     }
@@ -284,7 +328,7 @@ private fun startVoiceSession(
                 userId = token.userId.ifBlank { user.id },
                 textOnly = false,
                 audioInputSampleRate = 16000,
-                overrides = Overrides(conversation = ConversationOverrides(textOnly = false)),
+                overrides = Overrides(tts = TtsOverrides(voiceId = voiceId), conversation = ConversationOverrides(textOnly = false)),
                 clientTools = clientTools,
                 onUserTranscriptEvent = { text, _ -> toolContext.onUserTranscript(text) },
                 onAgentResponseEvent = { text, _ -> toolContext.onAgentResponse(text) },
@@ -292,7 +336,9 @@ private fun startVoiceSession(
             )
             val active = ConversationClient.startSession(config, context)
             onSession(active)
-        } catch (error: Throwable) {
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
             onFailure(error.message?.take(220) ?: "Could not connect to the HTE Voice Companion.")
         }
     }

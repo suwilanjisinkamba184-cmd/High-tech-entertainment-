@@ -38,6 +38,10 @@ class AppSettingsStore(context: Context) {
         get() = preferences.getString("video_quality", "AUTO") ?: "AUTO"
         set(value) { preferences.edit().putString("video_quality", value).apply() }
 
+    var voiceAssistantVoiceId: String
+        get() = preferences.getString("voice_assistant_voice_id", VoiceAssistantVoices.DEFAULT_ID) ?: VoiceAssistantVoices.DEFAULT_ID
+        set(value) { preferences.edit().putString("voice_assistant_voice_id", value).apply() }
+
     var backgroundPlayback: Boolean
         get() = preferences.getBoolean("background_playback", true)
         set(value) { preferences.edit().putBoolean("background_playback", value).apply() }
