@@ -275,7 +275,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                         Icon(Icons.Outlined.SystemUpdate, null, tint = SettingsGold, modifier = Modifier.size(28.dp))
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("HTE Universe 4.0.0", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("HTE Universe ${BuildConfig.VERSION_NAME}", color = Color.White, fontWeight = FontWeight.Bold)
                             Text("Installed version · build ${BuildConfig.VERSION_CODE}", color = SettingsMuted, fontSize = 10.sp)
                         }
                         if (updateInfo?.updateAvailable == true) Text("UPDATE AVAILABLE", color = SettingsGold, fontSize = 9.sp, fontWeight = FontWeight.Bold)
