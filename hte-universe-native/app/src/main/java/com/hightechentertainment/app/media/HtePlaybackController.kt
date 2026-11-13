@@ -2,11 +2,13 @@ package com.hightechentertainment.app.media
 
 import android.content.ComponentName
 import android.content.Context
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 
+@UnstableApi
 object HtePlaybackController {
     @Volatile private var sharedFuture: ListenableFuture<MediaController>? = null
     @Volatile private var activeController: MediaController? = null
