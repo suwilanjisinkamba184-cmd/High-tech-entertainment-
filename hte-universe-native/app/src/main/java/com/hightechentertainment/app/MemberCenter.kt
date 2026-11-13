@@ -1,11 +1,5 @@
 package com.hightechentertainment.app
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -43,15 +37,8 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
     val context = LocalContext.current
     val settingsStore = remember(context) { AppSettingsStore(context) }
     var notificationsEnabled by remember { mutableStateOf(settingsStore.notificationsEnabled) }
-    var autoplayNext by remember { mutableStateOf(settingsStore.autoplayNext) }
-    var dataSaver by remember { mutableStateOf(settingsStore.dataSaver) }
     var showFounderStudio by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        notificationsEnabled = granted
-        settingsStore.notificationsEnabled = granted
-        onSettingsChanged()
-    }
     val scope = rememberCoroutineScope()
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -217,26 +204,6 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
                 }
             }
         }
-        item { Text("APP SETTINGS", color = MemberGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
-        item {
-            PreferenceRow("Notifications", "Show account and booking updates in the app", notificationsEnabled) { enabled ->
-                if (enabled && Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                } else {
-                    notificationsEnabled = enabled; settingsStore.notificationsEnabled = enabled; onSettingsChanged()
-                }
-            }
-        }
-        item {
-            PreferenceRow("Autoplay next track", "Continue through the current music queue", autoplayNext) {
-                autoplayNext = it; settingsStore.autoplayNext = it; onSettingsChanged()
-            }
-        }
-        item {
-            PreferenceRow("Data saver", "Do not start downloads over metered mobile data", dataSaver) {
-                dataSaver = it; settingsStore.dataSaver = it; onSettingsChanged()
-            }
-        }
         if (statusMessage != null) item { Text(statusMessage!!, color = MemberGold, fontSize = 12.sp) }
     }
 
@@ -292,19 +259,6 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
             Surface(Modifier.fillMaxSize(), color = Color(0xFF08090B)) {
                 FounderStudioScreen(onClose = { showFounderStudio = false })
             }
-        }
-    }
-}
-
-@Composable
-private fun PreferenceRow(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = MemberPanel), shape = RoundedCornerShape(14.dp)) {
-        Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(title, color = Color.White, fontWeight = FontWeight.SemiBold)
-                Text(subtitle, color = MemberMuted, fontSize = 11.sp)
-            }
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
         }
     }
 }
