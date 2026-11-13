@@ -46,7 +46,12 @@ Deno.serve(async (req) => {
     // Legacy anon key is supported below.
   }
   publishableKey ||= Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-  const elevenLabsKey = Deno.env.get("ELEVENLABS_API_KEY") ?? "";
+  // Backward-compatible fallback for the legacy Supabase secret name with a trailing comma.
+  // Prefer the canonical ELEVENLABS_API_KEY secret; remove the legacy alias after migration.
+  const elevenLabsKey =
+    Deno.env.get("ELEVENLABS_API_KEY")?.trim() ||
+    Deno.env.get("ELEVENLABS_API_KEY,")?.trim() ||
+    "";
   if (!supabaseUrl || !publishableKey || !elevenLabsKey) {
     console.error("Voice token endpoint is missing required server configuration.");
     return respond({ error: "Voice service is not configured yet." }, 503, origin);
