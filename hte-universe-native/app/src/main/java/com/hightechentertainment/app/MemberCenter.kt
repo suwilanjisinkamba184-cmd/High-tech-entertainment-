@@ -6,12 +6,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -79,8 +83,21 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
 
     LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Text("Account", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text("Your HTE Universe membership.", color = MemberMuted, fontSize = 13.sp)
+            Text("MEMBER PORTAL", color = MemberGold, fontSize = 9.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+            Text("Your account.", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+            Text("Your HTE Universe membership.", color = MemberMuted, fontSize = 12.sp)
+        }
+        item {
+            MemberCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("HIGH-TECH ENTERTAINMENT", color = MemberGold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+                        Text("One account.\nYour whole universe.", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 24.sp)
+                        Text("Manage your profile, bookings and saved experiences.", color = MemberMuted, fontSize = 11.sp)
+                    }
+                    Icon(Icons.Outlined.AccountCircle, null, tint = MemberGold, modifier = Modifier.size(48.dp))
+                }
+            }
         }
         if (!configured || auth == null) {
             item {
@@ -94,8 +111,8 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
             item {
                 MemberCard {
                     Text(if (createAccount) "Create your HTE account" else "Welcome back", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    OutlinedTextField(value = email, onValueChange = { email = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Email address") }, singleLine = true)
-                    OutlinedTextField(value = password, onValueChange = { password = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Password") }, singleLine = true)
+                    OutlinedTextField(value = email, onValueChange = { email = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Email address") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), singleLine = true)
+                    OutlinedTextField(value = password, onValueChange = { password = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), singleLine = true)
                     Button(onClick = {
                         scope.launch {
                             isWorking = true
@@ -114,12 +131,15 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
                     OutlinedButton(onClick = {
                         scope.launch {
                             isWorking = true
-                            runCatching { AuthRepository().signInWithGoogle() }
-                                .onSuccess { statusMessage = "Complete Google sign-in in your browser, then return to HTE Universe." }
-                                .onFailure { statusMessage = it.message?.take(180) ?: "Google sign-in could not start." }
+                            runCatching { AuthRepository().signInWithGoogle(context) }
+                                .onSuccess { native ->
+                                    isSignedIn = auth.currentUserOrNull() != null
+                                    statusMessage = if (native && isSignedIn) "Google sign-in successful. Welcome to HTE Universe." else if (native) "Google verification completed. Loading your HTE account…" else "Continue in the Google sign-in tab. HTE Universe will reopen automatically when sign-in completes."
+                                }
+                                .onFailure { statusMessage = it.message?.take(180) ?: "Google sign-in could not complete. Check Google Play services and try again." }
                             isWorking = false
                         }
-                    }, enabled = !isWorking, modifier = Modifier.fillMaxWidth()) { Text("Continue with Google") }
+                    }, enabled = !isWorking, modifier = Modifier.fillMaxWidth()) { Text(if (isWorking) "Connecting to Google…" else "Continue with Google") }
                     TextButton(onClick = { createAccount = !createAccount; statusMessage = null }) {
                         Text(if (createAccount) "Already registered? Sign in" else "New to HTE? Create an account", color = MemberGold)
                     }
@@ -150,7 +170,7 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
                                 .onSuccess { isSignedIn = false; statusMessage = "You have signed out." }
                                 .onFailure { statusMessage = "Sign-out failed. Please try again." }
                         }
-                    }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.Logout, null); Spacer(Modifier.width(8.dp)); Text("Sign out") }
+                    }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.AutoMirrored.Outlined.Logout, null); Spacer(Modifier.width(8.dp)); Text("Sign out") }
                 }
             }
             if (role.equals("owner", true)) {
@@ -265,8 +285,8 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
 
 @Composable
 private fun MemberCard(content: @Composable ColumnScope.() -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = MemberPanel), shape = RoundedCornerShape(18.dp)) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
+    Card(colors = CardDefaults.cardColors(containerColor = MemberPanel), shape = RoundedCornerShape(22.dp)) {
+        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
     }
 }
 

@@ -5,12 +5,12 @@ import android.app.ActivityManager
 import android.content.pm.PackageManager
 import android.content.Intent
 import android.net.ConnectivityManager
-import android.net.Uri
 import android.os.Build
 import android.provider.Settings as AndroidSettings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.core.content.FileProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 import com.hightechentertainment.app.media.HteAudioEffects
 import com.hightechentertainment.app.media.HtePlaybackService
 import com.hightechentertainment.app.media.OfflineDownloadManager
@@ -221,8 +222,6 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                         networkPolicy = if (it == "WIFI_ONLY") "WIFI_ONLY" else "WIFI_AND_MOBILE"
                         settingsStore.networkPolicy = networkPolicy
                         onSettingsChanged()
-                        dataSaver = networkPolicy == "WIFI_ONLY"
-                        settingsStore.dataSaver = dataSaver
                     }
                     Text("Update download network", color = Color.White, fontWeight = FontWeight.SemiBold)
                     SettingsChips(listOf("WIFI_ONLY", "WIFI + MOBILE"), if (updateNetworkPolicy == "WIFI_ONLY") "WIFI_ONLY" else "WIFI + MOBILE") {
@@ -235,8 +234,6 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                     }
                     SettingsSwitch("Data saver", "Restrict downloads over metered mobile connections", dataSaver) {
                         dataSaver = it; settingsStore.dataSaver = it; onSettingsChanged()
-                        networkPolicy = if (it) "WIFI_ONLY" else "WIFI_AND_MOBILE"
-                        settingsStore.networkPolicy = networkPolicy
                     }
                     SettingsDivider()
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -474,13 +471,13 @@ private fun SettingsDivider() { HorizontalDivider(color = Color.White.copy(alpha
 private fun formatBytes(value: Long): String {
     if (value < 1024) return "$value B"
     val kb = value / 1024.0
-    if (kb < 1024) return String.format("%.1f KB", kb)
-    return String.format("%.1f MB", kb / 1024.0)
+    if (kb < 1024) return String.format(Locale.ROOT, "%.1f KB", kb)
+    return String.format(Locale.ROOT, "%.1f MB", kb / 1024.0)
 }
 
 private fun openUpdateInstaller(context: android.content.Context, file: File) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
-        val permissionIntent = Intent(AndroidSettings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))
+    if (!context.packageManager.canRequestPackageInstalls()) {
+        val permissionIntent = Intent(AndroidSettings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, "package:${context.packageName}".toUri())
         permissionIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(permissionIntent)
         return

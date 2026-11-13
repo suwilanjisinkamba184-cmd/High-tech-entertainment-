@@ -2,8 +2,9 @@ package com.hightechentertainment.app.media
 
 import android.app.DownloadManager
 import android.content.Context
-import android.net.Uri
 import android.os.Environment
+import androidx.core.content.edit
+import androidx.core.net.toUri
 
  data class OfflineDownloadRecord(
     val id: Long,
@@ -20,7 +21,7 @@ class OfflineDownloadManager(context: Context) {
     private val preferences = appContext.getSharedPreferences("hte_universe_offline_downloads", Context.MODE_PRIVATE)
 
     fun enqueue(url: String, title: String, mediaType: String, allowMetered: Boolean = true): Long {
-        val uri = Uri.parse(url)
+        val uri = url.toUri()
         require(uri.scheme == "https" || uri.scheme == "http") { "This media item does not have a valid download URL." }
         val safeName = title.replace(Regex("[^A-Za-z0-9._-]"), "_").trim('_').take(64).ifBlank { "hte_media" }
         val extension = if (mediaType == "video") "mp4" else "mp3"
@@ -33,7 +34,7 @@ class OfflineDownloadManager(context: Context) {
             .setAllowedOverRoaming(false)
             .setDestinationInExternalFilesDir(appContext, folder, "$safeName.$extension")
         val id = manager.enqueue(request)
-        preferences.edit().putString(id.toString(), "$mediaType|$title").apply()
+        preferences.edit { putString(id.toString(), "$mediaType|$title") }
         return id
     }
 
@@ -64,11 +65,11 @@ class OfflineDownloadManager(context: Context) {
     fun clearAll() {
         val ids = preferences.all.keys.mapNotNull { it.toLongOrNull() }.toLongArray()
         if (ids.isNotEmpty()) manager.remove(*ids)
-        preferences.edit().clear().apply()
+        preferences.edit { clear() }
     }
 
     fun remove(id: Long) {
         manager.remove(id)
-        preferences.edit().remove(id.toString()).apply()
+        preferences.edit { remove(id.toString()) }
     }
 }
