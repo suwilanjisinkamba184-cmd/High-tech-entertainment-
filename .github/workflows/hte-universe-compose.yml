@@ -110,10 +110,16 @@ jobs:
           set -euo pipefail
           APK_SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
           curl -fsSL "$PREVIOUS_APK_URL" -o "$RUNNER_TEMP/previous-hte-release.apk"
-          OLD_CERT="$("$APK_SIGNER" verify --print-certs "$RUNNER_TEMP/previous-hte-release.apk" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print $2; exit}')"
-          NEW_CERT="$("$APK_SIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print $2; exit}')"
-          if [[ -z "$OLD_CERT" || "$OLD_CERT" != "$NEW_CERT" ]]; then
-            echo "Production signing certificate does not match v2.2.10-SU. Refusing to publish."
+          OLD_CERT="$("$APK_SIGNER" verify --print-certs "$RUNNER_TEMP/previous-hte-release.apk" | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+          NEW_CERT="$("$APK_SIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+          if [[ -z "$OLD_CERT" || -z "$NEW_CERT" ]]; then
+            echo "::error::Could not extract a SHA-256 signing certificate fingerprint from one of the APKs."
+            exit 1
+          fi
+          if [[ "$OLD_CERT" != "$NEW_CERT" ]]; then
+            echo "::error::Production signing certificate differs from v2.2.10-SU. Refusing to publish."
+            echo "Previous release certificate SHA-256: $OLD_CERT"
+            echo "New release certificate SHA-256:      $NEW_CERT"
             exit 1
           fi
           echo "Verified: release certificate matches v2.2.10-SU."
