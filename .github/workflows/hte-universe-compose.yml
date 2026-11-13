@@ -3,7 +3,7 @@ name: HTE Universe — clean Compose rebuild
 on:
   push:
     branches: [rebuild/hte-universe-compose-clean]
-    tags: ["v4.*"]
+    tags: ["native-v*"]
     paths:
       - 'hte-universe-native/**'
       - '.github/workflows/hte-universe-compose.yml'
@@ -98,8 +98,8 @@ jobs:
           VERSION="$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
           test -n "$VERSION"
           cp app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/HTE-Universe-v${VERSION}.apk"
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            test "$GITHUB_REF_NAME" = "v${VERSION}" || { echo "Tag $GITHUB_REF_NAME does not match app version v${VERSION}."; exit 1; }
+          if [[ "$GITHUB_REF" == refs/tags/native-v* ]]; then
+            test "$GITHUB_REF_NAME" = "native-v${VERSION}" || { echo "Tag $GITHUB_REF_NAME does not match app version v${VERSION}."; exit 1; }
           fi
       - name: Upload signed production APK
         uses: actions/upload-artifact@v7
@@ -110,7 +110,7 @@ jobs:
             hte-universe-native/app/build/outputs/apk/release/SHA256SUMS.txt
           if-no-files-found: error
       - name: Publish signed APK as a GitHub Release for in-app updates
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/native-v')
         uses: softprops/action-gh-release@v2
         with:
           files: |

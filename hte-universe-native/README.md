@@ -65,4 +65,4 @@ The Kotlin/Jetpack Compose application uses signed, versioned APK releases. The 
 
 The existing Shorebird OTA workflow is retained for the legacy Flutter application only. Shorebird patches Dart code in that Flutter runtime; it cannot patch this native Kotlin/Compose application. Do not label a Shorebird patch as an update to the native app. Catalogue and remote configuration changes can continue to arrive through the Supabase backend without replacing the APK.
 
-Native release tags use `v` plus the Gradle `versionName` (for example, `v4.0.1`). The Android release workflow verifies the production signing certificate against the established release certificate before publishing the APK asset.
+Native release tags use `native-v` plus the Gradle `versionName` (for example, `native-v4.0.1`). The native updater filters only this tag namespace, so it cannot offer a legacy Flutter/Shorebird APK as a native Compose update. The Android release workflow verifies the production signing certificate against the established release certificate before publishing the APK asset.

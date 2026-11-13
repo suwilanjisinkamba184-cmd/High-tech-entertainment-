@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
@@ -39,11 +40,22 @@ class HteUpdateManager(private val context: Context) {
         try {
             val code = connection.responseCode
             require(code in 200..299) { "Update service returned HTTP $code." }
-            val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-            val tag = json.optString("tag_name").ifBlank { json.optString("name") }
-            val latest = tag.removePrefix("v").trim()
-            require(latest.isNotBlank()) { "The release service returned no version." }
-            val assets = json.optJSONArray("assets")
+            val releases = JSONArray(connection.inputStream.bufferedReader().use { it.readText() })
+            // The repository still has a legacy Flutter/Shorebird release stream. Never
+            // let that APK be offered as an update to the native Kotlin/Compose app.
+            val nativeRelease = (0 until releases.length())
+                .map { releases.getJSONObject(it) }
+                .filter { it.optString("tag_name").startsWith(NATIVE_RELEASE_TAG_PREFIX) }
+                .reduceOrNull { best, candidate ->
+                    val bestVersion = best.optString("tag_name").removePrefix(NATIVE_RELEASE_TAG_PREFIX)
+                    val candidateVersion = candidate.optString("tag_name").removePrefix(NATIVE_RELEASE_TAG_PREFIX)
+                    if (compareVersions(candidateVersion, bestVersion) > 0) candidate else best
+                }
+                ?: throw IllegalStateException("No published native HTE release is available yet.")
+            val tag = nativeRelease.optString("tag_name")
+            val latest = tag.removePrefix(NATIVE_RELEASE_TAG_PREFIX).trim()
+            require(latest.isNotBlank()) { "The native release service returned no version." }
+            val assets = nativeRelease.optJSONArray("assets")
             var apkUrl: String? = null
             var apkSize = 0L
             var digest: String? = null
@@ -62,7 +74,7 @@ class HteUpdateManager(private val context: Context) {
             HteUpdateInfo(
                 currentVersion = currentVersion,
                 latestVersion = latest,
-                releaseNotes = json.optString("body").take(6000),
+                releaseNotes = nativeRelease.optString("body").take(6000),
                 downloadUrl = apkUrl,
                 downloadSize = apkSize,
                 sha256 = digest,
@@ -164,6 +176,7 @@ class HteUpdateManager(private val context: Context) {
     }
 
     companion object {
-        private const val LATEST_RELEASE_URL = "https://api.github.com/repos/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest"
+        private const val NATIVE_RELEASE_TAG_PREFIX = "native-v"
+        private const val LATEST_RELEASE_URL = "https://api.github.com/repos/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases?per_page=100"
     }
 }
