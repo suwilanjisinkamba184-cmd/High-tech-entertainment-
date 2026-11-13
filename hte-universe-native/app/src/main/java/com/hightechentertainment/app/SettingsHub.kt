@@ -105,7 +105,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
             updateError = null
             try {
                 downloadedApk = updater.downloadUpdate(url, info.downloadSize, info.sha256) { value -> progress = value }
-                statusMessage = "Update downloaded and verified. You can now install it."
+                statusMessage = "Update downloaded. Android will verify the signing identity during installation."
             } catch (_: CancellationException) {
                 updateError = "Download paused. Your partial file is saved; tap Resume to continue."
             } catch (error: Throwable) {
@@ -194,12 +194,12 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                             )
                         }
                     }
-                    Text("Equalizer availability depends on the phone's audio-effect support and an active HTE playback session.", color = SettingsMuted, fontSize = 10.sp)
+                    Text("Equalizer availability depends on the phone's audio-effect support. Your selected preset is applied when the HTE playback audio session becomes active.", color = SettingsMuted, fontSize = 10.sp)
                     SettingsDivider()
                     SettingsChoice("Music streaming quality", streamingQuality, listOf("AUTO", "DATA SAVER", "NORMAL", "HIGH")) {
                         streamingQuality = it; settingsStore.streamingQuality = it
                     }
-                    SettingsChoice("Video quality", videoQuality, listOf("AUTO", "LOW", "MEDIUM", "HIGH")) {
+                    SettingsChoice("Preferred video quality (when variants are available)", videoQuality, listOf("AUTO", "LOW", "MEDIUM", "HIGH")) {
                         videoQuality = it; settingsStore.videoQuality = it
                     }
                 }
@@ -220,7 +220,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                         settingsStore.updateNetworkPolicy = updateNetworkPolicy
                     }
                     SettingsDivider()
-                    SettingsChoice("Default audio download quality", downloadQuality, listOf("STANDARD", "HIGH", "HIGHEST")) {
+                    SettingsChoice("Preferred audio download quality (when variants are available)", downloadQuality, listOf("STANDARD", "HIGH", "HIGHEST")) {
                         downloadQuality = it; settingsStore.downloadQuality = it
                     }
                     SettingsSwitch("Data saver", "Restrict downloads over metered mobile connections", dataSaver) {
@@ -294,7 +294,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                         }
                     }
                     downloadedApk?.let { file ->
-                        Text("Verified update ready · ${formatBytes(file.length())}", color = Color(0xFF8BCB9B), fontSize = 11.sp)
+                        Text("Update installer ready · ${formatBytes(file.length())}", color = Color(0xFF8BCB9B), fontSize = 11.sp)
                         Button(onClick = { openUpdateInstaller(context, file) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = SettingsGold, contentColor = SettingsBackground)) {
                             Icon(Icons.Outlined.InstallMobile, null); Spacer(Modifier.width(8.dp)); Text("Install update")
                         }
@@ -307,9 +307,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
             item {
                 SettingsSection("PERSONALISATION & ACCESSIBILITY", "Make the app comfortable to use")
                 SettingsCard {
-                    SettingsSwitch("Personalised recommendations", "Use your listening preferences to tailor discovery", recommendations) {
-                        recommendations = it; settingsStore.personalisedRecommendations = it
-                    }
+                    SettingsInfoRow("Personalised recommendations", "Saved as a future discovery preference; personalised ranking is not yet connected to the catalogue.")
                     SettingsDivider()
                     SettingsSwitch("Reduce motion", "Reduce decorative movement and transitions", reduceMotion) {
                         reduceMotion = it; settingsStore.reduceMotion = it
