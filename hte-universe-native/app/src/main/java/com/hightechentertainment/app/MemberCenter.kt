@@ -246,7 +246,8 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
                 SettingsHub(
                     onClose = { showSettings = false },
                     settingsStore = settingsStore,
-                    downloadManager = com.hightechentertainment.app.media.OfflineDownloadManager(context)
+                    downloadManager = com.hightechentertainment.app.media.OfflineDownloadManager(context),
+                    onSettingsChanged = onSettingsChanged
                 )
             }
         }
