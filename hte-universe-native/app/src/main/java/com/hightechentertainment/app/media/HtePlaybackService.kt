@@ -1,11 +1,13 @@
 package com.hightechentertainment.app.media
 
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 
 /** Owns the audio player outside the Activity so playback can continue in the background. */
+@OptIn(UnstableApi::class)
 class HtePlaybackService : MediaSessionService() {
     private var player: ExoPlayer? = null
     private var mediaSession: MediaSession? = null
