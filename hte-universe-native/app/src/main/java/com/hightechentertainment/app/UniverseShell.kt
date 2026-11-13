@@ -162,6 +162,7 @@ fun UniverseShell() {
                     tracks = tracks, videos = videos, isLoading = isLoading,
                     onExplore = { selectedTab = UniverseTab.DISCOVER },
                     onVideos = { selectedTab = UniverseTab.VIDEOS },
+                    onVoice = { showVoiceAssistant = true },
                     onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it) }, onPlayVideo = { selectedVideo = it },
                     onDownloadTrack = { startDownload(it.audioUrl, it.title, "audio") },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
@@ -247,45 +248,19 @@ private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, on
 @Composable
 private fun HomeScreen(
     tracks: List<TrackDto>, videos: List<VideoDto>, isLoading: Boolean,
-    onExplore: () -> Unit, onVideos: () -> Unit,
+    onExplore: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
 ) {
-    LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        item {
-            Text("YOUR UNIVERSE, YOUR SOUND", color = ShellMuted, fontSize = 10.sp, letterSpacing = 2.sp)
-            Text("Beyond the ordinary.", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.Bold)
-        }
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(22.dp)) {
-                Column(Modifier.fillMaxWidth().padding(22.dp)) {
-                    Text("HIGH-TECH ENTERTAINMENT", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(10.dp))
-                    Text("Music. Beats. Production. Beyond.", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Discover releases, artists and visual entertainment in one connected space.", color = ShellSilver, fontSize = 13.sp)
-                    Spacer(Modifier.height(18.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Button(onClick = onExplore, colors = ButtonDefaults.buttonColors(containerColor = ShellGold, contentColor = ShellBackground)) { Text("Explore music") }
-                        OutlinedButton(onClick = onVideos, colors = ButtonDefaults.outlinedButtonColors(contentColor = ShellSilver)) { Text("Watch videos") }
-                    }
-                }
-            }
-        }
-        item { SectionHeading("FEATURED MUSIC", "See all", onExplore) }
-        if (tracks.isEmpty()) {
-            item { EmptyCatalogueState("No published tracks yet", isLoading, onRefresh) }
-        } else {
-            items(tracks.take(4), key = { it.id }) { track -> TrackRow(track = track, onPlay = { onPlayTrack(track) }, onDownload = { onDownloadTrack(track) }, isFavourite = track.id in favouriteTrackIds, onToggleFavourite = { onToggleFavourite(track) }) }
-        }
-        item { SectionHeading("LATEST VIDEOS", "See all", onVideos) }
-        if (videos.isEmpty()) {
-            item { Text("Published HTE videos will appear here.", color = ShellMuted, fontSize = 13.sp) }
-        } else {
-            items(videos.take(2), key = { it.id }) { video -> VideoRow(video = video, onPlay = { onPlayVideo(video) }, onDownload = { onDownloadVideo(video) }) }
-        }
-    }
+    Universe2026Home(
+        tracks = tracks, videos = videos, isLoading = isLoading,
+        onExplore = onExplore, onVideos = onVideos, onVoice = onVoice,
+        onPlayTrack = onPlayTrack, onPlayVideo = onPlayVideo,
+        onDownloadTrack = onDownloadTrack, onDownloadVideo = onDownloadVideo,
+        favouriteTrackIds = favouriteTrackIds, onToggleFavourite = onToggleFavourite,
+        onRefresh = onRefresh
+    )
 }
 
 @Composable
