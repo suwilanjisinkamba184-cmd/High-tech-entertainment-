@@ -81,6 +81,45 @@ fun UniverseShell() {
     var searchQuery by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    var mediaController by remember { mutableStateOf<MediaController?>(null) }
+    var playerExpanded by remember { mutableStateOf(false) }
+    val playerUiController = remember(mediaController) { mediaController?.let { Media3PlayerController(it, scope) } }
+    DisposableEffect(context) {
+        HtePlaybackController.connect(
+            context,
+            onConnected = { mediaController = it },
+            onError = { error -> Toast.makeText(context, error.message?.take(120) ?: "The background player could not start.", Toast.LENGTH_LONG).show() },
+        )
+        onDispose { }
+    }
+    DisposableEffect(playerUiController) {
+        onDispose { playerUiController?.release() }
+    }
+    LaunchedEffect(mediaController, selectedTrack?.id, selectedTrackQueue) {
+        val player = mediaController ?: return@LaunchedEffect
+        val selected = selectedTrack ?: return@LaunchedEffect
+        val candidates = (selectedTrackQueue ?: listOf(selected)).let { queue ->
+            if (queue.any { it.id == selected.id }) queue else listOf(selected) + queue
+        }
+        val items = candidates.mapNotNull { candidate ->
+            val uri = candidate.audioUrl?.takeIf(String::isNotBlank)?.toUri() ?: return@mapNotNull null
+            if (uri.scheme !in listOf("http", "https", "file", "content")) return@mapNotNull null
+            MediaItem.Builder()
+                .setMediaId(candidate.id)
+                .setUri(uri)
+                .setMediaMetadata(MediaMetadata.Builder().setTitle(candidate.title).setArtist(candidate.artist).setArtworkUri(candidate.coverUrl?.toUri()).build())
+                .build()
+        }
+        if (items.isEmpty()) {
+            Toast.makeText(context, "This track does not have a valid audio URL.", Toast.LENGTH_LONG).show()
+            return@LaunchedEffect
+        }
+        val startIndex = items.indexOfFirst { it.mediaId == selected.id }.coerceAtLeast(0)
+        player.setMediaItems(items, startIndex, C.TIME_UNSET)
+        player.prepare()
+        player.play()
+        playerExpanded = true
+    }
     val offlineManager = remember(context) { OfflineDownloadManager(context) }
     val settingsStore = remember(context) { AppSettingsStore(context) }
     var settingsRevision by remember { mutableIntStateOf(0) }
@@ -139,80 +178,99 @@ fun UniverseShell() {
         }
     }
 
-    Scaffold(
-        containerColor = ShellBackground,
-        bottomBar = {
-            NavigationBar(containerColor = Color(0xFF0D0F12), contentColor = ShellGold, tonalElevation = 0.dp) {
-                UniverseTab.entries.forEach { tab ->
-                    val icon = when (tab) {
-                        UniverseTab.HOME -> Icons.Outlined.Home
-                        UniverseTab.DISCOVER -> Icons.Outlined.Explore
-                        UniverseTab.VIDEOS -> Icons.Outlined.VideoLibrary
-                        UniverseTab.LIBRARY -> Icons.Outlined.LibraryMusic
-                        UniverseTab.ACCOUNT -> Icons.Outlined.Person
-                    }
-                    NavigationBarItem(
-                        selected = selectedTab == tab,
-                        onClick = { selectedTab = tab },
-                        icon = { Icon(icon, contentDescription = tab.label) },
-                        label = { Text(tab.label, fontSize = 10.sp) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = ShellGold, selectedTextColor = ShellGold,
-                            unselectedIconColor = ShellMuted, unselectedTextColor = ShellMuted,
-                            indicatorColor = ShellGold.copy(alpha = .12f)
+    Box(Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = ShellBackground,
+            bottomBar = {
+                NavigationBar(containerColor = Color(0xFF0D0F12), contentColor = ShellGold, tonalElevation = 0.dp) {
+                    UniverseTab.entries.forEach { tab ->
+                        val icon = when (tab) {
+                            UniverseTab.HOME -> Icons.Outlined.Home
+                            UniverseTab.DISCOVER -> Icons.Outlined.Explore
+                            UniverseTab.VIDEOS -> Icons.Outlined.VideoLibrary
+                            UniverseTab.LIBRARY -> Icons.Outlined.LibraryMusic
+                            UniverseTab.ACCOUNT -> Icons.Outlined.Person
+                        }
+                        NavigationBarItem(
+                            selected = selectedTab == tab,
+                            onClick = { selectedTab = tab },
+                            icon = { Icon(icon, contentDescription = tab.label) },
+                            label = { Text(tab.label, fontSize = 10.sp) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = ShellGold, selectedTextColor = ShellGold,
+                                unselectedIconColor = ShellMuted, unselectedTextColor = ShellMuted,
+                                indicatorColor = ShellGold.copy(alpha = .12f)
+                            )
                         )
+                    }
+                }
+            }
+        ) { insets ->
+            Column(Modifier.fillMaxSize().padding(insets)) {
+                UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true })
+                when (selectedTab) {
+                    UniverseTab.HOME -> HomeScreen(
+                        tracks = tracks, videos = videos, isLoading = isLoading,
+                        onExplore = { selectedTab = UniverseTab.DISCOVER },
+                        onVideos = { selectedTab = UniverseTab.VIDEOS },
+                        onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it) }, onPlayVideo = { selectedVideo = it },
+                        onDownloadTrack = { startDownload(it.audioUrl, it.title, "audio") },
+                        favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
+                        onDownloadVideo = { startDownload(it.videoUrl, it.title, "video") },
+                        onRefresh = ::refreshCatalogue
                     )
+                    UniverseTab.DISCOVER -> DiscoverScreen(
+                        tracks = tracks, isLoading = isLoading, error = catalogueError,
+                        onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it) }, onDownload = { startDownload(it.audioUrl, it.title, "audio") },
+                        favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
+                        initialQuery = searchQuery, onQueryChanged = { searchQuery = it }, onRefresh = ::refreshCatalogue
+                    )
+                    UniverseTab.VIDEOS -> VideosScreen(
+                        videos = videos, isLoading = isLoading, error = catalogueError,
+                        onPlay = { selectedVideo = it }, onDownload = { startDownload(it.videoUrl, it.title, "video") }, onRefresh = ::refreshCatalogue
+                    )
+                    UniverseTab.LIBRARY -> LibraryScreen(
+                        onSignIn = { selectedTab = UniverseTab.ACCOUNT },
+                        downloads = downloads,
+                        favouriteTracks = tracks.filter { it.id in favouriteTrackIds },
+                        onPlayFavourite = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks.filter { track -> track.id in favouriteTrackIds } else listOf(it) },
+                        onToggleFavourite = ::toggleFavourite,
+                        onDownloadFavourite = { startDownload(it.audioUrl, it.title, "audio") },
+                        onRemoveDownload = { record -> scope.launch { withContext(Dispatchers.IO) { offlineManager.remove(record.id) }; downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() } } },
+                        onPlayDownload = { record ->
+                            if (record.localUri.isNullOrBlank()) Toast.makeText(context, "This download is not ready yet.", Toast.LENGTH_SHORT).show()
+                            else if (record.mediaType == "video") selectedVideo = VideoDto(record.id.toString(), record.title, videoUrl = record.localUri)
+                            else {
+                                val offlineTrack = TrackDto(record.id.toString(), record.title, artist = "Downloaded", audioUrl = record.localUri)
+                                selectedTrack = offlineTrack
+                                selectedTrackQueue = listOf(offlineTrack)
+                            }
+                        }
+                    )
+                    UniverseTab.ACCOUNT -> AccountScreen(configured = configured, onSettingsChanged = { settingsRevision++ })
                 }
             }
         }
-    ) { insets ->
-        Column(Modifier.fillMaxSize().padding(insets)) {
-            UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true })
-            when (selectedTab) {
-                UniverseTab.HOME -> HomeScreen(
-                    tracks = tracks, videos = videos, isLoading = isLoading,
-                    onExplore = { selectedTab = UniverseTab.DISCOVER },
-                    onVideos = { selectedTab = UniverseTab.VIDEOS },
-                    onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it) }, onPlayVideo = { selectedVideo = it },
-                    onDownloadTrack = { startDownload(it.audioUrl, it.title, "audio") },
-                    favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
-                    onDownloadVideo = { startDownload(it.videoUrl, it.title, "video") },
-                    onRefresh = ::refreshCatalogue
-                )
-                UniverseTab.DISCOVER -> DiscoverScreen(
-                    tracks = tracks, isLoading = isLoading, error = catalogueError,
-                    onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it) }, onDownload = { startDownload(it.audioUrl, it.title, "audio") },
-                    favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
-                    initialQuery = searchQuery, onQueryChanged = { searchQuery = it }, onRefresh = ::refreshCatalogue
-                )
-                UniverseTab.VIDEOS -> VideosScreen(
-                    videos = videos, isLoading = isLoading, error = catalogueError,
-                    onPlay = { selectedVideo = it }, onDownload = { startDownload(it.videoUrl, it.title, "video") }, onRefresh = ::refreshCatalogue
-                )
-                UniverseTab.LIBRARY -> LibraryScreen(
-                    onSignIn = { selectedTab = UniverseTab.ACCOUNT },
-                    downloads = downloads,
-                    favouriteTracks = tracks.filter { it.id in favouriteTrackIds },
-                    onPlayFavourite = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks.filter { track -> track.id in favouriteTrackIds } else listOf(it) },
-                    onToggleFavourite = ::toggleFavourite,
-                    onDownloadFavourite = { startDownload(it.audioUrl, it.title, "audio") },
-                    onRemoveDownload = { record -> scope.launch { withContext(Dispatchers.IO) { offlineManager.remove(record.id) }; downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() } } },
-                    onPlayDownload = { record ->
-                        if (record.localUri.isNullOrBlank()) Toast.makeText(context, "This download is not ready yet.", Toast.LENGTH_SHORT).show()
-                        else if (record.mediaType == "video") selectedVideo = VideoDto(record.id.toString(), record.title, videoUrl = record.localUri)
-                        else {
-                            val offlineTrack = TrackDto(record.id.toString(), record.title, artist = "Downloaded", audioUrl = record.localUri)
-                            selectedTrack = offlineTrack
-                            selectedTrackQueue = listOf(offlineTrack)
+        playerUiController?.let { uiController ->
+            PlayerHost(
+                controller = uiController,
+                expanded = playerExpanded,
+                onExpandedChange = { playerExpanded = it },
+                modifier = Modifier.align(Alignment.BottomCenter),
+                collapsedBottomInset = 80.dp,
+                artwork = { url, artworkModifier ->
+                    if (!url.isNullOrBlank()) {
+                        AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
+                    } else {
+                        Box(artworkModifier.background(Brush.linearGradient(listOf(Color(0xFF493719), ShellPanel))), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Outlined.Album, null, tint = ShellGold, modifier = Modifier.size(30.dp))
                         }
                     }
-                )
-                UniverseTab.ACCOUNT -> AccountScreen(configured = configured, onSettingsChanged = { settingsRevision++ })
-            }
+                },
+            )
         }
     }
 
-    selectedTrack?.let { AudioPlayerDialog(track = it, queue = selectedTrackQueue ?: if (autoplayNext) tracks else listOf(it), onDismiss = { selectedTrack = null; selectedTrackQueue = null }) }
     selectedVideo?.let { VideoPlayerDialog(video = it, onDismiss = { selectedVideo = null }) }
     if (showVoiceAssistant) {
         VoiceAssistantDialog(
