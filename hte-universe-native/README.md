@@ -20,16 +20,16 @@ gradle --no-daemon :app:testDebugUnitTest
 
 ## Core dependency baseline
 
-- Compose BOM 2026.06.01 (API 36-compatible stable line)
+- Compose BOM 2026.06.01 (stable API 36-compatible line)
 - AndroidX Activity Compose 1.13.0
-- AndroidX Lifecycle 2.11.0
-- AndroidX Core KTX 1.19.1
+- AndroidX Lifecycle 2.10.0 (latest stable line compatible with API 36)
+- AndroidX Core KTX 1.17.0 (API 36-compatible stable line)
 - Media3 1.11.1
 - Supabase Kotlin 3.9.0
 - Ktor 3.6.1
 - ElevenLabs Android 0.13.1
 
-These versions are pinned intentionally. Compose 1.12 requires compileSdk 37 and AGP 9.1.1 or newer, so this build remains on the API 36-compatible Compose BOM until the complete Android toolchain is upgraded together.
+Newer AndroidX Core 1.19.x and Lifecycle 2.11.x releases require API 37 and AGP 9.1/9.2 or newer. This project intentionally remains on the API 36 toolchain so the new dependencies are mutually compatible; compileSdk and AGP can be upgraded together in a later toolchain migration. Target SDK remains 36, separate from compileSdk, to avoid opting the app into newer runtime behavior prematurely.
 
 ## Backend configuration
 
@@ -55,5 +55,5 @@ Only approved credentials/configuration may be migrated from the previous projec
 - Clean Compose project foundation and branded startup prototype.
 - Supabase client/auth/catalogue data layer; SDK updated to the current upstream Kotlin/Ktor baseline.
 - Media3 1.11.1 playback, HLS and DASH libraries included as the native media foundation.
-- CI now uses current Node 24 GitHub Actions releases and verifies the original production signing certificate.
-- The playback service and UI, final startup narration, real-device acceptance, offline downloads, Founder Studio and full screen-by-screen UI still require implementation and testing.
+- CI uses current Node 24 GitHub Actions releases and verifies the original production signing certificate.
+- Playback service and UI, final startup narration, real-device acceptance, offline downloads, Founder Studio and full screen-by-screen UI still require implementation and testing.

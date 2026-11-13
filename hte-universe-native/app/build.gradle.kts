@@ -71,7 +71,7 @@ kotlin {
 dependencies {
     implementation("io.elevenlabs:elevenlabs-android:0.13.1")
 
-    // Latest stable Compose line compatible with compileSdk 36.
+    // Stable Compose BOM line supported by compileSdk 36.
     val composeBom = platform("androidx.compose:compose-bom:2026.06.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
@@ -82,11 +82,12 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
 
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
-    implementation("androidx.core:core-ktx:1.19.1")
+    // Latest stable AndroidX releases compatible with this API 36 build.
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
+    implementation("androidx.core:core-ktx:1.17.0")
 
-    // Supabase Kotlin 3.9.0 is aligned with Kotlin 2.4.21 and Ktor 3.6.1.
+    // Supabase Kotlin 3.9.0 upstream uses Kotlin 2.4.21 and Ktor 3.6.1.
     implementation(platform("io.github.jan-tennert.supabase:bom:3.9.0"))
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
@@ -94,7 +95,7 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:functions-kt")
     implementation("io.ktor:ktor-client-android:3.6.1")
 
-    // Stable native playback, streaming and fullscreen video foundation.
+    // Stable native playback, HLS and DASH streaming.
     val media3Version = "1.11.1"
     implementation("androidx.media3:media3-exoplayer:$media3Version")
     implementation("androidx.media3:media3-exoplayer-hls:$media3Version")
