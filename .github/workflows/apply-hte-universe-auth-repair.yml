@@ -118,13 +118,6 @@ jobs:
               'implementation("io.elevenlabs:elevenlabs-android:0.13.1")',
               'implementation("io.elevenlabs:elevenlabs-android:0.13.1")\n\n    // Native Google sign-in via Credential Manager and Google Play services.\n    implementation("androidx.credentials:credentials:1.6.0")\n    implementation("androidx.credentials:credentials-play-services-auth:1.6.0")\n    implementation("com.google.android.libraries.identity.googleid:googleid:1.2.1")')
 
-          workflow_path = Path(".github/workflows/hte-universe-compose.yml")
-          lines = workflow_path.read_text().splitlines()
-          if not any("GOOGLE_WEB_CLIENT_ID:" in line for line in lines):
-              i = next(i for i, line in enumerate(lines) if line.strip().startswith("SUPABASE_PUBLISHABLE_KEY:"))
-              lines.insert(i + 1, "      GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}")
-              workflow_path.write_text("\n".join(lines) + "\n")
-
           p = "hte-universe-native/app/src/main/java/com/hightechentertainment/app/MainActivity.kt"
           main = Path(p).read_text()
           main = main.replace("import android.media.PlaybackParams", "import android.media.PlaybackParams\nimport android.util.Log\nimport android.widget.Toast", 1)
@@ -149,15 +142,12 @@ jobs:
           replace_once(p,
               '}, enabled = !isWorking, modifier = Modifier.fillMaxWidth()) { Text("Continue with Google") }',
               '}, enabled = !isWorking, modifier = Modifier.fillMaxWidth()) { Text(if (isWorking) "Connecting to Google…" else "Continue with Google") }')
-
-          Path(".github/workflows/apply-hte-universe-auth-repair.yml").unlink(missing_ok=True)
           PY
 
       - name: Commit repaired source
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add hte-universe-native .github/workflows/hte-universe-compose.yml
-          git add -u .github/workflows/apply-hte-universe-auth-repair.yml || true
+          git add hte-universe-native
           git commit -m "fix(auth): route Google sign-in into HTE Universe and add native Play Services flow"
           git push origin HEAD:${{ github.ref_name }}
