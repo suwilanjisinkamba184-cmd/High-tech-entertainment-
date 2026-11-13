@@ -433,7 +433,7 @@ class HteApp extends StatelessWidget {
     darkTheme: ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF07090D),
+      scaffoldBackgroundColor: const Color(0xFF080A0D),
       colorScheme: ColorScheme.fromSeed(
         seedColor: const Color(0xFFE3B85F),
         brightness: Brightness.dark,
@@ -442,29 +442,31 @@ class HteApp extends StatelessWidget {
         onPrimary: const Color(0xFF17120A),
         secondary: const Color(0xFFB8D3E6),
         onSecondary: const Color(0xFF09121A),
-        surface: const Color(0xFF10151D),
-        surfaceContainer: const Color(0xFF131A23),
-        surfaceContainerHigh: const Color(0xFF19222D),
-        outline: const Color(0xFF34404D),
+        surface: const Color(0xFF101318),
+        surfaceContainer: const Color(0xFF141920),
+        surfaceContainerHigh: const Color(0xFF1B222B),
+        outline: const Color(0xFF303944),
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF07090D),
+        backgroundColor: Color(0xFF080A0D),
         foregroundColor: Color(0xFFF5F2EA),
         elevation: 0,
         centerTitle: false,
+        scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
+        titleTextStyle: TextStyle(color: Color(0xFFF5F2EA), fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -.35),
       ),
       textTheme: ThemeData.dark().textTheme.apply(
         bodyColor: const Color(0xFFF2F1ED),
         displayColor: const Color(0xFFF8F5EC),
       ),
       cardTheme: CardThemeData(
-        color: const Color(0xFF111720),
+        color: const Color(0xFF11161D),
         elevation: 0,
         margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: const BorderSide(color: Color(0xFF263442)),
+          borderRadius: BorderRadius.circular(22),
+          side: const BorderSide(color: Color(0xFF252D37)),
         ),
       ),
       listTileTheme: const ListTileThemeData(
@@ -511,7 +513,13 @@ class HteApp extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
         ),
       ),
-      dividerTheme: const DividerThemeData(color: Color(0xFF292B2E), thickness: 1),
+      dividerTheme: const DividerThemeData(color: Color(0xFF252B33), thickness: 1),
+      navigationBarTheme: const NavigationBarThemeData(
+        height: 66,
+        backgroundColor: Color(0xFF0B0E12),
+        indicatorColor: Color(0xFF302718),
+        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+      ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: Color(0xFFD9B96E),
         linearTrackColor: Color(0xFF292B2E),
@@ -1162,63 +1170,28 @@ class _MainScreenState extends State<MainScreen> {
     ]),
     bottomNavigationBar: Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xF2141B24), Color(0xFF080B10)],
-        ),
-        border: Border(top: BorderSide(color: Color(0xFF34404D), width: .7)),
-        boxShadow: [BoxShadow(color: Color(0x66000000), blurRadius: 24, offset: Offset(0, -8))],
+        color: Color(0xFF0B0E12),
+        border: Border(top: BorderSide(color: Color(0xFF252D37), width: .7)),
+        boxShadow: [BoxShadow(color: Color(0x55000000), blurRadius: 22, offset: Offset(0, -7))],
       ),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         const PlayerBar(),
         SafeArea(
           top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 7),
-            child: Row(
-              children: List.generate(_items.length, (index) {
-                final selected = tab == index;
-                final item = _items[index];
-                return Expanded(
-                  child: Semantics(
-                    button: true,
-                    selected: selected,
-                    label: item.$2,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(15),
-                      onTap: () => setState(() { tab = index; _visitedTabs.add(index); }),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 240),
-                        curve: Curves.easeOutCubic,
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          gradient: selected ? const LinearGradient(
-                            begin: Alignment.topLeft, end: Alignment.bottomRight,
-                            colors: [Color(0xFF4A3920), Color(0xFF211D17)],
-                          ) : null,
-                          color: selected ? null : Colors.transparent,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: selected ? const Color(0xFFB68B43) : Colors.transparent,
-                          ),
-                        ),
-                        child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(item.$1, size: 20,
-                            color: selected ? const Color(0xFFF0CC7B) : const Color(0xFF82909E)),
-                          const SizedBox(height: 4),
-                          Text(item.$2, maxLines: 1,
-                            style: TextStyle(fontSize: 9, letterSpacing: .2,
-                              fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
-                              color: selected ? const Color(0xFFF0CC7B) : const Color(0xFF9BA7B2))),
-                        ]),
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ),
+          child: NavigationBar(
+            selectedIndex: tab,
+            onDestinationSelected: (index) => setState(() {
+              tab = index;
+              _visitedTabs.add(index);
+            }),
+            destinations: const [
+              NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Home'),
+              NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore_rounded), label: 'Discover'),
+              NavigationDestination(icon: Icon(Icons.album_outlined), selectedIcon: Icon(Icons.album_rounded), label: 'Releases'),
+              NavigationDestination(icon: Icon(Icons.library_music_outlined), selectedIcon: Icon(Icons.library_music_rounded), label: 'Library'),
+              NavigationDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: 'Profile'),
+              NavigationDestination(icon: Icon(Icons.grid_view_outlined), selectedIcon: Icon(Icons.grid_view_rounded), label: 'More'),
+            ],
           ),
         ),
       ]),
@@ -1300,17 +1273,17 @@ class MoreTab extends StatelessWidget {
 class Brand extends StatelessWidget {
   const Brand({super.key, this.tagline = 'MUSIC. BEATS. PRODUCTION. BEYOND.'});
   final String tagline;
+
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(18, 15, 18, 15),
+    padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
     child: Row(children: [
       Container(
-        width: 58, height: 58,
-        padding: const EdgeInsets.all(5),
+        width: 46, height: 46, padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: const SweepGradient(colors: [Color(0xFF7E5A26), Color(0xFFE8C878), Color(0xFF607D91), Color(0xFF7E5A26)]),
-          boxShadow: const [BoxShadow(color: Color(0x337E5A26), blurRadius: 18, spreadRadius: 1)],
+          gradient: const SweepGradient(colors: [Color(0xFF86632F), Color(0xFFE8C878), Color(0xFF6B8795), Color(0xFF86632F)]),
+          boxShadow: [BoxShadow(color: const Color(0xFFD9B96E).withValues(alpha: .13), blurRadius: 16, spreadRadius: 1)],
         ),
         child: Container(
           padding: const EdgeInsets.all(4),
@@ -1318,27 +1291,24 @@ class Brand extends StatelessWidget {
           child: SvgPicture.asset('assets/high-tech-logo.svg', semanticsLabel: 'High-Tech Entertainment'),
         ),
       ),
-      const SizedBox(width: 13),
+      const SizedBox(width: 11),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('HIGH-TECH', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: 2.1, height: 1.05)),
+        const Text('HIGH-TECH', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 1.9, height: 1.05)),
+        const SizedBox(height: 3),
+        const Text('ENTERTAINMENT', style: TextStyle(fontSize: 8, color: Color(0xFFE2BC69), letterSpacing: 2.7, fontWeight: FontWeight.w800)),
         const SizedBox(height: 4),
-        const Text('ENTERTAINMENT', style: TextStyle(fontSize: 9, color: Color(0xFFE2BC69), letterSpacing: 3.0, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 5),
         Text(tagline, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 8, color: Color(0xFF8795A3), letterSpacing: 1.0, fontWeight: FontWeight.w600)),
+          style: const TextStyle(fontSize: 7, color: Color(0xFF84909C), letterSpacing: .65, fontWeight: FontWeight.w600)),
       ])),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-        decoration: BoxDecoration(
-          color: const Color(0xFF13202A),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF344B5A)),
+      const SizedBox(width: 6),
+      IconButton.filledTonal(
+        tooltip: 'Notifications',
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsPage())),
+        style: IconButton.styleFrom(
+          backgroundColor: const Color(0xFF151A20), foregroundColor: const Color(0xFFE6C77D),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: const BorderSide(color: Color(0xFF2A313A))),
         ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.graphic_eq_rounded, color: Color(0xFFE2BC69), size: 13),
-          SizedBox(width: 5),
-          Text('HT MUSIC', style: TextStyle(color: Color(0xFFC7D5DF), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: .8)),
-        ]),
+        icon: const Icon(Icons.notifications_none_rounded, size: 21),
       ),
     ]),
   );
@@ -1584,137 +1554,68 @@ class HteNeoHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.fromLTRB(16, 2, 16, 20),
+    margin: const EdgeInsets.fromLTRB(16, 4, 16, 18),
     clipBehavior: Clip.antiAlias,
     decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(30),
-      border: Border.all(color: const Color(0xFF78613A).withValues(alpha: .78)),
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF18232D), Color(0xFF0C121A), Color(0xFF080B10)],
+      borderRadius: BorderRadius.circular(28),
+      border: Border.all(color: const Color(0xFF66512F).withValues(alpha: .72)),
+      gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+        colors: [Color(0xFF171A1E), Color(0xFF0D1116), Color(0xFF090B0E)]),
+      boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 28, offset: Offset(0, 12))],
+    ),
+    child: Stack(children: [
+      Positioned(right: -64, top: -72, child: Container(
+        width: 245, height: 245,
+        decoration: BoxDecoration(shape: BoxShape.circle,
+          gradient: RadialGradient(colors: [const Color(0xFFD7AD5C).withValues(alpha: .17), const Color(0x00D7AD5C)])),
+      )),
+      Positioned(right: 8, top: 48, child: Opacity(opacity: .075,
+        child: SvgPicture.asset('assets/high-tech-logo.svg', width: 176, height: 176))),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+            decoration: BoxDecoration(color: const Color(0xFF211C13), borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: const Color(0xFF59472A))),
+            child: const Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.graphic_eq_rounded, color: Color(0xFFE4C27A), size: 14),
+              SizedBox(width: 7),
+              Text('THE HTE UNIVERSE', style: TextStyle(color: Color(0xFFEAD9B6), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1.1)),
+            ]),
+          ),
+          const SizedBox(height: 31),
+          const Text('SOUND THAT\nMOVES YOU.', style: TextStyle(fontSize: 35, height: 1.0,
+            fontWeight: FontWeight.w900, letterSpacing: -1.25, color: Color(0xFFF6F3EC))),
+          const SizedBox(height: 13),
+          const SizedBox(width: 260, child: Text(
+            'Discover original music, meet the artists and experience the visuals behind every release.',
+            style: TextStyle(color: Color(0xFFB3BAC2), height: 1.55, fontSize: 12))),
+          const SizedBox(height: 22),
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            FilledButton.icon(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MusicTab())),
+              icon: const Icon(Icons.play_arrow_rounded, size: 19), label: const Text('Explore music'),
+              style: FilledButton.styleFrom(minimumSize: const Size(0, 46), padding: const EdgeInsets.symmetric(horizontal: 18),
+                backgroundColor: const Color(0xFFE3BD70), foregroundColor: const Color(0xFF17130B),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(
+                appBar: AppBar(title: const Text('Videos')), body: const VideosTab()))),
+              icon: const Icon(Icons.play_circle_outline_rounded, size: 18), label: const Text('Watch videos'),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 46), foregroundColor: const Color(0xFFE4E7EA),
+                side: const BorderSide(color: Color(0xFF424B55)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+            ),
+          ]),
+          const SizedBox(height: 24),
+          const Row(children: [
+            Icon(Icons.equalizer_rounded, color: Color(0xFFE4C27A), size: 16), SizedBox(width: 8),
+            Text('MUSIC  ·  VIDEO  ·  CULTURE', style: TextStyle(color: Color(0xFF89939D), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+          ]),
+        ]),
       ),
-      boxShadow: const [
-        BoxShadow(color: Color(0x4439A7B8), blurRadius: 34, offset: Offset(12, -8)),
-        BoxShadow(color: Color(0x553A2A10), blurRadius: 28, offset: Offset(0, 14)),
-      ],
-    ),
-    child: Stack(
-      children: [
-        Positioned(right: -82, top: -92, child: Container(
-          width: 270, height: 270,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0x335CC9D8), width: 1.2),
-            boxShadow: const [BoxShadow(color: Color(0x223AB8C8), blurRadius: 36, spreadRadius: 12)],
-          ),
-        )),
-        Positioned(right: -35, top: -45, child: Container(
-          width: 180, height: 180,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0x44D7B66B), width: 1),
-          ),
-        )),
-        Positioned(right: 12, top: 52,
-          child: Opacity(opacity: .10,
-            child: SvgPicture.asset('assets/high-tech-logo.svg', width: 160, height: 160))),
-        Positioned(right: 20, bottom: 28, child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            for (final h in [12.0, 24.0, 17.0, 35.0, 22.0, 46.0, 29.0, 18.0, 38.0, 25.0, 14.0, 31.0])
-              Container(
-                width: 3, height: h,
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF64C6D2).withValues(alpha: .52),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-          ],
-        )),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(21, 21, 21, 22),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: const Color(0x1A62C6D2),
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: const Color(0x555CC9D8)),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF7FE0C0), shape: BoxShape.circle)),
-                    SizedBox(width: 7),
-                    Text('HIGH-TECH · SOUND SYSTEM',
-                      style: TextStyle(color: Color(0xFFD2E0E5), fontSize: 8,
-                        fontWeight: FontWeight.w800, letterSpacing: 1.05)),
-                  ]),
-                ),
-                const Spacer(),
-                const Icon(Icons.auto_awesome, color: Color(0xFFE6C77D), size: 19),
-              ]),
-              const SizedBox(height: 30),
-              const Text('ENTER A NEW\nFREQUENCY.',
-                style: TextStyle(
-                  fontSize: 36, height: 1.02, fontWeight: FontWeight.w900,
-                  letterSpacing: -1.5, color: Color(0xFFF6F4ED),
-                )),
-              const SizedBox(height: 12),
-              const SizedBox(
-                width: 265,
-                child: Text(
-                  'Discover original music, artists and releases. Your sound, connected.',
-                  style: TextStyle(color: Color(0xFFB4C2CB), height: 1.55, fontSize: 12),
-                ),
-              ),
-              const SizedBox(height: 22),
-              Wrap(spacing: 9, runSpacing: 9, children: [
-                FilledButton.icon(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const MusicTab())),
-                  icon: const Icon(Icons.play_arrow_rounded, size: 19),
-                  label: const Text('Explore music'),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(0, 46),
-                    padding: const EdgeInsets.symmetric(horizontal: 17),
-                    backgroundColor: const Color(0xFFE3BD70),
-                    foregroundColor: const Color(0xFF17130B),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => Scaffold(
-                      appBar: AppBar(title: const Text('Videos')),
-                      body: const VideosTab(),
-                    ))),
-                  icon: const Icon(Icons.play_circle_outline_rounded, size: 18),
-                  label: const Text('Watch visuals'),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 46),
-                    foregroundColor: const Color(0xFFD8E5EA),
-                    side: const BorderSide(color: Color(0xFF527783)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-              ]),
-              const SizedBox(height: 24),
-              Row(children: [
-                const Icon(Icons.graphic_eq_rounded, color: Color(0xFFE3C47D), size: 15),
-                const SizedBox(width: 7),
-                const Text('MUSIC  /  BEATS  /  PRODUCTION',
-                  style: TextStyle(color: Color(0xFF91A6B2), fontSize: 8,
-                    fontWeight: FontWeight.w800, letterSpacing: 1.2)),
-              ]),
-            ],
-          ),
-        ),
-      ],
-    ),
+    ]),
   );
 }
 

@@ -173,6 +173,56 @@ jobs:
           fi
           python3 -m pip install --quiet cairosvg
           python3 -c "import cairosvg; cairosvg.svg2png(url='$RUNNER_TEMP/hte_app/assets/high-tech-logo.svg', write_to='$RUNNER_TEMP/hte_app/assets/high-tech-logo.png', output_width=1024, output_height=1024)"
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          root = Path(os.environ["RUNNER_TEMP"]) / "hte_app" / "android" / "app" / "src" / "main" / "res"
+          (root / "values").mkdir(parents=True, exist_ok=True)
+          (root / "values-v31").mkdir(parents=True, exist_ok=True)
+          (root / "drawable").mkdir(parents=True, exist_ok=True)
+          (root / "drawable-nodpi").mkdir(parents=True, exist_ok=True)
+          (root / "values" / "styles.xml").write_text("""<?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+                  <item name="android:windowBackground">@drawable/launch_background</item>
+                  <item name="android:windowLightStatusBar">false</item>
+                  <item name="android:statusBarColor">#08090C</item>
+                  <item name="android:navigationBarColor">#08090C</item>
+                  <item name="android:windowActionModeOverlay">true</item>
+              </style>
+              <style name="NormalTheme" parent="@android:style/Theme.Material.NoActionBar">
+                  <item name="android:windowBackground">#08090C</item>
+                  <item name="android:windowLightStatusBar">false</item>
+                  <item name="android:statusBarColor">#08090C</item>
+                  <item name="android:navigationBarColor">#08090C</item>
+                  <item name="android:windowActionModeOverlay">true</item>
+              </style>
+          </resources>
+          """, encoding="utf-8")
+          (root / "values-v31" / "styles.xml").write_text("""<?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+                  <item name="android:windowSplashScreenBackground">#08090C</item>
+                  <item name="android:windowSplashScreenAnimatedIcon">@drawable/ht_splash_icon</item>
+                  <item name="android:windowSplashScreenIconBackgroundColor">#08090C</item>
+                  <item name="android:windowSplashScreenAnimationDuration">0</item>
+                  <item name="android:windowLightStatusBar">false</item>
+                  <item name="android:statusBarColor">#08090C</item>
+                  <item name="android:navigationBarColor">#08090C</item>
+                  <item name="postSplashScreenTheme">@style/NormalTheme</item>
+              </style>
+          </resources>
+          """, encoding="utf-8")
+          (root / "drawable" / "launch_background.xml").write_text("""<?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item><color android:color="#08090C" /></item>
+          </layer-list>
+          """, encoding="utf-8")
+          (root / "drawable-nodpi" / "ht_splash_icon.png").write_bytes(
+              (Path(os.environ["RUNNER_TEMP"]) / "hte_app" / "assets" / "high-tech-logo.png").read_bytes()
+          )
+          print("PASS: HTE black launch theme and Android 12+ splash icon resources installed.")
+          PY
       - name: Configure a Flutter-compatible Android Gradle toolchain
         working-directory: ${{ runner.temp }}/hte_app
         shell: bash
