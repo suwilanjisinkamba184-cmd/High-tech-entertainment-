@@ -57,10 +57,6 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.6.0'
-      - name: Compile clean Compose application
-        run: gradle --no-daemon :app:assembleDebug
-      - name: Run unit tests
-        run: gradle --no-daemon :app:testDebugUnitTest
       - name: Run Android lint
         run: |
           set +e
@@ -72,6 +68,10 @@ jobs:
             cat "$report"
           fi
           exit "$lint_status"
+      - name: Compile clean Compose application
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Run unit tests
+        run: gradle --no-daemon :app:testDebugUnitTest
       - name: Validate existing production signing configuration
         run: |
           test -n "$ANDROID_KEYSTORE_BASE64"
@@ -92,7 +92,8 @@ jobs:
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose --print-certs "$APK"
-          "$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK" | grep "package: name='com.hightechentertainment.app'"
+          BADGING=$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK")
+          echo "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='32' versionName='4.0.0'"
           sha256sum "$APK" | tee app/build/outputs/apk/release/SHA256SUMS.txt
       - name: Confirm certificate matches previous public release
         env:
