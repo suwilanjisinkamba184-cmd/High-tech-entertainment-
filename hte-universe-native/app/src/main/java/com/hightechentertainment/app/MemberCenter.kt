@@ -46,6 +46,7 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
     var autoplayNext by remember { mutableStateOf(settingsStore.autoplayNext) }
     var dataSaver by remember { mutableStateOf(settingsStore.dataSaver) }
     var showFounderStudio by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         notificationsEnabled = granted
         settingsStore.notificationsEnabled = granted
@@ -202,6 +203,20 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
                 }
             }
         }
+        item {
+            MemberCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Tune, null, tint = MemberGold, modifier = Modifier.size(28.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("HTE Control Centre", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Advanced sound, updates, downloads and app controls.", color = MemberMuted, fontSize = 11.sp)
+                    }
+                }
+                Button(onClick = { showSettings = true }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MemberGold, contentColor = Color.Black)) {
+                    Icon(Icons.Outlined.Settings, null); Spacer(Modifier.width(8.dp)); Text("Open Settings")
+                }
+            }
+        }
         item { Text("APP SETTINGS", color = MemberGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
         item {
             PreferenceRow("Notifications", "Show account and booking updates in the app", notificationsEnabled) { enabled ->
@@ -223,6 +238,18 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
             }
         }
         if (statusMessage != null) item { Text(statusMessage!!, color = MemberGold, fontSize = 12.sp) }
+    }
+
+    if (showSettings) {
+        Dialog(onDismissRequest = { showSettings = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Surface(Modifier.fillMaxSize(), color = Color(0xFF08090B)) {
+                SettingsHub(
+                    onClose = { showSettings = false },
+                    settingsStore = settingsStore,
+                    downloadManager = com.hightechentertainment.app.media.OfflineDownloadManager(context)
+                )
+            }
+        }
     }
 
     if (showProfileEditor && auth != null) {
