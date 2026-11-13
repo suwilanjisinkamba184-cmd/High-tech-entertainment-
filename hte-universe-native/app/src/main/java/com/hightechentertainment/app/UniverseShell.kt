@@ -213,7 +213,7 @@ fun UniverseShell() {
                         tracks = tracks, videos = videos, isLoading = isLoading,
                         onExplore = { selectedTab = UniverseTab.DISCOVER },
                         onVideos = { selectedTab = UniverseTab.VIDEOS },
-                        onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it) }, onPlayVideo = { selectedVideo = it },
+                        onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onPlayVideo = { selectedVideo = it },
                         onDownloadTrack = { startDownload(it.audioUrl, it.title, "audio") },
                         favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                         onDownloadVideo = { startDownload(it.videoUrl, it.title, "video") },
@@ -221,7 +221,7 @@ fun UniverseShell() {
                     )
                     UniverseTab.DISCOVER -> DiscoverScreen(
                         tracks = tracks, isLoading = isLoading, error = catalogueError,
-                        onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it) }, onDownload = { startDownload(it.audioUrl, it.title, "audio") },
+                        onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onDownload = { startDownload(it.audioUrl, it.title, "audio") },
                         favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                         initialQuery = searchQuery, onQueryChanged = { searchQuery = it }, onRefresh = ::refreshCatalogue
                     )
@@ -233,7 +233,7 @@ fun UniverseShell() {
                         onSignIn = { selectedTab = UniverseTab.ACCOUNT },
                         downloads = downloads,
                         favouriteTracks = tracks.filter { it.id in favouriteTrackIds },
-                        onPlayFavourite = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks.filter { track -> track.id in favouriteTrackIds } else listOf(it) },
+                        onPlayFavourite = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks.filter { track -> track.id in favouriteTrackIds } else listOf(it); playerExpanded = true },
                         onToggleFavourite = ::toggleFavourite,
                         onDownloadFavourite = { startDownload(it.audioUrl, it.title, "audio") },
                         onRemoveDownload = { record -> scope.launch { withContext(Dispatchers.IO) { offlineManager.remove(record.id) }; downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() } } },
@@ -244,6 +244,7 @@ fun UniverseShell() {
                                 val offlineTrack = TrackDto(record.id.toString(), record.title, artist = "Downloaded", audioUrl = record.localUri)
                                 selectedTrack = offlineTrack
                                 selectedTrackQueue = listOf(offlineTrack)
+                                playerExpanded = true
                             }
                         }
                     )
@@ -280,6 +281,7 @@ fun UniverseShell() {
                 favourites.firstOrNull()?.let { first ->
                     selectedTrack = first
                     selectedTrackQueue = if (autoplayNext) favourites else listOf(first)
+                    playerExpanded = true
                 }
             },
             onNavigate = { destination ->
