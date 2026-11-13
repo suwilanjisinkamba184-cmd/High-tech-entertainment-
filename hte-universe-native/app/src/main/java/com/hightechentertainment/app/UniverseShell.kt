@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -47,6 +48,7 @@ import com.hightechentertainment.app.data.VideoDto
 import com.hightechentertainment.app.media.HtePlaybackController
 import com.hightechentertainment.app.media.OfflineDownloadManager
 import com.hightechentertainment.app.media.OfflineDownloadRecord
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -95,6 +97,8 @@ fun UniverseShell() {
             try {
                 tracks = TrackRepository().getPublishedTracks()
                 videos = EntertainmentCatalogRepository().getPublishedVideos()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (_: Throwable) {
                 catalogueError = "We couldn't load the catalogue. Check your connection and try again."
             } finally {
@@ -104,9 +108,18 @@ fun UniverseShell() {
     }
 
     LaunchedEffect(configured) { refreshCatalogue() }
-    LaunchedEffect(selectedTab, showVoiceAssistant) {
-        if (selectedTab == UniverseTab.LIBRARY) downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
-        if (configured) favouriteTrackIds = runCatching { withContext(Dispatchers.IO) { MemberRepository().getFavouriteTrackIds() } }.getOrDefault(emptySet())
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == UniverseTab.LIBRARY) {
+            downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
+        }
+    }
+
+    LaunchedEffect(configured, selectedTab) {
+        if (configured && selectedTab == UniverseTab.LIBRARY) {
+            favouriteTrackIds = runCatching {
+                withContext(Dispatchers.IO) { MemberRepository().getFavouriteTrackIds() }
+            }.getOrDefault(favouriteTrackIds)
+        }
     }
 
     fun toggleFavourite(track: TrackDto) {
@@ -115,6 +128,8 @@ fun UniverseShell() {
                 if (track.id in favouriteTrackIds) withContext(Dispatchers.IO) { MemberRepository().removeFavourite(track.id) }
                 else withContext(Dispatchers.IO) { MemberRepository().addFavourite(track.id) }
                 favouriteTrackIds = if (track.id in favouriteTrackIds) favouriteTrackIds - track.id else favouriteTrackIds + track.id
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (error: Throwable) {
                 Toast.makeText(context, error.message?.take(120) ?: "Sign in to save favourites.", Toast.LENGTH_SHORT).show()
             }
@@ -128,6 +143,8 @@ fun UniverseShell() {
                 withContext(Dispatchers.IO) { offlineManager.enqueue(url, title, mediaType, allowMetered = !settingsStore.dataSaver) }
                 downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
                 Toast.makeText(context, "Download started: $title", Toast.LENGTH_SHORT).show()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (error: Throwable) {
                 Toast.makeText(context, error.message?.take(120) ?: "Download could not start.", Toast.LENGTH_LONG).show()
             }
@@ -409,7 +426,13 @@ private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit
                 Text(track.artist, color = ShellMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 track.genre?.let { Text(it, color = ShellGold, fontSize = 10.sp) }
             }
-            IconButton(onClick = onToggleFavourite) { Icon(if (isFavourite) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder, "Toggle favourite", tint = if (isFavourite) ShellGold else ShellSilver) }
+            IconButton(onClick = onToggleFavourite) {
+                Icon(
+                    imageVector = if (isFavourite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    contentDescription = if (isFavourite) "Remove from favourites" else "Add to favourites",
+                    tint = if (isFavourite) ShellGold else ShellMuted
+                )
+            }
             IconButton(onClick = onDownload) { Icon(Icons.Outlined.Download, "Download ${track.title}", tint = ShellSilver) }
             IconButton(onClick = onPlay) { Icon(Icons.Outlined.PlayCircle, "Play ${track.title}", tint = ShellGold, modifier = Modifier.size(28.dp)) }
         }
@@ -569,23 +592,35 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
     var isPlaying by remember { mutableStateOf(false) }
     var isBuffering by remember { mutableStateOf(false) }
     val validQueue = remember(queue, track.id, track.audioUrl) {
-        queue.filter { candidate ->
+        queue.mapNotNull { candidate ->
             val url = candidate.audioUrl.orEmpty()
-            url.startsWith("https://", true) || url.startsWith("http://", true)
-        }.map { candidate ->
-            MediaItem.Builder().setMediaId(candidate.id).setUri(candidate.audioUrl!!)
+            if (!url.isPlayableUri()) return@mapNotNull null
+            MediaItem.Builder().setMediaId(candidate.id).setUri(url)
                 .setMediaMetadata(MediaMetadata.Builder().setTitle(candidate.title).setArtist(candidate.artist).build()).build()
         }
     }
     DisposableEffect(context) {
-        HtePlaybackController.connect(context, { controller = it }, { error ->
-            playbackError = error.message?.take(160) ?: "The background audio service could not start."
-        })
-        onDispose { controller = null }
+        var effectActive = true
+        val connectionFuture = HtePlaybackController.connect(
+            context,
+            { mediaController -> if (effectActive) controller = mediaController },
+            { error ->
+                if (effectActive) {
+                    playbackError = error.message?.take(160)
+                        ?: "The background audio service could not start."
+                }
+            }
+        )
+        onDispose {
+            effectActive = false
+            controller = null
+            HtePlaybackController.release(connectionFuture)
+        }
     }
     LaunchedEffect(controller, track.id, track.audioUrl, validQueue) {
         val player = controller ?: return@LaunchedEffect
-        if (track.audioUrl.isNullOrBlank() || !track.audioUrl.startsWith("http", true)) {
+        val url = track.audioUrl.orEmpty()
+        if (!url.isPlayableUri()) {
             playbackError = "This track does not have a valid audio stream URL yet."
             return@LaunchedEffect
         }
@@ -657,6 +692,15 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
                 Text("Playback stays active in the background. Use the Android media notification to control it outside HTE Universe.", color = ShellMuted, fontSize = 10.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }
+    }
+}
+
+private fun String.isPlayableUri(): Boolean {
+    val uri = runCatching { Uri.parse(trim()) }.getOrNull() ?: return false
+    return when (uri.scheme?.lowercase()) {
+        "https", "http" -> !uri.host.isNullOrBlank()
+        "content", "file" -> !uri.path.isNullOrBlank()
+        else -> false
     }
 }
 
