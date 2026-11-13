@@ -11,6 +11,9 @@ val supabaseUrl = providers.gradleProperty("SUPABASE_URL")
 val supabasePublishableKey = providers.gradleProperty("SUPABASE_PUBLISHABLE_KEY")
     .orElse(providers.environmentVariable("SUPABASE_PUBLISHABLE_KEY"))
     .orElse("")
+val googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID")
+    .orElse(providers.environmentVariable("GOOGLE_WEB_CLIENT_ID"))
+    .orElse("")
 
 val releaseKeystorePath = providers.environmentVariable("ANDROID_KEYSTORE_PATH").orNull
 val releaseStorePassword = providers.environmentVariable("ANDROID_STORE_PASSWORD").orNull
@@ -40,6 +43,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "SUPABASE_URL", "\"" + supabaseUrl.get() + "\"")
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"" + supabasePublishableKey.get() + "\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"" + googleWebClientId.get() + "\"")
     }
     buildTypes {
         debug { applicationIdSuffix = ".dev"; versionNameSuffix = "-dev" }
@@ -71,6 +75,11 @@ kotlin {
 
 dependencies {
     implementation("io.elevenlabs:elevenlabs-android:0.13.1")
+
+    // Native Google sign-in via Credential Manager and Google Play services.
+    implementation("androidx.credentials:credentials:1.6.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.2.1")
 
     // Stable Compose BOM line for the API 37 build.
     val composeBom = platform("androidx.compose:compose-bom:2026.06.01")

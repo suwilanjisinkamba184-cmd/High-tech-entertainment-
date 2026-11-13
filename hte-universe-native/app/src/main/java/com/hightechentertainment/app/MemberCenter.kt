@@ -13,6 +13,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -95,8 +98,8 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
             item {
                 MemberCard {
                     Text(if (createAccount) "Create your HTE account" else "Welcome back", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    OutlinedTextField(value = email, onValueChange = { email = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Email address") }, singleLine = true)
-                    OutlinedTextField(value = password, onValueChange = { password = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Password") }, singleLine = true)
+                    OutlinedTextField(value = email, onValueChange = { email = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Email address") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), singleLine = true)
+                    OutlinedTextField(value = password, onValueChange = { password = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), singleLine = true)
                     Button(onClick = {
                         scope.launch {
                             isWorking = true
@@ -115,12 +118,15 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
                     OutlinedButton(onClick = {
                         scope.launch {
                             isWorking = true
-                            runCatching { AuthRepository().signInWithGoogle() }
-                                .onSuccess { statusMessage = "Complete Google sign-in in your browser, then return to HTE Universe." }
-                                .onFailure { statusMessage = it.message?.take(180) ?: "Google sign-in could not start." }
+                            runCatching { AuthRepository().signInWithGoogle(context) }
+                                .onSuccess { native ->
+                                    isSignedIn = auth.currentUserOrNull() != null
+                                    statusMessage = if (native && isSignedIn) "Google sign-in successful. Welcome to HTE Universe." else if (native) "Google verification completed. Loading your HTE account…" else "Continue in the Google sign-in tab. HTE Universe will reopen automatically when sign-in completes."
+                                }
+                                .onFailure { statusMessage = it.message?.take(180) ?: "Google sign-in could not complete. Check Google Play services and try again." }
                             isWorking = false
                         }
-                    }, enabled = !isWorking, modifier = Modifier.fillMaxWidth()) { Text("Continue with Google") }
+                    }, enabled = !isWorking, modifier = Modifier.fillMaxWidth()) { Text(if (isWorking) "Connecting to Google…" else "Continue with Google") }
                     TextButton(onClick = { createAccount = !createAccount; statusMessage = null }) {
                         Text(if (createAccount) "Already registered? Sign in" else "New to HTE? Create an account", color = MemberGold)
                     }

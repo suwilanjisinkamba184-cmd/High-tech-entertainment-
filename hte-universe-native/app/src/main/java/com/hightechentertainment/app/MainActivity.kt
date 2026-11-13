@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.content.Intent
 import android.media.MediaPlayer
 import android.media.PlaybackParams
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
@@ -72,8 +74,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleSupabaseIntent(intent: Intent) {
+        val callback = intent.data ?: return
+        if (callback.scheme != "com.hightechentertainment.app" || callback.host != "auth-callback") return
         if (BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()) {
             runCatching { SupabaseClientProvider.client.handleDeeplinks(intent) }
+                .onFailure { error ->
+                    Log.e("HTEAuth", "Supabase app callback could not be processed", error)
+                    Toast.makeText(this, "Sign-in could not be completed. Please try again.", Toast.LENGTH_LONG).show()
+                }
         }
     }
 }
