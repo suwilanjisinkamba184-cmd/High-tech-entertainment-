@@ -34,7 +34,7 @@ android {
     defaultConfig {
         applicationId = "com.hightechentertainment.app"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 32
         versionName = "4.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
