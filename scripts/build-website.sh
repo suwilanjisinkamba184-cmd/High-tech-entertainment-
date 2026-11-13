@@ -236,4 +236,11 @@ if "HTE video catalogue request timed out after 12 seconds" not in video_js:
 print(f"Verified {len(pages)} HTML pages, internal anchor targets, external asset JS, inline JS, and catalogue timeout fallbacks.")
 PY
 
+# Keep the member profile and Founder Studio available in the published artifact.
+for route in account admin; do
+  test -s "dist/$route/index.html" || { echo "Missing published route: $route/" >&2; exit 1; }
+done
+grep -Eq 'href="[^"]*account/"' dist/index.html || { echo "Homepage is missing the account navigation link." >&2; exit 1; }
+grep -Eq 'href="[^"]*admin/"' dist/index.html || { echo "Homepage is missing the Founder Studio navigation link." >&2; exit 1; }
+
 echo "Astro + React website build output prepared in dist/"
