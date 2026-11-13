@@ -46,6 +46,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.util.ExperimentalApi
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.compose.material3.MiniController
+import androidx.media3.ui.compose.material3.NextButton
+import androidx.media3.ui.compose.material3.PlayPauseButton
+import androidx.media3.ui.compose.material3.Player as Media3ComposePlayer
+import androidx.media3.ui.compose.material3.PlayerDefaults
+import androidx.media3.ui.compose.material3.PreviousButton
+import androidx.media3.ui.compose.material3.RepeatButton
+import androidx.media3.ui.compose.material3.ShuffleButton
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.media3.common.Player
 import androidx.media3.common.C
 import androidx.media3.session.MediaController
@@ -219,6 +233,7 @@ class MainActivity : ComponentActivity() {
                     loading = loading,
                     error = error,
                     currentTrack = currentTrack,
+                    player = playbackPlayer,
                     playing = playing,
                     onRefresh = { loadCatalog() },
                     onPlay = { track ->
@@ -235,11 +250,11 @@ class MainActivity : ComponentActivity() {
                                 val musicQueue = if (sponsoredAd != null) playableTracks.drop(startIndex) else playableTracks
                                 val queue = buildList {
                                     sponsoredAd?.let { ad ->
-                                        add(MediaItem.Builder().setMediaId("hte-ad:${ad.id}").setUri(ad.audioUrl).build())
+                                        add(MediaItem.Builder().setMediaId("hte-ad:${ad.id}").setUri(ad.audioUrl).setMediaMetadata(MediaMetadata.Builder().setTitle("Sponsored audio").setArtist("High-Tech Entertainment").setAlbumTitle("High-Tech Entertainment").build()).build())
                                     }
                                     addAll(musicQueue.map { item ->
                                         val uri = offlineDownloads.localUri(item.id)?.toString() ?: item.audioUrl!!
-                                        MediaItem.Builder().setMediaId(item.id).setUri(uri).build()
+                                        MediaItem.Builder().setMediaId(item.id).setUri(uri).setMediaMetadata(MediaMetadata.Builder().setTitle(item.title).setArtist(item.artist).setAlbumTitle("High-Tech Entertainment").build()).build()
                                     })
                                 }
                                 activePlayer.setMediaItems(queue, if (sponsoredAd != null) 0 else startIndex, C.TIME_UNSET)
@@ -269,11 +284,11 @@ class MainActivity : ComponentActivity() {
                                 val sponsoredAd = hteApplication.sponsoredAudioRepository.nextActiveAd().getOrNull()
                                 val queue = buildList {
                                     sponsoredAd?.let { ad ->
-                                        add(MediaItem.Builder().setMediaId("hte-ad:${ad.id}").setUri(ad.audioUrl).build())
+                                        add(MediaItem.Builder().setMediaId("hte-ad:${ad.id}").setUri(ad.audioUrl).setMediaMetadata(MediaMetadata.Builder().setTitle("Sponsored audio").setArtist("High-Tech Entertainment").setAlbumTitle("High-Tech Entertainment").build()).build())
                                     }
                                     addAll(favouriteQueue.map { item ->
                                         val uri = offlineDownloads.localUri(item.id)?.toString() ?: item.audioUrl!!
-                                        MediaItem.Builder().setMediaId(item.id).setUri(uri).build()
+                                        MediaItem.Builder().setMediaId(item.id).setUri(uri).setMediaMetadata(MediaMetadata.Builder().setTitle(item.title).setArtist(item.artist).setAlbumTitle("High-Tech Entertainment").build()).build()
                                     })
                                 }
                                 activePlayer.setMediaItems(queue, if (sponsoredAd != null) 0 else 0, C.TIME_UNSET)
@@ -469,6 +484,7 @@ private fun HighTechApp(
     loading: Boolean,
     error: String?,
     currentTrack: NativeTrack?,
+    player: Player?,
     playing: Boolean,
     onRefresh: () -> Unit,
     onPlay: (NativeTrack) -> Unit,
@@ -491,6 +507,7 @@ private fun HighTechApp(
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var moreExpanded by rememberSaveable { mutableStateOf(false) }
     var search by rememberSaveable { mutableStateOf("") }
+    var showNowPlaying by rememberSaveable { mutableStateOf(false) }
     var artists by remember { mutableStateOf<List<NativeArtist>>(emptyList()) }
     var artistsLoading by remember { mutableStateOf(false) }
     var artistsError by remember { mutableStateOf<String?>(null) }
@@ -831,7 +848,10 @@ private fun HighTechApp(
                                 downloads = downloads,
                                 isFounder = isFounderAccount,
                                 userId = userId,
-                                onPlayTrack = onPlay
+                                onPlayTrack = onPlay,
+                                audioWasPlaying = playing,
+                                onPauseAudio = onPause,
+                                onResumeAudio = onResume
                             )
                         }
                     }
@@ -841,53 +861,76 @@ private fun HighTechApp(
                 }
             }
 
-            if (currentTrack != null || sponsoredAudioPlaying) {
-                Column(
-                    Modifier.fillMaxWidth().background(Color(0xFF201A10)).padding(horizontal = 16.dp, vertical = 6.dp)
-                ) {
-                    var seekPreview by remember(currentTrack?.id, sponsoredAudioPlaying) { mutableStateOf<Float?>(null) }
-                    val progress = if (durationMs > 0L) (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
-                    Slider(
-                        value = seekPreview ?: progress,
-                        onValueChange = { seekPreview = it },
-                        onValueChangeFinished = {
-                            seekPreview?.let { if (durationMs > 0L) onSeek((it * durationMs).toLong()) }
-                            seekPreview = null
-                        },
-                        enabled = durationMs > 0L && !sponsoredAudioPlaying
-                    )
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(if (sponsoredAudioPlaying) "Sponsored audio" else currentTrack?.title.orEmpty(), color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(if (sponsoredAudioPlaying) "Advertisement" else currentTrack?.artist.orEmpty(), color = HteMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if ((currentTrack != null || sponsoredAudioPlaying) && player != null) {
+                MiniController(
+                    player = player,
+                    modifier = Modifier.fillMaxWidth()
+                        .background(Color(0xFF201A10))
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    defaultArtwork = painterResource(R.drawable.hte_launcher_foreground),
+                    onClick = { showNowPlaying = true },
+                    playerControls = { activePlayer ->
+                        PreviousButton(activePlayer)
+                        PlayPauseButton(activePlayer)
+                        NextButton(activePlayer)
+                        ShuffleButton(activePlayer)
+                        RepeatButton(activePlayer)
                     }
-                    if (!sponsoredAudioPlaying) IconButton(onClick = onPrevious) {
-                        Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous track", tint = HteMuted)
-                    }
-                    IconButton(onClick = { if (playing) onPause() else onResume() }) {
-                        Icon(
-                            if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            contentDescription = if (playing) "Pause" else "Play",
-                            tint = HteGold
-                        )
-                    }
-                    if (!sponsoredAudioPlaying) {
-                        IconButton(onClick = onNext) {
-                            Icon(Icons.Rounded.SkipNext, contentDescription = "Next track", tint = HteMuted)
-                        }
-                        IconButton(onClick = onToggleShuffle) {
-                            Icon(Icons.Rounded.Shuffle, contentDescription = "Toggle shuffle", tint = if (shuffleEnabled) HteGold else HteMuted)
-                        }
-                        IconButton(onClick = onToggleRepeat) {
-                            Icon(Icons.Rounded.Repeat, contentDescription = "Cycle repeat mode", tint = if (repeatMode == Player.REPEAT_MODE_OFF) HteMuted else HteGold)
-                        }
-                    }
-                    }
-                }
+                )
             }
+            if (showNowPlaying && player != null) {
+                AudioNowPlayingDialog(
+                    player = player,
+                    title = if (sponsoredAudioPlaying) "Sponsored audio" else currentTrack?.title.orEmpty(),
+                    artist = if (sponsoredAudioPlaying) "High-Tech Entertainment" else currentTrack?.artist.orEmpty(),
+                    onClose = { showNowPlaying = false }
+                )
+            }
+        }
+    }
+}
+
+
+@OptIn(UnstableApi::class, ExperimentalApi::class)
+@Composable
+private fun AudioNowPlayingDialog(
+    player: Player,
+    title: String,
+    artist: String,
+    onClose: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Column(
+            Modifier.fillMaxSize().background(Color.Black).padding(18.dp)
+        ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("NOW PLAYING", color = Color(0xFFD4AF37), fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = onClose) { Text("CLOSE", color = Color(0xFFD4AF37)) }
+            }
+            Media3ComposePlayer(
+                player = player,
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                showControls = true,
+                artwork = {
+                    Box(
+                        Modifier.fillMaxSize().background(
+                            Brush.linearGradient(listOf(Color(0xFF49351A), Color(0xFF151515), Color.Black))
+                        ),
+                        contentAlignment = androidx.compose.ui.Alignment.Center
+                    ) {
+                        Text("HTE", color = Color(0xFFD4AF37), style = MaterialTheme.typography.displayLarge, fontWeight = FontWeight.ExtraBold)
+                    }
+                },
+                topControls = { PlayerDefaults.TopControls(player) },
+                centerControls = { PlayerDefaults.CenterControls(player) },
+                bottomControls = { PlayerDefaults.BottomControls(player) }
+            )
+            Text(title, color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 2)
+            Text(artist, color = Color(0xFFB8B0A3), style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

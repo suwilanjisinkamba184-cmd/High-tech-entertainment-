@@ -1,6 +1,5 @@
 package com.hightechentertainment.app
 
-import android.view.ViewGroup
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -21,11 +20,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.util.ExperimentalApi
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.compose.material3.Player as Media3ComposePlayer
+import androidx.media3.ui.compose.material3.PlayerDefaults
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
 import com.hightechentertainment.app.data.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
@@ -41,7 +43,8 @@ fun AdditionalFeatureScreen(
     destination: String, tracks: List<NativeTrack>, features: FeatureRepository,
     library: UserLibraryRepository, sponsoredAudio: com.hightechentertainment.app.data.SponsoredAudioRepository,
     downloads: OfflineMusicDownloads,
-    isFounder: Boolean, userId: String?, onPlayTrack: (NativeTrack) -> Unit
+    isFounder: Boolean, userId: String?, onPlayTrack: (NativeTrack) -> Unit,
+    audioWasPlaying: Boolean = false, onPauseAudio: () -> Unit = {}, onResumeAudio: () -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -647,35 +650,61 @@ fun AdditionalFeatureScreen(
         }
     }
     selectedVideo?.let { video ->
-        Dialog(onDismissRequest = { selectedVideo = null },
+        val resumeAudioAfterVideo = remember(video.id) { audioWasPlaying }
+        LaunchedEffect(video.id) {
+            if (resumeAudioAfterVideo) onPauseAudio()
+        }
+        val closeVideo = {
+            selectedVideo = null
+            if (resumeAudioAfterVideo) onResumeAudio()
+        }
+        Dialog(onDismissRequest = closeVideo,
             properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
-            VideoPlaybackDialog(video, onClose = { selectedVideo = null })
+            VideoPlaybackDialog(video, onClose = closeVideo)
         }
     }
 }
 
+@OptIn(UnstableApi::class, ExperimentalApi::class)
 @Composable
 private fun VideoPlaybackDialog(video: NativeVideo, onClose: () -> Unit) {
     val context = LocalContext.current
-    val player = remember(video.id) {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(video.videoUrl))
-            prepare()
-            playWhenReady = true
-        }
+    val player = remember(video.id) { ExoPlayer.Builder(context).build() }
+    LaunchedEffect(player, video.videoUrl) {
+        val mediaItem = MediaItem.Builder()
+            .setMediaId(video.id)
+            .setUri(video.videoUrl)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(video.title)
+                    .setArtist(video.artist)
+                    .setAlbumTitle("High-Tech Entertainment")
+                    .build()
+            )
+            .build()
+        player.setMediaItem(mediaItem)
+        player.prepare()
+        player.play()
     }
     DisposableEffect(player) { onDispose { player.release() } }
-    Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onClose) { Text("CLOSE") }
-        }
-        AndroidView(factory = { ctx ->
-            PlayerView(ctx).apply {
-                this.player = player
-                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-                useController = true
+    Column(Modifier.fillMaxSize().background(Color.Black)) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(video.artist, color = Color(0xFFB8B0A3), style = MaterialTheme.typography.labelMedium)
             }
-        }, modifier = Modifier.fillMaxWidth().weight(1f))
-        Text(video.title, modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.titleMedium)
+            TextButton(onClick = onClose) { Text("CLOSE", color = Color(0xFFD4AF37)) }
+        }
+        Media3ComposePlayer(
+            player = player,
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            showControls = true,
+            topControls = { PlayerDefaults.TopControls(player) },
+            centerControls = { PlayerDefaults.CenterControls(player) },
+            bottomControls = { PlayerDefaults.BottomControls(player) }
+        )
     }
 }
