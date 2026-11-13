@@ -211,6 +211,7 @@ fun FounderStudioScreen(onClose: () -> Unit) {
 
 @Composable
 private fun FounderContentRow(title: String, subtitle: String, published: Boolean, onTogglePublish: (Boolean) -> Unit, onDelete: () -> Unit) {
+    var confirmDelete by remember { mutableStateOf(false) }
     Card(colors = CardDefaults.cardColors(containerColor = FounderPanel), shape = RoundedCornerShape(14.dp)) {
         Column(Modifier.fillMaxWidth().padding(12.dp)) {
             Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -218,9 +219,22 @@ private fun FounderContentRow(title: String, subtitle: String, published: Boolea
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(if (published) "Published" else "Draft", color = if (published) FounderGold else FounderMuted, fontSize = 11.sp, modifier = Modifier.weight(1f))
                 TextButton(onClick = { onTogglePublish(!published) }) { Text(if (published) "Unpublish" else "Publish", color = FounderGold) }
-                IconButton(onClick = onDelete) { Icon(Icons.Outlined.Delete, "Delete content", tint = FounderMuted) }
+                IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Outlined.Delete, "Delete content", tint = FounderMuted) }
             }
         }
+    }
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("Delete this content?") },
+            text = { Text("This permanently removes the selected item from HTE Universe. This action cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = false; onDelete() }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } }
+        )
     }
 }
 
