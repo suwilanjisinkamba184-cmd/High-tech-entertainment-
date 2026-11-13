@@ -92,8 +92,7 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text("HIGH-TECH ENTERTAINMENT", color = MemberGold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
-                        Text("One account.
-Your whole universe.", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 24.sp)
+                        Text("One account.\nYour whole universe.", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 24.sp)
                         Text("Manage your profile, bookings and saved experiences.", color = MemberMuted, fontSize = 11.sp)
                     }
                     Icon(Icons.Outlined.AccountCircle, null, tint = MemberGold, modifier = Modifier.size(48.dp))
