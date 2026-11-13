@@ -45,6 +45,7 @@ android {
         debug { applicationIdSuffix = ".dev"; versionNameSuffix = "-dev" }
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             if (!releaseKeystorePath.isNullOrBlank()) {
                 signingConfig = signingConfigs.getByName("release")
             }

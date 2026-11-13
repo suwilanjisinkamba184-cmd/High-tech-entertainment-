@@ -1,6 +1,5 @@
 package com.hightechentertainment.app
 
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.automirrored.outlined.QueueMusic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -402,7 +403,7 @@ private fun LibraryScreen(
                 TrackRow(track = track, onPlay = { onPlayFavourite(track) }, onDownload = { onDownloadFavourite(track) }, isFavourite = true, onToggleFavourite = { onToggleFavourite(track) })
             }
         }
-        item { LibraryTile(Icons.Outlined.QueueMusic, "Playlists", "Build and organise your listening") }
+        item { LibraryTile(Icons.AutoMirrored.Outlined.QueueMusic, "Playlists", "Build and organise your listening") }
         item { LibraryTile(Icons.Outlined.History, "Listening history", "Return to what you played") }
         item { Text("OFFLINE DOWNLOADS", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
         if (downloads.isEmpty()) {
@@ -486,7 +487,7 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
     var playbackError by remember { mutableStateOf<String?>(null) }
     val validQueue = remember(queue, track.id, track.audioUrl) {
         if (track.audioUrl?.startsWith("http", ignoreCase = true) != true) emptyList() else queue.filter { candidate ->
-            runCatching { Uri.parse(candidate.audioUrl.orEmpty()).scheme in listOf("https", "http") }.getOrDefault(false)
+            runCatching { candidate.audioUrl.orEmpty().toUri().scheme in listOf("https", "http") }.getOrDefault(false)
         }.map { candidate ->
             MediaItem.Builder()
                 .setMediaId(candidate.id)
@@ -548,7 +549,7 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
 @Composable
 private fun VideoPlayerDialog(video: VideoDto, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val validUrl = runCatching { Uri.parse(video.videoUrl).scheme in listOf("https", "http", "content", "file") }.getOrDefault(false)
+    val validUrl = runCatching { video.videoUrl.toUri().scheme in listOf("https", "http", "content", "file") }.getOrDefault(false)
     val player = remember(video.id) {
         ExoPlayer.Builder(context).build().apply {
             if (validUrl) { setMediaItem(MediaItem.fromUri(video.videoUrl)); prepare(); playWhenReady = true }

@@ -8,7 +8,7 @@ import androidx.media3.session.MediaSessionService
 import com.hightechentertainment.app.AppSettingsStore
 
 /** Owns the audio player outside the Activity so playback can continue in the background. */
-@OptIn(UnstableApi::class)
+@UnstableApi
 class HtePlaybackService : MediaSessionService() {
     private var player: ExoPlayer? = null
     private var mediaSession: MediaSession? = null
@@ -33,10 +33,10 @@ class HtePlaybackService : MediaSessionService() {
     override fun onDestroy() {
         HteAudioEffects.release()
         activeAudioSessionId = 0
-        player?.release()
-        player = null
         mediaSession?.release()
         mediaSession = null
+        player?.release()
+        player = null
         super.onDestroy()
     }
 

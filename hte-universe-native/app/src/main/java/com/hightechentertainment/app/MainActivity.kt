@@ -6,6 +6,7 @@ import android.media.MediaPlayer
 import android.media.PlaybackParams
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.view.WindowCompat
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -52,8 +53,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         handleSupabaseIntent(intent)
-        window.statusBarColor = android.graphics.Color.rgb(8, 9, 11)
-        window.navigationBarColor = android.graphics.Color.rgb(8, 9, 11)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
         setContent { HteUniverseApp() }
     }
 
@@ -92,9 +95,8 @@ private fun HteUniverseApp() {
 private fun UniverseSplash(onFinished: () -> Unit) {
     val context = LocalContext.current
     DisposableEffect(context) {
-        val audioId = context.resources.getIdentifier("hte_universe_intro", "raw", context.packageName)
         val startupEnabled = AppSettingsStore(context).startupSoundEnabled
-        val player = if (startupEnabled && audioId != 0) MediaPlayer.create(context, audioId) else null
+        val player = if (startupEnabled) MediaPlayer.create(context, R.raw.hte_universe_intro) else null
         // The packaged stereo MP3 is 14.054s; pitch-preserving 0.937x playback aligns it to the 15s splash.
         runCatching { player?.setPlaybackParams(PlaybackParams().setSpeed(0.937f).setPitch(1.0f)) }
         player?.start()
@@ -125,6 +127,8 @@ private fun UniverseSplash(onFinished: () -> Unit) {
         StarField(Modifier.fillMaxSize(), orbit)
         Column(Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 36.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Image(painter = painterResource(R.drawable.ic_hte_crown), contentDescription = "High-Tech Entertainment crown", modifier = Modifier.size(28.dp))
+            Spacer(Modifier.height(5.dp))
             Image(painter = painterResource(R.drawable.ht_logo), contentDescription = "High-Tech Entertainment official logo", contentScale = ContentScale.Fit, modifier = Modifier.size(142.dp))
             Spacer(Modifier.height(8.dp))
             Text("UNIVERSE", color = Gold, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 7.sp)

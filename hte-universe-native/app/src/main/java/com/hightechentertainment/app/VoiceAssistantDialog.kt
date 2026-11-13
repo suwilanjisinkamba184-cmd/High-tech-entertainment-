@@ -53,6 +53,7 @@ import kotlinx.serialization.json.Json
 private val VoiceGold = Color(0xFFD6B15E)
 private val VoicePanel = Color(0xFF121418)
 private val VoiceMuted = Color(0xFF8B929D)
+private val voiceJson = Json { ignoreUnknownKeys = true }
 
 @Serializable
 private data class VoiceTokenResponse(
@@ -263,7 +264,7 @@ private fun startVoiceSession(
             val user = SupabaseClientProvider.client.auth.currentUserOrNull()
                 ?: error("Sign in to use the High-Tech Entertainment Voice Companion.")
             val response = SupabaseClientProvider.client.functions.invoke("elevenlabs-voice-token")
-            val token = Json { ignoreUnknownKeys = true }.decodeFromString<VoiceTokenResponse>(response.bodyAsText())
+            val token = voiceJson.decodeFromString<VoiceTokenResponse>(response.bodyAsText())
             check(token.token.isNotBlank()) { "The voice service did not return a conversation token." }
 
             val clientTools = mapOf(

@@ -15,13 +15,11 @@ object AppNotificationHelper {
 
     fun show(context: Context, title: String, message: String, notificationId: Int = (System.currentTimeMillis() % Int.MAX_VALUE).toInt()) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "HTE account updates", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                    description = "Booking and account updates from HTE Universe"
-                }
-            )
-        }
+        manager.createNotificationChannel(
+            NotificationChannel(CHANNEL_ID, "HTE account updates", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = "Booking and account updates from HTE Universe"
+            }
+        )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_hte_launcher)
             .setContentTitle(title)
