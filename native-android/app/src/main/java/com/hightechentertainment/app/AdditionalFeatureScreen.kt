@@ -26,7 +26,6 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.ExperimentalApi
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.material3.Player as Media3ComposePlayer
-import androidx.media3.ui.compose.material3.PlayerDefaults
 import androidx.media3.exoplayer.ExoPlayer
 import com.hightechentertainment.app.data.*
 import kotlinx.coroutines.launch
@@ -701,10 +700,7 @@ private fun VideoPlaybackDialog(video: NativeVideo, onClose: () -> Unit) {
         Media3ComposePlayer(
             player = player,
             modifier = Modifier.fillMaxWidth().weight(1f),
-            showControls = true,
-            topControls = { PlayerDefaults.TopControls(player) },
-            centerControls = { PlayerDefaults.CenterControls(player) },
-            bottomControls = { PlayerDefaults.BottomControls(player) }
+            showControls = true
         )
     }
 }

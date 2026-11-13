@@ -50,14 +50,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.ExperimentalApi
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.material3.MiniController
-import androidx.media3.ui.compose.material3.NextButton
-import androidx.media3.ui.compose.material3.PlayPauseButton
 import androidx.media3.ui.compose.material3.Player as Media3ComposePlayer
-import androidx.media3.ui.compose.material3.PlayerDefaults
-import androidx.media3.ui.compose.material3.PreviousButton
-import androidx.media3.ui.compose.material3.RepeatButton
-import androidx.media3.ui.compose.material3.ShuffleButton
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.media3.common.Player
@@ -868,14 +861,24 @@ private fun HighTechApp(
                     modifier = Modifier.fillMaxWidth()
                         .background(Color(0xFF201A10))
                         .padding(horizontal = 16.dp, vertical = 6.dp),
-                    defaultArtwork = painterResource(R.drawable.hte_launcher_foreground),
                     onClick = { showNowPlaying = true },
                     playerControls = { activePlayer ->
-                        PreviousButton(activePlayer)
-                        PlayPauseButton(activePlayer)
-                        NextButton(activePlayer)
-                        ShuffleButton(activePlayer)
-                        RepeatButton(activePlayer)
+                        IconButton(onClick = { activePlayer.seekToPreviousMediaItem() }) {
+                            Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous track", tint = Color.White)
+                        }
+                        IconButton(onClick = { if (activePlayer.isPlaying) activePlayer.pause() else activePlayer.play() }) {
+                            Icon(if (activePlayer.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                contentDescription = if (activePlayer.isPlaying) "Pause" else "Play", tint = Color(0xFFD4AF37))
+                        }
+                        IconButton(onClick = { activePlayer.seekToNextMediaItem() }) {
+                            Icon(Icons.Rounded.SkipNext, contentDescription = "Next track", tint = Color.White)
+                        }
+                        IconButton(onClick = onToggleShuffle) {
+                            Icon(Icons.Rounded.Shuffle, contentDescription = "Toggle shuffle", tint = if (shuffleEnabled) Color(0xFFD4AF37) else Color.White)
+                        }
+                        IconButton(onClick = onToggleRepeat) {
+                            Icon(Icons.Rounded.Repeat, contentDescription = "Cycle repeat mode", tint = if (repeatMode == Player.REPEAT_MODE_OFF) Color.White else Color(0xFFD4AF37))
+                        }
                     }
                 )
             }
@@ -916,7 +919,7 @@ private fun AudioNowPlayingDialog(
                 player = player,
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 showControls = true,
-                artwork = {
+                shutter = {
                     Box(
                         Modifier.fillMaxSize().background(
                             Brush.linearGradient(listOf(Color(0xFF49351A), Color(0xFF151515), Color.Black))
@@ -925,10 +928,7 @@ private fun AudioNowPlayingDialog(
                     ) {
                         Text("HTE", color = Color(0xFFD4AF37), style = MaterialTheme.typography.displayLarge, fontWeight = FontWeight.ExtraBold)
                     }
-                },
-                topControls = { PlayerDefaults.TopControls(player) },
-                centerControls = { PlayerDefaults.CenterControls(player) },
-                bottomControls = { PlayerDefaults.BottomControls(player) }
+                }
             )
             Text(title, color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 2)
             Text(artist, color = Color(0xFFB8B0A3), style = MaterialTheme.typography.bodyMedium)
