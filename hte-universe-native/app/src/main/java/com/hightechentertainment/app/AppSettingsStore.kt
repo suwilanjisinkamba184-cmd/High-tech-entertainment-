@@ -19,7 +19,7 @@ class AppSettingsStore(context: Context) {
         set(value) { preferences.edit().putBoolean("data_saver", value).apply() }
 
     var networkPolicy: String
-        get() = preferences.getString("network_policy", "ASK") ?: "ASK"
+        get() = preferences.getString("network_policy", "WIFI_AND_MOBILE") ?: "WIFI_AND_MOBILE"
         set(value) { preferences.edit().putString("network_policy", value).apply() }
 
     var updateNetworkPolicy: String
