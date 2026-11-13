@@ -62,7 +62,16 @@ jobs:
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest
       - name: Run Android lint
-        run: gradle --no-daemon :app:lintRelease
+        run: |
+          set +e
+          gradle --no-daemon :app:lintRelease
+          lint_status=$?
+          report="app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt"
+          if [[ -f "$report" ]]; then
+            echo "---- Full Android lint report ----"
+            cat "$report"
+          fi
+          exit "$lint_status"
       - name: Validate existing production signing configuration
         run: |
           test -n "$ANDROID_KEYSTORE_BASE64"
