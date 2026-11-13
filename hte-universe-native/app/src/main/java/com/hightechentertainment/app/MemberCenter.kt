@@ -83,8 +83,22 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
 
     LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Text("Account", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text("Your HTE Universe membership.", color = MemberMuted, fontSize = 13.sp)
+            Text("MEMBER PORTAL", color = MemberGold, fontSize = 9.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+            Text("Your account.", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+            Text("Your HTE Universe membership.", color = MemberMuted, fontSize = 12.sp)
+        }
+        item {
+            MemberCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("HIGH-TECH ENTERTAINMENT", color = MemberGold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+                        Text("One account.
+Your whole universe.", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 24.sp)
+                        Text("Manage your profile, bookings and saved experiences.", color = MemberMuted, fontSize = 11.sp)
+                    }
+                    Icon(Icons.Outlined.AccountCircle, null, tint = MemberGold, modifier = Modifier.size(48.dp))
+                }
+            }
         }
         if (!configured || auth == null) {
             item {
@@ -272,8 +286,8 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
 
 @Composable
 private fun MemberCard(content: @Composable ColumnScope.() -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = MemberPanel), shape = RoundedCornerShape(18.dp)) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
+    Card(colors = CardDefaults.cardColors(containerColor = MemberPanel), shape = RoundedCornerShape(22.dp)) {
+        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
     }
 }
 

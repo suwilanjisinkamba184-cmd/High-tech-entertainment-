@@ -140,7 +140,7 @@ fun UniverseShell() {
     Scaffold(
         containerColor = ShellBackground,
         bottomBar = {
-            NavigationBar(containerColor = ShellPanel, contentColor = ShellGold) {
+            NavigationBar(containerColor = Color(0xFF0D0F12), contentColor = ShellGold, tonalElevation = 0.dp) {
                 UniverseTab.entries.forEach { tab ->
                     val icon = when (tab) {
                         UniverseTab.HOME -> Icons.Outlined.Home
@@ -276,6 +276,24 @@ private fun HomeScreen(
             }
         }
         item {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                Card(modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = ShellPanel)) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp)) {
+                        Text("MUSIC LIBRARY", color = ShellMuted, fontSize = 8.sp, letterSpacing = 1.1.sp, fontWeight = FontWeight.Bold)
+                        Text(tracks.size.toString().padStart(2, '0'), color = ShellGold, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                        Text("published tracks", color = ShellMuted, fontSize = 9.sp)
+                    }
+                }
+                Card(modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = ShellPanel)) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp)) {
+                        Text("VISUAL WORLD", color = ShellMuted, fontSize = 8.sp, letterSpacing = 1.1.sp, fontWeight = FontWeight.Bold)
+                        Text(videos.size.toString().padStart(2, '0'), color = ShellGold, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                        Text("published videos", color = ShellMuted, fontSize = 9.sp)
+                    }
+                }
+            }
+        }
+        item {
             Card(shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = ShellPanel)) {
                 Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF352713), Color(0xFF17130D), Color(0xFF101216)))).padding(20.dp)) {
                     Image(painter = painterResource(R.drawable.ic_hte_crown), contentDescription = null,
@@ -408,8 +426,8 @@ private fun DiscoverScreen(tracks: List<TrackDto>, isLoading: Boolean, error: St
         OutlinedTextField(value = query, onValueChange = { query = it; onQueryChanged(it) }, modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Search tracks or artists") }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true)
         Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            genres.take(6).forEach { genre ->
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(end = 4.dp)) {
+            items(genres.take(12)) { genre ->
                 FilterChip(selected = selectedGenre == genre, onClick = { selectedGenre = genre }, label = { Text(genre) })
             }
         }
@@ -428,9 +446,22 @@ private fun DiscoverScreen(tracks: List<TrackDto>, isLoading: Boolean, error: St
 @Composable
 private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: String?, onPlay: (VideoDto) -> Unit, onDownload: (VideoDto) -> Unit, onRefresh: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-        Text("Videos", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        Text("Watch HTE visuals, performances and stories.", color = ShellMuted, fontSize = 13.sp)
+        Text("THE VISUAL UNIVERSE", color = ShellGold, fontSize = 9.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+        Text("Videos", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+        Text("Music videos, performances and stories from HTE.", color = ShellMuted, fontSize = 12.sp)
         Spacer(Modifier.height(14.dp))
+        Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = ShellPanel)) {
+            Row(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF302315), Color(0xFF15171B)))).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("WATCH. FEEL. REPLAY.", color = ShellGold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(5.dp))
+                    Text("The sound has a visual side.", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("${videos.size} videos in the HTE catalogue", color = ShellSilver, fontSize = 10.sp)
+                }
+                Icon(Icons.Outlined.Movie, null, tint = ShellGold, modifier = Modifier.size(38.dp))
+            }
+        }
+        Spacer(Modifier.height(4.dp))
         if (error != null) Text(error, color = ShellGold, fontSize = 12.sp)
         if (videos.isEmpty()) {
             EmptyCatalogueState(if (isLoading) "Loading video catalogue…" else "No published videos yet", isLoading, onRefresh)
@@ -495,8 +526,21 @@ private fun LibraryScreen(
 ) {
     LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Text("Your Library", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text("Your music, saved your way.", color = ShellMuted, fontSize = 13.sp)
+            Text("YOUR PERSONAL SPACE", color = ShellGold, fontSize = 9.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+            Text("Your Library", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+            Text("Your music, saved your way.", color = ShellMuted, fontSize = 12.sp)
+        }
+        item {
+            Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = ShellPanel)) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("SAVED COLLECTION", color = ShellGold, fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
+                        Text("${favouriteTracks.size} favourites  ·  ${downloads.size} downloads", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Your collection stays with your HTE account and device.", color = ShellMuted, fontSize = 10.sp)
+                    }
+                    Icon(Icons.Outlined.LibraryMusic, null, tint = ShellGold, modifier = Modifier.size(34.dp))
+                }
+            }
         }
         item { Text("FAVOURITES", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
         if (favouriteTracks.isEmpty()) {
