@@ -61,6 +61,12 @@ class OfflineDownloadManager(context: Context) {
         }
     }.sortedByDescending { it.id }
 
+    fun clearAll() {
+        val ids = preferences.all.keys.mapNotNull { it.toLongOrNull() }.toLongArray()
+        if (ids.isNotEmpty()) manager.remove(*ids)
+        preferences.edit().clear().apply()
+    }
+
     fun remove(id: Long) {
         manager.remove(id)
         preferences.edit().remove(id.toString()).apply()
