@@ -94,7 +94,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
             try {
                 updateInfo = updater.checkForUpdate(BuildConfig.VERSION_NAME)
                 downloadedApk = updater.cachedUpdate()
-                statusMessage = if (updateInfo?.updateAvailable == true) "A newer HTE Universe release is available." else "You are using the latest published release."
+                statusMessage = if (updateInfo?.updateAvailable == true) "A newer HTE Universe release is available." else "No newer public release is available for this build."
             } catch (error: Throwable) {
                 updateError = error.message?.take(180) ?: "Could not check for updates. Check your connection."
             } finally { isChecking = false }
@@ -220,6 +220,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                     SettingsChips(listOf("WIFI_ONLY", "WIFI + MOBILE"), if (networkPolicy == "WIFI_ONLY") "WIFI_ONLY" else "WIFI + MOBILE") {
                         networkPolicy = if (it == "WIFI_ONLY") "WIFI_ONLY" else "WIFI_AND_MOBILE"
                         settingsStore.networkPolicy = networkPolicy
+                        onSettingsChanged()
                         dataSaver = networkPolicy == "WIFI_ONLY"
                         settingsStore.dataSaver = dataSaver
                     }
@@ -277,7 +278,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                             Text("HTE Universe 4.0.0", color = Color.White, fontWeight = FontWeight.Bold)
                             Text("Installed version · build ${BuildConfig.VERSION_CODE}", color = SettingsMuted, fontSize = 10.sp)
                         }
-                        if (updateInfo?.updateAvailable == true) AssistChip(onClick = {}, label = { Text("UPDATE") }, colors = AssistChipDefaults.assistChipColors(labelColor = SettingsGold))
+                        if (updateInfo?.updateAvailable == true) Text("UPDATE AVAILABLE", color = SettingsGold, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     }
                     Button(onClick = { checkForUpdates() }, enabled = !isChecking, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = SettingsGold, contentColor = SettingsBackground)) {
                         if (isChecking) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = SettingsBackground)
@@ -286,7 +287,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                     }
                     updateInfo?.let { info ->
                         Text("Latest published version: ${info.latestVersion}", color = SettingsSilver, fontSize = 12.sp)
-                        Text(if (info.updateAvailable) "A newer version is available." else "Your app is up to date.", color = if (info.updateAvailable) SettingsGold else Color(0xFF8BCB9B), fontSize = 11.sp)
+                        Text(if (info.updateAvailable) "A newer version is available." else "No newer public release is available.", color = if (info.updateAvailable) SettingsGold else Color(0xFF8BCB9B), fontSize = 11.sp)
                         if (info.releaseNotes.isNotBlank()) Text(info.releaseNotes.take(900), color = SettingsMuted, fontSize = 10.sp, maxLines = 8)
                         if (info.updateAvailable) {
                             val partialBytes = updater.partialDownloadSize()
@@ -302,7 +303,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                             }
                         }
                     }
-                    downloadedApk?.let { file ->
+                    downloadedApk?.takeIf { updateInfo?.updateAvailable == true }?.let { file ->
                         Text("Update installer ready · ${formatBytes(file.length())}", color = Color(0xFF8BCB9B), fontSize = 11.sp)
                         Button(onClick = { openUpdateInstaller(context, file) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = SettingsGold, contentColor = SettingsBackground)) {
                             Icon(Icons.Outlined.InstallMobile, null); Spacer(Modifier.width(8.dp)); Text("Install update")
