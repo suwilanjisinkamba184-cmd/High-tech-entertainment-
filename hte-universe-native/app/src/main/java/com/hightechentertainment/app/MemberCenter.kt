@@ -214,7 +214,7 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
                     onClose = { showSettings = false },
                     settingsStore = settingsStore,
                     downloadManager = com.hightechentertainment.app.media.OfflineDownloadManager(context),
-                    onSettingsChanged = onSettingsChanged
+                    onSettingsChanged = { notificationsEnabled = settingsStore.notificationsEnabled; onSettingsChanged() }
                 )
             }
         }
