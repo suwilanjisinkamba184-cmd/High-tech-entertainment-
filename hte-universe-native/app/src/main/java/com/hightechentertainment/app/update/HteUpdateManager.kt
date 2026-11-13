@@ -2,6 +2,8 @@ package com.hightechentertainment.app.update
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
@@ -106,6 +108,7 @@ class HteUpdateManager(private val context: Context) {
                 FileOutputStream(partial, append).use { output ->
                     val buffer = ByteArray(DEFAULT_BUFFER_SIZE * 8)
                     while (true) {
+                        currentCoroutineContext().ensureActive()
                         val count = input.read(buffer)
                         if (count < 0) break
                         output.write(buffer, 0, count)
@@ -131,6 +134,7 @@ class HteUpdateManager(private val context: Context) {
         }
     }
 
+    fun cachedUpdate(): File? = File(updateDirectory, "HTE-Universe-update.apk").takeIf { it.exists() && it.length() > 0L }
     fun partialDownloadSize(): Long = File(updateDirectory, "HTE-Universe-update.apk.part").takeIf { it.exists() }?.length() ?: 0L
     fun clearPartialDownload() { File(updateDirectory, "HTE-Universe-update.apk.part").delete() }
     fun clearCachedUpdate() { File(updateDirectory, "HTE-Universe-update.apk").delete(); clearPartialDownload() }
