@@ -1,11 +1,16 @@
 package com.hightechentertainment.app
 
+import android.Manifest
 import android.app.ActivityManager
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings as AndroidSettings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -54,7 +59,6 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
     var backgroundPlayback by remember { mutableStateOf(settingsStore.backgroundPlayback) }
     var startupSound by remember { mutableStateOf(settingsStore.startupSoundEnabled) }
     var reduceMotion by remember { mutableStateOf(settingsStore.reduceMotion) }
-    var recommendations by remember { mutableStateOf(settingsStore.personalisedRecommendations) }
     var eqEnabled by remember { mutableStateOf(settingsStore.equalizerEnabled) }
     var eqPreset by remember { mutableStateOf(settingsStore.equalizerPreset) }
     var eqBands by remember { mutableStateOf(settingsStore.equalizerBands()) }
@@ -74,6 +78,11 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
     var progress by remember { mutableStateOf(HteDownloadProgress(updater.partialDownloadSize(), 0L)) }
     var downloadedApk by remember { mutableStateOf<File?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        notifications = granted
+        settingsStore.notificationsEnabled = granted
+        onSettingsChanged()
+    }
 
     fun refreshDownloads() {
         scope.launch { downloads = withContext(Dispatchers.IO) { downloadManager.getDownloads() } }
@@ -104,7 +113,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
             isDownloading = true
             updateError = null
             try {
-                downloadedApk = updater.downloadUpdate(url, info.downloadSize, info.sha256) { value -> progress = value }
+                downloadedApk = updater.downloadUpdate(url, info.downloadSize, info.sha256) { value -> android.os.Handler(android.os.Looper.getMainLooper()).post { progress = value } }
                 statusMessage = "Update downloaded. Android will verify the signing identity during installation."
             } catch (_: CancellationException) {
                 updateError = "Download paused. Your partial file is saved; tap Resume to continue."
@@ -315,8 +324,12 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                     SettingsSwitch("Startup sound", "Play the HTE branded intro audio at launch", startupSound) {
                         startupSound = it; settingsStore.startupSoundEnabled = it
                     }
-                    SettingsSwitch("Notifications", "Show account and booking updates", notifications) {
-                        notifications = it; settingsStore.notificationsEnabled = it; onSettingsChanged()
+                    SettingsSwitch("Notifications", "Show account and booking updates", notifications) { enabled ->
+                        if (enabled && Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            notifications = enabled; settingsStore.notificationsEnabled = enabled; onSettingsChanged()
+                        }
                     }
                     Text("HTE Universe keeps its signature dark visual identity. More appearance controls can be added without compromising the brand.", color = SettingsMuted, fontSize = 10.sp)
                 }
