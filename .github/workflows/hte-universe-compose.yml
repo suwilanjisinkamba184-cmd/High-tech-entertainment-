@@ -46,7 +46,14 @@ jobs:
           yes | sdkmanager --licenses
           sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
           test -d "$ANDROID_HOME/platforms/android-37.0"
+          # Android Gradle Plugin resolves compileSdk 37 as android-37 while the
+          # preview SDK Manager package is installed under android-37.0.
+          if [[ ! -e "$ANDROID_HOME/platforms/android-37" ]]; then
+            ln -s "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
+          fi
+          test -d "$ANDROID_HOME/platforms/android-37"
           test -x "$ANDROID_HOME/build-tools/37.0.0/apksigner"
+          test -x "$ANDROID_HOME/build-tools/37.0.0/aapt"
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.6.0'
@@ -54,6 +61,8 @@ jobs:
         run: gradle --no-daemon :app:assembleDebug
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest
+      - name: Run Android lint
+        run: gradle --no-daemon :app:lintRelease
       - name: Validate existing production signing configuration
         run: |
           test -n "$ANDROID_KEYSTORE_BASE64"
@@ -74,14 +83,14 @@ jobs:
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose --print-certs "$APK"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep "package: name='com.hightechentertainment.app'"
+          "$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK" | grep "package: name='com.hightechentertainment.app'"
           sha256sum "$APK" | tee app/build/outputs/apk/release/SHA256SUMS.txt
       - name: Confirm certificate matches previous public release
         env:
           PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/v2.2.10-SU/High-Tech-Entertainment-v2.2.10-SU.apk
         run: |
           set -euo pipefail
-          APK_SIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          APK_SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
           curl -fsSL "$PREVIOUS_APK_URL" -o "$RUNNER_TEMP/previous-hte-release.apk"
           OLD_CERT="$("$APK_SIGNER" verify --print-certs "$RUNNER_TEMP/previous-hte-release.apk" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print $2; exit}')"
           NEW_CERT="$("$APK_SIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print $2; exit}')"
