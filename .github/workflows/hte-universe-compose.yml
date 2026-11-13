@@ -2,14 +2,19 @@ name: HTE Universe — clean Compose rebuild
 
 on:
   push:
-    branches: [rebuild/hte-universe-compose-clean]
+    branches: [main, rebuild/hte-universe-compose-clean]
     paths:
       - 'hte-universe-native/**'
       - '.github/workflows/hte-universe-compose.yml'
+      - 'supabase/functions/elevenlabs-voice-token/**'
+      - 'supabase/config.toml'
   pull_request:
+    branches: [main, rebuild/hte-universe-compose-clean]
     paths:
       - 'hte-universe-native/**'
       - '.github/workflows/hte-universe-compose.yml'
+      - 'supabase/functions/elevenlabs-voice-token/**'
+      - 'supabase/config.toml'
   workflow_dispatch:
 
 permissions:
@@ -57,20 +62,27 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.6.0'
+      - name: Validate Supabase runtime configuration
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_URL" || { echo "::error::SUPABASE_URL secret is required"; exit 1; }
+          test -n "$SUPABASE_PUBLISHABLE_KEY" || { echo "::error::SUPABASE_PUBLISHABLE_KEY secret is required"; exit 1; }
+          case "$SUPABASE_URL" in
+            https://*) ;;
+            *) echo "::error::SUPABASE_URL must use HTTPS"; exit 1 ;;
+          esac
       - name: Compile clean Compose application
         run: gradle --no-daemon :app:assembleDebug
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest
-      - name: Run Android lint
+      - name: Run release unit tests
+        run: gradle --no-daemon :app:testReleaseUnitTest
+      - name: Run Android lint for debug and release
         run: |
           set +e
-          gradle --no-daemon :app:lintRelease --console=plain
+          gradle --no-daemon :app:lintDebug :app:lintRelease --console=plain
           lint_status=$?
-          report="app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt"
-          if [[ -f "$report" ]]; then
-            echo "---- Full Android lint report ----"
-            cat "$report"
-          fi
+          find app/build -type f -name 'lint-results-*.txt' -print -exec cat {} \;
           exit "$lint_status"
       - name: Validate existing production signing configuration
         run: |

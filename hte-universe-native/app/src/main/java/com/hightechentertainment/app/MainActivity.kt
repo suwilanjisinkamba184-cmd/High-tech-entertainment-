@@ -4,8 +4,6 @@ import android.os.Bundle
 import android.content.Intent
 import android.media.MediaPlayer
 import android.media.PlaybackParams
-import androidx.annotation.OptIn
-import androidx.media3.common.util.UnstableApi
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
@@ -51,7 +49,6 @@ private val Gold = Color(0xFFD6B15E)
 private val Silver = Color(0xFFC4CAD2)
 private val Muted = Color(0xFF8B929D)
 
-@OptIn(markerClass = [UnstableApi::class])
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

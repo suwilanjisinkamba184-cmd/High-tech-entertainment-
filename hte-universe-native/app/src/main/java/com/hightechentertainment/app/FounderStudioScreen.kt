@@ -35,7 +35,7 @@ fun FounderStudioScreen(onClose: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val repository = remember { FounderStudioRepository() }
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) }
     var tracks by remember { mutableStateOf<List<FounderTrackDto>>(emptyList()) }
     var videos by remember { mutableStateOf<List<FounderVideoDto>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }

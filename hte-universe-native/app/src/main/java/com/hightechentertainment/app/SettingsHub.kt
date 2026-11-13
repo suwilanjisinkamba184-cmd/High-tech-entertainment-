@@ -21,8 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.annotation.OptIn
-import androidx.media3.common.util.UnstableApi
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,7 +49,6 @@ private val SettingsMuted = Color(0xFF8B929D)
 private val SettingsPanel = Color(0xFF121418)
 private val SettingsBackground = Color(0xFF08090B)
 
-@OptIn(markerClass = [UnstableApi::class])
 @Composable
 fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadManager: OfflineDownloadManager, onSettingsChanged: () -> Unit = {}) {
     val context = LocalContext.current

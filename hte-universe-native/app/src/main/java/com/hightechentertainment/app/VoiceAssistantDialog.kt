@@ -11,8 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.annotation.OptIn
-import androidx.media3.common.util.UnstableApi
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,7 +61,6 @@ private data class VoiceTokenResponse(
     @SerialName("user_id") val userId: String
 )
 
-@OptIn(markerClass = [UnstableApi::class])
 @Composable
 fun VoiceAssistantDialog(
     tracks: List<TrackDto>,
@@ -96,7 +93,7 @@ fun VoiceAssistantDialog(
     var status by remember { mutableStateOf("Disconnected") }
     var mode by remember { mutableStateOf("listening") }
     var muted by remember { mutableStateOf(false) }
-    var audioLevel by remember { mutableStateOf(0f) }
+    var audioLevel by remember { mutableFloatStateOf(0f) }
     var userTranscript by remember { mutableStateOf("") }
     var agentResponse by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
