@@ -20,7 +20,7 @@ gradle --no-daemon :app:testDebugUnitTest
 
 ## Core dependency baseline
 
-- Compose BOM 2026.06.01 (stable API 36-compatible line)
+- Compose BOM 2026.06.01 (API 37 build baseline)
 - AndroidX Activity Compose 1.13.0
 - AndroidX Lifecycle 2.11.0 (API 37)
 - AndroidX Core KTX 1.19.1 (API 37)
