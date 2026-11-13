@@ -41,11 +41,11 @@ jobs:
       - uses: android-actions/setup-android@v4
         with:
           packages: platform-tools
-      - name: Install Android SDK 36
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Install Android SDK 37
+        run: sdkmanager "platforms;android-37" "build-tools;36.0.0"
       - uses: gradle/actions/setup-gradle@v6
         with:
-          gradle-version: '8.14.4'
+          gradle-version: '9.6.0'
       - name: Compile clean Compose application
         run: gradle --no-daemon :app:assembleDebug
       - name: Run unit tests
