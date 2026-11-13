@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import io.github.jan.supabase.auth.handleDeeplinks
 import com.hightechentertainment.app.data.SupabaseClientProvider
+import com.hightechentertainment.app.media.HtePlaybackController
 
 private val Obsidian = Color(0xFF08090B)
 private val Panel = Color(0xFF121418)
@@ -60,6 +61,11 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleSupabaseIntent(intent)
+    }
+
+    override fun onStop() {
+        if (!AppSettingsStore(this).backgroundPlayback) HtePlaybackController.pause()
+        super.onStop()
     }
 
     private fun handleSupabaseIntent(intent: Intent) {
@@ -87,7 +93,8 @@ private fun UniverseSplash(onFinished: () -> Unit) {
     val context = LocalContext.current
     DisposableEffect(context) {
         val audioId = context.resources.getIdentifier("hte_universe_intro", "raw", context.packageName)
-        val player = if (audioId != 0) MediaPlayer.create(context, audioId) else null
+        val startupEnabled = AppSettingsStore(context).startupSoundEnabled
+        val player = if (startupEnabled && audioId != 0) MediaPlayer.create(context, audioId) else null
         // The packaged stereo MP3 is 14.054s; pitch-preserving 0.937x playback aligns it to the 15s splash.
         runCatching { player?.setPlaybackParams(PlaybackParams().setSpeed(0.937f).setPitch(1.0f)) }
         player?.start()
@@ -97,13 +104,17 @@ private fun UniverseSplash(onFinished: () -> Unit) {
         }
     }
     var elapsed by remember { mutableIntStateOf(0) }
+    val reduceMotion = remember(context) { AppSettingsStore(context).reduceMotion }
     val transition = rememberInfiniteTransition(label = "universe-motion")
-    val orbit by transition.animateFloat(0f, 360f,
+    val animatedOrbit by transition.animateFloat(0f, 360f,
         infiniteRepeatable(tween(9000, easing = FastOutSlowInEasing)), label = "orbit")
-    val headsetSpin by transition.animateFloat(0f, 360f,
+    val animatedHeadsetSpin by transition.animateFloat(0f, 360f,
         infiniteRepeatable(tween(5200, easing = LinearEasing)), label = "headset-spin")
-    val cameraSpin by transition.animateFloat(360f, 0f,
+    val animatedCameraSpin by transition.animateFloat(360f, 0f,
         infiniteRepeatable(tween(6100, easing = LinearEasing)), label = "camera-spin")
+    val orbit = if (reduceMotion) 0f else animatedOrbit
+    val headsetSpin = if (reduceMotion) 0f else animatedHeadsetSpin
+    val cameraSpin = if (reduceMotion) 0f else animatedCameraSpin
     val captions = listOf("Beyond the sound…", "Beyond the rhythm…", "Beyond boundaries…", "This is our universe.")
     LaunchedEffect(Unit) {
         while (elapsed < 15) { delay(1000); elapsed++ }
