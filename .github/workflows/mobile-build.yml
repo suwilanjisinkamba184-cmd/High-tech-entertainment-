@@ -221,7 +221,12 @@ jobs:
           (root / "drawable-nodpi" / "ht_splash_icon.png").write_bytes(
               (Path(os.environ["RUNNER_TEMP"]) / "hte_app" / "assets" / "high-tech-logo.png").read_bytes()
           )
-          print("PASS: HTE black launch theme and Android 12+ splash icon resources installed.")
+          app_gradle = root.parent.parent / "build.gradle.kts"
+          gradle_text = app_gradle.read_text(encoding="utf-8")
+          if "androidx.core:core-splashscreen" not in gradle_text:
+              gradle_text += "\ndependencies {\n    implementation(\"androidx.core:core-splashscreen:1.0.1\")\n}\n"
+              app_gradle.write_text(gradle_text, encoding="utf-8")
+          print("PASS: HTE black launch theme, AndroidX SplashScreen compatibility and Android 12+ icon resources installed.")
           PY
       - name: Configure a Flutter-compatible Android Gradle toolchain
         working-directory: ${{ runner.temp }}/hte_app
