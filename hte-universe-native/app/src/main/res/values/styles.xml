@@ -10,4 +10,5 @@
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
+    <style name="Theme.HTEUniverse.Starting" parent="Theme.HTEUniverse" />
 </resources>

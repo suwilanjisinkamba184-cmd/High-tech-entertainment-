@@ -3,7 +3,6 @@ package com.hightechentertainment.app
 import android.os.Bundle
 import android.content.Intent
 import android.media.MediaPlayer
-import android.media.PlaybackParams
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -95,8 +94,6 @@ private fun UniverseSplash(onFinished: () -> Unit) {
         val audioId = context.resources.getIdentifier("hte_universe_intro", "raw", context.packageName)
         val startupEnabled = AppSettingsStore(context).startupSoundEnabled
         val player = if (startupEnabled && audioId != 0) MediaPlayer.create(context, audioId) else null
-        // The packaged stereo MP3 is 14.054s; pitch-preserving 0.937x playback aligns it to the 15s splash.
-        runCatching { player?.setPlaybackParams(PlaybackParams().setSpeed(0.937f).setPitch(1.0f)) }
         player?.start()
         onDispose {
             try { player?.stop() } catch (_: IllegalStateException) { }
@@ -128,7 +125,8 @@ private fun UniverseSplash(onFinished: () -> Unit) {
             Image(painter = painterResource(R.drawable.ht_logo), contentDescription = "High-Tech Entertainment official logo", contentScale = ContentScale.Fit, modifier = Modifier.size(142.dp))
             Spacer(Modifier.height(8.dp))
             Text("UNIVERSE", color = Gold, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 7.sp)
-            Spacer(Modifier.height(44.dp))
+            Image(painter = painterResource(R.drawable.ic_hte_crown), contentDescription = "HTE crown", contentScale = ContentScale.Fit, modifier = Modifier.size(32.dp))
+            Spacer(Modifier.height(20.dp))
             Box(Modifier.size(230.dp), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxSize().graphicsLayer { rotationZ = orbit }) {
                     drawCircle(Gold.copy(alpha = .45f), style = Stroke(width = 1.3.dp.toPx()))

@@ -3,6 +3,7 @@ name: HTE Universe — clean Compose rebuild
 on:
   push:
     branches: [rebuild/hte-universe-compose-clean]
+    tags: ["v4.*"]
     paths:
       - 'hte-universe-native/**'
       - '.github/workflows/hte-universe-compose.yml'
@@ -13,7 +14,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: hte-universe-android-${{ github.ref }}
@@ -74,14 +75,14 @@ jobs:
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose --print-certs "$APK"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep "package: name='com.hightechentertainment.app'"
+          "$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK" | grep "package: name='com.hightechentertainment.app'"
           sha256sum "$APK" | tee app/build/outputs/apk/release/SHA256SUMS.txt
       - name: Confirm certificate matches previous public release
         env:
           PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/v2.2.10-SU/High-Tech-Entertainment-v2.2.10-SU.apk
         run: |
           set -euo pipefail
-          APK_SIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          APK_SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
           curl -fsSL "$PREVIOUS_APK_URL" -o "$RUNNER_TEMP/previous-hte-release.apk"
           OLD_CERT="$("$APK_SIGNER" verify --print-certs "$RUNNER_TEMP/previous-hte-release.apk" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print $2; exit}')"
           NEW_CERT="$("$APK_SIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print $2; exit}')"
@@ -90,20 +91,34 @@ jobs:
             exit 1
           fi
           echo "Verified: release certificate matches v2.2.10-SU."
+      - name: Name the production APK for the HTE updater
+        working-directory: hte-universe-native
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
+          test -n "$VERSION"
+          cp app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/HTE-Universe-v${VERSION}.apk"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            test "$GITHUB_REF_NAME" = "v${VERSION}" || { echo "Tag $GITHUB_REF_NAME does not match app version v${VERSION}."; exit 1; }
+          fi
       - name: Upload signed production APK
         uses: actions/upload-artifact@v7
         with:
           name: hte-universe-release-signed
           path: |
-            hte-universe-native/app/build/outputs/apk/release/*.apk
+            hte-universe-native/app/build/outputs/apk/release/HTE-Universe-v*.apk
             hte-universe-native/app/build/outputs/apk/release/SHA256SUMS.txt
           if-no-files-found: error
+      - name: Publish signed APK as a GitHub Release for in-app updates
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            hte-universe-native/app/build/outputs/apk/release/HTE-Universe-v*.apk
+            hte-universe-native/app/build/outputs/apk/release/SHA256SUMS.txt
+          generate_release_notes: true
+          make_latest: true
+          fail_on_unmatched_files: true
       - name: Remove temporary signing keystore
         if: always()
         run: rm -f "$RUNNER_TEMP/hte-release.jks"
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v7
-        with:
-          name: hte-universe-compose-debug
-          path: hte-universe-native/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
