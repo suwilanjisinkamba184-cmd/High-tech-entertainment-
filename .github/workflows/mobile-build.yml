@@ -48,7 +48,6 @@ jobs:
           cache: true
       - name: Detect Shorebird credentials
         if: github.event_name != 'pull_request' && inputs.operation != 'validate'
-        if: github.event_name != 'pull_request'
         id: shorebird
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
