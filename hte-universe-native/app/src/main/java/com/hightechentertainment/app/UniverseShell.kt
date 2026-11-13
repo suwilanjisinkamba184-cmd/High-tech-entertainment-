@@ -119,7 +119,7 @@ fun UniverseShell() {
         scope.launch {
             try {
                 if (url.isNullOrBlank()) error("This item has no download URL yet.")
-                withContext(Dispatchers.IO) { offlineManager.enqueue(url, title, mediaType, allowMetered = !settingsStore.dataSaver) }
+                withContext(Dispatchers.IO) { offlineManager.enqueue(url, title, mediaType, allowMetered = settingsStore.networkPolicy != "WIFI_ONLY" && !settingsStore.dataSaver) }
                 downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
                 Toast.makeText(context, "Download started: $title", Toast.LENGTH_SHORT).show()
             } catch (error: Throwable) {
