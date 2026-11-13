@@ -3,19 +3,33 @@
 Standalone Android application built from a new Kotlin + Jetpack Compose source tree. It does not import or depend on the legacy Flutter/native application source.
 
 - Application ID: `com.hightechentertainment.app`
-- UI: Kotlin, Jetpack Compose, Material 3
+- UI: Kotlin 2.4.21, Jetpack Compose, Material 3
+- Android build: AGP 8.13.2, Gradle 8.13, JDK 17, compile/target SDK 36
 - Visual direction: black / metallic gold / silver; crown, orbiting stars, rotating headphones and video-camera motifs
 - Brand: **HTE Universe — The Pride of Africa**
 - Supporting line: **Music. Creativity. Connection.**
 
 ## Build
 
-Requires JDK 17, Android SDK 36 and Gradle 8.11.1:
+Requires JDK 17, Android SDK 36 and Gradle 8.13:
 
 ```sh
-gradle :app:assembleDebug
-gradle :app:testDebugUnitTest
+gradle --no-daemon :app:assembleDebug
+gradle --no-daemon :app:testDebugUnitTest
 ```
+
+## Core dependency baseline
+
+- Compose BOM 2026.06.01 (API 36-compatible stable line)
+- AndroidX Activity Compose 1.13.0
+- AndroidX Lifecycle 2.11.0
+- AndroidX Core KTX 1.19.1
+- Media3 1.11.1
+- Supabase Kotlin 3.9.0
+- Ktor 3.6.1
+- ElevenLabs Android 0.13.1
+
+These versions are pinned intentionally. Compose 1.12 requires compileSdk 37 and AGP 9.1.1 or newer, so this build remains on the API 36-compatible Compose BOM until the complete Android toolchain is upgraded together.
 
 ## Backend configuration
 
@@ -28,14 +42,18 @@ For GitHub Actions, configure these as repository Actions secrets with those exa
 
 The first integration layer includes the Supabase Kotlin client, PKCE auth configuration, email/password member auth operations, and a read-only published-track repository. Founder authorization must be enforced by trusted server-side app metadata and database RLS; a UI-only role check is not security.
 
+## Signing and release safety
+
+Production signing continues to read the existing `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and `ANDROID_STORE_PASSWORD` GitHub Actions secrets. The workflow decodes the keystore only into the runner's temporary directory, checks the APK signer against the existing public release, and removes the temporary keystore even if a later step fails. Never commit or rotate these secrets as part of a dependency update.
+
 ## Security boundary
 
 Only approved credentials/configuration may be migrated from the previous project. Never copy legacy source files, UI, layouts, assets or application modules. Keep keystore material and API secrets in GitHub Actions secrets / secure local storage; never commit secret values.
 
 ## Current milestone
 
-- Clean Compose project foundation and first UI prototype.
-- Supabase client/auth/catalogue data layer added; CI compilation of this integration layer is the next verification gate.
-- Media3 dependencies added as the native playback foundation; the playback service and UI are not yet implemented.
-- Final startup narration/audio master and crown reference photograph have not yet been supplied in this chat.
-- Production signing, device acceptance, offline downloads, Founder Studio and full screen-by-screen UI remain outstanding.
+- Clean Compose project foundation and branded startup prototype.
+- Supabase client/auth/catalogue data layer; SDK updated to the current upstream Kotlin/Ktor baseline.
+- Media3 1.11.1 playback, HLS and DASH libraries included as the native media foundation.
+- CI now uses current Node 24 GitHub Actions releases and verifies the original production signing certificate.
+- The playback service and UI, final startup narration, real-device acceptance, offline downloads, Founder Studio and full screen-by-screen UI still require implementation and testing.
