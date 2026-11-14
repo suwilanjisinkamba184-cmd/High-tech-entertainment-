@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: hte-universe-android-${{ github.ref }}
@@ -136,6 +136,46 @@ jobs:
             hte-universe-native/app/build/outputs/apk/release/*.apk
             hte-universe-native/app/build/outputs/apk/release/SHA256SUMS.txt
           if-no-files-found: error
+      - name: Prepare permanent release assets
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          cp app/build/outputs/apk/release/app-release.apk release-assets/HTE-Universe-4.0.3.apk
+          (cd release-assets && sha256sum HTE-Universe-4.0.3.apk > SHA256SUMS.txt)
+      - name: Publish HTE Universe 4.0.3 GitHub Release
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v4.0.3
+          target_commitish: ${{ github.sha }}
+          name: HTE Universe 4.0.3
+          body: |
+            ## HTE Universe 4.0.3
+
+            Official signed Android release from the verified `main` build.
+
+            ### Changes
+            - Responsive settings controls that wrap on narrow screens.
+            - Google brand mark on the existing Supabase OAuth sign-in action.
+            - Audio player artwork sizing adjusted for smaller displays.
+            - Compose video controls for play/pause, seeking, elapsed time and duration.
+
+            ### Preserved
+            - Original High-Tech Entertainment logo and brand assets.
+            - Existing Supabase backend/configuration and OAuth flow.
+            - Application ID: `com.hightechentertainment.app`.
+
+            ### Verification
+            - Android compilation, unit tests and lint passed.
+            - Signed production APK package/version verification passed.
+            - Production signing certificate matched the previous public release.
+            - Version: 4.0.3 (version code 35); minimum Android 8 (API 26).
+          files: |
+            release-assets/HTE-Universe-4.0.3.apk
+            release-assets/SHA256SUMS.txt
+          fail_on_unmatched_files: true
+          make_latest: true
       - name: Remove temporary signing keystore
         if: always()
         run: rm -f "$RUNNER_TEMP/hte-release.jks"
