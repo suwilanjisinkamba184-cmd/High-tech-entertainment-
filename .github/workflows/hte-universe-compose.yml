@@ -108,7 +108,7 @@ jobs:
           sha256sum "$APK" | tee app/build/outputs/apk/release/SHA256SUMS.txt
       - name: Confirm certificate matches previous public release
         env:
-          PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/native-v4.0.5-build38/HTE-Universe-4.0.5.apk
+          PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/native-v4.0.4-build37/HTE-Universe-4.0.4.apk
         run: |
           set -euo pipefail
           APK_SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
