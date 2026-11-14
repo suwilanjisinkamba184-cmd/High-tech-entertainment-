@@ -46,11 +46,12 @@ if (( API_LEVEL <= 26 )); then
     echo "::error::Android API ${API_LEVEL} could not install the debug APK after three attempts."
     exit 1
   fi
-  adb logcat -c
+  # Some emulator images deny clearing the main log buffer; this is diagnostic only.
+  adb logcat -c 2>/dev/null || true
   adb shell am force-stop "$APP_ID"
-  adb shell am start -W -n "$APP_ID/.MainActivity"
+  adb shell am start -W -n "$APP_ID/com.hightechentertainment.app.MainActivity"
   sleep 5
-  adb shell dumpsys activity activities | grep -F "$APP_ID/.MainActivity"
+  adb shell dumpsys activity activities | grep -F "$APP_ID/com.hightechentertainment.app.MainActivity"
   if adb logcat -d -t 2500 | grep -E "FATAL EXCEPTION|Process: $APP_ID"; then
     echo "::error::HTE Universe crashed during the Android API ${API_LEVEL} launch smoke test."
     exit 1
