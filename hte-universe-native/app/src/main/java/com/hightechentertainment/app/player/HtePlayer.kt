@@ -184,12 +184,17 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
     val bars = state.amplitudes ?: remember(track.id) { placeholderWaveform(track.id) }
     BoxWithConstraints(modifier.fillMaxSize()) {
         val artworkMaxHeight = maxHeight * .34f
+        val horizontalInset = when {
+            maxWidth < 360.dp -> 12.dp
+            maxWidth < 600.dp -> 18.dp
+            else -> 28.dp
+        }
         Column(
             Modifier.fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(horizontal = 24.dp, vertical = 8.dp),
+                .padding(horizontal = horizontalInset, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
