@@ -629,7 +629,7 @@ jobs:
           mv "$APK" "build/app/outputs/flutter-apk/High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU.apk"
       - name: Upload standalone Android APK
         if: steps.ota_mode.outputs.mode == 'release' || steps.ota_mode.outputs.mode == 'validate'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU-APK
           path: ${{ runner.temp }}/hte_app/build/app/outputs/flutter-apk/High-Tech-Entertainment-v${{ steps.app_version.outputs.version }}-SU.apk
