@@ -164,7 +164,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          target_commitish: ${{ github.sha }}
           name: HTE Universe 4.0.5 — Production build 38
           body: |
             ## HTE Universe 4.0.5
@@ -235,6 +234,17 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+      - name: Install Android 37 compile platform for emulator tests
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager "platforms;android-37.0"
+          if [[ ! -e "$ANDROID_HOME/platforms/android-37" ]]; then
+            ln -s "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
+          fi
+          test -d "$ANDROID_HOME/platforms/android-37"
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.6.0'
