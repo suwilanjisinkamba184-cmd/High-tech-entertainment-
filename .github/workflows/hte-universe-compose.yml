@@ -3,16 +3,9 @@ name: HTE Universe — clean Compose rebuild
 on:
   push:
     branches: [main, rebuild/hte-universe-compose-clean]
-    paths:
-      - 'hte-universe-native/**'
-      - '.github/workflows/hte-universe-compose.yml'
-      - 'supabase/functions/elevenlabs-voice-token/**'
-      - 'supabase/config.toml'
+    tags: ['native-v*']
   pull_request:
     branches: [main, rebuild/hte-universe-compose-clean]
-    paths:
-      - 'hte-universe-native/**'
-      - '.github/workflows/hte-universe-compose.yml'
   workflow_dispatch:
 
 permissions:
@@ -147,17 +140,30 @@ jobs:
             hte-universe-native/app/build/outputs/apk/release/SHA256SUMS.txt
           if-no-files-found: error
       - name: Prepare permanent release assets
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: startsWith(github.ref, 'refs/tags/native-v')
         run: |
           set -euo pipefail
           mkdir -p ../release-assets
           cp app/build/outputs/apk/release/app-release.apk ../release-assets/HTE-Universe-4.0.5.apk
           (cd ../release-assets && sha256sum HTE-Universe-4.0.5.apk > SHA256SUMS.txt)
+      - name: Check whether this immutable release already exists
+        id: release_state
+        if: startsWith(github.ref, 'refs/tags/native-v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release already exists; it will be verified, never overwritten."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Publish HTE Universe 4.0.5 GitHub Release
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: startsWith(github.ref, 'refs/tags/native-v') && steps.release_state.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: native-v4.0.5-build38
+          tag_name: ${{ github.ref_name }}
           target_commitish: ${{ github.sha }}
           name: HTE Universe 4.0.5 — Production build 38
           body: |
@@ -180,7 +186,7 @@ jobs:
             ### Verification
             - Android compilation, unit tests and lint must pass.
             - Signed APK package/version and production certificate verification must pass.
-            - Emulator smoke tests target Android 8 (API 26) and Android 15 (API 35).
+            - Emulator smoke tests target Android 8 (API 26), Android 15 (API 35), and Android 17 (API 37).
             - Minimum supported Android version: Android 8 (API 26); target SDK: 37.
             - Physical-device tests remain separate from CI emulator verification.
           files: |
@@ -189,10 +195,10 @@ jobs:
           fail_on_unmatched_files: true
           make_latest: true
       - name: Verify public Android release was actually published
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: startsWith(github.ref, 'refs/tags/native-v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: native-v4.0.5-build38
+          RELEASE_TAG: ${{ github.ref_name }}
           APK_NAME: HTE-Universe-4.0.5.apk
         shell: bash
         run: |
@@ -222,7 +228,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api-level: [26, 35]
+        api-level: [26, 35, 37]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
