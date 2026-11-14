@@ -272,29 +272,13 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -wipe-data
           disable-animations: true
           script: |
-            set -eu
             adb wait-for-device
-            booted=false
-            for attempt in $(seq 1 120); do
-              state="$(adb get-state 2>/dev/null || true)"
-              boot_completed="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
-              if [ "$state" = "device" ] && [ "$boot_completed" = "1" ]; then
-                booted=true
-                break
-              fi
-              sleep 5
-            done
-            if [ "$booted" != "true" ]; then
-              adb devices -l
-              echo "::error::Android emulator did not reach a stable online and boot-complete state."
-              exit 1
-            fi
+            booted=false; for attempt in $(seq 1 120); do state="$(adb get-state 2>/dev/null || true)"; boot_completed="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r' || true)"; if [ "$state" = "device" ] && [ "$boot_completed" = "1" ]; then booted=true; break; fi; sleep 5; done; if [ "$booted" != "true" ]; then adb devices -l; echo "::error::Android emulator did not reach a stable online and boot-complete state."; exit 1; fi
             adb shell settings put global window_animation_scale 0
             adb shell settings put global transition_animation_scale 0
             adb shell settings put global animator_duration_scale 0
             adb shell pm list packages >/dev/null
-            cd hte-universe-native
-            gradle --no-daemon :app:connectedDebugAndroidTest --console=plain
+            cd hte-universe-native && gradle --no-daemon :app:connectedDebugAndroidTest --console=plain
       - name: Run Android 17 API 37 preview emulator smoke test
         if: matrix.api-level == 37
         shell: bash
