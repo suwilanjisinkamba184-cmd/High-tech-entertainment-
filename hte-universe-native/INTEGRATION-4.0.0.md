@@ -11,6 +11,9 @@ The canonical Android implementation is Kotlin + Jetpack Compose in this directo
 - Voice Companion obtains a short-lived ElevenLabs token from an authenticated Supabase Edge Function; provider credentials remain server-side. Voice choice is saved locally and playback/navigation/search tools return explicit success or failure.
 - Native update checks retain the native-release tag filter so a legacy Flutter APK cannot be offered to the Compose app.
 
+## Backend prerequisite
+Apply `supabase/migrations/20261114090000_hte_my_role_rpc.sql` to the existing Supabase project before enabling Founder Studio. It adds a narrowly scoped RPC that returns only the signed-in caller's role; it does not expose the user-role table. Existing row-level security remains the final authorization layer. Deploy the `elevenlabs-voice-token` Edge Function separately and configure the canonical `ELEVENLABS_API_KEY` secret in Supabase. No provider secret is committed to this repository.
+
 ## Compatibility and release safety
 - Package ID remains `com.hightechentertainment.app`; current version lineage remains 4.0.1 / code 33 (no downgrade from the prior candidate).
 - Existing production signing configuration and Supabase project are not rotated or modified by this source merge.
