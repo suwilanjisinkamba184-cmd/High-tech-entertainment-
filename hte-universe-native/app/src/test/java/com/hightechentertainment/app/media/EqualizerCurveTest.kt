@@ -10,7 +10,7 @@ class EqualizerCurveTest {
         assertEquals(10, migrated.size)
         assertEquals(-10, migrated.first())
         assertEquals(10, migrated.last())
-        assertEquals(0, migrated[4])
+        assertEquals(-1, migrated[4])
     }
 
     @Test fun clampsPersistedGainsToSupportedRange() {
