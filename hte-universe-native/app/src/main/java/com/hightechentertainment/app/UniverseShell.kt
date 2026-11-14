@@ -33,6 +33,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
 import androidx.media3.ui.PlayerView
@@ -709,6 +710,7 @@ private fun formatMediaTime(milliseconds: Long): String {
     return "%d:%02d".format(totalSeconds / 60L, totalSeconds % 60L)
 }
 
+@UnstableApi
 @Composable
 private fun VideoPlayerDialog(video: VideoDto, onDismiss: () -> Unit) {
     val context = LocalContext.current
