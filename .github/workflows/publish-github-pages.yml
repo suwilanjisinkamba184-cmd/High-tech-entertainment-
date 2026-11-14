@@ -23,7 +23,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - name: Assemble public website
         run: bash scripts/build-website.sh
       - name: Upload GitHub Pages artifact
