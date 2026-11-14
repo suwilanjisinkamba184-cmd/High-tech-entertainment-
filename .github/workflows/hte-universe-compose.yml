@@ -145,7 +145,7 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v4.0.4-build37
+          tag_name: native-v4.0.4-build37
           target_commitish: ${{ github.sha }}
           name: HTE Universe 4.0.4 — Production build 37
           body: |
@@ -178,7 +178,7 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: v4.0.4-build37
+          RELEASE_TAG: native-v4.0.4-build37
           APK_NAME: HTE-Universe-4.0.4.apk
         shell: bash
         run: |
