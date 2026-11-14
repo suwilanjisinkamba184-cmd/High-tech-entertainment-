@@ -638,7 +638,7 @@ jobs:
 
       - name: Publish public Android APK release
         if: github.event_name != 'pull_request' && steps.ota_mode.outputs.mode == 'release' && steps.android_signing.outputs.release_signing_ready == 'true'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ steps.app_version.outputs.version }}-SU
           name: High-Tech Entertainment v${{ steps.app_version.outputs.version }} SU
