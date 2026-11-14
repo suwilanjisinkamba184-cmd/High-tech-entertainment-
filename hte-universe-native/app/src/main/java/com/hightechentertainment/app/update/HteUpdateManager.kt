@@ -154,12 +154,17 @@ class HteUpdateManager(private val context: Context) {
     /** Reject stale, malformed or foreign APKs before invoking Android's package installer. */
     fun isInstallableUpdate(file: File): Boolean = runCatching {
         if (!file.isFile || file.length() <= 0L) return false
-        val archive = context.packageManager.getPackageArchiveInfo(file.absolutePath, 0) ?: return false
+        val signingFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
+        val archive = context.packageManager.getPackageArchiveInfo(file.absolutePath, signingFlags) ?: return false
         if (archive.packageName != context.packageName) return false
-        val installed = context.packageManager.getPackageInfo(context.packageName, 0)
+        val installed = context.packageManager.getPackageInfo(context.packageName, signingFlags)
         val archiveCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) archive.longVersionCode else archive.versionCode.toLong()
         val installedCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) installed.longVersionCode else installed.versionCode.toLong()
-        archiveCode > installedCode
+        val archiveSigners = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) archive.signingInfo?.apkContentsSigners else archive.signatures
+        val installedSigners = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) installed.signingInfo?.apkContentsSigners else installed.signatures
+        val sameSigningIdentity = !archiveSigners.isNullOrEmpty() && !installedSigners.isNullOrEmpty() &&
+            archiveSigners.map { it.toCharsString() }.toSet() == installedSigners.map { it.toCharsString() }.toSet()
+        archiveCode > installedCode && sameSigningIdentity
     }.getOrDefault(false)
     fun partialDownloadSize(): Long = File(updateDirectory, "HTE-Universe-update.apk.part").takeIf { it.exists() }?.length() ?: 0L
     fun clearPartialDownload() { File(updateDirectory, "HTE-Universe-update.apk.part").delete() }
