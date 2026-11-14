@@ -202,34 +202,65 @@ fun UniverseShell() {
     }
 
     Box(Modifier.fillMaxSize()) {
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+        // Use a navigation rail on wide/landscape windows and bottom navigation on phones.
+        val isWideLayout = maxWidth >= 600.dp
         Scaffold(
         containerColor = ShellBackground,
         bottomBar = {
-            NavigationBar(containerColor = ShellPanel, contentColor = ShellGold) {
-                UniverseTab.entries.forEach { tab ->
-                    val icon = when (tab) {
-                        UniverseTab.HOME -> Icons.Outlined.Home
-                        UniverseTab.DISCOVER -> Icons.Outlined.Explore
-                        UniverseTab.VIDEOS -> Icons.Outlined.VideoLibrary
-                        UniverseTab.LIBRARY -> Icons.Outlined.LibraryMusic
-                        UniverseTab.ACCOUNT -> Icons.Outlined.Person
-                    }
-                    NavigationBarItem(
-                        selected = selectedTab == tab,
-                        onClick = { selectedTab = tab },
-                        icon = { Icon(icon, contentDescription = tab.label) },
-                        label = { Text(tab.label, fontSize = 10.sp) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = ShellGold, selectedTextColor = ShellGold,
-                            unselectedIconColor = ShellMuted, unselectedTextColor = ShellMuted,
-                            indicatorColor = ShellGold.copy(alpha = .12f)
+            if (!isWideLayout) {
+                NavigationBar(containerColor = ShellPanel, contentColor = ShellGold) {
+                    UniverseTab.entries.forEach { tab ->
+                        val icon = when (tab) {
+                            UniverseTab.HOME -> Icons.Outlined.Home
+                            UniverseTab.DISCOVER -> Icons.Outlined.Explore
+                            UniverseTab.VIDEOS -> Icons.Outlined.VideoLibrary
+                            UniverseTab.LIBRARY -> Icons.Outlined.LibraryMusic
+                            UniverseTab.ACCOUNT -> Icons.Outlined.Person
+                        }
+                        NavigationBarItem(
+                            selected = selectedTab == tab,
+                            onClick = { selectedTab = tab },
+                            icon = { Icon(icon, contentDescription = tab.label) },
+                            label = { Text(tab.label, fontSize = 10.sp) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = ShellGold, selectedTextColor = ShellGold,
+                                unselectedIconColor = ShellMuted, unselectedTextColor = ShellMuted,
+                                indicatorColor = ShellGold.copy(alpha = .12f)
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
     ) { insets ->
-        Column(Modifier.fillMaxSize().padding(insets)) {
+        Row(Modifier.fillMaxSize()) {
+            if (isWideLayout) {
+                NavigationRail(containerColor = ShellPanel, contentColor = ShellGold) {
+                    UniverseTab.entries.forEach { tab ->
+                        val icon = when (tab) {
+                            UniverseTab.HOME -> Icons.Outlined.Home
+                            UniverseTab.DISCOVER -> Icons.Outlined.Explore
+                            UniverseTab.VIDEOS -> Icons.Outlined.VideoLibrary
+                            UniverseTab.LIBRARY -> Icons.Outlined.LibraryMusic
+                            UniverseTab.ACCOUNT -> Icons.Outlined.Person
+                        }
+                        NavigationRailItem(
+                            selected = selectedTab == tab,
+                            onClick = { selectedTab = tab },
+                            icon = { Icon(icon, contentDescription = tab.label) },
+                            label = { Text(tab.label, fontSize = 9.sp) },
+                            alwaysShowLabel = true,
+                            colors = NavigationRailItemDefaults.colors(
+                                selectedIconColor = ShellGold, selectedTextColor = ShellGold,
+                                unselectedIconColor = ShellMuted, unselectedTextColor = ShellMuted,
+                                indicatorColor = ShellGold.copy(alpha = .12f)
+                            )
+                        )
+                    }
+                }
+            }
+            Column(Modifier.weight(1f).fillMaxHeight().padding(insets)) {
             UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true })
             when (selectedTab) {
                 UniverseTab.HOME -> HomeScreen(
@@ -275,14 +306,14 @@ fun UniverseShell() {
                 UniverseTab.ACCOUNT -> AccountScreen(configured = configured, onSettingsChanged = { settingsRevision++ })
             }
         }
-    }
+        }
         playerUiController?.let { uiController ->
             PlayerHost(
                 controller = uiController,
                 expanded = playerExpanded,
                 onExpandedChange = { playerExpanded = it },
                 modifier = Modifier.align(Alignment.BottomCenter),
-                collapsedBottomInset = 80.dp,
+                collapsedBottomInset = if (isWideLayout) 12.dp else 80.dp,
                 artwork = { url, artworkModifier ->
                     if (!url.isNullOrBlank()) {
                         AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
@@ -293,6 +324,7 @@ fun UniverseShell() {
                     }
                 },
             )
+        }
         }
     }
 
