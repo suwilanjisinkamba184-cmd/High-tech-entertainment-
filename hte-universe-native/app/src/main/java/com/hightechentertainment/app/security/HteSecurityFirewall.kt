@@ -18,24 +18,29 @@ object HteSecurityFirewall {
     const val EXPECTED_PACKAGE_NAME = "com.hightechentertainment.app"
     const val TRUSTED_CERT_SHA256 = "6bfa59139e569475fd1843a59216f50cc5bb407df5cf48b8007cc96073adaffa"
 
-    fun verifyAppIntegrity(context: Context): Boolean = runCatching {
-        if (context.packageName != EXPECTED_PACKAGE_NAME) return false
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            PackageManager.GET_SIGNING_CERTIFICATES
-        } else {
-            @Suppress("DEPRECATION")
-            PackageManager.GET_SIGNATURES
-        }
-        val packageInfo = context.packageManager.getPackageInfo(context.packageName, flags)
-        val signers: Array<Signature>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            packageInfo.signingInfo?.apkContentsSigners
-        } else {
-            @Suppress("DEPRECATION")
-            packageInfo.signatures
-        }
-        if (signers == null || signers.size != 1) return false
-        isTrustedFingerprint(sha256Fingerprint(signers.single().toByteArray()))
-    }.getOrDefault(false)
+    fun verifyAppIntegrity(context: Context): Boolean {
+        return runCatching {
+            if (context.packageName != EXPECTED_PACKAGE_NAME) {
+                false
+            } else {
+                val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    PackageManager.GET_SIGNING_CERTIFICATES
+                } else {
+                    @Suppress("DEPRECATION")
+                    PackageManager.GET_SIGNATURES
+                }
+                val packageInfo = context.packageManager.getPackageInfo(context.packageName, flags)
+                val signers: Array<Signature>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    packageInfo.signingInfo?.apkContentsSigners
+                } else {
+                    @Suppress("DEPRECATION")
+                    packageInfo.signatures
+                }
+                signers != null && signers.size == 1 &&
+                    isTrustedFingerprint(sha256Fingerprint(signers.single().toByteArray()))
+            }
+        }.getOrDefault(false)
+    }
 
     internal fun isTrustedFingerprint(value: String): Boolean =
         value.equals(TRUSTED_CERT_SHA256, ignoreCase = true)
