@@ -1,0 +1,32 @@
+name: Apply HTE Universe Compose UI corrections
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: hte-compose-ui-patch-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out requested feature branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+      - name: Apply verified Compose UI source patch
+        run: python3 scripts/apply_hte_compose_ui_fixes.py
+      - name: Commit corrected application sources
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add hte-universe-native/app/src/main/java/com/hightechentertainment/app/SettingsHub.kt
+          git add hte-universe-native/app/src/main/java/com/hightechentertainment/app/MemberCenter.kt
+          git add hte-universe-native/app/src/main/java/com/hightechentertainment/app/UniverseShell.kt
+          git add hte-universe-native/app/src/main/java/com/hightechentertainment/app/player/HtePlayer.kt
+          git add hte-universe-native/app/src/main/res/drawable/ic_google_g.xml
+          git add hte-universe-native/app/build.gradle.kts
+          git rm .github/workflows/apply-hte-compose-ui-fixes.yml scripts/apply_hte_compose_ui_fixes.py
+          git commit -m "Fix HTE Universe Compose UI integration"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
