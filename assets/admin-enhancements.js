@@ -1,7 +1,6 @@
 (()=>{'use strict';
-const cfg=window.HTE_SUPABASE_CONFIG||{};
-if(!window.supabase||!cfg.url||!cfg.publishableKey)return;
-const db=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+const db=window.HTE_SUPABASE_CLIENT;
+if(!db)return;
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let modal;
 async function founder(){const {data,error}=await db.auth.getSession();if(error)throw error;const user=data.session?.user;if(!user)throw Error('Founder sign-in required.');const {data:isAdmin,error:roleError}=await db.rpc('hte_is_admin');if(roleError)throw roleError;if(isAdmin!==true)throw Error('Founder access required.');return user}
