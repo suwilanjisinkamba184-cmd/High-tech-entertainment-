@@ -127,7 +127,7 @@ fun UniverseShell() {
     LaunchedEffect(mediaController, streamingQuality) {
         val player = mediaController ?: return@LaunchedEffect
         val maxAudioBitrate = when (streamingQuality) {
-            "DATA SAVER" -> 96_000
+            "DATA SAVER" -> 128_000
             "NORMAL" -> 160_000
             "HIGH" -> 320_000
             else -> Int.MAX_VALUE
@@ -923,10 +923,11 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     var videoDuration by remember { mutableLongStateOf(0L) }
     var isSeeking by remember { mutableStateOf(false) }
     var seekFraction by remember { mutableStateOf(0f) }
+    val isSeekingNow by rememberUpdatedState(isSeeking)
     LaunchedEffect(player) {
         while (true) {
             videoPlaying = player.isPlaying
-            if (!isSeeking) videoPosition = player.currentPosition.coerceAtLeast(0L)
+            if (!isSeekingNow) videoPosition = player.currentPosition.coerceAtLeast(0L)
             videoDuration = player.duration.takeIf { it != C.TIME_UNSET }?.coerceAtLeast(0L) ?: 0L
             delay(400)
         }
