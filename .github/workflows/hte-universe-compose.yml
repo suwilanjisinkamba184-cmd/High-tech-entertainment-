@@ -108,7 +108,7 @@ jobs:
           sha256sum "$APK" | tee app/build/outputs/apk/release/SHA256SUMS.txt
       - name: Confirm certificate matches previous public release
         env:
-          PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/v2.2.10-SU/High-Tech-Entertainment-v2.2.10-SU.apk
+          PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/v4.0.3-build36/HTE-Universe-4.0.3.apk
         run: |
           set -euo pipefail
           APK_SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
@@ -120,12 +120,12 @@ jobs:
             exit 1
           fi
           if [[ "$OLD_CERT" != "$NEW_CERT" ]]; then
-            echo "::error::Production signing certificate differs from v2.2.10-SU. Refusing to publish."
+            echo "::error::Production signing certificate differs from the previous public 4.0.3 build 36. Refusing to publish."
             echo "Previous release certificate SHA-256: $OLD_CERT"
             echo "New release certificate SHA-256:      $NEW_CERT"
             exit 1
           fi
-          echo "Verified: release certificate matches v2.2.10-SU."
+          echo "Verified: release certificate matches 4.0.3 build 36."
       - name: Upload signed production APK
         uses: actions/upload-artifact@v7
         with:
@@ -139,17 +139,17 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ../release-assets
-          cp app/build/outputs/apk/release/app-release.apk ../release-assets/HTE-Universe-4.0.3.apk
-          (cd ../release-assets && sha256sum HTE-Universe-4.0.3.apk > SHA256SUMS.txt)
-      - name: Publish HTE Universe 4.0.3 GitHub Release
+          cp app/build/outputs/apk/release/app-release.apk ../release-assets/HTE-Universe-4.0.4.apk
+          (cd ../release-assets && sha256sum HTE-Universe-4.0.4.apk > SHA256SUMS.txt)
+      - name: Publish HTE Universe 4.0.4 GitHub Release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v4.0.3-build36
+          tag_name: v4.0.4-build37
           target_commitish: ${{ github.sha }}
-          name: HTE Universe 4.0.3 — Production build 36
+          name: HTE Universe 4.0.4 — Production build 37
           body: |
-            ## HTE Universe 4.0.3
+            ## HTE Universe 4.0.4
 
             Official signed Android release from the verified `main` build.
 
@@ -168,9 +168,9 @@ jobs:
             - Android compilation, unit tests and lint passed.
             - Signed production APK package/version verification passed.
             - Production signing certificate matched the previous public release.
-            - Version: 4.0.3 (version code 36); minimum Android 8 (API 26).
+            - Version: 4.0.4 (version code 37); minimum Android 8 (API 26).
           files: |
-            release-assets/HTE-Universe-4.0.3.apk
+            release-assets/HTE-Universe-4.0.4.apk
             release-assets/SHA256SUMS.txt
           fail_on_unmatched_files: true
           make_latest: true
@@ -178,8 +178,8 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: v4.0.3-build36
-          APK_NAME: HTE-Universe-4.0.3.apk
+          RELEASE_TAG: v4.0.4-build37
+          APK_NAME: HTE-Universe-4.0.4.apk
         shell: bash
         run: |
           set -euo pipefail

@@ -92,12 +92,23 @@ fun UniverseShell() {
     val playerUiState = playerUiController?.state?.collectAsState(initial = PlayerUiState())?.value ?: PlayerUiState()
     val playerHasTrack = playerUiState.track != null
     DisposableEffect(context) {
-        HtePlaybackController.connect(
+        var effectActive = true
+        val connectionFuture = HtePlaybackController.connect(
             context,
-            onConnected = { mediaController = it },
-            onError = { error -> Toast.makeText(context, error.message?.take(120) ?: "The background player could not start.", Toast.LENGTH_LONG).show() },
+            onConnected = { controller -> if (effectActive) mediaController = controller },
+            onError = { error ->
+                if (effectActive) Toast.makeText(
+                    context,
+                    error.message?.take(120) ?: "The background player could not start.",
+                    Toast.LENGTH_LONG,
+                ).show()
+            },
         )
-        onDispose { }
+        onDispose {
+            effectActive = false
+            mediaController = null
+            HtePlaybackController.release(connectionFuture)
+        }
     }
     DisposableEffect(playerUiController) {
         onDispose { playerUiController?.release() }

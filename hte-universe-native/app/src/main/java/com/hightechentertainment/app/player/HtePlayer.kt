@@ -9,6 +9,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -54,6 +56,7 @@ data class PlayerUiState(
     val track: PlayerTrack? = null, val isPlaying: Boolean = false, val isBuffering: Boolean = false,
     val positionMs: Long = 0L, val durationMs: Long = 0L, val shuffle: Boolean = false,
     val repeat: HteRepeatMode = HteRepeatMode.OFF, val amplitudes: List<Float>? = null,
+    val playbackError: Boolean = false,
 )
 interface PlayerController {
     val state: StateFlow<PlayerUiState>
@@ -61,6 +64,7 @@ interface PlayerController {
     fun next()
     fun previous()
     fun seekTo(positionMs: Long)
+    fun retry()
     fun toggleShuffle()
     fun cycleRepeat()
 }
@@ -101,6 +105,7 @@ class Media3PlayerController(private val player: Player, scope: CoroutineScope) 
             isBuffering = player.playbackState == Player.STATE_BUFFERING,
             positionMs = player.currentPosition.coerceAtLeast(0L),
             durationMs = player.duration.takeIf { it != C.TIME_UNSET }?.coerceAtLeast(0L) ?: 0L,
+            playbackError = player.playerError != null,
             shuffle = player.shuffleModeEnabled,
             repeat = when (player.repeatMode) { Player.REPEAT_MODE_ONE -> HteRepeatMode.ONE; Player.REPEAT_MODE_ALL -> HteRepeatMode.ALL; else -> HteRepeatMode.OFF },
             amplitudes = waveform?.takeIf { it.first == item?.mediaId }?.second,
@@ -110,6 +115,12 @@ class Media3PlayerController(private val player: Player, scope: CoroutineScope) 
     override fun next() { if (player.hasNextMediaItem()) player.seekToNextMediaItem() }
     override fun previous() { if (player.hasPreviousMediaItem()) player.seekToPreviousMediaItem() }
     override fun seekTo(positionMs: Long) { player.seekTo(positionMs.coerceAtLeast(0L)) }
+    override fun retry() {
+        if (player.currentMediaItem != null) {
+            player.prepare()
+            player.play()
+        }
+    }
     override fun toggleShuffle() { player.shuffleModeEnabled = !player.shuffleModeEnabled }
     override fun cycleRepeat() {
         player.repeatMode = when (player.repeatMode) { Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL; Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE; else -> Player.REPEAT_MODE_OFF }
@@ -172,19 +183,36 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
     val progress = if (state.durationMs > 0) (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f) else 0f
     val bars = state.amplitudes ?: remember(track.id) { placeholderWaveform(track.id) }
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val artworkMaxHeight = maxHeight * .40f
-        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 24.dp, vertical = 8.dp)) {
+        val artworkMaxHeight = maxHeight * .34f
+        Column(
+            Modifier.fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onCollapse) { Icon(Icons.Rounded.KeyboardArrowDown, "Close player", tint = HteColors.OnDark, modifier = Modifier.size(32.dp)) }
             Text("NOW PLAYING", style = MaterialTheme.typography.labelLarge, color = HteColors.Silver, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(Modifier.size(48.dp))
         }
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(4.dp))
         artwork(track.artworkUrl, Modifier.fillMaxWidth().heightIn(max = artworkMaxHeight).aspectRatio(1f).graphicsLayer { scaleX = scale; scaleY = scale }.clip(MaterialTheme.shapes.large).background(HteColors.Panel))
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(4.dp))
         Text(track.title, style = MaterialTheme.typography.headlineMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(track.artist, style = MaterialTheme.typography.bodyLarge, color = HteColors.Silver, maxLines = 1)
-        Spacer(Modifier.height(18.dp))
+        if (state.playbackError) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Playback interrupted. Check your connection and try again.",
+                    color = HteColors.Muted,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = controller::retry) { Text("Retry", color = HteColors.Gold) }
+            }
+        }
         WaveformScrubber(progress, bars, HteColors.Gold, { if (state.durationMs > 0) controller.seekTo((it * state.durationMs).toLong()) }, Modifier.fillMaxWidth())
         Row(Modifier.fillMaxWidth()) {
             Text(formatTime(state.positionMs), color = HteColors.Muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
@@ -201,7 +229,7 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
             IconButton(onClick = controller::next, modifier = Modifier.size(54.dp)) { Icon(Icons.Rounded.SkipNext, "Next", tint = HteColors.OnDark, modifier = Modifier.size(34.dp)) }
             IconButton(onClick = controller::cycleRepeat) { Icon(if (state.repeat == HteRepeatMode.ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, "Repeat " + state.repeat.name.lowercase(), tint = if (state.repeat == HteRepeatMode.OFF) HteColors.Muted else HteColors.Gold) }
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
         }
     }
 }
