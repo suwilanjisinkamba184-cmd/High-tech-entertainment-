@@ -1,7 +1,6 @@
 (()=>{'use strict';
-const $=s=>document.querySelector(s),config=window.HTE_SUPABASE_CONFIG||{};
-if(!window.supabase||!config.url||!config.publishableKey)return;
-const db=window.supabase.createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});
+const $=s=>document.querySelector(s),db=window.HTE_SUPABASE_CLIENT;
+if(!db)return;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function founder(){const {data,error}=await db.auth.getSession();if(error)throw error;const user=data.session?.user;if(!user)throw Error('Founder sign-in required.');const {data:isAdmin,error:roleError}=await db.rpc('hte_is_admin');if(roleError)throw roleError;if(isAdmin!==true)throw Error('Founder access required.');return user}
 async function refresh(){const body=$('#admin-videos');if(!body)return;try{await founder();const {data,error}=await db.from('videos').select('*').order('created_at',{ascending:false});if(error)throw error;body.innerHTML=data?.length?data.map(v=>'<tr><td>'+esc(v.title)+'</td><td>'+esc(v.artist||'—')+'</td><td>'+(v.is_published?'Published':'Draft')+'</td><td><div class="table-actions"><button class="btn" data-video-toggle="'+esc(v.id)+'" data-published="'+(!v.is_published)+'">'+(v.is_published?'Unpublish':'Publish')+'</button><button class="btn danger" data-video-delete="'+esc(v.id)+'" data-url="'+esc(v.video_url)+'">Delete</button></div></td></tr>').join(''):'<tr><td colspan="4">No videos uploaded yet.</td></tr>'}catch(e){body.innerHTML='<tr><td colspan="4">'+esc(e.message||'Could not load videos')+'</td></tr>'}}
