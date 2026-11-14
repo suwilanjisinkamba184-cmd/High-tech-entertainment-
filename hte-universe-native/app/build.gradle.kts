@@ -36,7 +36,7 @@ android {
     compileSdk = 37
     defaultConfig {
         applicationId = "com.hightechentertainment.app"
-        minSdk = 26
+        minSdk = 25
         targetSdk = 37
         versionCode = 39
         versionName = "4.0.5"
