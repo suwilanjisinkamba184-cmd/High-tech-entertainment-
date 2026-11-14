@@ -1,5 +1,8 @@
 project_id = "wqrxacjbsldbnoekbkbf"
 
+[functions.elevenlabs-voice-token]
+verify_jwt = true
+
 [functions.booking-notification]
 verify_jwt = false
 

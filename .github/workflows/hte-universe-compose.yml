@@ -1,0 +1,147 @@
+name: HTE Universe — clean Compose rebuild
+
+on:
+  push:
+    branches: [main, rebuild/hte-universe-compose-clean]
+    paths:
+      - 'hte-universe-native/**'
+      - '.github/workflows/hte-universe-compose.yml'
+      - 'supabase/functions/elevenlabs-voice-token/**'
+      - 'supabase/config.toml'
+  pull_request:
+    branches: [main, rebuild/hte-universe-compose-clean]
+    paths:
+      - 'hte-universe-native/**'
+      - '.github/workflows/hte-universe-compose.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hte-universe-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hte-universe-native
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+      - name: Install Android SDK 37
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+          test -d "$ANDROID_HOME/platforms/android-37.0"
+          # Android Gradle Plugin resolves compileSdk 37 as android-37 while the
+          # preview SDK Manager package is installed under android-37.0.
+          if [[ ! -e "$ANDROID_HOME/platforms/android-37" ]]; then
+            ln -s "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
+          fi
+          test -d "$ANDROID_HOME/platforms/android-37"
+          test -x "$ANDROID_HOME/build-tools/37.0.0/apksigner"
+          test -x "$ANDROID_HOME/build-tools/37.0.0/aapt"
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '9.6.0'
+      - name: Validate Supabase runtime configuration
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_URL" || { echo "::error::SUPABASE_URL secret is required"; exit 1; }
+          test -n "$SUPABASE_PUBLISHABLE_KEY" || { echo "::error::SUPABASE_PUBLISHABLE_KEY secret is required"; exit 1; }
+          case "$SUPABASE_URL" in
+            https://*) ;;
+            *) echo "::error::SUPABASE_URL must use HTTPS"; exit 1 ;;
+          esac
+      - name: Compile clean Compose application
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Run unit tests
+        run: gradle --no-daemon :app:testDebugUnitTest
+      - name: Run Android lint for debug and release
+        run: |
+          set +e
+          gradle --no-daemon :app:lintDebug :app:lintRelease --console=plain
+          lint_status=$?
+          find app/build -type f -name 'lint-results-*.txt' -print -exec cat {} \;
+          exit "$lint_status"
+      - name: Validate existing production signing configuration
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANDROID_KEY_ALIAS"
+          test -n "$ANDROID_KEY_PASSWORD"
+          test -n "$ANDROID_STORE_PASSWORD"
+      - name: Decode existing production keystore
+        run: |
+          set -euo pipefail
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hte-release.jks"
+          test -s "$RUNNER_TEMP/hte-release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/hte-release.jks" >> "$GITHUB_ENV"
+      - name: Assemble signed production APK
+        run: gradle --no-daemon :app:assembleRelease
+      - name: Verify APK package and signing certificate
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose --print-certs "$APK"
+          BADGING=$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK")
+          EXPECTED_VERSION_CODE=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' app/build.gradle.kts | head -n1)
+          EXPECTED_VERSION_NAME=$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts | head -n1)
+          test -n "$EXPECTED_VERSION_CODE"
+          test -n "$EXPECTED_VERSION_NAME"
+          echo "Expected app version: $EXPECTED_VERSION_NAME ($EXPECTED_VERSION_CODE)"
+          echo "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='$EXPECTED_VERSION_CODE' versionName='$EXPECTED_VERSION_NAME'"
+          sha256sum "$APK" | tee app/build/outputs/apk/release/SHA256SUMS.txt
+      - name: Confirm certificate matches previous public release
+        env:
+          PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/v2.2.10-SU/High-Tech-Entertainment-v2.2.10-SU.apk
+        run: |
+          set -euo pipefail
+          APK_SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
+          curl -fsSL "$PREVIOUS_APK_URL" -o "$RUNNER_TEMP/previous-hte-release.apk"
+          OLD_CERT="$("$APK_SIGNER" verify --print-certs "$RUNNER_TEMP/previous-hte-release.apk" | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+          NEW_CERT="$("$APK_SIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+          if [[ -z "$OLD_CERT" || -z "$NEW_CERT" ]]; then
+            echo "::error::Could not extract a SHA-256 signing certificate fingerprint from one of the APKs."
+            exit 1
+          fi
+          if [[ "$OLD_CERT" != "$NEW_CERT" ]]; then
+            echo "::error::Production signing certificate differs from v2.2.10-SU. Refusing to publish."
+            echo "Previous release certificate SHA-256: $OLD_CERT"
+            echo "New release certificate SHA-256:      $NEW_CERT"
+            exit 1
+          fi
+          echo "Verified: release certificate matches v2.2.10-SU."
+      - name: Upload signed production APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: hte-universe-release-signed
+          path: |
+            hte-universe-native/app/build/outputs/apk/release/*.apk
+            hte-universe-native/app/build/outputs/apk/release/SHA256SUMS.txt
+          if-no-files-found: error
+      - name: Remove temporary signing keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/hte-release.jks"
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: hte-universe-compose-debug
+          path: hte-universe-native/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
