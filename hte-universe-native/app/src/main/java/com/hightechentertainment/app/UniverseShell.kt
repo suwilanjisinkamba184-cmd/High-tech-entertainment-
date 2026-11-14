@@ -328,6 +328,8 @@ fun UniverseShell() {
         }
     }
 
+    }
+
     selectedVideo?.let { VideoPlayerDialog(video = it, onDismiss = { selectedVideo = null }) }
     if (showVoiceAssistant) {
         VoiceAssistantDialog(
