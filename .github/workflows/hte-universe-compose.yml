@@ -255,9 +255,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          yes | sdkmanager --licenses
           sdkmanager "emulator" "system-images;android-37.0;google_apis;x86_64"
-          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force --name hte-api37 --package "system-images;android-37.0;google_apis;x86_64" --device "pixel_2"
+          echo no | avdmanager create avd --force --name hte-api37 --package "system-images;android-37.0;google_apis;x86_64" --device "pixel_2"
           "$ANDROID_HOME/emulator/emulator" -avd hte-api37 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data > "$RUNNER_TEMP/emulator-api37.log" 2>&1 &
           adb wait-for-device
           booted=false
