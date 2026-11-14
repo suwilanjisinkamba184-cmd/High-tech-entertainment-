@@ -82,7 +82,7 @@ dependencies {
     implementation("com.google.android.libraries.identity.googleid:googleid:1.2.1")
 
     // Stable Compose BOM line for the API 37 build.
-    val composeBom = platform("androidx.compose:compose-bom:2026.06.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
     implementation("androidx.activity:activity-compose:1.13.0")
