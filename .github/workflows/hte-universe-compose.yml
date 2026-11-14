@@ -124,6 +124,14 @@ jobs:
             echo "::error::Could not extract a SHA-256 signing certificate fingerprint from one of the APKs."
             exit 1
           fi
+          TRUSTED_CERT_SHA256="6bfa59139e569475fd1843a59216f50cc5bb407df5cf48b8007cc96073adaffa"
+          RUNTIME_CERT_SHA256=$(sed -nE 's/^[[:space:]]*const val TRUSTED_CERT_SHA256 = "([0-9a-f]{64})".*/\1/p' app/src/main/java/com/hightechentertainment/app/security/HteSecurityFirewall.kt | head -n1)
+          if [[ "$OLD_CERT" != "$TRUSTED_CERT_SHA256" || "$RUNTIME_CERT_SHA256" != "$TRUSTED_CERT_SHA256" ]]; then
+            echo "::error::The pinned runtime certificate fingerprint does not match the actual previous public production APK."
+            echo "Previous release certificate SHA-256: $OLD_CERT"
+            echo "Runtime certificate pin:                $RUNTIME_CERT_SHA256"
+            exit 1
+          fi
           if [[ "$OLD_CERT" != "$NEW_CERT" ]]; then
             echo "::error::Production signing certificate differs from the previous public 4.0.5 build 38. Refusing to publish."
             echo "Previous release certificate SHA-256: $OLD_CERT"
@@ -147,7 +155,7 @@ jobs:
           VERSION_NAME=$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts | head -n1)
           VERSION_CODE=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' app/build.gradle.kts | head -n1)
           test "$VERSION_NAME" = "4.0.6"
-          test "$VERSION_CODE" = "40"
+          test "$VERSION_CODE" = "39"
           test "$GITHUB_REF_NAME" = "native-v${VERSION_NAME}-build${VERSION_CODE}"
           APK_NAME="HTE-Universe-${VERSION_NAME}.apk"
           cp app/build/outputs/apk/release/app-release.apk "../release-assets/$APK_NAME"
@@ -181,13 +189,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: HTE Universe 4.0.6 — Production build 40
+          name: HTE Universe 4.0.6 — Production build 39
           body: |
             ## HTE Universe 4.0.6
 
             Official signed Android release from the verified `main` build.
 
-            Production version: `4.0.6` (version code `40`).
+            Production version: `4.0.6` (version code `39`).
 
             ### Changes
             - Adaptive settings layout for compact phones, tablets and wide screens.
@@ -251,7 +259,7 @@ jobs:
           AAPT="$ANDROID_HOME/build-tools/37.0.0/aapt"
           "$APK_SIGNER" verify --verbose --print-certs "$RELEASE_DIR/$APK_NAME"
           PUBLISHED_BADGING="$("$AAPT" dump badging "$RELEASE_DIR/$APK_NAME")"
-          echo "$PUBLISHED_BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='40' versionName='4.0.6'"
+          echo "$PUBLISHED_BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='39' versionName='4.0.6'"
           LOCAL_CERT="$("$APK_SIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
           PUBLISHED_CERT="$("$APK_SIGNER" verify --print-certs "$RELEASE_DIR/$APK_NAME" | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
           test -n "$LOCAL_CERT" && test "$LOCAL_CERT" = "$PUBLISHED_CERT"
@@ -265,6 +273,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         api-level: [25, 26, 35, 37]
     steps:
@@ -294,13 +303,24 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_2
-          cores: 2
-          ram-size: 3072M
+          cores: 4
+          ram-size: 4096M
           heap-size: 512M
           emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -wipe-data
           disable-animations: true
-          script: bash .github/scripts/android-emulator-smoke.sh "${{ matrix.api-level }}"
+          script: |
+            set -euo pipefail
+            services_ready=false
+            for attempt in $(seq 1 30); do
+              if adb shell pm list packages >/dev/null 2>&1 && adb shell am get-current-user >/dev/null 2>&1; then
+                services_ready=true
+                break
+              fi
+              sleep 2
+            done
+            test "$services_ready" = "true" || { echo "::error::Android system package/activity services did not become ready."; exit 1; }
+            bash .github/scripts/android-emulator-smoke.sh "${{ matrix.api-level }}"
       - name: Run Android 17 API 37 preview emulator smoke test
         if: matrix.api-level == 37
         shell: bash
@@ -309,7 +329,7 @@ jobs:
           sdkmanager "emulator" "system-images;android-37.0;google_apis;x86_64"
           # Avoid avdmanager device-catalogue lookup: preview images may omit devices.xml.
           echo no | avdmanager create avd --force --name hte-api37 --package "system-images;android-37.0;google_apis;x86_64" --sdcard 512M
-          "$ANDROID_HOME/emulator/emulator" -avd hte-api37 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data -memory 3072 -cores 2 > "$RUNNER_TEMP/emulator-api37.log" 2>&1 &
+          "$ANDROID_HOME/emulator/emulator" -avd hte-api37 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data -memory 4096 -cores 4 > "$RUNNER_TEMP/emulator-api37.log" 2>&1 &
           adb wait-for-device
           booted=false
           for attempt in $(seq 1 120); do
@@ -327,5 +347,14 @@ jobs:
           adb shell settings put global window_animation_scale 0
           adb shell settings put global transition_animation_scale 0
           adb shell settings put global animator_duration_scale 0
+          services_ready=false
+          for attempt in $(seq 1 30); do
+            if adb shell pm list packages >/dev/null 2>&1 && adb shell am get-current-user >/dev/null 2>&1; then
+              services_ready=true
+              break
+            fi
+            sleep 2
+          done
+          test "$services_ready" = "true" || { echo "::error::Android API 37 package/activity services did not become ready."; exit 1; }
           cd hte-universe-native
           gradle --no-daemon :app:connectedDebugAndroidTest --console=plain

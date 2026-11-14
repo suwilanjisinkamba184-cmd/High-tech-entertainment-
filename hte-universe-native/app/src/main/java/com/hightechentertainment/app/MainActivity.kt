@@ -44,6 +44,7 @@ import kotlinx.coroutines.delay
 import io.github.jan.supabase.auth.handleDeeplinks
 import com.hightechentertainment.app.data.SupabaseClientProvider
 import com.hightechentertainment.app.media.HtePlaybackController
+import com.hightechentertainment.app.security.HteSecurityFirewall
 import com.hightechentertainment.app.ui.design.HteTheme
 
 private val Obsidian = Color(0xFF08090B)
@@ -57,6 +58,12 @@ internal const val HTE_STARTUP_TAGLINE = "Music. Beats. Production. Beyond."
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!BuildConfig.DEBUG && !HteSecurityFirewall.verifyAppIntegrity(this)) {
+            Log.e("HTESecurity", "Production application signature verification failed.")
+            Toast.makeText(this, "This HTE Universe installation could not be verified.", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
         SupabaseClientProvider.initialize(applicationContext)
         handleSupabaseIntent(intent)
         WindowCompat.getInsetsController(window, window.decorView).apply {
