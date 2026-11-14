@@ -120,7 +120,11 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
         val info = updateInfo ?: return
         val url = info.downloadUrl ?: run { updateError = "This release does not include an APK installer."; return }
         val connectivity = context.getSystemService(ConnectivityManager::class.java)
-        if (updateNetworkPolicy == "WIFI_ONLY" && connectivity?.isActiveNetworkMetered == true) {
+        val selectedNetworkPolicy = updateNetworkPolicy
+        val canDownload = {
+            allowsUpdateDownload(selectedNetworkPolicy, connectivity?.isActiveNetworkMetered == true)
+        }
+        if (!canDownload()) {
             updateError = "Update downloads are set to Wi-Fi only. Connect to Wi-Fi or allow mobile data in Settings."
             return
         }
@@ -129,7 +133,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
             isDownloading = true
             updateError = null
             try {
-                val file = updater.downloadUpdate(url, info.downloadSize, info.sha256) { value -> android.os.Handler(android.os.Looper.getMainLooper()).post { progress = value } }
+                val file = updater.downloadUpdate(url, info.downloadSize, info.sha256, canDownload = canDownload) { value -> android.os.Handler(android.os.Looper.getMainLooper()).post { progress = value } }
                 check(updater.isInstallableUpdate(file)) { "The downloaded APK is not a newer HTE Universe build for this app. It was rejected." }
                 downloadedApk = file
                 statusMessage = "Update downloaded and package identity verified. Android will verify the signing certificate during installation."

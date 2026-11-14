@@ -144,8 +144,13 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ../release-assets
-          cp app/build/outputs/apk/release/app-release.apk ../release-assets/HTE-Universe-4.0.5.apk
-          (cd ../release-assets && sha256sum HTE-Universe-4.0.5.apk > SHA256SUMS.txt)
+          VERSION_NAME=$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts | head -n1)
+          VERSION_CODE=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' app/build.gradle.kts | head -n1)
+          test "$VERSION_NAME" = "4.0.6"
+          test "$VERSION_CODE" = "39"
+          APK_NAME="HTE-Universe-${VERSION_NAME}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "../release-assets/$APK_NAME"
+          (cd ../release-assets && sha256sum "$APK_NAME" > SHA256SUMS.txt)
       - name: Check whether this immutable release already exists
         id: release_state
         if: startsWith(github.ref, 'refs/tags/native-v')
@@ -159,22 +164,27 @@ jobs:
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
-      - name: Publish HTE Universe 4.0.5 GitHub Release
+      - name: Publish HTE Universe 4.0.6 GitHub Release
         if: startsWith(github.ref, 'refs/tags/native-v') && steps.release_state.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: HTE Universe 4.0.5 — Production build 38
+          name: HTE Universe 4.0.6 — Production build 39
           body: |
-            ## HTE Universe 4.0.5
+            ## HTE Universe 4.0.6
 
             Official signed Android release from the verified `main` build.
+
+            Production version: `4.0.6` (version code `39`).
 
             ### Changes
             - Adaptive settings layout for compact phones, tablets and wide screens.
             - New ten-band studio equalizer curve mapped to each device's supported audio-effect bands.
             - Migration of saved five-band equalizer settings without discarding the user's previous curve.
-            - Clearer update-service diagnostics, safer resumable downloads and APK package/version validation.
+            - Bounded DNS, timeout and transient HTTP retries with clearer update diagnostics.
+            - Wi-Fi-only update policy is enforced throughout resumable downloads.
+            - Offline media downloads use collision-resistant filenames for same-title tracks.
+            - Stable API 26/35 emulator boot and ADB readiness checks before instrumentation.
             - Android emulator launch smoke tests for API 26 and API 35.
 
             ### Preserved
@@ -189,7 +199,7 @@ jobs:
             - Minimum supported Android version: Android 8 (API 26); target SDK: 37.
             - Physical-device tests remain separate from CI emulator verification.
           files: |
-            release-assets/HTE-Universe-4.0.5.apk
+            release-assets/*.apk
             release-assets/SHA256SUMS.txt
           fail_on_unmatched_files: true
           make_latest: true
@@ -198,7 +208,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name }}
-          APK_NAME: HTE-Universe-4.0.5.apk
+          APK_NAME: HTE-Universe-4.0.6.apk
         shell: bash
         run: |
           set -euo pipefail

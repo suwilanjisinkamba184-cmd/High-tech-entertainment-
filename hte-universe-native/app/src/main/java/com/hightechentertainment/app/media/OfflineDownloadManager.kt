@@ -6,6 +6,7 @@ import android.os.Environment
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import java.net.URLConnection
+import java.security.MessageDigest
 
 data class OfflineDownloadRecord(val id: Long, val title: String, val mediaType: String, val status: String, val localUri: String? = null)
 
@@ -32,6 +33,16 @@ internal fun resolveMediaFileExtension(url: String, mediaType: String, mimeType:
     return if (mediaType.equals("video", true) || mediaType.startsWith("video/", true)) "mp4" else "mp3"
 }
 
+internal fun buildOfflineDownloadFileName(title: String, url: String, mediaType: String, mimeType: String? = null): String {
+    val safeName = title.replace(Regex("[^A-Za-z0-9._-]"), "_").trim('_').take(64).ifBlank { "hte_media" }
+    val extension = resolveMediaFileExtension(url, mediaType, mimeType)
+    val fingerprint = MessageDigest.getInstance("SHA-256")
+        .digest(url.toByteArray(Charsets.UTF_8))
+        .take(6)
+        .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+    return "$safeName-$fingerprint.$extension"
+}
+
 class OfflineDownloadManager(context: Context) {
     private val appContext = context.applicationContext
     private val manager = appContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
@@ -40,8 +51,7 @@ class OfflineDownloadManager(context: Context) {
     fun enqueue(url: String, title: String, mediaType: String, allowMetered: Boolean = true, mimeType: String? = null): Long {
         val uri = url.toUri()
         require(uri.scheme == "https" || uri.scheme == "http") { "This media item does not have a valid download URL." }
-        val safeName = title.replace(Regex("[^A-Za-z0-9._-]"), "_").trim('_').take(64).ifBlank { "hte_media" }
-        val extension = resolveMediaFileExtension(url, mediaType, mimeType)
+        val fileName = buildOfflineDownloadFileName(title, url, mediaType, mimeType)
         val isVideo = mediaType.equals("video", true) || mediaType.startsWith("video/", true)
         val folder = if (isVideo) Environment.DIRECTORY_MOVIES else Environment.DIRECTORY_MUSIC
         val request = DownloadManager.Request(uri)
@@ -50,8 +60,8 @@ class OfflineDownloadManager(context: Context) {
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setAllowedOverMetered(allowMetered)
             .setAllowedOverRoaming(false)
-            .setDestinationInExternalFilesDir(appContext, folder, "$safeName.$extension")
-        val resolvedMime = mimeType?.takeIf { it.isNotBlank() } ?: URLConnection.guessContentTypeFromName("$safeName.$extension")
+            .setDestinationInExternalFilesDir(appContext, folder, fileName)
+        val resolvedMime = mimeType?.takeIf { it.isNotBlank() } ?: URLConnection.guessContentTypeFromName(fileName)
         if (!resolvedMime.isNullOrBlank()) request.setMimeType(resolvedMime)
         val id = manager.enqueue(request)
         preferences.edit { putString(id.toString(), "$mediaType|$title") }
