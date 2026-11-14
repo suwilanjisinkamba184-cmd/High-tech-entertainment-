@@ -154,7 +154,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                 SettingsSection("PLAYBACK & SOUND", "Tune the way HTE Universe sounds")
                 SettingsCard {
                     SettingsSwitch("Background playback", "Keep music playing when you leave the app", backgroundPlayback) {
-                        backgroundPlayback = it; settingsStore.backgroundPlayback = it
+                        backgroundPlayback = it; settingsStore.backgroundPlayback = it; onSettingsChanged()
                     }
                     SettingsDivider()
                     SettingsSwitch("Autoplay next track", "Continue through the current queue", autoplay) {
@@ -221,8 +221,6 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                         networkPolicy = if (it == "WIFI_ONLY") "WIFI_ONLY" else "WIFI_AND_MOBILE"
                         settingsStore.networkPolicy = networkPolicy
                         onSettingsChanged()
-                        dataSaver = networkPolicy == "WIFI_ONLY"
-                        settingsStore.dataSaver = dataSaver
                     }
                     Text("Update download network", color = Color.White, fontWeight = FontWeight.SemiBold)
                     SettingsChips(listOf("WIFI_ONLY", "WIFI + MOBILE"), if (updateNetworkPolicy == "WIFI_ONLY") "WIFI_ONLY" else "WIFI + MOBILE") {
@@ -235,8 +233,6 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                     }
                     SettingsSwitch("Data saver", "Restrict downloads over metered mobile connections", dataSaver) {
                         dataSaver = it; settingsStore.dataSaver = it; onSettingsChanged()
-                        networkPolicy = if (it) "WIFI_ONLY" else "WIFI_AND_MOBILE"
-                        settingsStore.networkPolicy = networkPolicy
                     }
                     SettingsDivider()
                     Row(verticalAlignment = Alignment.CenterVertically) {
