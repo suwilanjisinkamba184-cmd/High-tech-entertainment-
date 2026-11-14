@@ -205,13 +205,18 @@ class HteUpdateManager(private val context: Context) {
     fun clearPartialDownload() { File(updateDirectory, "HTE-Universe-update.apk.part").delete() }
     fun clearCachedUpdate() { File(updateDirectory, "HTE-Universe-update.apk").delete(); clearPartialDownload() }
 
-    private fun java.io.IOException.isTransientUpdateNetworkError(): Boolean =
-        generateSequence(this) { it.cause }.any {
-            it is java.net.UnknownHostException ||
-                it is java.net.SocketTimeoutException ||
-                it is java.net.ConnectException ||
-                it is java.net.NoRouteToHostException
+    private fun java.io.IOException.isTransientUpdateNetworkError(): Boolean {
+        var cause: Throwable? = this
+        while (cause != null) {
+            if (cause is java.net.UnknownHostException ||
+                cause is java.net.SocketTimeoutException ||
+                cause is java.net.ConnectException ||
+                cause is java.net.NoRouteToHostException
+            ) return true
+            cause = cause.cause
         }
+        return false
+    }
 
     private fun httpError(connection: HttpURLConnection, code: Int, operation: String): String {
         val body = runCatching { connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty() }.getOrDefault("")
