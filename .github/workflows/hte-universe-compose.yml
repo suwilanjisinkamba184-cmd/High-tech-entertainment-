@@ -155,7 +155,7 @@ jobs:
           VERSION_NAME=$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts | head -n1)
           VERSION_CODE=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' app/build.gradle.kts | head -n1)
           test "$VERSION_NAME" = "4.0.6"
-          test "$VERSION_CODE" = "39"
+          test "$VERSION_CODE" = "40"
           test "$GITHUB_REF_NAME" = "native-v${VERSION_NAME}-build${VERSION_CODE}"
           APK_NAME="HTE-Universe-${VERSION_NAME}.apk"
           cp app/build/outputs/apk/release/app-release.apk "../release-assets/$APK_NAME"
@@ -189,13 +189,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: HTE Universe 4.0.6 — Production build 39
+          name: HTE Universe 4.0.6 — Production build 40
           body: |
             ## HTE Universe 4.0.6
 
             Official signed Android release from the verified `main` build.
 
-            Production version: `4.0.6` (version code `39`).
+            Production version: `4.0.6` (version code `40`).
 
             ### Changes
             - Adaptive settings layout for compact phones, tablets and wide screens.
@@ -259,7 +259,7 @@ jobs:
           AAPT="$ANDROID_HOME/build-tools/37.0.0/aapt"
           "$APK_SIGNER" verify --verbose --print-certs "$RELEASE_DIR/$APK_NAME"
           PUBLISHED_BADGING="$("$AAPT" dump badging "$RELEASE_DIR/$APK_NAME")"
-          echo "$PUBLISHED_BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='39' versionName='4.0.6'"
+          echo "$PUBLISHED_BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='40' versionName='4.0.6'"
           LOCAL_CERT="$("$APK_SIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
           PUBLISHED_CERT="$("$APK_SIGNER" verify --print-certs "$RELEASE_DIR/$APK_NAME" | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
           test -n "$LOCAL_CERT" && test "$LOCAL_CERT" = "$PUBLISHED_CERT"
@@ -309,18 +309,7 @@ jobs:
           emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -wipe-data
           disable-animations: true
-          script: |
-            set -euo pipefail
-            services_ready=false
-            for attempt in $(seq 1 30); do
-              if adb shell pm list packages >/dev/null 2>&1 && adb shell am get-current-user >/dev/null 2>&1; then
-                services_ready=true
-                break
-              fi
-              sleep 2
-            done
-            test "$services_ready" = "true" || { echo "::error::Android system package/activity services did not become ready."; exit 1; }
-            bash .github/scripts/android-emulator-smoke.sh "${{ matrix.api-level }}"
+          script: bash .github/scripts/wait-android-services.sh && bash .github/scripts/android-emulator-smoke.sh "${{ matrix.api-level }}"
       - name: Run Android 17 API 37 preview emulator smoke test
         if: matrix.api-level == 37
         shell: bash
