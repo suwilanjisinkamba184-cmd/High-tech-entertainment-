@@ -234,21 +234,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v4
-        with:
-          packages: platform-tools
-      - name: Install Android 37 compile platform for emulator tests
-        run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platforms;android-37.0"
-          if [[ ! -e "$ANDROID_HOME/platforms/android-37" ]]; then
-            ln -s "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
-          fi
-          test -d "$ANDROID_HOME/platforms/android-37"
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.6.0'
-      - name: Run app launch test on Android emulator
+      - name: Run Android 8 / Android 15 emulator smoke test
+        if: matrix.api-level != 37
         uses: ReactiveCircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api-level }}
@@ -257,3 +247,31 @@ jobs:
           profile: pixel_2
           disable-animations: true
           script: cd hte-universe-native && gradle --no-daemon :app:connectedDebugAndroidTest
+      - name: Run Android 17 API 37 preview emulator smoke test
+        if: matrix.api-level == 37
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses
+          sdkmanager "emulator" "system-images;android-37.0;google_apis;x86_64"
+          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force --name hte-api37 --package "system-images;android-37.0;google_apis;x86_64" --device "pixel_2"
+          "$ANDROID_HOME/emulator/emulator" -avd hte-api37 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data > "$RUNNER_TEMP/emulator-api37.log" 2>&1 &
+          adb wait-for-device
+          booted=false
+          for attempt in $(seq 1 120); do
+            if [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]]; then
+              booted=true
+              break
+            fi
+            sleep 5
+          done
+          if [[ "$booted" != "true" ]]; then
+            cat "$RUNNER_TEMP/emulator-api37.log"
+            echo "::error::Android API 37 emulator did not finish booting."
+            exit 1
+          fi
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          cd hte-universe-native
+          gradle --no-daemon :app:connectedDebugAndroidTest --console=plain
