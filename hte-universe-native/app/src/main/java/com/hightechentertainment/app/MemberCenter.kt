@@ -2,6 +2,9 @@ package com.hightechentertainment.app
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -146,7 +149,17 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
                                 .onFailure { statusMessage = it.message?.take(180) ?: "Google sign-in could not complete. Check Google Play services and try again." }
                             isWorking = false
                         }
-                    }, enabled = !isWorking, modifier = Modifier.fillMaxWidth()) { Text("Continue with Google") }
+                    }, enabled = !isWorking, modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            GoogleBrandMark(Modifier.size(20.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Text("Continue with Google", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                     TextButton(onClick = { createAccount = !createAccount; statusMessage = null }) {
                         Text(if (createAccount) "Already registered? Sign in" else "New to HTE? Create an account", color = MemberGold)
                     }
@@ -361,4 +374,26 @@ private fun BookingRequestDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
+}
+
+@Composable
+private fun GoogleBrandMark(modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val stroke = Stroke(width = size.minDimension * .2f, cap = StrokeCap.Butt)
+        val arcs = listOf(
+            Color(0xFF4285F4) to -45f,
+            Color(0xFF34A853) to 45f,
+            Color(0xFFFBBC05) to 135f,
+            Color(0xFFEA4335) to 225f
+        )
+        arcs.forEach { (color, start) ->
+            drawArc(color, startAngle = start, sweepAngle = 88f, useCenter = false, style = stroke)
+        }
+        drawLine(
+            color = Color(0xFF4285F4),
+            start = androidx.compose.ui.geometry.Offset(size.width * .53f, size.height * .5f),
+            end = androidx.compose.ui.geometry.Offset(size.width * .98f, size.height * .5f),
+            strokeWidth = size.minDimension * .2f
+        )
+    }
 }
