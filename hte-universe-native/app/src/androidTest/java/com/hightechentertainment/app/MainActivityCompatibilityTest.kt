@@ -9,10 +9,13 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class MainActivityCompatibilityTest {
-    @Test fun mainActivityLaunchesOnSupportedAndroidApi() {
+    @Test
+    fun mainActivityLaunchesOnSupportedAndroidApi() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                assertEquals("com.hightechentertainment.app", activity.packageName)
+                // Debug builds intentionally add ".dev"; compare against the
+                // actual variant application ID instead of the production ID.
+                assertEquals(BuildConfig.APPLICATION_ID, activity.packageName)
                 assertNotNull(activity.window.decorView)
             }
         }
