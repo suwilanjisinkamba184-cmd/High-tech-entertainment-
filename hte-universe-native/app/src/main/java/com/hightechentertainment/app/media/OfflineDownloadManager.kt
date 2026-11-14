@@ -5,27 +5,45 @@ import android.content.Context
 import android.os.Environment
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import java.net.URLConnection
 
- data class OfflineDownloadRecord(
-    val id: Long,
-    val title: String,
-    val mediaType: String,
-    val status: String,
-    val localUri: String? = null
-)
+data class OfflineDownloadRecord(val id: Long, val title: String, val mediaType: String, val status: String, val localUri: String? = null)
 
-/** Uses Android DownloadManager and app-specific external storage; no broad storage permission is needed. */
+internal fun resolveMediaFileExtension(url: String, mediaType: String, mimeType: String? = null): String {
+    val mimeExtension = when (mimeType?.substringBefore(';')?.trim()?.lowercase()) {
+        "audio/mpeg", "audio/mp3" -> "mp3"
+        "audio/mp4", "audio/x-m4a", "audio/m4a" -> "m4a"
+        "audio/aac", "audio/aacp" -> "aac"
+        "audio/wav", "audio/x-wav", "audio/wave" -> "wav"
+        "audio/ogg", "application/ogg" -> "ogg"
+        "audio/flac", "audio/x-flac" -> "flac"
+        "audio/opus" -> "opus"
+        "audio/webm", "video/webm" -> "webm"
+        "video/mp4", "video/x-m4v" -> "mp4"
+        "video/quicktime" -> "mov"
+        "video/x-matroska" -> "mkv"
+        "video/3gpp" -> "3gp"
+        else -> null
+    }
+    if (mimeExtension != null) return mimeExtension
+    val path = url.substringBefore('#').substringBefore('?')
+    val candidate = path.substringAfterLast('/').substringAfterLast('.', "").lowercase()
+    if (candidate in setOf("mp3","m4a","aac","wav","ogg","flac","opus","webm","mp4","mov","mkv","3gp")) return candidate
+    return if (mediaType.equals("video", true) || mediaType.startsWith("video/", true)) "mp4" else "mp3"
+}
+
 class OfflineDownloadManager(context: Context) {
     private val appContext = context.applicationContext
     private val manager = appContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
     private val preferences = appContext.getSharedPreferences("hte_universe_offline_downloads", Context.MODE_PRIVATE)
 
-    fun enqueue(url: String, title: String, mediaType: String, allowMetered: Boolean = true): Long {
+    fun enqueue(url: String, title: String, mediaType: String, allowMetered: Boolean = true, mimeType: String? = null): Long {
         val uri = url.toUri()
         require(uri.scheme == "https" || uri.scheme == "http") { "This media item does not have a valid download URL." }
         val safeName = title.replace(Regex("[^A-Za-z0-9._-]"), "_").trim('_').take(64).ifBlank { "hte_media" }
-        val extension = if (mediaType == "video") "mp4" else "mp3"
-        val folder = if (mediaType == "video") Environment.DIRECTORY_MOVIES else Environment.DIRECTORY_MUSIC
+        val extension = resolveMediaFileExtension(url, mediaType, mimeType)
+        val isVideo = mediaType.equals("video", true) || mediaType.startsWith("video/", true)
+        val folder = if (isVideo) Environment.DIRECTORY_MOVIES else Environment.DIRECTORY_MUSIC
         val request = DownloadManager.Request(uri)
             .setTitle(title)
             .setDescription("Downloading from HTE Universe")
@@ -33,6 +51,8 @@ class OfflineDownloadManager(context: Context) {
             .setAllowedOverMetered(allowMetered)
             .setAllowedOverRoaming(false)
             .setDestinationInExternalFilesDir(appContext, folder, "$safeName.$extension")
+        val resolvedMime = mimeType?.takeIf { it.isNotBlank() } ?: URLConnection.guessContentTypeFromName("$safeName.$extension")
+        if (!resolvedMime.isNullOrBlank()) request.setMimeType(resolvedMime)
         val id = manager.enqueue(request)
         preferences.edit { putString(id.toString(), "$mediaType|$title") }
         return id
@@ -67,7 +87,6 @@ class OfflineDownloadManager(context: Context) {
         if (ids.isNotEmpty()) manager.remove(*ids)
         preferences.edit { clear() }
     }
-
     fun remove(id: Long) {
         manager.remove(id)
         preferences.edit { remove(id.toString()) }

@@ -1,7 +1,10 @@
 package com.hightechentertainment.app.update
 
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -36,10 +39,11 @@ class HteUpdateManager(private val context: Context) {
             readTimeout = 20_000
             setRequestProperty("Accept", "application/vnd.github+json")
             setRequestProperty("User-Agent", "HTE-Universe-Android")
+            setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
         }
         try {
             val code = connection.responseCode
-            require(code in 200..299) { "Update service returned HTTP $code." }
+            if (code !in 200..299) throw IllegalStateException(httpError(connection, code, "Update check"))
             val releases = JSONArray(connection.inputStream.bufferedReader().use { it.readText() })
             // The repository still has a legacy Flutter/Shorebird release stream. Never
             // let that APK be offered as an update to the native Kotlin/Compose app.
@@ -95,61 +99,108 @@ class HteUpdateManager(private val context: Context) {
         updateDirectory.mkdirs()
         val partial = File(updateDirectory, "HTE-Universe-update.apk.part")
         val complete = File(updateDirectory, "HTE-Universe-update.apk")
-        var offset = if (partial.exists()) partial.length() else 0L
-        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 20_000
-            readTimeout = 30_000
-            instanceFollowRedirects = true
-            setRequestProperty("User-Agent", "HTE-Universe-Android")
-            if (offset > 0L) setRequestProperty("Range", "bytes=$offset-")
-        }
-        try {
-            val response = connection.responseCode
-            require(response == HttpURLConnection.HTTP_OK || response == HttpURLConnection.HTTP_PARTIAL) {
-                "Download interrupted by the server (HTTP $response). Your partial download is kept so you can retry."
+        var lastNetworkError: java.io.IOException? = null
+        // Keep partial bytes and resume with HTTP Range after transient disconnects.
+        for (attempt in 0..3) {
+            currentCoroutineContext().ensureActive()
+            val offset = if (partial.exists()) partial.length() else 0L
+            val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 20_000
+                readTimeout = 30_000
+                instanceFollowRedirects = true
+                setRequestProperty("User-Agent", "HTE-Universe-Android")
+                if (offset > 0L) setRequestProperty("Range", "bytes=$offset-")
             }
-            val append = offset > 0L && response == HttpURLConnection.HTTP_PARTIAL
-            if (!append) {
-                offset = 0L
-                partial.delete()
-            }
-            val responseLength = connection.getHeaderFieldLong("Content-Length", -1L)
-            val total = if (append && responseLength > 0L) offset + responseLength else if (expectedSize > 0L) expectedSize else responseLength
-            var downloaded = offset
-            connection.inputStream.use { input ->
-                FileOutputStream(partial, append).use { output ->
-                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE * 8)
-                    while (true) {
-                        currentCoroutineContext().ensureActive()
-                        val count = input.read(buffer)
-                        if (count < 0) break
-                        output.write(buffer, 0, count)
-                        downloaded += count
-                        onProgress(HteDownloadProgress(downloaded, total))
-                    }
-                    output.fd.sync()
+            try {
+                val response = connection.responseCode
+                if (response == 416 && offset > 0L) {
+                    partial.delete()
+                    lastNetworkError = java.io.IOException("Saved update range rejected; restarting from byte zero.")
+                    continue
                 }
+                if (response == 408 || response == 429 || response in 500..599) {
+                    throw java.io.IOException(httpError(connection, response, "Update download"))
+                }
+                if (response != HttpURLConnection.HTTP_OK && response != HttpURLConnection.HTTP_PARTIAL) {
+                    throw IllegalStateException(httpError(connection, response, "Update download"))
+                }
+                val append = offset > 0L && response == HttpURLConnection.HTTP_PARTIAL
+                if (!append) partial.delete()
+                val effectiveOffset = if (append) offset else 0L
+                val responseLength = connection.getHeaderFieldLong("Content-Length", -1L)
+                val total = if (append && responseLength > 0L) effectiveOffset + responseLength
+                    else if (expectedSize > 0L) expectedSize else responseLength
+                var downloaded = effectiveOffset
+                connection.inputStream.use { input ->
+                    FileOutputStream(partial, append).use { output ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE * 8)
+                        while (true) {
+                            currentCoroutineContext().ensureActive()
+                            val count = input.read(buffer)
+                            if (count < 0) break
+                            output.write(buffer, 0, count)
+                            downloaded += count
+                            onProgress(HteDownloadProgress(downloaded, total))
+                        }
+                        output.fd.sync()
+                    }
+                }
+                require(partial.exists() && partial.length() > 0L) { "The update download was empty." }
+                if (expectedSize > 0L && partial.length() != expectedSize) {
+                    throw java.io.IOException("Update download incomplete; the saved partial file will be resumed.")
+                }
+                if (!expectedSha256.isNullOrBlank()) {
+                    if (!sha256(partial).equals(expectedSha256, ignoreCase = true)) {
+                        partial.delete()
+                        throw IllegalStateException("Update integrity check failed. The downloaded file was rejected.")
+                    }
+                }
+                if (complete.exists()) complete.delete()
+                check(partial.renameTo(complete)) { "The update was downloaded but could not be finalised." }
+                return@withContext complete
+            } catch (error: java.io.IOException) {
+                lastNetworkError = error
+                if (attempt >= 3) throw error
+                delay(1_000L * (attempt + 1))
+            } finally {
+                connection.disconnect()
             }
-            require(partial.exists() && partial.length() > 0L) { "The update download was empty." }
-            if (expectedSize > 0L) require(partial.length() == expectedSize) {
-                "The downloaded file is incomplete. Resume the download to continue."
-            }
-            if (!expectedSha256.isNullOrBlank()) {
-                val actual = sha256(partial)
-                require(actual.equals(expectedSha256, ignoreCase = true)) { "Update integrity check failed. The downloaded file was rejected." }
-            }
-            if (complete.exists()) complete.delete()
-            check(partial.renameTo(complete)) { "The update was downloaded but could not be finalised." }
-            complete
-        } finally {
-            connection.disconnect()
         }
+        throw lastNetworkError ?: java.io.IOException("The update could not be downloaded. Please retry.")
     }
 
     fun cachedUpdate(): File? = File(updateDirectory, "HTE-Universe-update.apk").takeIf { it.exists() && it.length() > 0L }
+
+    /** Reject stale, malformed or foreign APKs before invoking Android's package installer. */
+    fun isInstallableUpdate(file: File): Boolean = runCatching {
+        if (!file.isFile || file.length() <= 0L) return false
+        val signingFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
+        val archive = context.packageManager.getPackageArchiveInfo(file.absolutePath, signingFlags) ?: return false
+        if (archive.packageName != context.packageName) return false
+        val installed = context.packageManager.getPackageInfo(context.packageName, signingFlags)
+        val archiveCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) archive.longVersionCode else archive.versionCode.toLong()
+        val installedCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) installed.longVersionCode else installed.versionCode.toLong()
+        val archiveSigners = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) archive.signingInfo?.apkContentsSigners else archive.signatures
+        val installedSigners = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) installed.signingInfo?.apkContentsSigners else installed.signatures
+        val sameSigningIdentity = !archiveSigners.isNullOrEmpty() && !installedSigners.isNullOrEmpty() &&
+            archiveSigners.map { it.toCharsString() }.toSet() == installedSigners.map { it.toCharsString() }.toSet()
+        archiveCode > installedCode && sameSigningIdentity
+    }.getOrDefault(false)
     fun partialDownloadSize(): Long = File(updateDirectory, "HTE-Universe-update.apk.part").takeIf { it.exists() }?.length() ?: 0L
     fun clearPartialDownload() { File(updateDirectory, "HTE-Universe-update.apk.part").delete() }
     fun clearCachedUpdate() { File(updateDirectory, "HTE-Universe-update.apk").delete(); clearPartialDownload() }
+
+    private fun httpError(connection: HttpURLConnection, code: Int, operation: String): String {
+        val body = runCatching { connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty() }.getOrDefault("")
+        val detail = runCatching { JSONObject(body).optString("message") }.getOrDefault("")
+        return when (code) {
+            403 -> "$operation was temporarily rate-limited by GitHub (HTTP 403). Wait a little and retry. ${detail.take(120)}".trim()
+            404 -> "$operation endpoint or release asset was not found (HTTP 404). The release may have been moved or removed."
+            416 -> "The update server rejected the saved download range (HTTP 416). Clear the partial update and download again."
+            in 500..599 -> "$operation server is temporarily unavailable (HTTP $code). Please retry later."
+            else -> "$operation returned HTTP $code. ${detail.take(160)}".trim()
+        }
+    }
 
     private fun sha256(file: File): String {
         val digest = MessageDigest.getInstance("SHA-256")

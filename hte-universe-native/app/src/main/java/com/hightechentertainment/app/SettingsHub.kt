@@ -40,6 +40,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import javax.net.ssl.SSLException
 
 private val SettingsGold = Color(0xFFD6B15E)
 private val SettingsSilver = Color(0xFFC4CAD2)
@@ -102,10 +105,14 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
             updateError = null
             try {
                 updateInfo = updater.checkForUpdate(BuildConfig.VERSION_NAME)
-                downloadedApk = updater.cachedUpdate()
+                val cached = updater.cachedUpdate()
+                downloadedApk = cached?.takeIf { updater.isInstallableUpdate(it) }
+                if (cached != null && downloadedApk == null) updater.clearCachedUpdate()
                 statusMessage = if (updateInfo?.updateAvailable == true) "A newer HTE Universe release is available." else "No newer public release is available for this build."
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (error: Throwable) {
-                updateError = error.message?.take(180) ?: "Could not check for updates. Check your connection."
+                updateError = friendlyUpdateError(error)
             } finally { isChecking = false }
         }
     }
@@ -122,12 +129,14 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
             isDownloading = true
             updateError = null
             try {
-                downloadedApk = updater.downloadUpdate(url, info.downloadSize, info.sha256) { value -> android.os.Handler(android.os.Looper.getMainLooper()).post { progress = value } }
-                statusMessage = "Update downloaded. Android will verify the signing identity during installation."
+                val file = updater.downloadUpdate(url, info.downloadSize, info.sha256) { value -> android.os.Handler(android.os.Looper.getMainLooper()).post { progress = value } }
+                check(updater.isInstallableUpdate(file)) { "The downloaded APK is not a newer HTE Universe build for this app. It was rejected." }
+                downloadedApk = file
+                statusMessage = "Update downloaded and package identity verified. Android will verify the signing certificate during installation."
             } catch (_: CancellationException) {
                 updateError = "Download paused. Your partial file is saved; tap Resume to continue."
             } catch (error: Throwable) {
-                updateError = (error.message ?: "Download interrupted. Your partial file is saved.") + " Tap Resume to continue."
+                updateError = friendlyUpdateError(error) + " Your partial download is kept when safe; tap Resume to retry."
             } finally { isDownloading = false }
         }
     }
@@ -142,8 +151,14 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
         onDispose { }
     }
 
-    Column(Modifier.fillMaxSize().background(SettingsBackground)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(SettingsBackground)) {
+        val horizontalInset = when {
+            maxWidth < 360.dp -> 12.dp
+            maxWidth < 600.dp -> 16.dp
+            else -> 24.dp
+        }
+        Column(Modifier.fillMaxSize().widthIn(max = 760.dp).align(Alignment.TopCenter)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = horizontalInset, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("HTE CONTROL CENTRE", color = SettingsGold, fontSize = 10.sp, letterSpacing = 2.2.sp, fontWeight = FontWeight.Bold)
                 Text("Settings", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
@@ -153,7 +168,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
         }
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 30.dp),
+            contentPadding = PaddingValues(start = horizontalInset, end = horizontalInset, bottom = 30.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
@@ -179,19 +194,19 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                     SettingsChips(listOf("FLAT", "BASS", "VOCAL", "STUDIO", "AFROBEAT", "DANCEHALL", "DRILL", "GOSPEL"), eqPreset) { preset ->
                         eqPreset = preset; settingsStore.equalizerPreset = preset
                         val values = when (preset) {
-                            "BASS" -> listOf(8, 6, 2, 0, -1)
-                            "VOCAL" -> listOf(-3, 1, 6, 5, 2)
-                            "STUDIO" -> listOf(0, 1, -1, 1, 0)
-                            "AFROBEAT" -> listOf(6, 4, 1, 3, 5)
-                            "DANCEHALL" -> listOf(8, 5, 0, 3, 4)
-                            "DRILL" -> listOf(9, 4, -2, 2, 6)
-                            "GOSPEL" -> listOf(1, 3, 6, 5, 3)
-                            else -> listOf(0, 0, 0, 0, 0)
+                            "BASS" -> listOf(8, 8, 7, 5, 3, 1, 0, -1, -2, -3)
+                            "VOCAL" -> listOf(-4, -3, -1, 2, 5, 7, 7, 5, 3, 1)
+                            "STUDIO" -> listOf(0, 1, 1, 0, 0, 0, 1, 1, 0, 0)
+                            "AFROBEAT" -> listOf(5, 6, 5, 3, 1, 0, 1, 3, 4, 3)
+                            "DANCEHALL" -> listOf(8, 7, 5, 2, 0, -1, 1, 3, 5, 4)
+                            "DRILL" -> listOf(9, 8, 5, 1, -2, -3, 0, 3, 6, 7)
+                            "GOSPEL" -> listOf(0, 1, 3, 5, 6, 6, 5, 3, 2, 1)
+                            else -> List(10) { 0 }
                         }
                         eqBands = values; settingsStore.setEqualizerBands(values)
                         HteAudioEffects.apply(HtePlaybackService.activeAudioSessionId, eqEnabled, values)
                     }
-                    val bandLabels = listOf("60 Hz", "230 Hz", "910 Hz", "3.6 kHz", "14 kHz")
+                    val bandLabels = listOf("31 Hz", "62 Hz", "125 Hz", "250 Hz", "500 Hz", "1 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz")
                     bandLabels.forEachIndexed { index, label ->
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -212,7 +227,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                             )
                         }
                     }
-                    Text("Equalizer availability depends on the phone's audio-effect support. Your selected preset is applied when the HTE playback audio session becomes active.", color = SettingsMuted, fontSize = 10.sp)
+                    Text("10-band studio curve · HTE maps these controls to the actual equalizer bands supported by each phone. Some devices expose fewer hardware bands or disable system audio effects.", color = SettingsMuted, fontSize = 10.sp)
                     SettingsDivider()
                     SettingsChoice("Music streaming quality", streamingQuality, listOf("AUTO", "DATA SAVER", "NORMAL", "HIGH")) {
                         streamingQuality = it
@@ -314,7 +329,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                     }
                     downloadedApk?.takeIf { updateInfo?.updateAvailable == true }?.let { file ->
                         Text("Update installer ready · ${formatBytes(file.length())}", color = Color(0xFF8BCB9B), fontSize = 11.sp)
-                        Button(onClick = { openUpdateInstaller(context, file) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = SettingsGold, contentColor = SettingsBackground)) {
+                        Button(onClick = { runCatching { openUpdateInstaller(context, file) }.onFailure { updateError = friendlyUpdateError(it) } }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = SettingsGold, contentColor = SettingsBackground)) {
                             Icon(Icons.Outlined.InstallMobile, null); Spacer(Modifier.width(8.dp)); Text("Install update")
                         }
                     }
@@ -368,6 +383,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                     Text("HTE Universe · The Pride of Africa", color = SettingsGold, fontSize = 10.sp, letterSpacing = 1.2.sp)
                 }
             }
+        }
         }
     }
 
@@ -508,4 +524,11 @@ private fun openUpdateInstaller(context: android.content.Context, file: File) {
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     context.startActivity(intent)
+}
+
+private fun friendlyUpdateError(error: Throwable): String = when (error) {
+    is UnknownHostException -> "No internet connection. Connect to the internet and try again."
+    is SocketTimeoutException -> "The update server took too long to respond. Please retry."
+    is SSLException -> "A secure connection to the update server could not be established. Check your device date, time and network."
+    else -> error.message?.take(220) ?: "The update could not be completed. Please retry."
 }

@@ -57,6 +57,7 @@ internal const val HTE_STARTUP_TAGLINE = "Music. Beats. Production. Beyond."
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        SupabaseClientProvider.initialize(applicationContext)
         handleSupabaseIntent(intent)
         WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars = false
