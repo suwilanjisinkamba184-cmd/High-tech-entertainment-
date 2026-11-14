@@ -14,8 +14,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -452,16 +450,24 @@ private fun SettingsChoice(title: String, selected: String, options: List<String
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SettingsChips(options: List<String>, selected: String, onSelect: (String) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp)
+    ) {
         options.forEach { option ->
             val label = option.replace("_", " ").replace("WIFI", "Wi-Fi")
             FilterChip(
                 selected = option == selected,
                 onClick = { onSelect(option) },
-                label = { Text(label, fontSize = 9.sp, maxLines = 1) },
-                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = SettingsGold.copy(alpha = .18f), selectedLabelColor = SettingsGold)
+                label = { Text(label, fontSize = 10.sp, maxLines = 1) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = SettingsGold.copy(alpha = .18f),
+                    selectedLabelColor = SettingsGold
+                )
             )
         }
     }

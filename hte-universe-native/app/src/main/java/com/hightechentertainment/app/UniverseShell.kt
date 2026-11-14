@@ -870,6 +870,17 @@ private fun VideoPlayerDialog(video: VideoDto, onDismiss: () -> Unit) {
     }
     var playbackError by remember { mutableStateOf<String?>(null) }
     var isBuffering by remember { mutableStateOf(false) }
+    var videoPlaying by remember { mutableStateOf(false) }
+    var videoPosition by remember { mutableLongStateOf(0L) }
+    var videoDuration by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(player) {
+        while (true) {
+            videoPlaying = player.isPlaying
+            videoPosition = player.currentPosition.coerceAtLeast(0L)
+            videoDuration = player.duration.takeIf { it != C.TIME_UNSET }?.coerceAtLeast(0L) ?: 0L
+            delay(400)
+        }
+    }
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
@@ -898,10 +909,7 @@ private fun VideoPlayerDialog(video: VideoDto, onDismiss: () -> Unit) {
                     AndroidView(
                         factory = { viewContext -> PlayerView(viewContext).apply {
                             this.player = player
-                            useController = true
-                            controllerAutoShow = true
-                            controllerHideOnTouch = true
-                            controllerShowTimeoutMs = 3500
+                            useController = false
                             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                             setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
                             keepScreenOn = true
@@ -912,6 +920,32 @@ private fun VideoPlayerDialog(video: VideoDto, onDismiss: () -> Unit) {
                 } else {
                     Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                         Text("This video does not have a valid playback URL.", color = ShellGold)
+                    }
+                }
+                if (validUrl) {
+                    Column(
+                        Modifier.fillMaxWidth().background(ShellPanel, RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        Slider(
+                            value = if (videoDuration > 0L) (videoPosition.toFloat() / videoDuration).coerceIn(0f, 1f) else 0f,
+                            onValueChange = { fraction -> if (videoDuration > 0L) player.seekTo((fraction * videoDuration).toLong()) },
+                            enabled = videoDuration > 0L,
+                            colors = SliderDefaults.colors(thumbColor = ShellGold, activeTrackColor = ShellGold)
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(formatVideoTime(videoPosition), color = ShellMuted, fontSize = 10.sp)
+                            Spacer(Modifier.weight(1f))
+                            TextButton(onClick = { player.seekTo((player.currentPosition - 10_000L).coerceAtLeast(0L)) }) { Text("−10s", color = ShellSilver) }
+                            Button(
+                                onClick = { if (player.isPlaying) player.pause() else player.play() },
+                                colors = ButtonDefaults.buttonColors(containerColor = ShellGold, contentColor = Color.Black),
+                                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 7.dp)
+                            ) { Text(if (videoPlaying) "Pause" else "Play", fontWeight = FontWeight.Bold) }
+                            TextButton(onClick = { if (videoDuration > 0L) player.seekTo((player.currentPosition + 10_000L).coerceAtMost(videoDuration)) }) { Text("+10s", color = ShellSilver) }
+                            Spacer(Modifier.weight(1f))
+                            Text(formatVideoTime(videoDuration), color = ShellMuted, fontSize = 10.sp)
+                        }
                     }
                 }
                 if (isBuffering) LinearProgressIndicator(Modifier.fillMaxWidth(), color = ShellGold)
@@ -933,4 +967,9 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
+}
+
+private fun formatVideoTime(milliseconds: Long): String {
+    val totalSeconds = (milliseconds.coerceAtLeast(0L) / 1000L)
+    return String.format(java.util.Locale.US, "%d:%02d", totalSeconds / 60L, totalSeconds % 60L)
 }

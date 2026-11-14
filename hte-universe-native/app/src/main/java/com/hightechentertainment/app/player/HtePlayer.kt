@@ -171,14 +171,16 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
     val scale by animateFloatAsState(if (state.isPlaying || reduce) 1f else .94f, if (reduce) snap() else spring(stiffness = Spring.StiffnessLow), label = "hte-art-scale")
     val progress = if (state.durationMs > 0) (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f) else 0f
     val bars = state.amplitudes ?: remember(track.id) { placeholderWaveform(track.id) }
-    Column(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 24.dp, vertical = 8.dp)) {
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        val artworkMaxHeight = maxHeight * .40f
+        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 24.dp, vertical = 8.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onCollapse) { Icon(Icons.Rounded.KeyboardArrowDown, "Close player", tint = HteColors.OnDark, modifier = Modifier.size(32.dp)) }
             Text("NOW PLAYING", style = MaterialTheme.typography.labelLarge, color = HteColors.Silver, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(Modifier.size(48.dp))
         }
         Spacer(Modifier.weight(1f))
-        artwork(track.artworkUrl, Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer { scaleX = scale; scaleY = scale }.clip(MaterialTheme.shapes.large).background(HteColors.Panel))
+        artwork(track.artworkUrl, Modifier.fillMaxWidth().heightIn(max = artworkMaxHeight).aspectRatio(1f).graphicsLayer { scaleX = scale; scaleY = scale }.clip(MaterialTheme.shapes.large).background(HteColors.Panel))
         Spacer(Modifier.weight(1f))
         Text(track.title, style = MaterialTheme.typography.headlineMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(track.artist, style = MaterialTheme.typography.bodyLarge, color = HteColors.Silver, maxLines = 1)
@@ -200,6 +202,7 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
             IconButton(onClick = controller::cycleRepeat) { Icon(if (state.repeat == HteRepeatMode.ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, "Repeat " + state.repeat.name.lowercase(), tint = if (state.repeat == HteRepeatMode.OFF) HteColors.Muted else HteColors.Gold) }
         }
         Spacer(Modifier.height(12.dp))
+        }
     }
 }
 
