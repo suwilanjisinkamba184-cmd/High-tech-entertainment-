@@ -4,7 +4,7 @@ import android.content.Context
 
 /** True only when the current download policy and Data Saver both permit metered media downloads. */
 internal fun allowsMeteredMediaDownloads(networkPolicy: String, dataSaverEnabled: Boolean): Boolean =
-    networkPolicy != "WIFI_ONLY" && !dataSaverEnabled
+    networkPolicy == "WIFI_AND_MOBILE" && !dataSaverEnabled
 
 /** Local, non-sensitive preferences. Secrets and authentication tokens never belong here. */
 class AppSettingsStore(context: Context) {
@@ -23,7 +23,7 @@ class AppSettingsStore(context: Context) {
         set(value) { preferences.edit().putBoolean("data_saver", value).apply() }
 
     var networkPolicy: String
-        get() = preferences.getString("network_policy", "WIFI_AND_MOBILE") ?: "WIFI_AND_MOBILE"
+        get() = if (preferences.getString("network_policy", "WIFI_AND_MOBILE") == "WIFI_ONLY") "WIFI_ONLY" else "WIFI_AND_MOBILE"
         set(value) { preferences.edit().putString("network_policy", value).apply() }
 
     var updateNetworkPolicy: String
