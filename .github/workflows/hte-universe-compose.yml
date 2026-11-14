@@ -113,7 +113,7 @@ jobs:
           sha256sum "$APK" | tee app/build/outputs/apk/release/SHA256SUMS.txt
       - name: Confirm certificate matches previous public release
         env:
-          PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/native-v4.0.4-build37/HTE-Universe-4.0.4.apk
+          PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/native-v4.0.5-build38/HTE-Universe-4.0.5.apk
         run: |
           set -euo pipefail
           APK_SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
@@ -124,13 +124,21 @@ jobs:
             echo "::error::Could not extract a SHA-256 signing certificate fingerprint from one of the APKs."
             exit 1
           fi
+          TRUSTED_CERT_SHA256="6bfa59139e569475fd1843a59216f50cc5bb407df5cf48b8007cc96073adaffa"
+          RUNTIME_CERT_SHA256=$(sed -nE 's/^[[:space:]]*const val TRUSTED_CERT_SHA256 = "([0-9a-f]{64})".*/\1/p' app/src/main/java/com/hightechentertainment/app/security/HteSecurityFirewall.kt | head -n1)
+          if [[ "$OLD_CERT" != "$TRUSTED_CERT_SHA256" || "$RUNTIME_CERT_SHA256" != "$TRUSTED_CERT_SHA256" ]]; then
+            echo "::error::The pinned runtime certificate fingerprint does not match the actual previous public production APK."
+            echo "Previous release certificate SHA-256: $OLD_CERT"
+            echo "Runtime certificate pin:                $RUNTIME_CERT_SHA256"
+            exit 1
+          fi
           if [[ "$OLD_CERT" != "$NEW_CERT" ]]; then
-            echo "::error::Production signing certificate differs from the previous public 4.0.4 build 37. Refusing to publish."
+            echo "::error::Production signing certificate differs from the previous public 4.0.5 build 38. Refusing to publish."
             echo "Previous release certificate SHA-256: $OLD_CERT"
             echo "New release certificate SHA-256:      $NEW_CERT"
             exit 1
           fi
-          echo "Verified: release certificate matches 4.0.4 build 37."
+          echo "Verified: release certificate matches 4.0.5 build 38."
       - name: Upload signed production APK
         uses: actions/upload-artifact@v7
         with:
@@ -144,8 +152,14 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ../release-assets
-          cp app/build/outputs/apk/release/app-release.apk ../release-assets/HTE-Universe-4.0.5.apk
-          (cd ../release-assets && sha256sum HTE-Universe-4.0.5.apk > SHA256SUMS.txt)
+          VERSION_NAME=$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts | head -n1)
+          VERSION_CODE=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' app/build.gradle.kts | head -n1)
+          test "$VERSION_NAME" = "4.0.6"
+          test "$VERSION_CODE" = "40"
+          test "$GITHUB_REF_NAME" = "native-v${VERSION_NAME}-build${VERSION_CODE}"
+          APK_NAME="HTE-Universe-${VERSION_NAME}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "../release-assets/$APK_NAME"
+          (cd ../release-assets && sha256sum "$APK_NAME" > SHA256SUMS.txt)
       - name: Check whether this immutable release already exists
         id: release_state
         if: startsWith(github.ref, 'refs/tags/native-v')
@@ -153,29 +167,45 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Release already exists; it will be verified, never overwritten."
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Publish HTE Universe 4.0.5 GitHub Release
+          set -euo pipefail
+          API_URL="https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME"
+          HTTP_STATUS="$(curl -sS -o "$RUNNER_TEMP/release-check.json" -w "%{http_code}" -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$API_URL")"
+          case "$HTTP_STATUS" in
+            200)
+              echo "exists=true" >> "$GITHUB_OUTPUT"
+              echo "Release already exists; it will be verified, never overwritten."
+              ;;
+            404)
+              echo "exists=false" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              cat "$RUNNER_TEMP/release-check.json"
+              echo "::error::Could not determine release existence (GitHub API HTTP $HTTP_STATUS). Refusing to publish."
+              exit 1
+              ;;
+          esac
+      - name: Publish HTE Universe 4.0.6 GitHub Release
         if: startsWith(github.ref, 'refs/tags/native-v') && steps.release_state.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: HTE Universe 4.0.5 — Production build 38
+          name: HTE Universe 4.0.6 — Production build 40
           body: |
-            ## HTE Universe 4.0.5
+            ## HTE Universe 4.0.6
 
             Official signed Android release from the verified `main` build.
+
+            Production version: `4.0.6` (version code `40`).
 
             ### Changes
             - Adaptive settings layout for compact phones, tablets and wide screens.
             - New ten-band studio equalizer curve mapped to each device's supported audio-effect bands.
             - Migration of saved five-band equalizer settings without discarding the user's previous curve.
-            - Clearer update-service diagnostics, safer resumable downloads and APK package/version validation.
-            - Android emulator launch smoke tests for API 26 and API 35.
+            - Bounded DNS, timeout and transient HTTP retries with clearer update diagnostics.
+            - Wi-Fi-only update policy is enforced throughout resumable downloads.
+            - Offline media downloads use collision-resistant filenames for same-title tracks.
+            - Stable API 25/26/35/37 emulator boot and ADB readiness checks before launch/instrumentation tests.
+            - Android emulator launch smoke tests for API 25, API 26, API 35 and API 37.
 
             ### Preserved
             - Original High-Tech Entertainment logo, splash screen and startup audio resources.
@@ -185,11 +215,11 @@ jobs:
             ### Verification
             - Android compilation, unit tests and lint must pass.
             - Signed APK package/version and production certificate verification must pass.
-            - Emulator smoke tests target Android 8 (API 26), Android 15 (API 35), and Android 17 (API 37).
-            - Minimum supported Android version: Android 8 (API 26); target SDK: 37.
+            - Emulator smoke tests target Android 7.1 (API 25), Android 8 (API 26), Android 15 (API 35), and Android 17 preview (API 37).
+            - Minimum supported Android version: Android 7.1 (API 25); target SDK: 37.
             - Physical-device tests remain separate from CI emulator verification.
           files: |
-            release-assets/HTE-Universe-4.0.5.apk
+            release-assets/*.apk
             release-assets/SHA256SUMS.txt
           fail_on_unmatched_files: true
           make_latest: true
@@ -198,7 +228,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name }}
-          APK_NAME: HTE-Universe-4.0.5.apk
+          APK_NAME: HTE-Universe-4.0.6.apk
         shell: bash
         run: |
           set -euo pipefail
@@ -213,10 +243,27 @@ jobs:
           if data.get("isDraft") or data.get("isPrerelease"):
               raise SystemExit("Release exists but is not a public stable release.")
           assets = {asset.get("name") for asset in data.get("assets", [])}
-          if expected not in assets:
-              raise SystemExit(f"Production APK is missing from release: {expected}")
-          print(f"PASS: public release {data['tagName']} contains {expected}.")
+          missing = {expected, "SHA256SUMS.txt"} - assets
+          if missing:
+              raise SystemExit(f"Production release is missing assets: {sorted(missing)}")
+          print(f"PASS: public release {data['tagName']} contains the APK and SHA-256 manifest.")
           PY
+          RELEASE_DIR="$RUNNER_TEMP/hte-public-release"
+          mkdir -p "$RELEASE_DIR"
+          gh release download "$RELEASE_TAG" --pattern "$APK_NAME" --pattern "SHA256SUMS.txt" --dir "$RELEASE_DIR"
+          (cd "$RELEASE_DIR" && sha256sum --check SHA256SUMS.txt)
+          LOCAL_SHA="$(sha256sum app/build/outputs/apk/release/app-release.apk | awk '{print $1}')"
+          PUBLISHED_SHA="$(sha256sum "$RELEASE_DIR/$APK_NAME" | awk '{print $1}')"
+          test "$LOCAL_SHA" = "$PUBLISHED_SHA"
+          APK_SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
+          AAPT="$ANDROID_HOME/build-tools/37.0.0/aapt"
+          "$APK_SIGNER" verify --verbose --print-certs "$RELEASE_DIR/$APK_NAME"
+          PUBLISHED_BADGING="$("$AAPT" dump badging "$RELEASE_DIR/$APK_NAME")"
+          echo "$PUBLISHED_BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='40' versionName='4.0.6'"
+          LOCAL_CERT="$("$APK_SIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+          PUBLISHED_CERT="$("$APK_SIGNER" verify --print-certs "$RELEASE_DIR/$APK_NAME" | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+          test -n "$LOCAL_CERT" && test "$LOCAL_CERT" = "$PUBLISHED_CERT"
+          echo "PASS: public APK bytes, SHA-256, package ID, version and signing certificate match the verified production candidate."
       - name: Remove temporary signing keystore
         if: always()
         run: rm -f "$RUNNER_TEMP/hte-release.jks"
@@ -226,8 +273,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
-        api-level: [26, 35, 37]
+        api-level: [25, 26, 35, 37]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -255,16 +303,22 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -wipe-data
           disable-animations: true
-          script: cd hte-universe-native && gradle --no-daemon :app:connectedDebugAndroidTest
+          script: bash .github/scripts/wait-android-services.sh && bash .github/scripts/android-emulator-smoke.sh "${{ matrix.api-level }}"
       - name: Run Android 17 API 37 preview emulator smoke test
         if: matrix.api-level == 37
         shell: bash
         run: |
           set -euo pipefail
           sdkmanager "emulator" "system-images;android-37.0;google_apis;x86_64"
-          echo no | avdmanager create avd --force --name hte-api37 --package "system-images;android-37.0;google_apis;x86_64" --device "pixel_2"
-          "$ANDROID_HOME/emulator/emulator" -avd hte-api37 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data > "$RUNNER_TEMP/emulator-api37.log" 2>&1 &
+          # Avoid avdmanager device-catalogue lookup: preview images may omit devices.xml.
+          echo no | avdmanager create avd --force --name hte-api37 --package "system-images;android-37.0;google_apis;x86_64" --sdcard 512M
+          "$ANDROID_HOME/emulator/emulator" -avd hte-api37 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data -memory 4096 -cores 4 > "$RUNNER_TEMP/emulator-api37.log" 2>&1 &
           adb wait-for-device
           booted=false
           for attempt in $(seq 1 120); do
@@ -282,5 +336,14 @@ jobs:
           adb shell settings put global window_animation_scale 0
           adb shell settings put global transition_animation_scale 0
           adb shell settings put global animator_duration_scale 0
+          services_ready=false
+          for attempt in $(seq 1 30); do
+            if adb shell pm list packages >/dev/null 2>&1 && adb shell am get-current-user >/dev/null 2>&1; then
+              services_ready=true
+              break
+            fi
+            sleep 2
+          done
+          test "$services_ready" = "true" || { echo "::error::Android API 37 package/activity services did not become ready."; exit 1; }
           cd hte-universe-native
           gradle --no-daemon :app:connectedDebugAndroidTest --console=plain

@@ -60,6 +60,8 @@ import com.hightechentertainment.app.data.VideoDto
 import com.hightechentertainment.app.media.HtePlaybackController
 import com.hightechentertainment.app.media.OfflineDownloadManager
 import com.hightechentertainment.app.media.OfflineDownloadRecord
+import com.hightechentertainment.app.ui.design.HteIcons
+import com.hightechentertainment.app.ui.design.HteGlowingIconBadge
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -258,17 +260,11 @@ fun UniverseShell() {
             if (!isWideLayout) {
                 NavigationBar(containerColor = ShellPanel, contentColor = ShellGold) {
                     UniverseTab.entries.forEach { tab ->
-                        val icon = when (tab) {
-                            UniverseTab.HOME -> Icons.Outlined.Home
-                            UniverseTab.DISCOVER -> Icons.Outlined.Explore
-                            UniverseTab.VIDEOS -> Icons.Outlined.VideoLibrary
-                            UniverseTab.LIBRARY -> Icons.Outlined.LibraryMusic
-                            UniverseTab.ACCOUNT -> Icons.Outlined.Person
-                        }
+                        val icon = HteIcons.navigation(tab.label)
                         NavigationBarItem(
                             selected = selectedTab == tab,
                             onClick = { selectedTab = tab },
-                            icon = { Icon(icon, contentDescription = tab.label) },
+                            icon = { HteGlowingIconBadge(icon = icon, selected = selectedTab == tab, contentDescription = tab.label) },
                             label = { Text(tab.label, fontSize = 10.sp) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = ShellGold, selectedTextColor = ShellGold,
@@ -285,17 +281,11 @@ fun UniverseShell() {
             if (isWideLayout) {
                 NavigationRail(containerColor = ShellPanel, contentColor = ShellGold) {
                     UniverseTab.entries.forEach { tab ->
-                        val icon = when (tab) {
-                            UniverseTab.HOME -> Icons.Outlined.Home
-                            UniverseTab.DISCOVER -> Icons.Outlined.Explore
-                            UniverseTab.VIDEOS -> Icons.Outlined.VideoLibrary
-                            UniverseTab.LIBRARY -> Icons.Outlined.LibraryMusic
-                            UniverseTab.ACCOUNT -> Icons.Outlined.Person
-                        }
+                        val icon = HteIcons.navigation(tab.label)
                         NavigationRailItem(
                             selected = selectedTab == tab,
                             onClick = { selectedTab = tab },
-                            icon = { Icon(icon, contentDescription = tab.label) },
+                            icon = { HteGlowingIconBadge(icon = icon, selected = selectedTab == tab, contentDescription = tab.label) },
                             label = { Text(tab.label, fontSize = 9.sp) },
                             alwaysShowLabel = true,
                             colors = NavigationRailItemDefaults.colors(

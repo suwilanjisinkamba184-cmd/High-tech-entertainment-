@@ -120,7 +120,11 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
         val info = updateInfo ?: return
         val url = info.downloadUrl ?: run { updateError = "This release does not include an APK installer."; return }
         val connectivity = context.getSystemService(ConnectivityManager::class.java)
-        if (updateNetworkPolicy == "WIFI_ONLY" && connectivity?.isActiveNetworkMetered == true) {
+        val selectedNetworkPolicy = updateNetworkPolicy
+        val canDownload = {
+            allowsUpdateDownload(selectedNetworkPolicy, connectivity?.isActiveNetworkMetered == true)
+        }
+        if (!canDownload()) {
             updateError = "Update downloads are set to Wi-Fi only. Connect to Wi-Fi or allow mobile data in Settings."
             return
         }
@@ -129,7 +133,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
             isDownloading = true
             updateError = null
             try {
-                val file = updater.downloadUpdate(url, info.downloadSize, info.sha256) { value -> android.os.Handler(android.os.Looper.getMainLooper()).post { progress = value } }
+                val file = updater.downloadUpdate(url, info.downloadSize, info.sha256, canDownload = canDownload) { value -> android.os.Handler(android.os.Looper.getMainLooper()).post { progress = value } }
                 check(updater.isInstallableUpdate(file)) { "The downloaded APK is not a newer HTE Universe build for this app. It was rejected." }
                 downloadedApk = file
                 statusMessage = "Update downloaded and package identity verified. Android will verify the signing certificate during installation."
@@ -333,7 +337,18 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                             Icon(Icons.Outlined.InstallMobile, null); Spacer(Modifier.width(8.dp)); Text("Install update")
                         }
                     }
-                    updateError?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 11.sp) }
+                    updateError?.let { message ->
+                        Text(message, color = Color(0xFFFF8A80), fontSize = 11.sp)
+                        TextButton(onClick = {
+                            runCatching {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases".toUri()))
+                            }.onFailure {
+                                statusMessage = "GitHub Releases could not be opened. Check your internet connection and try again."
+                            }
+                        }) {
+                            Text("Open GitHub Releases", color = SettingsGold)
+                        }
+                    }
                     statusMessage?.let { Text(it, color = SettingsSilver, fontSize = 11.sp) }
                     Text("Downloads can be paused and resumed. Android will verify the app signature when you install an update.", color = SettingsMuted, fontSize = 10.sp)
                 }
@@ -512,7 +527,8 @@ private fun formatBytes(value: Long): String {
 }
 
 private fun openUpdateInstaller(context: android.content.Context, file: File) {
-    if (!context.packageManager.canRequestPackageInstalls()) {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
+        !context.packageManager.canRequestPackageInstalls()) {
         val permissionIntent = Intent(AndroidSettings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, "package:${context.packageName}".toUri())
         permissionIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(permissionIntent)
@@ -526,9 +542,12 @@ private fun openUpdateInstaller(context: android.content.Context, file: File) {
     context.startActivity(intent)
 }
 
-private fun friendlyUpdateError(error: Throwable): String = when (error) {
-    is UnknownHostException -> "No internet connection. Connect to the internet and try again."
-    is SocketTimeoutException -> "The update server took too long to respond. Please retry."
-    is SSLException -> "A secure connection to the update server could not be established. Check your device date, time and network."
-    else -> error.message?.take(220) ?: "The update could not be completed. Please retry."
+private fun friendlyUpdateError(error: Throwable): String {
+    val rootCause = generateSequence(error) { it.cause }.last()
+    return when (rootCause) {
+        is UnknownHostException -> "Can't reach GitHub right now. Check your internet connection or Private DNS, then retry. You can also open GitHub Releases below."
+        is SocketTimeoutException -> "GitHub took too long to respond. Check your connection and retry."
+        is SSLException -> "A secure connection to GitHub could not be established. Check your device date, time and network."
+        else -> (rootCause.message ?: error.message)?.take(220) ?: "The update could not be completed. Please retry."
+    }
 }
