@@ -13,11 +13,11 @@ The canonical Android implementation is Kotlin + Jetpack Compose in this directo
 
 ## Verified existing Supabase backend
 - Production already has `public.hte_my_role()` as a SECURITY INVOKER RPC. It delegates to `private.hte_current_role()`, whose SECURITY DEFINER implementation is confined to the unexposed private schema, uses an empty search path, checks `auth.uid()`, and returns only the active caller's role. Anonymous execution is denied and authenticated execution is granted.
-- Production already has the `elevenlabs-voice-token` Edge Function deployed and active with JWT verification enabled. The deployed source matches the checked-in function implementation; no redeployment or new database migration is required for this integration.
+- Production already has the `elevenlabs-voice-token` Edge Function deployed and active with JWT verification enabled. The deployed source exactly matches the checked-in function implementation; no redeployment or new database migration is required for this integration.
 - Existing Founder-only RLS policies remain the final authorization layer. No production database changes or secret changes were applied by this PR.
 
 ## Compatibility and release safety
-- Package ID remains `com.hightechentertainment.app`; current version lineage remains 4.0.1 / code 33 (no downgrade from the prior candidate).
+- Package ID remains `com.hightechentertainment.app`; next release candidate is 4.0.2 / versionCode 34, incremented above the previous 4.0.1 / code 33 build.
 - Existing production signing configuration and Supabase project are not rotated or modified by this source merge.
 - The uploaded starter's duplicate `HteApp`, `HteRoot` and playback service are not added.
 - No destructive database migration is included.
