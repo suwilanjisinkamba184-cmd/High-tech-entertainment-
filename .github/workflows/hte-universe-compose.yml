@@ -272,19 +272,19 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -wipe-data
           disable-animations: true
           script: |
-            set -euo pipefail
+            set -eu
             adb wait-for-device
             booted=false
             for attempt in $(seq 1 120); do
               state="$(adb get-state 2>/dev/null || true)"
               boot_completed="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
-              if [[ "$state" == "device" && "$boot_completed" == "1" ]]; then
+              if [ "$state" = "device" ] && [ "$boot_completed" = "1" ]; then
                 booted=true
                 break
               fi
               sleep 5
             done
-            if [[ "$booted" != "true" ]]; then
+            if [ "$booted" != "true" ]; then
               adb devices -l
               echo "::error::Android emulator did not reach a stable online and boot-complete state."
               exit 1
