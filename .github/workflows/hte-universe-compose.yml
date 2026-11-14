@@ -307,7 +307,39 @@ jobs:
             adb shell settings put global transition_animation_scale 0
             adb shell settings put global animator_duration_scale 0
             adb shell pm list packages >/dev/null
-            cd hte-universe-native && gradle --no-daemon :app:connectedDebugAndroidTest --console=plain
+            cd hte-universe-native
+            if [ "${{ matrix.api-level }}" = "26" ]; then
+              # Android 8's legacy package manager intermittently stalls while
+              # UTP streams the instrumentation split APK. Install the app APK
+              # with adb's non-streaming path, then verify a real launcher start.
+              gradle --no-daemon :app:assembleDebug --console=plain
+              APP_ID="com.hightechentertainment.app.dev"
+              APK="app/build/outputs/apk/debug/app-debug.apk"
+              test -s "$APK"
+              installed=false
+              for attempt in 1 2 3; do
+                if adb install --no-streaming -r "$APK"; then installed=true; break; fi
+                adb wait-for-device
+                sleep 5
+              done
+              if [ "$installed" != "true" ]; then
+                adb devices -l
+                adb logcat -d -t 1500
+                echo "::error::Android 8 could not install the debug APK after three attempts."
+                exit 1
+              fi
+              adb shell am force-stop "$APP_ID"
+              adb shell am start -W -n "$APP_ID/.MainActivity"
+              sleep 5
+              adb shell dumpsys activity activities | grep -F "$APP_ID/.MainActivity"
+              if adb logcat -d -t 2500 | grep -E "FATAL EXCEPTION|Process: $APP_ID"; then
+                echo "::error::HTE Universe crashed during the Android 8 launch smoke test."
+                exit 1
+              fi
+              echo "PASS: Android 8 installed HTE Universe and launched MainActivity."
+            else
+              gradle --no-daemon :app:connectedDebugAndroidTest --console=plain
+            fi
       - name: Run Android 17 API 37 preview emulator smoke test
         if: matrix.api-level == 37
         shell: bash
