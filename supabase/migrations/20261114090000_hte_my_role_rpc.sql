@@ -1,6 +1,6 @@
--- Expose only the authenticated caller's role to the native Founder Studio.
--- Do not return user IDs, emails, or the role directory.
-create or replace function public.hte_my_role()
+-- Keep the privileged role-table lookup in the unexposed private schema.
+-- The public RPC is SECURITY INVOKER and returns only the caller's own role.
+create or replace function private.hte_my_role()
 returns text
 language sql
 stable
@@ -24,8 +24,23 @@ as $$
   end;
 $$;
 
+revoke all on function private.hte_my_role() from public, anon;
+grant execute on function private.hte_my_role() to authenticated;
+
+create or replace function public.hte_my_role()
+returns text
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select private.hte_my_role();
+$$;
+
 revoke all on function public.hte_my_role() from public, anon;
 grant execute on function public.hte_my_role() to authenticated;
 
+comment on function private.hte_my_role() is
+  'Privileged internal lookup that returns only the current authenticated caller role.';
 comment on function public.hte_my_role() is
-  'Returns only the authenticated caller role for HTE app gating; server RLS remains authoritative.';
+  'Authenticated RPC wrapper for the caller role; server RLS remains the authorization authority.';
