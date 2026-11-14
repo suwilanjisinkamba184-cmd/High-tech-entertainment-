@@ -26,6 +26,7 @@ import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import com.hightechentertainment.app.player.Media3PlayerController
 import com.hightechentertainment.app.player.PlayerHost
+import com.hightechentertainment.app.player.PlayerUiState
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -88,6 +89,8 @@ fun UniverseShell() {
     var mediaController by remember { mutableStateOf<MediaController?>(null) }
     var playerExpanded by remember { mutableStateOf(false) }
     val playerUiController = remember(mediaController) { mediaController?.let { Media3PlayerController(it, scope) } }
+    val playerUiState = playerUiController?.state?.collectAsState(initial = PlayerUiState())?.value ?: PlayerUiState()
+    val playerHasTrack = playerUiState.track != null
     DisposableEffect(context) {
         HtePlaybackController.connect(
             context,
@@ -260,7 +263,11 @@ fun UniverseShell() {
                     }
                 }
             }
-            Column(Modifier.weight(1f).fillMaxHeight().padding(insets)) {
+            Column(
+                Modifier.weight(1f).fillMaxHeight()
+                    .padding(insets)
+                    .padding(end = if (isWideLayout && playerHasTrack) 360.dp else 0.dp)
+            ) {
             UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true })
             when (selectedTab) {
                 UniverseTab.HOME -> HomeScreen(
@@ -308,22 +315,44 @@ fun UniverseShell() {
         }
         }
         playerUiController?.let { uiController ->
-            PlayerHost(
-                controller = uiController,
-                expanded = playerExpanded,
-                onExpandedChange = { playerExpanded = it },
-                modifier = Modifier.align(Alignment.BottomCenter),
-                collapsedBottomInset = if (isWideLayout) 12.dp else 80.dp,
-                artwork = { url, artworkModifier ->
-                    if (!url.isNullOrBlank()) {
-                        AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
-                    } else {
-                        Box(artworkModifier.background(Brush.linearGradient(listOf(Color(0xFF493719), ShellPanel))), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Outlined.Album, null, tint = ShellGold, modifier = Modifier.size(30.dp))
+            if (isWideLayout && playerHasTrack) {
+                // Wide layouts reserve a dedicated right-hand listening theater.
+                PlayerHost(
+                    controller = uiController,
+                    expanded = playerExpanded,
+                    onExpandedChange = { playerExpanded = it },
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                        .width(352.dp).fillMaxHeight()
+                        .padding(start = 8.dp, top = 10.dp, end = 10.dp, bottom = 10.dp),
+                    collapsedBottomInset = 0.dp,
+                    artwork = { url, artworkModifier ->
+                        if (!url.isNullOrBlank()) {
+                            AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
+                        } else {
+                            Box(artworkModifier.background(Brush.linearGradient(listOf(Color(0xFF493719), ShellPanel))), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Outlined.Album, null, tint = ShellGold, modifier = Modifier.size(30.dp))
+                            }
                         }
-                    }
-                },
-            )
+                    },
+                )
+            } else {
+                PlayerHost(
+                    controller = uiController,
+                    expanded = playerExpanded,
+                    onExpandedChange = { playerExpanded = it },
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    collapsedBottomInset = 80.dp,
+                    artwork = { url, artworkModifier ->
+                        if (!url.isNullOrBlank()) {
+                            AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
+                        } else {
+                            Box(artworkModifier.background(Brush.linearGradient(listOf(Color(0xFF493719), ShellPanel))), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Outlined.Album, null, tint = ShellGold, modifier = Modifier.size(30.dp))
+                            }
+                        }
+                    },
+                )
+            }
         }
         }
     }
