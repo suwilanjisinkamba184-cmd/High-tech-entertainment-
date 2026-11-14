@@ -113,7 +113,7 @@ jobs:
           sha256sum "$APK" | tee app/build/outputs/apk/release/SHA256SUMS.txt
       - name: Confirm certificate matches previous public release
         env:
-          PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/native-v4.0.4-build37/HTE-Universe-4.0.4.apk
+          PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/native-v4.0.5-build38/HTE-Universe-4.0.5.apk
         run: |
           set -euo pipefail
           APK_SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
@@ -125,12 +125,12 @@ jobs:
             exit 1
           fi
           if [[ "$OLD_CERT" != "$NEW_CERT" ]]; then
-            echo "::error::Production signing certificate differs from the previous public 4.0.4 build 37. Refusing to publish."
+            echo "::error::Production signing certificate differs from the previous public 4.0.5 build 38. Refusing to publish."
             echo "Previous release certificate SHA-256: $OLD_CERT"
             echo "New release certificate SHA-256:      $NEW_CERT"
             exit 1
           fi
-          echo "Verified: release certificate matches 4.0.4 build 37."
+          echo "Verified: release certificate matches 4.0.5 build 38."
       - name: Upload signed production APK
         uses: actions/upload-artifact@v7
         with:
@@ -148,6 +148,7 @@ jobs:
           VERSION_CODE=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' app/build.gradle.kts | head -n1)
           test "$VERSION_NAME" = "4.0.6"
           test "$VERSION_CODE" = "39"
+          test "$GITHUB_REF_NAME" = "native-v${VERSION_NAME}-build${VERSION_CODE}"
           APK_NAME="HTE-Universe-${VERSION_NAME}.apk"
           cp app/build/outputs/apk/release/app-release.apk "../release-assets/$APK_NAME"
           (cd ../release-assets && sha256sum "$APK_NAME" > SHA256SUMS.txt)
@@ -158,12 +159,23 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Release already exists; it will be verified, never overwritten."
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
+          set -euo pipefail
+          API_URL="https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME"
+          HTTP_STATUS="$(curl -sS -o "$RUNNER_TEMP/release-check.json" -w "%{http_code}" -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$API_URL")"
+          case "$HTTP_STATUS" in
+            200)
+              echo "exists=true" >> "$GITHUB_OUTPUT"
+              echo "Release already exists; it will be verified, never overwritten."
+              ;;
+            404)
+              echo "exists=false" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              cat "$RUNNER_TEMP/release-check.json"
+              echo "::error::Could not determine release existence (GitHub API HTTP $HTTP_STATUS). Refusing to publish."
+              exit 1
+              ;;
+          esac
       - name: Publish HTE Universe 4.0.6 GitHub Release
         if: startsWith(github.ref, 'refs/tags/native-v') && steps.release_state.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
@@ -184,8 +196,8 @@ jobs:
             - Bounded DNS, timeout and transient HTTP retries with clearer update diagnostics.
             - Wi-Fi-only update policy is enforced throughout resumable downloads.
             - Offline media downloads use collision-resistant filenames for same-title tracks.
-            - Stable API 26/35 emulator boot and ADB readiness checks before instrumentation.
-            - Android emulator launch smoke tests for API 26 and API 35.
+            - Stable API 26/35/37 emulator boot and ADB readiness checks before instrumentation.
+            - Android emulator launch smoke tests for API 26, API 35 and API 37.
 
             ### Preserved
             - Original High-Tech Entertainment logo, splash screen and startup audio resources.
@@ -223,10 +235,27 @@ jobs:
           if data.get("isDraft") or data.get("isPrerelease"):
               raise SystemExit("Release exists but is not a public stable release.")
           assets = {asset.get("name") for asset in data.get("assets", [])}
-          if expected not in assets:
-              raise SystemExit(f"Production APK is missing from release: {expected}")
-          print(f"PASS: public release {data['tagName']} contains {expected}.")
+          missing = {expected, "SHA256SUMS.txt"} - assets
+          if missing:
+              raise SystemExit(f"Production release is missing assets: {sorted(missing)}")
+          print(f"PASS: public release {data['tagName']} contains the APK and SHA-256 manifest.")
           PY
+          RELEASE_DIR="$RUNNER_TEMP/hte-public-release"
+          mkdir -p "$RELEASE_DIR"
+          gh release download "$RELEASE_TAG" --pattern "$APK_NAME" --pattern "SHA256SUMS.txt" --dir "$RELEASE_DIR"
+          (cd "$RELEASE_DIR" && sha256sum --check SHA256SUMS.txt)
+          LOCAL_SHA="$(sha256sum app/build/outputs/apk/release/app-release.apk | awk '{print $1}')"
+          PUBLISHED_SHA="$(sha256sum "$RELEASE_DIR/$APK_NAME" | awk '{print $1}')"
+          test "$LOCAL_SHA" = "$PUBLISHED_SHA"
+          APK_SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
+          AAPT="$ANDROID_HOME/build-tools/37.0.0/aapt"
+          "$APK_SIGNER" verify --verbose --print-certs "$RELEASE_DIR/$APK_NAME"
+          PUBLISHED_BADGING="$("$AAPT" dump badging "$RELEASE_DIR/$APK_NAME")"
+          echo "$PUBLISHED_BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='39' versionName='4.0.6'"
+          LOCAL_CERT="$("$APK_SIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+          PUBLISHED_CERT="$("$APK_SIGNER" verify --print-certs "$RELEASE_DIR/$APK_NAME" | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+          test -n "$LOCAL_CERT" && test "$LOCAL_CERT" = "$PUBLISHED_CERT"
+          echo "PASS: public APK bytes, SHA-256, package ID, version and signing certificate match the verified production candidate."
       - name: Remove temporary signing keystore
         if: always()
         run: rm -f "$RUNNER_TEMP/hte-release.jks"
