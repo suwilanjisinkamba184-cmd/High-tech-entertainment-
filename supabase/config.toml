@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.public-booking-request]
 verify_jwt = false
+
+[functions.elevenlabs-ad-studio]
+verify_jwt = true
+
+[functions.elevenlabs-voice-token]
+verify_jwt = true
