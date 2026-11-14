@@ -145,9 +145,9 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v4.0.3-build35
+          tag_name: v4.0.3-build36
           target_commitish: ${{ github.sha }}
-          name: HTE Universe 4.0.3 — Production build 35
+          name: HTE Universe 4.0.3 — Production build 36
           body: |
             ## HTE Universe 4.0.3
 
@@ -168,7 +168,7 @@ jobs:
             - Android compilation, unit tests and lint passed.
             - Signed production APK package/version verification passed.
             - Production signing certificate matched the previous public release.
-            - Version: 4.0.3 (version code 35); minimum Android 8 (API 26).
+            - Version: 4.0.3 (version code 36); minimum Android 8 (API 26).
           files: |
             release-assets/HTE-Universe-4.0.3.apk
             release-assets/SHA256SUMS.txt
@@ -178,7 +178,7 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: v4.0.3-build35
+          RELEASE_TAG: v4.0.3-build36
           APK_NAME: HTE-Universe-4.0.3.apk
         shell: bash
         run: |
