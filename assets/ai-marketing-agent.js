@@ -1,6 +1,5 @@
 (()=>{'use strict';
-const cfg=window.HTE_SUPABASE_CONFIG||{};
-const client=window.supabase?.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});
+const client=window.HTE_SUPABASE_CLIENT;
 const form=document.getElementById('hte-marketing-form');if(!form)return;
 const status=document.getElementById('hte-marketing-status');
 const connections=document.getElementById('hte-social-connections');
