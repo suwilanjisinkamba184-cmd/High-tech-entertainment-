@@ -215,10 +215,14 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                     Text("Equalizer availability depends on the phone's audio-effect support. Your selected preset is applied when the HTE playback audio session becomes active.", color = SettingsMuted, fontSize = 10.sp)
                     SettingsDivider()
                     SettingsChoice("Music streaming quality", streamingQuality, listOf("AUTO", "DATA SAVER", "NORMAL", "HIGH")) {
-                        streamingQuality = it; settingsStore.streamingQuality = it
+                        streamingQuality = it
+                        settingsStore.streamingQuality = it
+                        onSettingsChanged()
                     }
                     SettingsChoice("Preferred video quality (when variants are available)", videoQuality, listOf("AUTO", "LOW", "MEDIUM", "HIGH")) {
-                        videoQuality = it; settingsStore.videoQuality = it
+                        videoQuality = it
+                        settingsStore.videoQuality = it
+                        onSettingsChanged()
                     }
                 }
             }

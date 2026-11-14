@@ -33,6 +33,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.media3.common.C
@@ -86,21 +89,57 @@ fun UniverseShell() {
     var searchQuery by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val settingsStore = remember(context) { AppSettingsStore(context) }
+    var settingsRevision by remember { mutableStateOf(0) }
+    val backgroundPlayback = remember(settingsRevision) { settingsStore.backgroundPlayback }
+    val streamingQuality = remember(settingsRevision) { settingsStore.streamingQuality }
+    val videoQuality = remember(settingsRevision) { settingsStore.videoQuality }
     var mediaController by remember { mutableStateOf<MediaController?>(null) }
     var playerExpanded by remember { mutableStateOf(false) }
     val playerUiController = remember(mediaController) { mediaController?.let { Media3PlayerController(it, scope) } }
     val playerUiState = playerUiController?.state?.collectAsState(initial = PlayerUiState())?.value ?: PlayerUiState()
     val playerHasTrack = playerUiState.track != null
     DisposableEffect(context) {
-        HtePlaybackController.connect(
+        var effectActive = true
+        val connectionFuture = HtePlaybackController.connect(
             context,
-            onConnected = { mediaController = it },
-            onError = { error -> Toast.makeText(context, error.message?.take(120) ?: "The background player could not start.", Toast.LENGTH_LONG).show() },
+            onConnected = { controller -> if (effectActive) mediaController = controller },
+            onError = { error ->
+                if (effectActive) Toast.makeText(
+                    context,
+                    error.message?.take(120) ?: "The background player could not start.",
+                    Toast.LENGTH_LONG,
+                ).show()
+            },
         )
-        onDispose { }
+        onDispose {
+            effectActive = false
+            mediaController = null
+            HtePlaybackController.release(connectionFuture)
+        }
     }
     DisposableEffect(playerUiController) {
         onDispose { playerUiController?.release() }
+    }
+    DisposableEffect(lifecycleOwner, mediaController, backgroundPlayback) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP && !backgroundPlayback) mediaController?.pause()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(mediaController, streamingQuality) {
+        val player = mediaController ?: return@LaunchedEffect
+        val maxAudioBitrate = when (streamingQuality) {
+            "DATA SAVER" -> 128_000
+            "NORMAL" -> 160_000
+            "HIGH" -> 320_000
+            else -> Int.MAX_VALUE
+        }
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setMaxAudioBitrate(maxAudioBitrate)
+            .build()
     }
     LaunchedEffect(mediaController, selectedTrack?.id, selectedTrackQueue) {
         val player = mediaController ?: return@LaunchedEffect
@@ -132,8 +171,6 @@ fun UniverseShell() {
         selectedTrackQueue = null
     }
     val offlineManager = remember(context) { OfflineDownloadManager(context) }
-    val settingsStore = remember(context) { AppSettingsStore(context) }
-    var settingsRevision by remember { mutableStateOf(0) }
     val autoplayNext = remember(settingsRevision) { settingsStore.autoplayNext }
     var downloads by remember { mutableStateOf<List<OfflineDownloadRecord>>(emptyList()) }
     var favouriteTrackIds by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -359,7 +396,7 @@ fun UniverseShell() {
 
     }
 
-    selectedVideo?.let { VideoPlayerDialog(video = it, onDismiss = { selectedVideo = null }) }
+    selectedVideo?.let { VideoPlayerDialog(video = it, quality = videoQuality, onDismiss = { selectedVideo = null }) }
     if (showVoiceAssistant) {
         VoiceAssistantDialog(
             tracks = tracks,
@@ -845,7 +882,7 @@ private fun formatMediaTime(milliseconds: Long): String {
 
 @androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 @Composable
-private fun VideoPlayerDialog(video: VideoDto, onDismiss: () -> Unit) {
+private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
     DisposableEffect(activity) {
@@ -861,6 +898,17 @@ private fun VideoPlayerDialog(video: VideoDto, onDismiss: () -> Unit) {
     }
     val player = remember(video.id, video.videoUrl) {
         ExoPlayer.Builder(context).build().apply {
+            val maxVideoSize = when (quality) {
+                "LOW" -> 640 to 360
+                "MEDIUM" -> 854 to 480
+                "HIGH" -> 1920 to 1080
+                else -> null
+            }
+            if (maxVideoSize != null) {
+                trackSelectionParameters = trackSelectionParameters.buildUpon()
+                    .setMaxVideoSize(maxVideoSize.first, maxVideoSize.second)
+                    .build()
+            }
             if (validUrl) {
                 setMediaItem(MediaItem.fromUri(video.videoUrl))
                 prepare()
@@ -873,10 +921,13 @@ private fun VideoPlayerDialog(video: VideoDto, onDismiss: () -> Unit) {
     var videoPlaying by remember { mutableStateOf(false) }
     var videoPosition by remember { mutableLongStateOf(0L) }
     var videoDuration by remember { mutableLongStateOf(0L) }
+    var isSeeking by remember { mutableStateOf(false) }
+    var seekFraction by remember { mutableStateOf(0f) }
+    val isSeekingNow by rememberUpdatedState(isSeeking)
     LaunchedEffect(player) {
         while (true) {
             videoPlaying = player.isPlaying
-            videoPosition = player.currentPosition.coerceAtLeast(0L)
+            if (!isSeekingNow) videoPosition = player.currentPosition.coerceAtLeast(0L)
             videoDuration = player.duration.takeIf { it != C.TIME_UNSET }?.coerceAtLeast(0L) ?: 0L
             delay(400)
         }
@@ -928,8 +979,12 @@ private fun VideoPlayerDialog(video: VideoDto, onDismiss: () -> Unit) {
                         verticalArrangement = Arrangement.spacedBy(7.dp)
                     ) {
                         Slider(
-                            value = if (videoDuration > 0L) (videoPosition.toFloat() / videoDuration).coerceIn(0f, 1f) else 0f,
-                            onValueChange = { fraction -> if (videoDuration > 0L) player.seekTo((fraction * videoDuration).toLong()) },
+                            value = if (isSeeking) seekFraction else if (videoDuration > 0L) (videoPosition.toFloat() / videoDuration).coerceIn(0f, 1f) else 0f,
+                            onValueChange = { fraction -> isSeeking = true; seekFraction = fraction },
+                            onValueChangeFinished = {
+                                if (videoDuration > 0L) player.seekTo((seekFraction * videoDuration).toLong())
+                                isSeeking = false
+                            },
                             enabled = videoDuration > 0L,
                             colors = SliderDefaults.colors(thumbColor = ShellGold, activeTrackColor = ShellGold)
                         )
