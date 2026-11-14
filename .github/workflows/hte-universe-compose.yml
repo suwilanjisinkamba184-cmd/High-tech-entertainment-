@@ -303,44 +303,49 @@ jobs:
           script: |
             adb wait-for-device
             booted=false
-          attempt=0
-          while [ "$attempt" -lt 120 ]; do
-            state="$(adb get-state 2>/dev/null || true)"
-            boot_completed="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
-            if [ "$state" = "device" ] && [ "$boot_completed" = "1" ]; then
-              booted=true
-              break
+            attempt=0
+            while [ "$attempt" -lt 120 ]; do
+              state="$(adb get-state 2>/dev/null || true)"
+              boot_completed="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+              if [ "$state" = "device" ] && [ "$boot_completed" = "1" ]; then
+                booted=true
+                break
+              fi
+              attempt=$((attempt + 1))
+              sleep 5
+            done
+            if [ "$booted" != "true" ]; then
+              adb devices -l
+              echo "::error::Android emulator did not reach a stable online and boot-complete state."
+              exit 1
             fi
-            attempt=$((attempt + 1))
-            sleep 5
-          done
-          if [ "$booted" != "true" ]; then
-            adb devices -l
-            echo "::error::Android emulator did not reach a stable online and boot-complete state."
-            exit 1
-          fi
             adb shell settings put global window_animation_scale 0
             adb shell settings put global transition_animation_scale 0
             adb shell settings put global animator_duration_scale 0
             adb shell pm list packages >/dev/null
             cd hte-universe-native
             if [ "${{ matrix.api-level }}" -le 26 ]; then
-              # Android 7.1/8 package managers can stall when UTP streams instrumentation APKs.
+              # Older Android package managers can stall when UTP streams instrumentation APKs.
               # Install the app APK directly and verify a real launcher start.
               gradle --no-daemon :app:assembleDebug --console=plain
               APP_ID="com.hightechentertainment.app.dev"
               APK="app/build/outputs/apk/debug/app-debug.apk"
               test -s "$APK"
               installed=false
-              for attempt in 1 2 3; do
-                if adb install --no-streaming -r "$APK"; then installed=true; break; fi
+              attempt=0
+              while [ "$attempt" -lt 3 ]; do
+                if adb install --no-streaming -r "$APK"; then
+                  installed=true
+                  break
+                fi
                 adb wait-for-device
+                attempt=$((attempt + 1))
                 sleep 5
               done
               if [ "$installed" != "true" ]; then
                 adb devices -l
                 adb logcat -d -t 1500
-                echo "::error::Android 8 could not install the debug APK after three attempts."
+                echo "::error::Android API ${{ matrix.api-level }} could not install the debug APK after three attempts."
                 exit 1
               fi
               adb shell am force-stop "$APP_ID"
@@ -348,7 +353,7 @@ jobs:
               sleep 5
               adb shell dumpsys activity activities | grep -F "$APP_ID/.MainActivity"
               if adb logcat -d -t 2500 | grep -E "FATAL EXCEPTION|Process: $APP_ID"; then
-                echo "::error::HTE Universe crashed during the Android 8 launch smoke test."
+                echo "::error::HTE Universe crashed during the Android API ${{ matrix.api-level }} launch smoke test."
                 exit 1
               fi
               echo "PASS: Android API ${{ matrix.api-level }} installed HTE Universe and launched MainActivity."
