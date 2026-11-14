@@ -18,6 +18,9 @@ const featured=[
  {id:'zm-dear-mutima-2026',title:'Dear Mutima',artist:'Frank Ro ft. Kell Kay',description:'New Zambian–Malawian collaboration • November 2026',video_url:'https://www.youtube.com/watch?v=8HAJA43fta8',featured:true},
  {id:'zm-pa-duty-2026',title:'Pa Duty',artist:'Ace Trap ft. Natasha Chansa',description:'New Zambian release • November 2026',search_url:'https://www.youtube.com/results?search_query=Ace+Trap+Natasha+Chansa+Pa+Duty+official+video',featured:true},
  {id:'zm-final-destination-2026',title:'Final Destination',artist:'Shenky',description:'New Zambian release • November 2026',search_url:'https://www.youtube.com/results?search_query=Shenky+Final+Destination+official+video',featured:true}
+ ,{id:'zm-remember-me-2025',title:'Remember Me',artist:'Chile One MrZambia',description:'2025 Zambian release · official artist visualizer',video_url:'https://www.youtube.com/watch?v=RqoMc9n_XLs',thumbnail_url:'https://i.ytimg.com/vi/RqoMc9n_XLs/hqdefault.jpg',featured:true}
+ ,{id:'zm-bestie-2025',title:'Bestie (Muntu Wanga)',artist:'Roberto',description:'2025 Zambian release · official artist music video',video_url:'https://www.youtube.com/watch?v=7mLl3k9NUGs',thumbnail_url:'https://i.ytimg.com/vi/7mLl3k9NUGs/hqdefault.jpg',featured:true}
+ ,{id:'zm-kabolala-2025',title:'Kabolala',artist:'Kupa Kontra',description:'2025 Zambian release · official artist music video',video_url:'https://www.youtube.com/watch?v=zfK0o_g_9Mo',thumbnail_url:'https://i.ytimg.com/vi/zfK0o_g_9Mo/hqdefault.jpg',featured:true}
 ];
 let db=null;if(window.supabase&&cfg.url&&cfg.publishableKey){db=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}})}
 function videoCard(video){
