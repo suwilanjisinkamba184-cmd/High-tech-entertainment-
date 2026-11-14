@@ -4,7 +4,9 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import com.russhwolf.settings.ExperimentalSettingsApi
 import io.github.jan.supabase.auth.SessionManager
+import io.github.jan.supabase.auth.SettingsSessionManager
 import io.github.jan.supabase.auth.exception.NoSessionFoundException
 import io.github.jan.supabase.auth.user.UserSession
 import kotlinx.serialization.decodeFromString
@@ -35,7 +37,7 @@ internal class EncryptedSupabaseSessionManager(context: Context) : SessionManage
     }
 
     override suspend fun loadSession(): UserSession {
-        val encoded = preferences.getString(SESSION_KEY, null) ?: throw NoSessionFoundException()
+        val encoded = preferences.getString(SESSION_KEY, null) ?: return migrateLegacySession()
         return try {
             val payload = Base64.decode(encoded, Base64.NO_WRAP)
             require(payload.size > GCM_IV_BYTES)
@@ -52,6 +54,16 @@ internal class EncryptedSupabaseSessionManager(context: Context) : SessionManage
 
     override suspend fun deleteSession() {
         check(preferences.edit().remove(SESSION_KEY).commit()) { "Could not clear the saved sign-in session." }
+    }
+
+    @OptIn(ExperimentalSettingsApi::class)
+    private suspend fun migrateLegacySession(): UserSession {
+        // Preserve the existing SDK-managed login during upgrade to encrypted storage.
+        val legacy = SettingsSessionManager()
+        val session = legacy.loadSession()
+        saveSession(session)
+        legacy.deleteSession()
+        return session
     }
 
     private fun getOrCreateKey(): SecretKey {
