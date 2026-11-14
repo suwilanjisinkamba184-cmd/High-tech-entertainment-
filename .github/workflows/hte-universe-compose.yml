@@ -143,7 +143,7 @@ jobs:
           (cd ../release-assets && sha256sum HTE-Universe-4.0.3.apk > SHA256SUMS.txt)
       - name: Publish HTE Universe 4.0.3 GitHub Release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v4.0.3-build36
           target_commitish: ${{ github.sha }}
