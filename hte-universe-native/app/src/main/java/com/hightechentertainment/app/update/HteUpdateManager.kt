@@ -28,7 +28,7 @@ data class HteDownloadProgress(val downloaded: Long, val total: Long) {
 }
 
 class HteUpdateManager(private val context: Context) {
-    private val updateDirectory = File(context.cacheDir, "updates")
+    private val updateDirectory = File(context.filesDir, "updates")
 
     suspend fun checkForUpdate(currentVersion: String): HteUpdateInfo = withContext(Dispatchers.IO) {
         val connection = (URL(LATEST_RELEASE_URL).openConnection() as HttpURLConnection).apply {
