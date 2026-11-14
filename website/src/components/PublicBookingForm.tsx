@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 let client:SupabaseClient|null = null;
@@ -22,7 +22,7 @@ export default function PublicBookingForm() {
     if (formRef.current) formRef.current.dataset.startedAt = String(Date.now());
   },[]);
 
-  const submit = async (event:FormEvent<HTMLFormElement>) => {
+  const submit = async (event:SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (submitting) return;
     const form = event.currentTarget;

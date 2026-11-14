@@ -150,7 +150,7 @@
 
     <section class="admin-view" data-view="artists" hidden>
       <div class="admin-section-label"><div><span>03 / CREATIVE ROSTER</span><h2>Artist management</h2><p>Add and manage the artists represented on your website.</p></div></div>
-      <div class="panel admin-form-panel admin-compact-form"><div class="admin-panel-heading"><span class="admin-panel-icon">♙</span><div><h3>Add an artist</h3><p>Create a public artist profile</p></div></div><form id="artist-form"><div class="form-grid"><div class="field"><label>Artist name</label><input name="name" required maxlength="120" placeholder="Artist or stage name"></div><div class="field"><label>Image URL <span class="optional">OPTIONAL</span></label><input name="image_url" type="url" placeholder="https://…"></div><div class="field full"><label>Biography</label><textarea name="bio" maxlength="2000" placeholder="Tell visitors about this artist…"></textarea></div><div class="field full admin-checkbox-field"><label><input name="is_published" type="checkbox" checked style="width:auto"> Publish artist profile</label></div></div><button class="btn gold admin-submit" type="submit">Add artist →</button><div id="artist-status" class="status" role="status"></div></form></div>
+      <div class="panel admin-form-panel admin-compact-form"><div class="admin-panel-heading"><span class="admin-panel-icon">♙</span><div><h3>Add an artist</h3><p>Create a public artist profile</p></div></div><form id="artist-form"><div class="form-grid"><div class="field"><label>Artist name</label><input name="name" required maxlength="120" placeholder="Artist or stage name"></div><div class="field"><label>Image URL <span class="optional">OPTIONAL</span></label><input name="image_url" type="url" placeholder="https://…"></div><div class="field full"><label>Upload artist artwork <span class="optional">OR USE THE URL ABOVE</span></label><input name="artist_image" type="file" accept="image/jpeg,image/png,image/webp"><small class="admin-field-help">JPG, PNG or WebP · maximum 20 MB. Uploaded artwork is stored in HTE public artwork storage.</small></div><div class="field full"><label>Biography</label><textarea name="bio" maxlength="2000" placeholder="Tell visitors about this artist…"></textarea></div><div class="field full admin-checkbox-field"><label><input name="is_published" type="checkbox" checked style="width:auto"> Publish artist profile</label></div></div><button class="btn gold admin-submit" type="submit">Add artist →</button><div id="artist-status" class="status" role="status"></div></form></div>
       <div class="admin-table-heading"><div><span>ARTIST DIRECTORY</span><h3>Artists on your platform</h3></div><input class="admin-table-search" type="search" data-table-search="admin-artists" placeholder="Search artists…" aria-label="Search artists"></div>
       <div class="table-wrap admin-table-wrap"><table class="data-table"><thead><tr><th>Artist</th><th>Status</th><th>Actions</th></tr></thead><tbody id="admin-artists"></tbody></table></div>
     </section>
@@ -251,13 +251,13 @@
 <div id="toast" class="toast" role="status"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script src="../supabase-config.js"></script>
-<script src="../assets/app.js?v=17"></script>
+<script src="../assets/app.js?v=18"></script>
 <script src="../assets/admin-upload.js?v=20261109-session1"></script>
-<script src="../assets/admin-video.js?v=20261109-rpc1"></script>
+<script src="../assets/admin-video.js?v=20261114-shared-auth1"></script>
 <script src="../assets/admin-ui.js?v=20261112-1"></script>
 <script src="../assets/founder-studio-navigation.js?v=20261112-1"></script>
-<script src="../assets/admin-enhancements.js?v=20261109-rpc1"></script>
-<script src="../assets/ai-ad-studio.js?v=20261109-rpc1"></script>
-<script src="../assets/ai-marketing-agent.js?v=20261109-rpc1"></script>
+<script src="../assets/admin-enhancements.js?v=20261114-shared-auth2"></script>
+<script src="../assets/ai-ad-studio.js?v=20261114-shared-auth1"></script>
+<script src="../assets/ai-marketing-agent.js?v=20261114-shared-auth1"></script>
 </body>
 </html>

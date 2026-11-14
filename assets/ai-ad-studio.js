@@ -1,8 +1,7 @@
 (()=>{'use strict';
-const cfg=window.HTE_SUPABASE_CONFIG||{};
 const preferredVoiceId='4N8zjn9tVNuDEBFWVHAq';
 const storageKey='hte_ai_ad_script_draft_v1';
-const client=window.supabase?.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});
+const client=window.HTE_SUPABASE_CLIENT;
 const form=document.getElementById('ai-ad-form');
 if(!form)return;
 const voiceSelect=document.getElementById('ai-ad-voice');

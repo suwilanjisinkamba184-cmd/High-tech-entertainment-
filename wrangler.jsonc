@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Cloudflare Workers Builds runs scripts/build-website.sh before creating this preview.
+  "name": "high-tech-entertainment",
+  "compatibility_date": "2026-11-13",
+  "preview_urls": true,
+  "assets": {
+    "directory": "./dist"
+  },
+  "previews": {}
+}
