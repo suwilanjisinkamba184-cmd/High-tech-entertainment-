@@ -38,7 +38,7 @@ android {
         applicationId = "com.hightechentertainment.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 35
+        versionCode = 36
         versionName = "4.0.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "SUPABASE_URL", "\"" + supabaseUrl.get() + "\"")
