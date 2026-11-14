@@ -2,6 +2,8 @@
 
 **Music. Beats. Production. Beyond.**
 
+[![OpenRepos](https://img.shields.io/endpoint?url=https://openrepos.org/status/high-tech-entertainment.openrepos.org.json&style=flat-square)](https://high-tech-entertainment.openrepos.org/)
+
 High-Tech Entertainment is a focused music and artist platform for discovering releases, featured music, viewing artists and videos, and contacting or booking the team. The project includes a public website, a founder administration area, and a native Flutter application.
 
 ## Production addresses
