@@ -101,7 +101,12 @@ jobs:
           test -s "$APK"
           "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose --print-certs "$APK"
           BADGING=$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK")
-          echo "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='32' versionName='4.0.0'"
+          EXPECTED_VERSION_CODE=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' app/build.gradle.kts | head -n1)
+          EXPECTED_VERSION_NAME=$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts | head -n1)
+          test -n "$EXPECTED_VERSION_CODE"
+          test -n "$EXPECTED_VERSION_NAME"
+          echo "Expected app version: $EXPECTED_VERSION_NAME ($EXPECTED_VERSION_CODE)"
+          echo "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='$EXPECTED_VERSION_CODE' versionName='$EXPECTED_VERSION_NAME'"
           sha256sum "$APK" | tee app/build/outputs/apk/release/SHA256SUMS.txt
       - name: Confirm certificate matches previous public release
         env:
