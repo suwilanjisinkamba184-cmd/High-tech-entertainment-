@@ -2,11 +2,14 @@ package com.hightechentertainment.app.media
 
 import android.content.ComponentName
 import android.content.Context
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 
+@OptIn(markerClass = [UnstableApi::class])
 object HtePlaybackController {
     @Volatile private var sharedFuture: ListenableFuture<MediaController>? = null
     @Volatile private var activeController: MediaController? = null
@@ -39,11 +42,24 @@ object HtePlaybackController {
     }
 
     fun isConnected(): Boolean = activeController != null
+
+    /** Executes only actions that the active Media3 player can actually perform. */
+    fun performAction(action: String): Boolean {
+        val controller = activeController ?: return false
+        return when (action) {
+            "pause" -> if (controller.currentMediaItem == null) false else { controller.pause(); true }
+            "resume" -> if (controller.currentMediaItem == null) false else { controller.play(); true }
+            "next" -> if (controller.hasNextMediaItem()) { controller.seekToNextMediaItem(); true } else false
+            "previous" -> if (controller.currentMediaItem == null) false else { controller.seekToPreviousMediaItem(); true }
+            "stop" -> if (controller.currentMediaItem == null) false else { controller.stop(); true }
+            else -> false
+        }
+    }
     fun pause() { activeController?.pause() }
     fun resume() { activeController?.play() }
     fun next() { activeController?.seekToNextMediaItem() }
     fun previous() { activeController?.seekToPreviousMediaItem() }
-    fun stop() { activeController?.let { it.pause(); it.seekTo(0) } }
+    fun stop() { activeController?.stop() }
 
     fun release(future: ListenableFuture<MediaController>) {
         synchronized(this) {

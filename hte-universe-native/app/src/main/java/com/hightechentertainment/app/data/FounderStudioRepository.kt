@@ -205,19 +205,21 @@ class FounderStudioRepository {
 
     private fun safeName(name: String): String = name.replace(Regex("[^A-Za-z0-9._-]"), "_").take(80).ifBlank { "media" }
 
-    private fun extensionFor(mimeType: String, fallback: String): String = when (mimeType.lowercase()) {
+    private fun extensionFor(mimeType: String, fallback: String): String = when (mimeType.substringBefore(';').trim().lowercase()) {
         "audio/mpeg", "audio/mp3" -> "mp3"
         "audio/mp4", "audio/x-m4a" -> "m4a"
         "audio/aac" -> "aac"
         "audio/wav", "audio/x-wav" -> "wav"
         "audio/ogg" -> "ogg"
         "audio/flac" -> "flac"
+        "audio/webm" -> "webm"
         "video/webm" -> "webm"
         "video/quicktime" -> "mov"
         "video/mp4", "video/x-m4v" -> "mp4"
         "image/jpeg" -> "jpg"
         "image/png" -> "png"
         "image/webp" -> "webp"
+        "image/avif" -> "avif"
         else -> fallback
     }
 }

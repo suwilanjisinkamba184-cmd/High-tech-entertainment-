@@ -20,6 +20,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
+import androidx.core.net.toUri
+import coil.compose.AsyncImage
+import com.hightechentertainment.app.player.Media3PlayerController
+import com.hightechentertainment.app.player.PlayerHost
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -79,6 +85,49 @@ fun UniverseShell() {
     var searchQuery by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    var mediaController by remember { mutableStateOf<MediaController?>(null) }
+    var playerExpanded by remember { mutableStateOf(false) }
+    val playerUiController = remember(mediaController) { mediaController?.let { Media3PlayerController(it, scope) } }
+    DisposableEffect(context) {
+        HtePlaybackController.connect(
+            context,
+            onConnected = { mediaController = it },
+            onError = { error -> Toast.makeText(context, error.message?.take(120) ?: "The background player could not start.", Toast.LENGTH_LONG).show() },
+        )
+        onDispose { }
+    }
+    DisposableEffect(playerUiController) {
+        onDispose { playerUiController?.release() }
+    }
+    LaunchedEffect(mediaController, selectedTrack?.id, selectedTrackQueue) {
+        val player = mediaController ?: return@LaunchedEffect
+        val selected = selectedTrack ?: return@LaunchedEffect
+        val candidates = (selectedTrackQueue ?: listOf(selected)).let { queue ->
+            if (queue.any { it.id == selected.id }) queue else listOf(selected) + queue
+        }
+        val items = candidates.mapNotNull { candidate ->
+            val uri = candidate.audioUrl?.takeIf(String::isNotBlank)?.toUri() ?: return@mapNotNull null
+            if (uri.scheme !in listOf("http", "https", "file", "content")) return@mapNotNull null
+            MediaItem.Builder()
+                .setMediaId(candidate.id)
+                .setUri(uri)
+                .setMediaMetadata(MediaMetadata.Builder().setTitle(candidate.title).setArtist(candidate.artist).setArtworkUri(candidate.coverUrl?.toUri()).build())
+                .build()
+        }
+        if (items.isEmpty()) {
+            Toast.makeText(context, "This track does not have a valid audio URL.", Toast.LENGTH_LONG).show()
+            selectedTrack = null
+            selectedTrackQueue = null
+            return@LaunchedEffect
+        }
+        val startIndex = items.indexOfFirst { it.mediaId == selected.id }.coerceAtLeast(0)
+        player.setMediaItems(items, startIndex, C.TIME_UNSET)
+        player.prepare()
+        player.play()
+        playerExpanded = true
+        selectedTrack = null
+        selectedTrackQueue = null
+    }
     val offlineManager = remember(context) { OfflineDownloadManager(context) }
     val settingsStore = remember(context) { AppSettingsStore(context) }
     var settingsRevision by remember { mutableStateOf(0) }
@@ -152,7 +201,8 @@ fun UniverseShell() {
         }
     }
 
-    Scaffold(
+    Box(Modifier.fillMaxSize()) {
+        Scaffold(
         containerColor = ShellBackground,
         bottomBar = {
             NavigationBar(containerColor = ShellPanel, contentColor = ShellGold) {
@@ -187,7 +237,7 @@ fun UniverseShell() {
                     onExplore = { selectedTab = UniverseTab.DISCOVER },
                     onVideos = { selectedTab = UniverseTab.VIDEOS },
                     onVoice = { showVoiceAssistant = true },
-                    onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it) }, onPlayVideo = { selectedVideo = it },
+                    onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onPlayVideo = { selectedVideo = it },
                     onDownloadTrack = { startDownload(it.audioUrl, it.title, "audio") },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     onDownloadVideo = { startDownload(it.videoUrl, it.title, "video") },
@@ -195,7 +245,7 @@ fun UniverseShell() {
                 )
                 UniverseTab.DISCOVER -> DiscoverScreen(
                     tracks = tracks, isLoading = isLoading, error = catalogueError,
-                    onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it) }, onDownload = { startDownload(it.audioUrl, it.title, "audio") },
+                    onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onDownload = { startDownload(it.audioUrl, it.title, "audio") },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     initialQuery = searchQuery, onQueryChanged = { searchQuery = it }, onRefresh = ::refreshCatalogue
                 )
@@ -207,7 +257,7 @@ fun UniverseShell() {
                     onSignIn = { selectedTab = UniverseTab.ACCOUNT },
                     downloads = downloads,
                     favouriteTracks = tracks.filter { it.id in favouriteTrackIds },
-                    onPlayFavourite = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks.filter { track -> track.id in favouriteTrackIds } else listOf(it) },
+                    onPlayFavourite = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks.filter { track -> track.id in favouriteTrackIds } else listOf(it); playerExpanded = true },
                     onToggleFavourite = ::toggleFavourite,
                     onDownloadFavourite = { startDownload(it.audioUrl, it.title, "audio") },
                     onRemoveDownload = { record -> scope.launch { withContext(Dispatchers.IO) { offlineManager.remove(record.id) }; downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() } } },
@@ -218,6 +268,7 @@ fun UniverseShell() {
                             val offlineTrack = TrackDto(record.id.toString(), record.title, artist = "Downloaded", audioUrl = record.localUri)
                             selectedTrack = offlineTrack
                             selectedTrackQueue = listOf(offlineTrack)
+                            playerExpanded = true
                         }
                     }
                 )
@@ -225,8 +276,26 @@ fun UniverseShell() {
             }
         }
     }
+        playerUiController?.let { uiController ->
+            PlayerHost(
+                controller = uiController,
+                expanded = playerExpanded,
+                onExpandedChange = { playerExpanded = it },
+                modifier = Modifier.align(Alignment.BottomCenter),
+                collapsedBottomInset = 80.dp,
+                artwork = { url, artworkModifier ->
+                    if (!url.isNullOrBlank()) {
+                        AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
+                    } else {
+                        Box(artworkModifier.background(Brush.linearGradient(listOf(Color(0xFF493719), ShellPanel))), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Outlined.Album, null, tint = ShellGold, modifier = Modifier.size(30.dp))
+                        }
+                    }
+                },
+            )
+        }
+    }
 
-    selectedTrack?.let { AudioPlayerDialog(track = it, queue = selectedTrackQueue ?: if (autoplayNext) tracks else listOf(it), onDismiss = { selectedTrack = null; selectedTrackQueue = null }) }
     selectedVideo?.let { VideoPlayerDialog(video = it, onDismiss = { selectedVideo = null }) }
     if (showVoiceAssistant) {
         VoiceAssistantDialog(
@@ -236,6 +305,7 @@ fun UniverseShell() {
                 favourites.firstOrNull()?.let { first ->
                     selectedTrack = first
                     selectedTrackQueue = if (autoplayNext) favourites else listOf(first)
+                    playerExpanded = true
                 }
             },
             onNavigate = { destination ->
@@ -710,7 +780,7 @@ private fun formatMediaTime(milliseconds: Long): String {
     return "%d:%02d".format(totalSeconds / 60L, totalSeconds % 60L)
 }
 
-@UnstableApi
+@androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 @Composable
 private fun VideoPlayerDialog(video: VideoDto, onDismiss: () -> Unit) {
     val context = LocalContext.current

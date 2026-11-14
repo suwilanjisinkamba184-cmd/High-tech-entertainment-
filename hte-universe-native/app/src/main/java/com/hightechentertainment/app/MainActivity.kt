@@ -3,8 +3,12 @@ package com.hightechentertainment.app
 import android.os.Bundle
 import android.content.Intent
 import android.media.MediaPlayer
+import android.media.PlaybackParams
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.view.WindowCompat
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -40,6 +44,7 @@ import kotlinx.coroutines.delay
 import io.github.jan.supabase.auth.handleDeeplinks
 import com.hightechentertainment.app.data.SupabaseClientProvider
 import com.hightechentertainment.app.media.HtePlaybackController
+import com.hightechentertainment.app.ui.design.HteTheme
 
 private val Obsidian = Color(0xFF08090B)
 private val Panel = Color(0xFF121418)
@@ -51,8 +56,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         handleSupabaseIntent(intent)
-        window.statusBarColor = android.graphics.Color.rgb(8, 9, 11)
-        window.navigationBarColor = android.graphics.Color.rgb(8, 9, 11)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
         setContent { HteUniverseApp() }
     }
 
@@ -68,8 +75,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleSupabaseIntent(intent: Intent) {
+        val callback = intent.data ?: return
+        if (callback.scheme != "com.hightechentertainment.app" || callback.host != "auth-callback") return
         if (BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()) {
             runCatching { SupabaseClientProvider.client.handleDeeplinks(intent) }
+                .onFailure { error ->
+                    Log.e("HTEAuth", "Supabase app callback could not be processed", error)
+                    Toast.makeText(this, "Sign-in could not be completed. Please try again.", Toast.LENGTH_LONG).show()
+                }
         }
     }
 }
@@ -77,10 +90,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun HteUniverseApp() {
     var splashFinished by remember { mutableStateOf(false) }
-    MaterialTheme(colorScheme = darkColorScheme(
-        primary = Gold, secondary = Silver, background = Obsidian,
-        surface = Panel, onPrimary = Obsidian, onBackground = Color.White, onSurface = Color.White
-    )) {
+    val context = LocalContext.current
+    val reduceMotion = remember(context) { AppSettingsStore(context).reduceMotion }
+    HteTheme(reduceMotion = reduceMotion) {
         Surface(Modifier.fillMaxSize(), color = Obsidian) {
             if (!splashFinished) UniverseSplash { splashFinished = true } else UniverseShell()
         }
@@ -91,9 +103,10 @@ private fun HteUniverseApp() {
 private fun UniverseSplash(onFinished: () -> Unit) {
     val context = LocalContext.current
     DisposableEffect(context) {
-        val audioId = context.resources.getIdentifier("hte_universe_intro", "raw", context.packageName)
         val startupEnabled = AppSettingsStore(context).startupSoundEnabled
-        val player = if (startupEnabled && audioId != 0) MediaPlayer.create(context, audioId) else null
+        val player = if (startupEnabled) MediaPlayer.create(context, R.raw.hte_universe_intro) else null
+        // The packaged stereo MP3 is 14.054s; pitch-preserving 0.937x playback aligns it to the 15s splash.
+        runCatching { player?.setPlaybackParams(PlaybackParams().setSpeed(0.937f).setPitch(1.0f)) }
         player?.start()
         onDispose {
             try { player?.stop() } catch (_: IllegalStateException) { }
@@ -122,12 +135,15 @@ private fun UniverseSplash(onFinished: () -> Unit) {
         StarField(Modifier.fillMaxSize(), orbit)
         Column(Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 36.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Box(Modifier.size(88.dp).background(Brush.radialGradient(listOf(Gold.copy(alpha = .25f), Color.Transparent)), CircleShape), contentAlignment = Alignment.Center) {
+                Image(painter = painterResource(R.drawable.ic_hte_crown), contentDescription = "High-Tech Entertainment crown", modifier = Modifier.size(72.dp).graphicsLayer { rotationZ = if (reduceMotion) 0f else animatedCameraSpin * .035f })
+            }
+            Spacer(Modifier.height(2.dp))
             Image(painter = painterResource(R.drawable.ht_logo), contentDescription = "High-Tech Entertainment official logo", contentScale = ContentScale.Fit, modifier = Modifier.size(142.dp))
             Spacer(Modifier.height(8.dp))
             Text("UNIVERSE", color = Gold, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 7.sp)
-            Image(painter = painterResource(R.drawable.ic_hte_crown), contentDescription = "HTE crown", contentScale = ContentScale.Fit, modifier = Modifier.size(32.dp))
-            Spacer(Modifier.height(20.dp))
-            Box(Modifier.size(230.dp), contentAlignment = Alignment.Center) {
+            Spacer(Modifier.height(44.dp))
+            Box(Modifier.size(250.dp).background(Brush.radialGradient(listOf(Gold.copy(alpha = .13f), Color.Transparent)), CircleShape), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxSize().graphicsLayer { rotationZ = orbit }) {
                     drawCircle(Gold.copy(alpha = .45f), style = Stroke(width = 1.3.dp.toPx()))
                     drawCircle(Silver.copy(alpha = .22f), radius = size.minDimension * .39f, style = Stroke(width = 1.dp.toPx()))
@@ -135,7 +151,7 @@ private fun UniverseSplash(onFinished: () -> Unit) {
                         center = androidx.compose.ui.geometry.Offset(size.width * .5f, 4.dp.toPx()))
                 }
                 Icon(Icons.Outlined.Headphones, "Spinning headphones", tint = Gold,
-                    modifier = Modifier.size(112.dp).graphicsLayer { rotationZ = headsetSpin })
+                    modifier = Modifier.size(142.dp).graphicsLayer { rotationZ = headsetSpin; scaleX = 1.04f; scaleY = 1.04f })
                 Icon(Icons.Outlined.Videocam, "Spinning video camera", tint = Silver,
                     modifier = Modifier.align(Alignment.BottomEnd).size(58.dp).graphicsLayer { rotationZ = cameraSpin })
                 Icon(Icons.Outlined.VideoLibrary, "Orbiting video library", tint = Gold.copy(alpha = .8f),
@@ -143,7 +159,9 @@ private fun UniverseSplash(onFinished: () -> Unit) {
                 Icon(Icons.Outlined.AutoAwesome, "Orbiting star", tint = Gold,
                     modifier = Modifier.align(Alignment.TopStart).size(30.dp).graphicsLayer { rotationZ = orbit })
             }
-            Spacer(Modifier.height(38.dp))
+            Spacer(Modifier.height(30.dp))
+            Text("A NEW SOUND. A NEW UNIVERSE.", color = Gold.copy(alpha = .82f), fontSize = 9.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(10.dp))
             Text(captions[(elapsed / 4).coerceIn(0, 3)], color = Color.White, fontSize = 20.sp,
                 fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
             Spacer(Modifier.height(9.dp))

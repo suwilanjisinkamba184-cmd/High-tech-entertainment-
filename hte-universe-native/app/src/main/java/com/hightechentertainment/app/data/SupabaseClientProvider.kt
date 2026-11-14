@@ -5,6 +5,7 @@ import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.functions.Functions
 import io.github.jan.supabase.auth.FlowType
+import io.github.jan.supabase.auth.ExternalAuthAction
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.storage.Storage
 
@@ -15,6 +16,7 @@ import io.github.jan.supabase.storage.Storage
  * Never place a service-role or secret key in BuildConfig or the APK.
  */
 object SupabaseClientProvider {
+    const val AUTH_REDIRECT_URI = "com.hightechentertainment.app://auth-callback"
     val client by lazy {
         check(BuildConfig.SUPABASE_URL.isNotBlank()) {
             "Supabase URL is not configured for this build."
@@ -30,6 +32,7 @@ object SupabaseClientProvider {
                 flowType = FlowType.PKCE
                 scheme = "com.hightechentertainment.app"
                 host = "auth-callback"
+                defaultExternalAuthAction = ExternalAuthAction.CustomTabs()
             }
             install(Postgrest)
             install(Storage)

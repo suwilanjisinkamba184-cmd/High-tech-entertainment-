@@ -5,7 +5,7 @@ import android.app.ActivityManager
 import android.content.pm.PackageManager
 import android.content.Intent
 import android.net.ConnectivityManager
-import android.net.Uri
+import androidx.core.net.toUri
 import android.os.Build
 import android.provider.Settings as AndroidSettings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -41,6 +41,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.Locale
 
 private val SettingsGold = Color(0xFFD6B15E)
 private val SettingsSilver = Color(0xFFC4CAD2)
@@ -48,6 +49,7 @@ private val SettingsMuted = Color(0xFF8B929D)
 private val SettingsPanel = Color(0xFF121418)
 private val SettingsBackground = Color(0xFF08090B)
 
+@androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
 @Composable
 fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadManager: OfflineDownloadManager, onSettingsChanged: () -> Unit = {}) {
     val context = LocalContext.current
@@ -470,13 +472,13 @@ private fun SettingsDivider() { HorizontalDivider(color = Color.White.copy(alpha
 private fun formatBytes(value: Long): String {
     if (value < 1024) return "$value B"
     val kb = value / 1024.0
-    if (kb < 1024) return String.format("%.1f KB", kb)
-    return String.format("%.1f MB", kb / 1024.0)
+    if (kb < 1024) return String.format(Locale.ROOT, "%.1f KB", kb)
+    return String.format(Locale.ROOT, "%.1f MB", kb / 1024.0)
 }
 
 private fun openUpdateInstaller(context: android.content.Context, file: File) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
-        val permissionIntent = Intent(AndroidSettings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))
+    if (!context.packageManager.canRequestPackageInstalls()) {
+        val permissionIntent = Intent(AndroidSettings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, "package:${context.packageName}".toUri())
         permissionIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(permissionIntent)
         return
