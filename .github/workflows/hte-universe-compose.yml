@@ -146,8 +146,8 @@ jobs:
           mkdir -p ../release-assets
           VERSION_NAME=$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts | head -n1)
           VERSION_CODE=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' app/build.gradle.kts | head -n1)
-          test "$VERSION_NAME" = "4.0.5"
-          test "$VERSION_CODE" = "39"
+          test "$VERSION_NAME" = "4.0.6"
+          test "$VERSION_CODE" = "40"
           test "$GITHUB_REF_NAME" = "native-v${VERSION_NAME}-build${VERSION_CODE}"
           APK_NAME="HTE-Universe-${VERSION_NAME}.apk"
           cp app/build/outputs/apk/release/app-release.apk "../release-assets/$APK_NAME"
@@ -176,18 +176,18 @@ jobs:
               exit 1
               ;;
           esac
-      - name: Publish HTE Universe 4.0.5 GitHub Release
+      - name: Publish HTE Universe 4.0.6 GitHub Release
         if: startsWith(github.ref, 'refs/tags/native-v') && steps.release_state.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: HTE Universe 4.0.5 — Production build 39
+          name: HTE Universe 4.0.6 — Production build 40
           body: |
-            ## HTE Universe 4.0.5
+            ## HTE Universe 4.0.6
 
             Official signed Android release from the verified `main` build.
 
-            Production version: `4.0.5` (version code `39`).
+            Production version: `4.0.6` (version code `40`).
 
             ### Changes
             - Adaptive settings layout for compact phones, tablets and wide screens.
@@ -220,7 +220,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name }}
-          APK_NAME: HTE-Universe-4.0.5.apk
+          APK_NAME: HTE-Universe-4.0.6.apk
         shell: bash
         run: |
           set -euo pipefail
@@ -251,7 +251,7 @@ jobs:
           AAPT="$ANDROID_HOME/build-tools/37.0.0/aapt"
           "$APK_SIGNER" verify --verbose --print-certs "$RELEASE_DIR/$APK_NAME"
           PUBLISHED_BADGING="$("$AAPT" dump badging "$RELEASE_DIR/$APK_NAME")"
-          echo "$PUBLISHED_BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='39' versionName='4.0.5'"
+          echo "$PUBLISHED_BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='40' versionName='4.0.6'"
           LOCAL_CERT="$("$APK_SIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
           PUBLISHED_CERT="$("$APK_SIGNER" verify --print-certs "$RELEASE_DIR/$APK_NAME" | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
           test -n "$LOCAL_CERT" && test "$LOCAL_CERT" = "$PUBLISHED_CERT"
@@ -300,66 +300,7 @@ jobs:
           emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -wipe-data
           disable-animations: true
-          script: |
-            adb wait-for-device
-            booted=false
-            attempt=0
-            while [ "$attempt" -lt 120 ]; do
-              state="$(adb get-state 2>/dev/null || true)"
-              boot_completed="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
-              if [ "$state" = "device" ] && [ "$boot_completed" = "1" ]; then
-                booted=true
-                break
-              fi
-              attempt=$((attempt + 1))
-              sleep 5
-            done
-            if [ "$booted" != "true" ]; then
-              adb devices -l
-              echo "::error::Android emulator did not reach a stable online and boot-complete state."
-              exit 1
-            fi
-            adb shell settings put global window_animation_scale 0
-            adb shell settings put global transition_animation_scale 0
-            adb shell settings put global animator_duration_scale 0
-            adb shell pm list packages >/dev/null
-            cd hte-universe-native
-            if [ "${{ matrix.api-level }}" -le 26 ]; then
-              # Older Android package managers can stall when UTP streams instrumentation APKs.
-              # Install the app APK directly and verify a real launcher start.
-              gradle --no-daemon :app:assembleDebug --console=plain
-              APP_ID="com.hightechentertainment.app.dev"
-              APK="app/build/outputs/apk/debug/app-debug.apk"
-              test -s "$APK"
-              installed=false
-              attempt=0
-              while [ "$attempt" -lt 3 ]; do
-                if adb install --no-streaming -r "$APK"; then
-                  installed=true
-                  break
-                fi
-                adb wait-for-device
-                attempt=$((attempt + 1))
-                sleep 5
-              done
-              if [ "$installed" != "true" ]; then
-                adb devices -l
-                adb logcat -d -t 1500
-                echo "::error::Android API ${{ matrix.api-level }} could not install the debug APK after three attempts."
-                exit 1
-              fi
-              adb shell am force-stop "$APP_ID"
-              adb shell am start -W -n "$APP_ID/.MainActivity"
-              sleep 5
-              adb shell dumpsys activity activities | grep -F "$APP_ID/.MainActivity"
-              if adb logcat -d -t 2500 | grep -E "FATAL EXCEPTION|Process: $APP_ID"; then
-                echo "::error::HTE Universe crashed during the Android API ${{ matrix.api-level }} launch smoke test."
-                exit 1
-              fi
-              echo "PASS: Android API ${{ matrix.api-level }} installed HTE Universe and launched MainActivity."
-            else
-              gradle --no-daemon :app:connectedDebugAndroidTest --console=plain
-            fi
+          script: bash .github/scripts/android-emulator-smoke.sh "${{ matrix.api-level }}"
       - name: Run Android 17 API 37 preview emulator smoke test
         if: matrix.api-level == 37
         shell: bash

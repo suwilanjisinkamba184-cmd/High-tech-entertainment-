@@ -527,7 +527,8 @@ private fun formatBytes(value: Long): String {
 }
 
 private fun openUpdateInstaller(context: android.content.Context, file: File) {
-    if (!context.packageManager.canRequestPackageInstalls()) {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
+        !context.packageManager.canRequestPackageInstalls()) {
         val permissionIntent = Intent(AndroidSettings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, "package:${context.packageName}".toUri())
         permissionIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(permissionIntent)
