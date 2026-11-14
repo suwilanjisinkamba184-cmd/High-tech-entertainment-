@@ -22,7 +22,7 @@ jobs:
       META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
     steps:
       - name: Check out official source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install video tools
         run: |
