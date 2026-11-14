@@ -105,6 +105,18 @@ jobs:
           test -n "$EXPECTED_VERSION_NAME"
           echo "Expected app version: $EXPECTED_VERSION_NAME ($EXPECTED_VERSION_CODE)"
           echo "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='$EXPECTED_VERSION_CODE' versionName='$EXPECTED_VERSION_NAME'"
+          NATIVE_CODE=$(echo "$BADGING" | sed -n "s/^native-code: //p")
+          if [[ -z "$NATIVE_CODE" ]]; then
+            echo "No native-code libraries are packaged; Kotlin/Java bytecode is CPU-architecture independent."
+          else
+            echo "Packaged native ABIs: $NATIVE_CODE"
+            for ABI in arm64-v8a armeabi-v7a; do
+              if ! echo "$NATIVE_CODE" | grep -q "$ABI"; then
+                echo "::error::APK is missing $ABI while native libraries are present; 64-bit and 32-bit ARM phone compatibility cannot both be guaranteed."
+                exit 1
+              fi
+            done
+          fi
           sha256sum "$APK" | tee app/build/outputs/apk/release/SHA256SUMS.txt
       - name: Confirm certificate matches previous public release
         env:
@@ -120,12 +132,12 @@ jobs:
             exit 1
           fi
           if [[ "$OLD_CERT" != "$NEW_CERT" ]]; then
-            echo "::error::Production signing certificate differs from the previous public 4.0.3 build 36. Refusing to publish."
+            echo "::error::Production signing certificate differs from the previous public 4.0.4 build 37. Refusing to publish."
             echo "Previous release certificate SHA-256: $OLD_CERT"
             echo "New release certificate SHA-256:      $NEW_CERT"
             exit 1
           fi
-          echo "Verified: release certificate matches 4.0.3 build 36."
+          echo "Verified: release certificate matches 4.0.4 build 37."
       - name: Upload signed production APK
         uses: actions/upload-artifact@v7
         with:
