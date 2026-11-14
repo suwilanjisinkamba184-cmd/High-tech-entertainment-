@@ -38,6 +38,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -162,7 +163,13 @@ fun UniverseShell() {
             selectedTrackQueue = null
             return@LaunchedEffect
         }
-        val startIndex = items.indexOfFirst { it.mediaId == selected.id }.coerceAtLeast(0)
+        val startIndex = items.indexOfFirst { it.mediaId == selected.id }
+        if (startIndex < 0) {
+            Toast.makeText(context, "The selected track has no playable audio URL.", Toast.LENGTH_LONG).show()
+            selectedTrack = null
+            selectedTrackQueue = null
+            return@LaunchedEffect
+        }
         player.setMediaItems(items, startIndex, C.TIME_UNSET)
         player.prepare()
         player.play()
@@ -795,11 +802,12 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
             playbackError = "This track does not have a valid audio stream URL yet."
             return@LaunchedEffect
         }
-        val items = if (validQueue.isNotEmpty()) validQueue else listOf(
-            MediaItem.Builder().setMediaId(track.id).setUri(track.audioUrl)
-                .setMediaMetadata(MediaMetadata.Builder().setTitle(track.title).setArtist(track.artist).build()).build()
-        )
-        val startIndex = items.indexOfFirst { it.mediaId == track.id }.coerceAtLeast(0)
+        val selectedIndex = validQueue.indexOfFirst { it.mediaId == track.id }
+        val items = if (selectedIndex >= 0) validQueue else validQueue + MediaItem.Builder()
+            .setMediaId(track.id).setUri(url)
+            .setMediaMetadata(MediaMetadata.Builder().setTitle(track.title).setArtist(track.artist).build())
+            .build()
+        val startIndex = if (selectedIndex >= 0) selectedIndex else items.lastIndex
         runCatching { player.setMediaItems(items, startIndex, C.TIME_UNSET); player.prepare(); player.play() }
             .onFailure { playbackError = it.message?.take(160) ?: "Unable to start this track." }
     }
@@ -897,24 +905,26 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
         }.getOrDefault(false)
     }
     val player = remember(video.id, video.videoUrl) {
-        ExoPlayer.Builder(context).build().apply {
-            val maxVideoSize = when (quality) {
-                "LOW" -> 640 to 360
-                "MEDIUM" -> 854 to 480
-                "HIGH" -> 1920 to 1080
-                else -> null
-            }
-            if (maxVideoSize != null) {
-                trackSelectionParameters = trackSelectionParameters.buildUpon()
-                    .setMaxVideoSize(maxVideoSize.first, maxVideoSize.second)
-                    .build()
-            }
+        ExoPlayer.Builder(context)
+            .setAudioAttributes(AudioAttributes.DEFAULT, true)
+            .build().apply {
             if (validUrl) {
                 setMediaItem(MediaItem.fromUri(video.videoUrl))
                 prepare()
                 playWhenReady = true
             }
         }
+    }
+    LaunchedEffect(player, quality) {
+        val maxVideoSize = when (quality) {
+            "LOW" -> 640 to 360
+            "MEDIUM" -> 854 to 480
+            "HIGH" -> 1920 to 1080
+            else -> Int.MAX_VALUE to Int.MAX_VALUE
+        }
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setMaxVideoSize(maxVideoSize.first, maxVideoSize.second)
+            .build()
     }
     var playbackError by remember { mutableStateOf<String?>(null) }
     var isBuffering by remember { mutableStateOf(false) }

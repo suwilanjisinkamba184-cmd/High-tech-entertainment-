@@ -1,6 +1,7 @@
 package com.hightechentertainment.app.media
 
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -16,7 +17,9 @@ class HtePlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        val audioPlayer = ExoPlayer.Builder(this).build()
+        val audioPlayer = ExoPlayer.Builder(this)
+            .setAudioAttributes(AudioAttributes.DEFAULT, true)
+            .build()
         activeAudioSessionId = audioPlayer.audioSessionId
         applySavedEqualizer(activeAudioSessionId)
         audioPlayer.addListener(object : Player.Listener {
