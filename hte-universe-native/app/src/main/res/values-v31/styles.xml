@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.HTEUniverse.Starting" parent="Theme.HTEUniverse">
+        <item name="android:windowSplashScreenBackground">#08090B</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ht_logo</item>
+        <item name="android:windowSplashScreenBrandingImage">@drawable/ic_hte_crown</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">#08090B</item>
+        <item name="android:windowSplashScreenAnimationDuration">1000</item>
+    </style>
+</resources>

@@ -5,6 +5,8 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -55,7 +58,7 @@ private val VoiceMuted = Color(0xFF8B929D)
 @Serializable
 private data class VoiceTokenResponse(
     val token: String,
-    @SerialName("user_id") val userId: String
+    @SerialName("user_id") val userId: String = ""
 )
 
 @Composable
@@ -100,7 +103,7 @@ fun VoiceAssistantDialog(
         if (granted) startVoiceSession(scope, context, toolContext,
             onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
             onSession = { active -> session = active; isConnecting = false },
-            onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = error }
+            onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = voiceFailureMessage(error) }
         ) else errorMessage = "Microphone permission is required for Voice Companion."
     }
 
@@ -112,7 +115,7 @@ fun VoiceAssistantDialog(
             startVoiceSession(scope, context, toolContext,
                 onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
                 onSession = { active -> session = active; isConnecting = false },
-                onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = error }
+                onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = voiceFailureMessage(error) }
             )
         }
     }
@@ -133,56 +136,106 @@ fun VoiceAssistantDialog(
     }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxWidth().padding(18.dp), color = VoicePanel, shape = RoundedCornerShape(26.dp)) {
-            Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Surface(Modifier.fillMaxSize(), color = Color(0xFF08090B)) {
+            Column(
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp, vertical = 18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("HIGH-TECH ENTERTAINMENT", color = VoiceGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold)
-                        Text("Voice Companion", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("HTE UNIVERSE / NEURAL CO-PILOT", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
+                        Text("Synapse AI", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                        Text("Your voice-controlled HTE companion", color = VoiceMuted, fontSize = 11.sp)
                     }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close Voice Companion", tint = Color.White) }
+                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close Synapse AI", tint = Color.White) }
                 }
-                val orbScale = 1f + (audioLevel.coerceIn(0f, 1f) * 0.22f)
-                Box(Modifier.size(94.dp).graphicsLayer { scaleX = orbScale; scaleY = orbScale }.clip(CircleShape).background(VoiceGold.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Outlined.GraphicEq, null, tint = VoiceGold, modifier = Modifier.size(48.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF11161C)),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Shield, null, tint = VoiceGold, modifier = Modifier.size(23.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("SECURE VOICE LINK", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
+                            Text("Microphone audio is sent to the configured voice service only while a session is active.", color = VoiceMuted, fontSize = 10.sp)
+                        }
+                        Text(if (session != null) "LIVE" else "STANDBY", color = if (session != null) Color(0xFF8BCB9B) else VoiceMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Box(
+                    Modifier.fillMaxWidth().height(210.dp)
+                        .background(Brush.radialGradient(listOf(Color(0xFF3C3220), Color(0xFF18212A), Color(0xFF08090B))), RoundedCornerShape(24.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(Modifier.size(164.dp).clip(CircleShape).background(VoiceGold.copy(alpha = .07f)), contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(126.dp).clip(CircleShape).background(VoiceGold.copy(alpha = .13f)), contentAlignment = Alignment.Center) {
+                            Box(Modifier.size(88.dp).clip(CircleShape).background(VoiceGold.copy(alpha = .18f)), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Outlined.GraphicEq, null, tint = VoiceGold, modifier = Modifier.size(46.dp))
+                            }
+                        }
+                    }
+                    Text("SYNAPSE / AUDIO CORE", color = VoiceMuted, fontSize = 8.sp, letterSpacing = 2.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp))
                 }
                 Text(status.replaceFirstChar { it.uppercase() } + if (session != null) " · ${mode.replaceFirstChar { it.uppercase() }}" else "", color = VoiceGold, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                Text("Talk naturally to discover music, control playback and navigate HTE Universe.", color = VoiceMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
-
+                Text("Speak naturally to find music, control playback, search the catalogue and move around HTE Universe.", color = VoiceMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
                 if (userTranscript.isNotBlank()) {
-                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1B2026)), shape = RoundedCornerShape(14.dp)) {
-                        Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                            Text("YOU", color = VoiceMuted, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
-                            Text(userTranscript, color = Color.White, fontSize = 12.sp)
+                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF151B22)), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text("YOU / VOICE INPUT", color = VoiceMuted, fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
+                            Text(userTranscript, color = Color.White, fontSize = 13.sp)
                         }
                     }
                 }
                 if (agentResponse.isNotBlank()) {
-                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF201D17)), shape = RoundedCornerShape(14.dp)) {
-                        Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                            Text("VOICE COMPANION", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
-                            Text(agentResponse, color = Color.White, fontSize = 12.sp)
+                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF211D16)), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text("SYNAPSE / RESPONSE", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
+                            Text(agentResponse, color = Color.White, fontSize = 13.sp)
                         }
                     }
                 }
                 errorMessage?.let { Text(it, color = Color(0xFFFFA8A8), fontSize = 11.sp, textAlign = TextAlign.Center) }
-
                 if (isConnecting) LinearProgressIndicator(Modifier.fillMaxWidth(), color = VoiceGold)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (session == null) {
-                        Button(onClick = { connect() }, enabled = !isConnecting, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = VoiceGold, contentColor = Color.Black)) {
-                            Icon(Icons.Outlined.Mic, null); Spacer(Modifier.width(8.dp)); Text(if (isConnecting) "Connecting…" else "Start talking")
+                        Button(
+                            onClick = { connect() }, enabled = !isConnecting,
+                            modifier = Modifier.weight(1f).height(52.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = VoiceGold, contentColor = Color.Black),
+                            shape = RoundedCornerShape(15.dp)
+                        ) {
+                            Icon(Icons.Outlined.Mic, null); Spacer(Modifier.width(8.dp)); Text(if (isConnecting) "Connecting…" else "Start voice session")
                         }
                     } else {
-                        OutlinedButton(onClick = { scope.launch { session?.toggleMute() } }, modifier = Modifier.weight(1f)) {
+                        OutlinedButton(onClick = { scope.launch { session?.toggleMute() } }, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(15.dp)) {
                             Icon(if (muted) Icons.Outlined.MicOff else Icons.Outlined.Mic, null); Spacer(Modifier.width(6.dp)); Text(if (muted) "Unmute" else "Mute")
                         }
-                        Button(onClick = { session = null; status = "Disconnecting" }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8E3434), contentColor = Color.White)) {
+                        Button(onClick = { session = null; status = "Disconnecting" }, modifier = Modifier.weight(1f).height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8E3434), contentColor = Color.White), shape = RoundedCornerShape(15.dp)) {
                             Icon(Icons.Outlined.CallEnd, null); Spacer(Modifier.width(6.dp)); Text("End session")
                         }
                     }
                 }
-                Text("Your private session is authenticated through HTE Supabase. The ElevenLabs API key stays server-side.", color = VoiceMuted, fontSize = 9.sp, textAlign = TextAlign.Center)
+                Text("QUICK LAUNCH", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { currentOnSearch("Zambian") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                        Icon(Icons.Outlined.Search, null); Spacer(Modifier.width(4.dp)); Text("Zambian music", fontSize = 10.sp)
+                    }
+                    OutlinedButton(onClick = { currentOnNavigate("DISCOVER") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                        Icon(Icons.Outlined.Explore, null); Spacer(Modifier.width(4.dp)); Text("Discover", fontSize = 10.sp)
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { currentOnNavigate("LIBRARY") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                        Icon(Icons.Outlined.LibraryMusic, null); Spacer(Modifier.width(4.dp)); Text("My library", fontSize = 10.sp)
+                    }
+                    OutlinedButton(onClick = { currentOnNavigate("HOME") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                        Icon(Icons.Outlined.Home, null); Spacer(Modifier.width(4.dp)); Text("Home", fontSize = 10.sp)
+                    }
+                }
+                Text("The ElevenLabs API key remains server-side. Sign in to HTE Universe before starting a private voice session.", color = VoiceMuted, fontSize = 9.sp, textAlign = TextAlign.Center)
             }
         }
     }
@@ -295,5 +348,17 @@ private fun startVoiceSession(
         } catch (error: Throwable) {
             onFailure(error.message?.take(220) ?: "Could not connect to the HTE Voice Companion.")
         }
+    }
+}
+
+
+private fun voiceFailureMessage(message: String): String {
+    val normalized = message.lowercase()
+    return when {
+        "convai_write" in normalized || "missing permission" in normalized || "401" in normalized || "502" in normalized ->
+            "Voice service authentication failed. The HTE ElevenLabs API key must include Conversational AI (ConvAI) write permission. Please update the key stored in Supabase and try again."
+        "sign in" in normalized || "unauthorized" in normalized ->
+            "Please sign in again, then reconnect Voice Companion."
+        else -> message.take(220).ifBlank { "Could not connect to the HTE Voice Companion. Please try again." }
     }
 }

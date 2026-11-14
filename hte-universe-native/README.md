@@ -57,3 +57,12 @@ Only approved credentials/configuration may be migrated from the previous projec
 - Media3 1.11.1 playback, HLS and DASH libraries included as the native media foundation.
 - CI uses current Node 24 GitHub Actions releases and verifies the original production signing certificate.
 - Playback service and UI, final startup narration, real-device acceptance, offline downloads, Founder Studio and full screen-by-screen UI still require implementation and testing.
+
+
+## Native release and update strategy
+
+The Kotlin/Jetpack Compose application uses signed, versioned APK releases. The in-app updater checks the latest GitHub Release, downloads over HTTPS, resumes interrupted downloads, verifies the published SHA-256 digest when supplied, and hands the APK to Android's package installer. Android enforces that an in-place update is signed by the same application certificate. Publish a full native APK for Kotlin, Compose, manifest, dependency, or other native-code security fixes.
+
+The existing Shorebird OTA workflow is retained for the legacy Flutter application only. Shorebird patches Dart code in that Flutter runtime; it cannot patch this native Kotlin/Compose application. Do not label a Shorebird patch as an update to the native app. Catalogue and remote configuration changes can continue to arrive through the Supabase backend without replacing the APK.
+
+Native release tags use `native-v` plus the Gradle `versionName` (for example, `native-v4.0.1`). The native updater filters only this tag namespace, so it cannot offer a legacy Flutter/Shorebird APK as a native Compose update. The Android release workflow verifies the production signing certificate against the established release certificate before publishing the APK asset.

@@ -154,7 +154,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                 SettingsSection("PLAYBACK & SOUND", "Tune the way HTE Universe sounds")
                 SettingsCard {
                     SettingsSwitch("Background playback", "Keep music playing when you leave the app", backgroundPlayback) {
-                        backgroundPlayback = it; settingsStore.backgroundPlayback = it
+                        backgroundPlayback = it; settingsStore.backgroundPlayback = it; onSettingsChanged()
                     }
                     SettingsDivider()
                     SettingsSwitch("Autoplay next track", "Continue through the current queue", autoplay) {
@@ -221,8 +221,6 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                         networkPolicy = if (it == "WIFI_ONLY") "WIFI_ONLY" else "WIFI_AND_MOBILE"
                         settingsStore.networkPolicy = networkPolicy
                         onSettingsChanged()
-                        dataSaver = networkPolicy == "WIFI_ONLY"
-                        settingsStore.dataSaver = dataSaver
                     }
                     Text("Update download network", color = Color.White, fontWeight = FontWeight.SemiBold)
                     SettingsChips(listOf("WIFI_ONLY", "WIFI + MOBILE"), if (updateNetworkPolicy == "WIFI_ONLY") "WIFI_ONLY" else "WIFI + MOBILE") {
@@ -235,8 +233,6 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                     }
                     SettingsSwitch("Data saver", "Restrict downloads over metered mobile connections", dataSaver) {
                         dataSaver = it; settingsStore.dataSaver = it; onSettingsChanged()
-                        networkPolicy = if (it) "WIFI_ONLY" else "WIFI_AND_MOBILE"
-                        settingsStore.networkPolicy = networkPolicy
                     }
                     SettingsDivider()
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -275,7 +271,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                         Icon(Icons.Outlined.SystemUpdate, null, tint = SettingsGold, modifier = Modifier.size(28.dp))
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("HTE Universe 4.0.0", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("HTE Universe ${BuildConfig.VERSION_NAME}", color = Color.White, fontWeight = FontWeight.Bold)
                             Text("Installed version · build ${BuildConfig.VERSION_CODE}", color = SettingsMuted, fontSize = 10.sp)
                         }
                         if (updateInfo?.updateAvailable == true) Text("UPDATE AVAILABLE", color = SettingsGold, fontSize = 9.sp, fontWeight = FontWeight.Bold)

@@ -1,6 +1,7 @@
 package com.hightechentertainment.app
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -79,8 +80,27 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
 
     LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Text("Account", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text("Your HTE Universe membership.", color = MemberMuted, fontSize = 13.sp)
+            Card(colors = CardDefaults.cardColors(containerColor = MemberPanel), shape = RoundedCornerShape(22.dp)) {
+                Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF302514), MemberPanel, Color(0xFF0C1118)))).padding(18.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.AccountCircle, null, tint = MemberGold, modifier = Modifier.size(34.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("HTE UNIVERSE / MEMBER NODE", color = MemberGold, fontSize = 9.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold)
+                                Text("Your account", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Text(if (isSignedIn) "ONLINE" else "GUEST", color = if (isSignedIn) Color(0xFF8BCB9B) else MemberMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Text("Manage your identity, bookings, notifications and founder access.", color = MemberMuted, fontSize = 11.sp)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MemberMetric(if (isSignedIn) role.uppercase() else "GUEST", "ACCESS", Modifier.weight(1f))
+                            MemberMetric(bookings.size.toString(), "BOOKINGS", Modifier.weight(1f))
+                            MemberMetric(notifications.size.toString(), "ALERTS", Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
         }
         if (!configured || auth == null) {
             item {
@@ -260,6 +280,14 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
                 FounderStudioScreen(onClose = { showFounderStudio = false })
             }
         }
+    }
+}
+
+@Composable
+private fun MemberMetric(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(modifier.background(Color.White.copy(alpha = .035f), RoundedCornerShape(12.dp)).padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Text(label, color = MemberMuted, fontSize = 8.sp, letterSpacing = 1.sp)
     }
 }
 
