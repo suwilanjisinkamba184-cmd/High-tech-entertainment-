@@ -4,7 +4,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class StartupCopyTest {
-    @Test fun brandTaglineIsStable() {
-        assertEquals("THE PRIDE OF AFRICA", "THE PRIDE OF AFRICA")
+    @Test
+    fun splashUsesTheOfficialHighTechEntertainmentSlogan() {
+        assertEquals("Music. Beats. Production. Beyond.", HTE_STARTUP_TAGLINE)
     }
 }

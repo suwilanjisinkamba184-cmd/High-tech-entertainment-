@@ -52,6 +52,8 @@ private val Gold = Color(0xFFD6B15E)
 private val Silver = Color(0xFFC4CAD2)
 private val Muted = Color(0xFF8B929D)
 
+internal const val HTE_STARTUP_TAGLINE = "Music. Beats. Production. Beyond."
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -165,7 +167,7 @@ private fun UniverseSplash(onFinished: () -> Unit) {
             Text(captions[(elapsed / 4).coerceIn(0, 3)], color = Color.White, fontSize = 20.sp,
                 fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
             Spacer(Modifier.height(9.dp))
-            Text("THE PRIDE OF AFRICA", color = Gold, fontSize = 12.sp,
+            Text(HTE_STARTUP_TAGLINE, color = Gold, fontSize = 12.sp,
                 fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
             Spacer(Modifier.height(36.dp))
             LinearProgressIndicator(progress = { elapsed / 15f },
