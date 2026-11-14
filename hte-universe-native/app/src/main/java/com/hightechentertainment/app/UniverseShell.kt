@@ -90,6 +90,11 @@ fun UniverseShell() {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val settingsStore = remember(context) { AppSettingsStore(context) }
+    var settingsRevision by remember { mutableStateOf(0) }
+    val backgroundPlayback = remember(settingsRevision) { settingsStore.backgroundPlayback }
+    val streamingQuality = remember(settingsRevision) { settingsStore.streamingQuality }
+    val videoQuality = remember(settingsRevision) { settingsStore.videoQuality }
     var mediaController by remember { mutableStateOf<MediaController?>(null) }
     var playerExpanded by remember { mutableStateOf(false) }
     val playerUiController = remember(mediaController) { mediaController?.let { Media3PlayerController(it, scope) } }
@@ -166,12 +171,7 @@ fun UniverseShell() {
         selectedTrackQueue = null
     }
     val offlineManager = remember(context) { OfflineDownloadManager(context) }
-    val settingsStore = remember(context) { AppSettingsStore(context) }
-    var settingsRevision by remember { mutableStateOf(0) }
     val autoplayNext = remember(settingsRevision) { settingsStore.autoplayNext }
-    val backgroundPlayback = remember(settingsRevision) { settingsStore.backgroundPlayback }
-    val streamingQuality = remember(settingsRevision) { settingsStore.streamingQuality }
-    val videoQuality = remember(settingsRevision) { settingsStore.videoQuality }
     var downloads by remember { mutableStateOf<List<OfflineDownloadRecord>>(emptyList()) }
     var favouriteTrackIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     val configured = BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()
