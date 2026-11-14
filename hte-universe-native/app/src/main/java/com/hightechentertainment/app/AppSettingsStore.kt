@@ -2,6 +2,7 @@ package com.hightechentertainment.app
 
 import android.content.Context
 import androidx.core.content.edit
+import kotlin.math.roundToInt
 
 /** True only when the current download policy and Data Saver both permit metered media downloads. */
 internal fun allowsMeteredMediaDownloads(networkPolicy: String, dataSaverEnabled: Boolean): Boolean =
@@ -72,16 +73,30 @@ class AppSettingsStore(context: Context) {
         set(value) { preferences.edit { putString("equalizer_preset", value) } }
 
     fun equalizerBands(): List<Int> {
-        val values = preferences.getString("equalizer_bands", null)?.split(",")?.mapNotNull { it.toIntOrNull() }
-        return values?.takeIf { it.size == 5 } ?: listOf(0, 0, 0, 0, 0)
+        val stored = preferences.getString("equalizer_bands", null)?.split(",")?.mapNotNull { it.toIntOrNull() }.orEmpty()
+        val normalized = normalizeEqualizerBands(stored)
+        if (stored != normalized) setEqualizerBands(normalized)
+        return normalized
     }
 
     fun setEqualizerBands(values: List<Int>) {
-        require(values.size == 5)
-        preferences.edit { putString("equalizer_bands", values.joinToString(",")) }
+        require(values.size == 10) { "The HTE equalizer requires ten standard bands." }
+        preferences.edit { putString("equalizer_bands", values.map { it.coerceIn(-12, 12) }.joinToString(",")) }
     }
 
     fun clearPreferences() {
         preferences.edit { clear() }
     }
+}
+
+/** Migrates the previous five-control curve to the new ten-band format. */
+internal fun normalizeEqualizerBands(values: List<Int>): List<Int> = when (values.size) {
+    10 -> values.map { it.coerceIn(-12, 12) }
+    5 -> List(10) { index ->
+        val position = index * (values.lastIndex / 9f)
+        val lower = position.toInt().coerceIn(0, values.lastIndex)
+        val upper = (lower + 1).coerceAtMost(values.lastIndex)
+        (values[lower] + (values[upper] - values[lower]) * (position - lower)).roundToInt().coerceIn(-12, 12)
+    }
+    else -> List(10) { 0 }
 }

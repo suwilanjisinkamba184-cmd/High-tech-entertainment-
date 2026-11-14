@@ -1,6 +1,8 @@
 package com.hightechentertainment.app.update
 
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -36,10 +38,11 @@ class HteUpdateManager(private val context: Context) {
             readTimeout = 20_000
             setRequestProperty("Accept", "application/vnd.github+json")
             setRequestProperty("User-Agent", "HTE-Universe-Android")
+            setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
         }
         try {
             val code = connection.responseCode
-            require(code in 200..299) { "Update service returned HTTP $code." }
+            if (code !in 200..299) throw IllegalStateException(httpError(connection, code, "Update check"))
             val releases = JSONArray(connection.inputStream.bufferedReader().use { it.readText() })
             // The repository still has a legacy Flutter/Shorebird release stream. Never
             // let that APK be offered as an update to the native Kotlin/Compose app.
@@ -105,8 +108,8 @@ class HteUpdateManager(private val context: Context) {
         }
         try {
             val response = connection.responseCode
-            require(response == HttpURLConnection.HTTP_OK || response == HttpURLConnection.HTTP_PARTIAL) {
-                "Download interrupted by the server (HTTP $response). Your partial download is kept so you can retry."
+            if (response != HttpURLConnection.HTTP_OK && response != HttpURLConnection.HTTP_PARTIAL) {
+                throw IllegalStateException(httpError(connection, response, "Update download"))
             }
             val append = offset > 0L && response == HttpURLConnection.HTTP_PARTIAL
             if (!append) {
@@ -147,9 +150,32 @@ class HteUpdateManager(private val context: Context) {
     }
 
     fun cachedUpdate(): File? = File(updateDirectory, "HTE-Universe-update.apk").takeIf { it.exists() && it.length() > 0L }
+
+    /** Reject stale, malformed or foreign APKs before invoking Android's package installer. */
+    fun isInstallableUpdate(file: File): Boolean = runCatching {
+        if (!file.isFile || file.length() <= 0L) return false
+        val archive = context.packageManager.getPackageArchiveInfo(file.absolutePath, 0) ?: return false
+        if (archive.packageName != context.packageName) return false
+        val installed = context.packageManager.getPackageInfo(context.packageName, 0)
+        val archiveCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) archive.longVersionCode else archive.versionCode.toLong()
+        val installedCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) installed.longVersionCode else installed.versionCode.toLong()
+        archiveCode > installedCode
+    }.getOrDefault(false)
     fun partialDownloadSize(): Long = File(updateDirectory, "HTE-Universe-update.apk.part").takeIf { it.exists() }?.length() ?: 0L
     fun clearPartialDownload() { File(updateDirectory, "HTE-Universe-update.apk.part").delete() }
     fun clearCachedUpdate() { File(updateDirectory, "HTE-Universe-update.apk").delete(); clearPartialDownload() }
+
+    private fun httpError(connection: HttpURLConnection, code: Int, operation: String): String {
+        val body = runCatching { connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty() }.getOrDefault("")
+        val detail = runCatching { JSONObject(body).optString("message") }.getOrDefault("")
+        return when (code) {
+            403 -> "$operation was temporarily rate-limited by GitHub (HTTP 403). Wait a little and retry. ${detail.take(120)}".trim()
+            404 -> "$operation endpoint or release asset was not found (HTTP 404). The release may have been moved or removed."
+            416 -> "The update server rejected the saved download range (HTTP 416). Clear the partial update and download again."
+            in 500..599 -> "$operation server is temporarily unavailable (HTTP $code). Please retry later."
+            else -> "$operation returned HTTP $code. ${detail.take(160)}".trim()
+        }
+    }
 
     private fun sha256(file: File): String {
         val digest = MessageDigest.getInstance("SHA-256")
