@@ -14,6 +14,7 @@ object AppNotificationHelper {
     private const val CHANNEL_ID = "hte_account_updates"
 
     fun show(context: Context, title: String, message: String, notificationId: Int = (System.currentTimeMillis() % Int.MAX_VALUE).toInt()) {
+        if (!AppSettingsStore(context).notificationsEnabled) return
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(

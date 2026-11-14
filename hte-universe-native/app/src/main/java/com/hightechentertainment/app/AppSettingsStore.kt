@@ -12,7 +12,7 @@ class AppSettingsStore(context: Context) {
     private val preferences = context.applicationContext.getSharedPreferences("hte_universe_preferences", Context.MODE_PRIVATE)
 
     var notificationsEnabled: Boolean
-        get() = preferences.getBoolean("notifications_enabled", true)
+        get() = preferences.getBoolean("notifications_enabled", false)
         set(value) { preferences.edit { putBoolean("notifications_enabled", value) } }
 
     var autoplayNext: Boolean

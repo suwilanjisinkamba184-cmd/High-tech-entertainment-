@@ -85,6 +85,15 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
         settingsStore.notificationsEnabled = granted
         onSettingsChanged()
     }
+    LaunchedEffect(Unit) {
+        if (notifications && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notifications = false
+            settingsStore.notificationsEnabled = false
+            onSettingsChanged()
+        }
+    }
 
     fun refreshDownloads() {
         scope.launch { downloads = withContext(Dispatchers.IO) { downloadManager.getDownloads() } }
