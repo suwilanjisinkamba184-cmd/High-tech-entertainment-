@@ -333,7 +333,18 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                             Icon(Icons.Outlined.InstallMobile, null); Spacer(Modifier.width(8.dp)); Text("Install update")
                         }
                     }
-                    updateError?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 11.sp) }
+                    updateError?.let { message ->
+                        Text(message, color = Color(0xFFFF8A80), fontSize = 11.sp)
+                        TextButton(onClick = {
+                            runCatching {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases".toUri()))
+                            }.onFailure {
+                                statusMessage = "GitHub Releases could not be opened. Check your internet connection and try again."
+                            }
+                        }) {
+                            Text("Open GitHub Releases", color = SettingsGold)
+                        }
+                    }
                     statusMessage?.let { Text(it, color = SettingsSilver, fontSize = 11.sp) }
                     Text("Downloads can be paused and resumed. Android will verify the app signature when you install an update.", color = SettingsMuted, fontSize = 10.sp)
                 }
@@ -526,9 +537,12 @@ private fun openUpdateInstaller(context: android.content.Context, file: File) {
     context.startActivity(intent)
 }
 
-private fun friendlyUpdateError(error: Throwable): String = when (error) {
-    is UnknownHostException -> "No internet connection. Connect to the internet and try again."
-    is SocketTimeoutException -> "The update server took too long to respond. Please retry."
-    is SSLException -> "A secure connection to the update server could not be established. Check your device date, time and network."
-    else -> error.message?.take(220) ?: "The update could not be completed. Please retry."
+private fun friendlyUpdateError(error: Throwable): String {
+    val rootCause = generateSequence(error) { it.cause }.last()
+    return when (rootCause) {
+        is UnknownHostException -> "Can't reach GitHub right now. Check your internet connection or Private DNS, then retry. You can also open GitHub Releases below."
+        is SocketTimeoutException -> "GitHub took too long to respond. Check your connection and retry."
+        is SSLException -> "A secure connection to GitHub could not be established. Check your device date, time and network."
+        else -> (rootCause.message ?: error.message)?.take(220) ?: "The update could not be completed. Please retry."
+    }
 }

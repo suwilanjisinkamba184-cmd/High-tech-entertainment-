@@ -33,7 +33,22 @@ data class HteDownloadProgress(val downloaded: Long, val total: Long) {
 class HteUpdateManager(private val context: Context) {
     private val updateDirectory = File(context.filesDir, "updates")
 
-    suspend fun checkForUpdate(currentVersion: String): HteUpdateInfo = withContext(Dispatchers.IO) {
+    suspend fun checkForUpdate(currentVersion: String): HteUpdateInfo {
+        var lastNetworkError: java.io.IOException? = null
+        for (attempt in 0..2) {
+            currentCoroutineContext().ensureActive()
+            try {
+                return checkForUpdateOnce(currentVersion)
+            } catch (error: java.io.IOException) {
+                lastNetworkError = error
+                if (attempt == 2 || !error.isTransientUpdateNetworkError()) throw error
+                delay(750L * (attempt + 1))
+            }
+        }
+        throw lastNetworkError ?: java.io.IOException("The update check could not reach GitHub. Please retry.")
+    }
+
+    private suspend fun checkForUpdateOnce(currentVersion: String): HteUpdateInfo = withContext(Dispatchers.IO) {
         val connection = (URL(LATEST_RELEASE_URL).openConnection() as HttpURLConnection).apply {
             connectTimeout = 15_000
             readTimeout = 20_000
@@ -189,6 +204,14 @@ class HteUpdateManager(private val context: Context) {
     fun partialDownloadSize(): Long = File(updateDirectory, "HTE-Universe-update.apk.part").takeIf { it.exists() }?.length() ?: 0L
     fun clearPartialDownload() { File(updateDirectory, "HTE-Universe-update.apk.part").delete() }
     fun clearCachedUpdate() { File(updateDirectory, "HTE-Universe-update.apk").delete(); clearPartialDownload() }
+
+    private fun java.io.IOException.isTransientUpdateNetworkError(): Boolean =
+        generateSequence(this) { it.cause }.any {
+            it is java.net.UnknownHostException ||
+                it is java.net.SocketTimeoutException ||
+                it is java.net.ConnectException ||
+                it is java.net.NoRouteToHostException
+        }
 
     private fun httpError(connection: HttpURLConnection, code: Int, operation: String): String {
         val body = runCatching { connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty() }.getOrDefault("")
