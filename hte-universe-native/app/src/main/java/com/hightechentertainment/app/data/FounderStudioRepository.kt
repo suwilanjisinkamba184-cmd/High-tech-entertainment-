@@ -8,6 +8,7 @@ import io.github.jan.supabase.storage.UploadData
 import io.ktor.http.ContentType
 import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.writeFully
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -152,16 +153,30 @@ class FounderStudioRepository {
 
     suspend fun deleteTrack(track: FounderTrackDto) {
         requireOwner()
-        storagePath(track.audioUrl, "hte-audio")?.let { path -> runCatching { client.storage.from("hte-audio").delete(path) } }
-        storagePath(track.coverUrl, "hte-artwork")?.let { path -> runCatching { client.storage.from("hte-artwork").delete(path) } }
+        // Retain the database row whenever any Storage cleanup fails, so the owner can retry.
+        storagePath(track.coverUrl, "hte-artwork")?.let { deleteStorageObject("hte-artwork", it, "track artwork") }
+        storagePath(track.audioUrl, "hte-audio")?.let { deleteStorageObject("hte-audio", it, "track audio") }
         client.from("tracks").delete { filter { eq("id", track.id) } }
     }
 
     suspend fun deleteVideo(video: FounderVideoDto) {
         requireOwner()
-        storagePath(video.videoUrl, "hte-videos")?.let { path -> runCatching { client.storage.from("hte-videos").delete(path) } }
-        storagePath(video.thumbnailUrl, "hte-artwork")?.let { path -> runCatching { client.storage.from("hte-artwork").delete(path) } }
+        storagePath(video.thumbnailUrl, "hte-artwork")?.let { deleteStorageObject("hte-artwork", it, "video thumbnail") }
+        storagePath(video.videoUrl, "hte-videos")?.let { deleteStorageObject("hte-videos", it, "video file") }
         client.from("videos").delete { filter { eq("id", video.id) } }
+    }
+
+    private suspend fun deleteStorageObject(bucketId: String, path: String, description: String) {
+        try {
+            client.storage.from(bucketId).delete(path)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            throw IllegalStateException(
+                "Could not delete $description from storage. The content record was kept; check the connection and retry.",
+                error
+            )
+        }
     }
 
     private suspend fun uploadStream(bucketId: String, path: String, input: InputStream, size: Long, mimeType: String): String = coroutineScope {
