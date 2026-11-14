@@ -57,7 +57,7 @@ jobs:
 
       - name: Upload resolved dependency lockfile
         if: ${{ hashFiles('flutter-ui/pubspec.yaml') != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hte-flutter-dependencies-${{ github.run_number }}
           path: flutter-ui/pubspec.lock
