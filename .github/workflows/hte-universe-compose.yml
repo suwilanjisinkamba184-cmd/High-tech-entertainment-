@@ -69,8 +69,6 @@ jobs:
             https://*) ;;
             *) echo "::error::SUPABASE_URL must use HTTPS"; exit 1 ;;
           esac
-      - name: Compile clean Compose application
-        run: gradle --no-daemon :app:assembleDebug
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest
       - name: Run Android lint for debug and release
@@ -147,9 +145,9 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v4.0.3
+          tag_name: v4.0.3-build35
           target_commitish: ${{ github.sha }}
-          name: HTE Universe 4.0.3
+          name: HTE Universe 4.0.3 — Production build 35
           body: |
             ## HTE Universe 4.0.3
 
@@ -176,12 +174,30 @@ jobs:
             release-assets/SHA256SUMS.txt
           fail_on_unmatched_files: true
           make_latest: true
+      - name: Verify public Android release was actually published
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: v4.0.3-build35
+          APK_NAME: HTE-Universe-4.0.3.apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          RELEASE_JSON="$(gh release view "$RELEASE_TAG" --json tagName,isDraft,isPrerelease,assets)"
+          export RELEASE_JSON
+          python3 - <<'PY'
+          import json, os
+          data = json.loads(os.environ["RELEASE_JSON"])
+          expected = os.environ["APK_NAME"]
+          if data.get("tagName") != os.environ["RELEASE_TAG"]:
+              raise SystemExit("Published release tag does not match the production build.")
+          if data.get("isDraft") or data.get("isPrerelease"):
+              raise SystemExit("Release exists but is not a public stable release.")
+          assets = {asset.get("name") for asset in data.get("assets", [])}
+          if expected not in assets:
+              raise SystemExit(f"Production APK is missing from release: {expected}")
+          print(f"PASS: public release {data['tagName']} contains {expected}.")
+          PY
       - name: Remove temporary signing keystore
         if: always()
         run: rm -f "$RUNNER_TEMP/hte-release.jks"
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v7
-        with:
-          name: hte-universe-compose-debug
-          path: hte-universe-native/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
