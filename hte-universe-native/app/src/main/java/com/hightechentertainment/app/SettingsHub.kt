@@ -194,19 +194,19 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                     SettingsChips(listOf("FLAT", "BASS", "VOCAL", "STUDIO", "AFROBEAT", "DANCEHALL", "DRILL", "GOSPEL"), eqPreset) { preset ->
                         eqPreset = preset; settingsStore.equalizerPreset = preset
                         val values = when (preset) {
-                            "BASS" -> listOf(8, 6, 2, 0, -1)
-                            "VOCAL" -> listOf(-3, 1, 6, 5, 2)
-                            "STUDIO" -> listOf(0, 1, -1, 1, 0)
-                            "AFROBEAT" -> listOf(6, 4, 1, 3, 5)
-                            "DANCEHALL" -> listOf(8, 5, 0, 3, 4)
-                            "DRILL" -> listOf(9, 4, -2, 2, 6)
-                            "GOSPEL" -> listOf(1, 3, 6, 5, 3)
-                            else -> listOf(0, 0, 0, 0, 0)
+                            "BASS" -> listOf(8, 8, 7, 5, 3, 1, 0, -1, -2, -3)
+                            "VOCAL" -> listOf(-4, -3, -1, 2, 5, 7, 7, 5, 3, 1)
+                            "STUDIO" -> listOf(0, 1, 1, 0, 0, 0, 1, 1, 0, 0)
+                            "AFROBEAT" -> listOf(5, 6, 5, 3, 1, 0, 1, 3, 4, 3)
+                            "DANCEHALL" -> listOf(8, 7, 5, 2, 0, -1, 1, 3, 5, 4)
+                            "DRILL" -> listOf(9, 8, 5, 1, -2, -3, 0, 3, 6, 7)
+                            "GOSPEL" -> listOf(0, 1, 3, 5, 6, 6, 5, 3, 2, 1)
+                            else -> List(10) { 0 }
                         }
                         eqBands = values; settingsStore.setEqualizerBands(values)
                         HteAudioEffects.apply(HtePlaybackService.activeAudioSessionId, eqEnabled, values)
                     }
-                    val bandLabels = listOf("60 Hz", "230 Hz", "910 Hz", "3.6 kHz", "14 kHz")
+                    val bandLabels = listOf("31 Hz", "62 Hz", "125 Hz", "250 Hz", "500 Hz", "1 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz")
                     bandLabels.forEachIndexed { index, label ->
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
