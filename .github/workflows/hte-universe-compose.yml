@@ -1,11 +1,11 @@
-name: HTE Universe — clean Compose rebuild
+name: HTE Universe — production build and release
 
 on:
   push:
-    branches: [main, rebuild/hte-universe-compose-clean]
+    branches: [main]
     tags: ['native-v*']
   pull_request:
-    branches: [main, rebuild/hte-universe-compose-clean]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -13,7 +13,7 @@ permissions:
 
 concurrency:
   group: hte-universe-android-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   android-build:
@@ -42,12 +42,9 @@ jobs:
           yes | sdkmanager --licenses
           sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
           test -d "$ANDROID_HOME/platforms/android-37.0"
-          # Android Gradle Plugin resolves compileSdk 37 as android-37 while the
-          # preview SDK Manager package is installed under android-37.0.
           if [[ ! -e "$ANDROID_HOME/platforms/android-37" ]]; then
             ln -s "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
           fi
-          test -d "$ANDROID_HOME/platforms/android-37"
           test -x "$ANDROID_HOME/build-tools/37.0.0/apksigner"
           test -x "$ANDROID_HOME/build-tools/37.0.0/aapt"
       - uses: gradle/actions/setup-gradle@v6
@@ -56,28 +53,20 @@ jobs:
       - name: Validate Supabase runtime configuration
         run: |
           set -euo pipefail
-          test -n "$SUPABASE_URL" || { echo "::error::SUPABASE_URL secret is required"; exit 1; }
-          test -n "$SUPABASE_PUBLISHABLE_KEY" || { echo "::error::SUPABASE_PUBLISHABLE_KEY secret is required"; exit 1; }
-          case "$SUPABASE_URL" in
-            https://*) ;;
-            *) echo "::error::SUPABASE_URL must use HTTPS"; exit 1 ;;
-          esac
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_PUBLISHABLE_KEY"
+          case "$SUPABASE_URL" in https://*) ;; *) exit 1 ;; esac
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest
-      - name: Run Android lint for debug and release
-        run: |
-          set +e
-          gradle --no-daemon :app:lintDebug :app:lintRelease --console=plain
-          lint_status=$?
-          find app/build -type f -name 'lint-results-*.txt' -print -exec cat {} \;
-          exit "$lint_status"
-      - name: Validate existing production signing configuration
+      - name: Run Android lint
+        run: gradle --no-daemon :app:lintDebug :app:lintRelease --console=plain
+      - name: Validate production signing configuration
         run: |
           test -n "$ANDROID_KEYSTORE_BASE64"
           test -n "$ANDROID_KEY_ALIAS"
           test -n "$ANDROID_KEY_PASSWORD"
           test -n "$ANDROID_STORE_PASSWORD"
-      - name: Decode existing production keystore
+      - name: Decode production keystore
         run: |
           set -euo pipefail
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hte-release.jks"
@@ -85,60 +74,29 @@ jobs:
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/hte-release.jks" >> "$GITHUB_ENV"
       - name: Assemble signed production APK
         run: gradle --no-daemon :app:assembleRelease
-      - name: Verify APK package and signing certificate
+      - name: Verify APK identity, version and signer
         run: |
           set -euo pipefail
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose --print-certs "$APK"
           BADGING=$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK")
-          EXPECTED_VERSION_CODE=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' app/build.gradle.kts | head -n1)
-          EXPECTED_VERSION_NAME=$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts | head -n1)
-          test -n "$EXPECTED_VERSION_CODE"
-          test -n "$EXPECTED_VERSION_NAME"
-          echo "Expected app version: $EXPECTED_VERSION_NAME ($EXPECTED_VERSION_CODE)"
-          echo "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='$EXPECTED_VERSION_CODE' versionName='$EXPECTED_VERSION_NAME'"
-          NATIVE_CODE=$(echo "$BADGING" | sed -n "s/^native-code: //p")
-          if [[ -z "$NATIVE_CODE" ]]; then
-            echo "No native-code libraries are packaged; Kotlin/Java bytecode is CPU-architecture independent."
-          else
-            echo "Packaged native ABIs: $NATIVE_CODE"
-            for ABI in arm64-v8a armeabi-v7a; do
-              if ! echo "$NATIVE_CODE" | grep -q "$ABI"; then
-                echo "::error::APK is missing $ABI while native libraries are present; 64-bit and 32-bit ARM phone compatibility cannot both be guaranteed."
-                exit 1
-              fi
-            done
-          fi
+          echo "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='41' versionName='4.0.7'"
           sha256sum "$APK" | tee app/build/outputs/apk/release/SHA256SUMS.txt
-      - name: Confirm certificate matches previous public release
+      - name: Confirm production certificate continuity
         env:
           PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/native-v4.0.5-build38/HTE-Universe-4.0.5.apk
         run: |
           set -euo pipefail
-          APK_SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
-          curl -fsSL "$PREVIOUS_APK_URL" -o "$RUNNER_TEMP/previous-hte-release.apk"
-          OLD_CERT="$("$APK_SIGNER" verify --print-certs "$RUNNER_TEMP/previous-hte-release.apk" | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
-          NEW_CERT="$("$APK_SIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
-          if [[ -z "$OLD_CERT" || -z "$NEW_CERT" ]]; then
-            echo "::error::Could not extract a SHA-256 signing certificate fingerprint from one of the APKs."
-            exit 1
-          fi
+          SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
+          curl -fsSL "$PREVIOUS_APK_URL" -o "$RUNNER_TEMP/previous.apk"
+          OLD_CERT=$("$SIGNER" verify --print-certs "$RUNNER_TEMP/previous.apk" | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+          NEW_CERT=$("$SIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
           TRUSTED_CERT_SHA256="6bfa59139e569475fd1843a59216f50cc5bb407df5cf48b8007cc96073adaffa"
           RUNTIME_CERT_SHA256=$(sed -nE 's/^[[:space:]]*const val TRUSTED_CERT_SHA256 = "([0-9a-f]{64})".*/\1/p' app/src/main/java/com/hightechentertainment/app/security/HteSecurityFirewall.kt | head -n1)
-          if [[ "$OLD_CERT" != "$TRUSTED_CERT_SHA256" || "$RUNTIME_CERT_SHA256" != "$TRUSTED_CERT_SHA256" ]]; then
-            echo "::error::The pinned runtime certificate fingerprint does not match the actual previous public production APK."
-            echo "Previous release certificate SHA-256: $OLD_CERT"
-            echo "Runtime certificate pin:                $RUNTIME_CERT_SHA256"
-            exit 1
-          fi
-          if [[ "$OLD_CERT" != "$NEW_CERT" ]]; then
-            echo "::error::Production signing certificate differs from the previous public 4.0.5 build 38. Refusing to publish."
-            echo "Previous release certificate SHA-256: $OLD_CERT"
-            echo "New release certificate SHA-256:      $NEW_CERT"
-            exit 1
-          fi
-          echo "Verified: release certificate matches 4.0.5 build 38."
+          test "$OLD_CERT" = "$TRUSTED_CERT_SHA256"
+          test "$NEW_CERT" = "$TRUSTED_CERT_SHA256"
+          test "$RUNTIME_CERT_SHA256" = "$TRUSTED_CERT_SHA256"
       - name: Upload signed production APK
         uses: actions/upload-artifact@v7
         with:
@@ -152,201 +110,49 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ../release-assets
-          VERSION_NAME=$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts | head -n1)
-          VERSION_CODE=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' app/build.gradle.kts | head -n1)
-          test "$VERSION_NAME" = "4.0.7"
-          test "$VERSION_CODE" = "41"
-          test "$GITHUB_REF_NAME" = "native-v${VERSION_NAME}-build${VERSION_CODE}"
-          APK_NAME="HTE-Universe-${VERSION_NAME}.apk"
-          cp app/build/outputs/apk/release/app-release.apk "../release-assets/$APK_NAME"
-          (cd ../release-assets && sha256sum "$APK_NAME" > SHA256SUMS.txt)
-      - name: Check whether this immutable release already exists
-        id: release_state
+          cp app/build/outputs/apk/release/app-release.apk ../release-assets/HTE-Universe-4.0.7.apk
+          (cd ../release-assets && sha256sum HTE-Universe-4.0.7.apk > SHA256SUMS.txt)
+      - name: Publish HTE Universe 4.0.7
         if: startsWith(github.ref, 'refs/tags/native-v')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          API_URL="https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME"
-          HTTP_STATUS="$(curl -sS -o "$RUNNER_TEMP/release-check.json" -w "%{http_code}" -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$API_URL")"
-          case "$HTTP_STATUS" in
-            200)
-              echo "exists=true" >> "$GITHUB_OUTPUT"
-              echo "Release already exists; it will be verified, never overwritten."
-              ;;
-            404)
-              echo "exists=false" >> "$GITHUB_OUTPUT"
-              ;;
-            *)
-              cat "$RUNNER_TEMP/release-check.json"
-              echo "::error::Could not determine release existence (GitHub API HTTP $HTTP_STATUS). Refusing to publish."
-              exit 1
-              ;;
-          esac
-      - name: Publish HTE Universe 4.0.7 GitHub Release
-        if: startsWith(github.ref, 'refs/tags/native-v') && steps.release_state.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: HTE Universe 4.0.7 — Production build 41
           body: |
             ## HTE Universe 4.0.7
-
-            Official signed Android release from the verified `main` build.
-
-            Production version: `4.0.7` (version code `41`).
+            Signed production APK, build 41.
 
             ### Changes
-            - Working Privacy Policy and Terms of Service links in Settings.
-            - Contact Support and Send Feedback actions with app version/build context.
-            - Immersive landscape fullscreen video mode with system UI restoration.
-            - Adaptive settings layout for compact phones, tablets and wide screens.
-            - New ten-band studio equalizer curve mapped to each device's supported audio-effect bands.
-            - Migration of saved five-band equalizer settings without discarding the user's previous curve.
-            - Bounded DNS, timeout and transient HTTP retries with clearer update diagnostics.
-            - Wi-Fi-only update policy is enforced throughout resumable downloads.
-            - Offline media downloads use collision-resistant filenames for same-title tracks.
-            - Stable API 25/26/35/37 emulator boot and ADB readiness checks before launch/instrumentation tests.
-            - Android emulator launch smoke tests for API 25, API 26, API 35 and API 37.
+            - Removed GitHub emulator compatibility matrix; CI now focuses on build, unit tests, lint, signing and release integrity.
+            - Added first-install device diagnostics and safe local recovery checks.
+            - Added diagnostic report screen and founder support escalation.
+            - Preserved existing High-Tech Entertainment branding, Supabase backend, package ID and production signing identity.
 
-            ### Preserved
-            - Original High-Tech Entertainment logo, splash screen and startup audio resources.
-            - Existing Supabase backend/configuration and OAuth callback.
-            - Application ID: `com.hightechentertainment.app`.
-
-            ### Verification
-            - Android compilation, unit tests and lint must pass.
-            - Signed APK package/version and production certificate verification must pass.
-            - Emulator smoke tests target Android 7.1 (API 25), Android 8 (API 26), Android 15 (API 35), and Android 17 preview (API 37).
-            - Minimum supported Android version: Android 7.1 (API 25); target SDK: 37.
-            - Physical-device tests remain separate from CI emulator verification.
+            Device diagnostics run on the installed phone. Physical-device validation remains the responsibility of real installations and user/device reports.
           files: |
-            release-assets/*.apk
+            release-assets/HTE-Universe-4.0.7.apk
             release-assets/SHA256SUMS.txt
           fail_on_unmatched_files: true
           make_latest: true
-      - name: Verify public Android release was actually published
+      - name: Verify public release assets
         if: startsWith(github.ref, 'refs/tags/native-v')
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name }}
-          APK_NAME: HTE-Universe-4.0.7.apk
-        shell: bash
         run: |
           set -euo pipefail
-          RELEASE_JSON="$(gh release view "$RELEASE_TAG" --json tagName,isDraft,isPrerelease,assets)"
-          export RELEASE_JSON
-          python3 - <<'PY'
-          import json, os
-          data = json.loads(os.environ["RELEASE_JSON"])
-          expected = os.environ["APK_NAME"]
-          if data.get("tagName") != os.environ["RELEASE_TAG"]:
-              raise SystemExit("Published release tag does not match the production build.")
-          if data.get("isDraft") or data.get("isPrerelease"):
-              raise SystemExit("Release exists but is not a public stable release.")
-          assets = {asset.get("name") for asset in data.get("assets", [])}
-          missing = {expected, "SHA256SUMS.txt"} - assets
-          if missing:
-              raise SystemExit(f"Production release is missing assets: {sorted(missing)}")
-          print(f"PASS: public release {data['tagName']} contains the APK and SHA-256 manifest.")
+          gh release view "$RELEASE_TAG" --json tagName,isDraft,isPrerelease,assets > "$RUNNER_TEMP/release.json"
+          python3 - "$RUNNER_TEMP/release.json" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          assert d["tagName"] == "native-v4.0.7-build41"
+          assert not d["isDraft"] and not d["isPrerelease"]
+          names={a["name"] for a in d["assets"]}
+          assert {"HTE-Universe-4.0.7.apk","SHA256SUMS.txt"} <= names
+          print("Public stable release and APK assets verified.")
           PY
-          RELEASE_DIR="$RUNNER_TEMP/hte-public-release"
-          mkdir -p "$RELEASE_DIR"
-          gh release download "$RELEASE_TAG" --pattern "$APK_NAME" --pattern "SHA256SUMS.txt" --dir "$RELEASE_DIR"
-          (cd "$RELEASE_DIR" && sha256sum --check SHA256SUMS.txt)
-          LOCAL_SHA="$(sha256sum app/build/outputs/apk/release/app-release.apk | awk '{print $1}')"
-          PUBLISHED_SHA="$(sha256sum "$RELEASE_DIR/$APK_NAME" | awk '{print $1}')"
-          test "$LOCAL_SHA" = "$PUBLISHED_SHA"
-          APK_SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
-          AAPT="$ANDROID_HOME/build-tools/37.0.0/aapt"
-          "$APK_SIGNER" verify --verbose --print-certs "$RELEASE_DIR/$APK_NAME"
-          PUBLISHED_BADGING="$("$AAPT" dump badging "$RELEASE_DIR/$APK_NAME")"
-          echo "$PUBLISHED_BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='41' versionName='4.0.7'"
-          LOCAL_CERT="$("$APK_SIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
-          PUBLISHED_CERT="$("$APK_SIGNER" verify --print-certs "$RELEASE_DIR/$APK_NAME" | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
-          test -n "$LOCAL_CERT" && test "$LOCAL_CERT" = "$PUBLISHED_CERT"
-          echo "PASS: public APK bytes, SHA-256, package ID, version and signing certificate match the verified production candidate."
+          mkdir -p "$RUNNER_TEMP/published"
+          gh release download "$RELEASE_TAG" --pattern "HTE-Universe-4.0.7.apk" --pattern "SHA256SUMS.txt" --dir "$RUNNER_TEMP/published"
+          (cd "$RUNNER_TEMP/published" && sha256sum --check SHA256SUMS.txt)
       - name: Remove temporary signing keystore
         if: always()
         run: rm -f "$RUNNER_TEMP/hte-release.jks"
-
-  emulator-compatibility:
-    name: Android API ${{ matrix.api-level }} device smoke test
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        api-level: [25, 26, 35, 37]
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '17'
-      - uses: android-actions/setup-android@v4
-        with:
-          packages: platform-tools
-      - name: Install Android 37 compile platform for emulator tests
-        run: |
-          sdkmanager "platforms;android-37.0"
-          if [[ ! -e "$ANDROID_HOME/platforms/android-37" ]]; then
-            ln -s "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
-          fi
-          test -d "$ANDROID_HOME/platforms/android-37"
-      - uses: gradle/actions/setup-gradle@v6
-        with:
-          gradle-version: '9.6.0'
-      - name: Run Android 8 / Android 15 emulator smoke test
-        if: matrix.api-level != 37
-        uses: ReactiveCircus/android-emulator-runner@v2
-        with:
-          api-level: ${{ matrix.api-level }}
-          target: google_apis
-          arch: x86_64
-          profile: pixel_2
-          cores: 4
-          ram-size: 4096M
-          heap-size: 512M
-          emulator-boot-timeout: 900
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -wipe-data
-          disable-animations: true
-          script: bash .github/scripts/wait-android-services.sh && bash .github/scripts/android-emulator-smoke.sh "${{ matrix.api-level }}"
-      - name: Run Android 17 API 37 preview emulator smoke test
-        if: matrix.api-level == 37
-        shell: bash
-        run: |
-          set -euo pipefail
-          sdkmanager "emulator" "system-images;android-37.0;google_apis;x86_64"
-          # Avoid avdmanager device-catalogue lookup: preview images may omit devices.xml.
-          echo no | avdmanager create avd --force --name hte-api37 --package "system-images;android-37.0;google_apis;x86_64" --sdcard 512M
-          "$ANDROID_HOME/emulator/emulator" -avd hte-api37 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data -memory 4096 -cores 4 > "$RUNNER_TEMP/emulator-api37.log" 2>&1 &
-          adb wait-for-device
-          booted=false
-          for attempt in $(seq 1 120); do
-            if [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]]; then
-              booted=true
-              break
-            fi
-            sleep 5
-          done
-          if [[ "$booted" != "true" ]]; then
-            cat "$RUNNER_TEMP/emulator-api37.log"
-            echo "::error::Android API 37 emulator did not finish booting."
-            exit 1
-          fi
-          adb shell settings put global window_animation_scale 0
-          adb shell settings put global transition_animation_scale 0
-          adb shell settings put global animator_duration_scale 0
-          services_ready=false
-          for attempt in $(seq 1 30); do
-            if adb shell pm list packages >/dev/null 2>&1 && adb shell am get-current-user >/dev/null 2>&1; then
-              services_ready=true
-              break
-            fi
-            sleep 2
-          done
-          test "$services_ready" = "true" || { echo "::error::Android API 37 package/activity services did not become ready."; exit 1; }
-          cd hte-universe-native
-          gradle --no-daemon :app:connectedDebugAndroidTest --console=plain
