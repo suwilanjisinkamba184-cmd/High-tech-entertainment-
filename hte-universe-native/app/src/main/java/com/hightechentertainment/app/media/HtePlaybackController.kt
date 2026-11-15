@@ -33,7 +33,17 @@ object HtePlaybackController {
         }
         future.addListener({
             runCatching { future.get() }
-                .onSuccess { controller -> activeController = controller; onConnected(controller) }
+                .onSuccess { controller ->
+                    val isCurrentConnection = synchronized(this) {
+                        if (sharedFuture === future && connectionLeases.containsKey(future)) {
+                            activeController = controller
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    if (isCurrentConnection) onConnected(controller)
+                }
                 .onFailure { error ->
                     synchronized(this) {
                         if (sharedFuture === future) {
