@@ -206,3 +206,154 @@
 .artist-cover{display:grid;place-items:center;width:min(100%,132px);aspect-ratio:1/1;margin:0 auto 14px;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 30% 25%,#3b5268,#111923 70%);border:1px solid rgba(214,177,92,.35)}
 .artist-cover img{display:block;width:100%;height:100%;object-fit:cover}
 .artist-initials{display:grid;place-items:center;width:100%;height:100%;font:800 2.2rem/1 Manrope,Inter,sans-serif;letter-spacing:-.06em;color:#e8d5a8}
+
+
+/* HTE UI REFRESH · 15 NOV 2026
+   Presentation-only layer: preserves Astro components, Supabase workflows and route structure. */
+:root{
+  --hte-gold-bright:#e7cb8a;
+  --hte-gold-deep:#8f6b2e;
+  --hte-silver-bright:#e0e3e7;
+  --hte-glass:rgba(18,19,21,.82);
+  --hte-focus:rgba(231,203,138,.32);
+}
+html{scroll-behavior:smooth;scroll-padding-top:112px}
+body{
+  background:
+    radial-gradient(ellipse at 78% 8%,rgba(197,164,90,.105),transparent 34%),
+    radial-gradient(ellipse at 8% 48%,rgba(191,195,199,.055),transparent 32%),
+    linear-gradient(180deg,#080909 0%,#0d0e10 48%,#080909 100%);
+  background-attachment:fixed;
+}
+::selection{background:var(--hte-gold);color:#111}
+:focus-visible{outline:2px solid var(--hte-gold-bright);outline-offset:4px;box-shadow:0 0 0 5px #e7cb8a18}
+.topbar{
+  width:min(1320px,calc(100% - 28px));margin:12px auto 0;
+  border:1px solid rgba(197,164,90,.23);border-radius:18px;
+  background:rgba(8,9,10,.88);box-shadow:0 14px 44px #0008;
+}
+.nav{min-height:72px}
+.brand-logo{height:42px;filter:drop-shadow(0 0 12px #c5a45a38)}
+.brand-wordmark b{font-size:1.12rem;letter-spacing:.075em}
+.navlinks a{font-size:.82rem;letter-spacing:.015em;padding:9px 12px;border-radius:8px}
+.navlinks a:hover,.navlinks a.active{background:#c5a45a12;color:var(--hte-gold-bright)}
+.btn,.button{min-height:46px;border-radius:10px;font-weight:750;letter-spacing:.025em}
+.btn.gold,.button-gold{
+  background:linear-gradient(112deg,#e6e8eb 0%,#d8bd7b 38%,#b58a42 100%);
+  color:#111;border:1px solid #ead9aa;
+  box-shadow:0 10px 28px #c5a45a24;
+}
+.btn.gold:hover,.button-gold:hover{filter:brightness(1.08);box-shadow:0 14px 36px #c5a45a35}
+.btn:not(.gold):hover,.button-outline:hover{background:#c5a45a12;border-color:#c5a45a;color:#f1dfb5}
+.hero{
+  position:relative;isolation:isolate;padding-top:clamp(66px,9vw,126px);
+  padding-bottom:clamp(58px,8vw,100px);
+}
+.hero:after{
+  content:"";position:absolute;z-index:-1;inset:8% 0 0 auto;width:48%;
+  background:radial-gradient(ellipse at center,rgba(197,164,90,.10),transparent 68%);
+  pointer-events:none;
+}
+.hero-grid{gap:clamp(30px,5vw,76px)}
+.hero h1{font-size:clamp(3.2rem,7.7vw,7rem);line-height:.94;letter-spacing:-.075em}
+.hero .lead{max-width:56ch;font-size:clamp(1rem,1.25vw,1.14rem);line-height:1.85;color:#c0bdb5}
+.hero-art{border-radius:22px;border-color:#c5a45a55;box-shadow:0 28px 90px #0009,0 0 0 1px #ffffff08}
+.hero-stamp{border-radius:12px;background:rgba(7,8,9,.78);border-color:#c5a45a55}
+.hero-stamp strong{font-size:clamp(1rem,1.5vw,1.3rem)}
+.hero-actions{gap:11px}
+.stats{margin-top:clamp(36px,5vw,62px);border-radius:14px;background:#c5a45a30}
+.stats>div{padding:clamp(15px,2vw,23px);background:linear-gradient(145deg,#151617,#0d0e0f)}
+.stats b{font-size:clamp(1.25rem,2vw,1.75rem)}
+.marquee{background:#0c0d0e;border-color:#c5a45a30}
+.marquee div{animation-duration:36s;letter-spacing:.22em}
+.section{padding-top:clamp(68px,8vw,112px);padding-bottom:clamp(68px,8vw,112px)}
+.section-head{margin-bottom:clamp(26px,4vw,42px)}
+.section-head h2,.about-heading h2{letter-spacing:-.055em}
+.experience-card,.journal-feature,.journal-story,.b,.team-card,.service-card,.step,.panel,.cards>*{
+  border-color:rgba(197,164,90,.2);box-shadow:0 16px 46px #0004;
+}
+.experience-card{border-radius:20px}
+.experience-card:hover{border-color:#e0c37e;box-shadow:0 22px 58px #0008,0 0 30px #c5a45a12}
+.experience-copy{padding:clamp(20px,2.5vw,30px)}
+.experience-copy strong{font-size:clamp(1.3rem,2vw,1.8rem)}
+.bento{gap:13px}
+.b{border-radius:19px;background:linear-gradient(150deg,#191a1b,#0e0f10)}
+.b:hover{border-color:#e0c37e;box-shadow:0 18px 44px #0007}
+.b-cta{background:linear-gradient(125deg,#e0e3e7,#d1b36e 58%,#a77e38)}
+.cards{gap:clamp(12px,1.8vw,20px)}
+.cards>*{border-radius:17px;background:linear-gradient(150deg,#191a1c,#101112);padding:clamp(12px,1.5vw,17px)}
+.cards>*:hover{border-color:#d9bd7d;box-shadow:0 20px 46px #0008}
+.cards img{border-radius:12px}
+.service-grid{gap:11px}
+.service-card{border-radius:13px;background:linear-gradient(145deg,#191a1c,#101112);padding:18px}
+.service-card h3{color:#e2c783}
+.service-card p{line-height:1.65}
+.team-card{border-radius:15px;background:linear-gradient(145deg,#1a1b1d,#0e0f10)}
+.team-card h3{letter-spacing:-.025em}
+.step{border-radius:15px;background:linear-gradient(145deg,#191a1c,#0e0f10)}
+.step:before{color:var(--hte-gold-bright)}
+.feature-band{border-radius:22px;background:radial-gradient(ellipse at 90% 0,#c5a45a20,transparent 45%),linear-gradient(135deg,#171819,#0d0e10);border-color:#c5a45a40}
+.panel,.public-booking-form{border-radius:17px;background:linear-gradient(150deg,#191a1c,#0d0e10);border-color:#c5a45a35;box-shadow:0 20px 55px #0006}
+input,select,textarea,.catalogue-search input,.catalogue-genre select{
+  min-height:48px;border-radius:10px;background:#090a0b;border-color:#45413a;
+}
+textarea{min-height:132px}
+input:hover,select:hover,textarea:hover{border-color:#8f784d}
+input:focus,select:focus,textarea:focus{border-color:#e0c37e;box-shadow:0 0 0 3px var(--hte-focus)}
+.loc{border-radius:13px;background:#111213;border-color:#c5a45a30}
+.faq details{border-radius:13px;background:linear-gradient(145deg,#171819,#0d0e10);border-color:#c5a45a25}
+.faq summary{min-height:58px;align-items:center}
+.faq details[open]{border-color:#c5a45a88}
+.footer{background:#070809;border-top-color:#c5a45a35}
+.footer-row{align-items:center;gap:18px}
+.toast{border-radius:11px;background:#171819;box-shadow:0 12px 40px #0009}
+.catalogue-tools{gap:10px}
+.catalogue-tools button,.catalogue-save-button{border-radius:9px;background:#171819;border-color:#5a4b2e;min-height:46px}
+.catalogue-tools button[aria-pressed="true"],.catalogue-save-button[aria-pressed="true"]{background:#c5a45a18;border-color:#d9bd7d;color:#f0d99d}
+.video-player-shell{border-radius:15px;border-color:#c5a45a40}
+.video-preview{border-radius:13px}
+.video-preview-play{background:linear-gradient(120deg,#e0e3e7,#c5a45a);box-shadow:0 8px 28px #0009}
+.hte-audio-player{border-radius:13px;border-color:#c5a45a44}
+.hte-player-play{background:linear-gradient(120deg,#e0e3e7,#c5a45a);border-color:#ead9aa}
+@media(max-width:900px){
+  .topbar{width:calc(100% - 20px);margin-top:10px;border-radius:15px}
+  .navlinks.open{border:1px solid #c5a45a40;border-radius:14px;background:#0b0c0df7;box-shadow:0 20px 48px #000b}
+  .navlinks a{min-height:44px;display:flex;align-items:center}
+}
+@media(max-width:700px){
+  .hero{padding-top:55px;padding-bottom:62px}
+  .hero-grid{gap:28px}
+  .hero h1{font-size:clamp(3.2rem,14vw,5.5rem)}
+  .hero .lead{font-size:1rem}
+  .hero-art{aspect-ratio:5/4;border-radius:17px}
+  .hero-actions .btn{flex:1 1 auto;justify-content:center}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:1px}
+  .stats>div{padding:15px 10px}
+  .section{padding:62px 0}
+  .section-head{gap:13px}
+  .experience-card:first-child{min-height:350px}
+  .experience-card{min-height:250px}
+  .journal-feature{min-height:360px}
+  .journal-story{grid-template-columns:104px minmax(0,1fr);gap:12px}
+  .journal-story img{min-height:112px}
+  .public-booking-section,.public-feedback-section{padding-inline:16px}
+  .team-grid{gap:10px}
+}
+@media(max-width:420px){
+  .topbar{width:calc(100% - 14px)}
+  .nav{gap:8px;min-height:64px}
+  .brand-logo{width:36px;height:36px}
+  .brand-wordmark b{font-size:.98rem}
+  .brand-wordmark small{font-size:.52rem;letter-spacing:.12em}
+  .hero-actions{display:grid;grid-template-columns:1fr}
+  .hero-actions .btn{width:100%}
+  .stats span{font-size:.72rem}
+  .journal-story{grid-template-columns:88px minmax(0,1fr);padding:10px}
+  .journal-story img{min-height:100px}
+  .team-grid{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .marquee div,.aurora i,.eq i,.grad,.gold-text{animation:none!important}
+  .btn,.button,.cards>*,.experience-card,.b,.team-card,.service-card{transition:none!important}
+}
