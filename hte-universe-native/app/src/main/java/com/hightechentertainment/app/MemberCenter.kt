@@ -1,5 +1,8 @@
 package com.hightechentertainment.app
 
+import android.content.Intent
+import android.net.Uri
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
@@ -21,8 +24,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hightechentertainment.app.data.AuthRepository
@@ -39,13 +40,13 @@ import java.time.LocalDate
 private val MemberGold = Color(0xFFD6B15E)
 private val MemberPanel = Color(0xFF121418)
 private val MemberMuted = Color(0xFF8B929D)
+private const val FOUNDER_STUDIO_URL = "https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/admin/"
 
 @Composable
 fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
     val context = LocalContext.current
     val settingsStore = remember(context) { AppSettingsStore(context) }
     var notificationsEnabled by remember { mutableStateOf(settingsStore.notificationsEnabled) }
-    var showFounderStudio by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     var email by remember { mutableStateOf("") }
@@ -197,8 +198,14 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
                 item {
                     MemberCard {
                         Text("Founder Studio", color = Color.White, fontWeight = FontWeight.Bold)
-                        Text("Upload and manage HTE music, videos and artwork. Access is verified by the server-side owner role.", color = MemberMuted, fontSize = 12.sp)
-                        Button(onClick = { showFounderStudio = true }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MemberGold, contentColor = Color.Black)) {
+                        Text("Open the official responsive Founder Studio. The same workspace, navigation, AI tools and publishing controls are shared with the HTE website.", color = MemberMuted, fontSize = 12.sp)
+                        Button(onClick = {
+                            runCatching {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(FOUNDER_STUDIO_URL)))
+                            }.onFailure {
+                                statusMessage = "No browser is available to open Founder Studio. Install or enable Chrome and try again."
+                            }
+                        }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MemberGold, contentColor = Color.Black)) {
                             Icon(Icons.Outlined.AdminPanelSettings, null); Spacer(Modifier.width(8.dp)); Text("Open Founder Studio")
                         }
                     }
@@ -294,13 +301,6 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
         )
     }
 
-    if (showFounderStudio) {
-        Dialog(onDismissRequest = { showFounderStudio = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-            Surface(Modifier.fillMaxSize(), color = Color(0xFF08090B)) {
-                FounderStudioScreen(onClose = { showFounderStudio = false })
-            }
-        }
-    }
 }
 
 @Composable
