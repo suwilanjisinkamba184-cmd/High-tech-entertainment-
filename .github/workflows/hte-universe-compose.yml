@@ -135,9 +135,10 @@ jobs:
           fail_on_unmatched_files: true
           make_latest: true
       - name: Verify public release assets
-        if: startsWith(github.ref, 'refs/tags/native-v')
+        if: startsWith(github.ref, 'refs/tags/native-v') || github.event_name == 'workflow_dispatch'
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/native-v') && github.ref_name || 'native-v4.0.7-build41' }}
         run: |
           set -euo pipefail
           gh release view "$RELEASE_TAG" --json tagName,isDraft,isPrerelease,assets > "$RUNNER_TEMP/release.json"
