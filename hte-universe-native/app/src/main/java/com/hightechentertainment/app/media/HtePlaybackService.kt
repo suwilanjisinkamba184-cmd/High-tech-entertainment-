@@ -2,6 +2,7 @@ package com.hightechentertainment.app.media
 
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -19,6 +20,8 @@ class HtePlaybackService : MediaSessionService() {
         super.onCreate()
         val audioPlayer = ExoPlayer.Builder(this)
             .setAudioAttributes(AudioAttributes.DEFAULT, true)
+            // Keep the CPU awake during foreground music playback when the screen is off.
+            .setWakeMode(C.WAKE_MODE_LOCAL)
             .build()
         activeAudioSessionId = audioPlayer.audioSessionId
         applySavedEqualizer(activeAudioSessionId)
