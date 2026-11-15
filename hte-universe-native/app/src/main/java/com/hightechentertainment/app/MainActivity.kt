@@ -153,7 +153,7 @@ private fun UniverseSplash(onFinished: () -> Unit) {
             Spacer(Modifier.height(8.dp))
             Text("UNIVERSE", color = Gold, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 7.sp)
             Spacer(Modifier.height(22.dp))
-            Box(Modifier.size(190.dp).background(Brush.radialGradient(listOf(Gold.copy(alpha = .13f), Color.Transparent)), CircleShape), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(160.dp).background(Brush.radialGradient(listOf(Gold.copy(alpha = .13f), Color.Transparent)), CircleShape), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxSize().graphicsLayer { rotationZ = orbit }) {
                     drawCircle(Gold.copy(alpha = .45f), style = Stroke(width = 1.3.dp.toPx()))
                     drawCircle(Silver.copy(alpha = .22f), radius = size.minDimension * .39f, style = Stroke(width = 1.dp.toPx()))
@@ -161,11 +161,11 @@ private fun UniverseSplash(onFinished: () -> Unit) {
                         center = androidx.compose.ui.geometry.Offset(size.width * .5f, 4.dp.toPx()))
                 }
                 Icon(Icons.Outlined.Headphones, "Spinning headphones", tint = Gold,
-                    modifier = Modifier.size(142.dp).graphicsLayer { rotationZ = headsetSpin; scaleX = 1.04f; scaleY = 1.04f })
+                    modifier = Modifier.size(106.dp).graphicsLayer { rotationZ = headsetSpin; scaleX = 1.04f; scaleY = 1.04f })
                 Icon(Icons.Outlined.Videocam, "Spinning video camera", tint = Silver,
-                    modifier = Modifier.align(Alignment.BottomEnd).size(58.dp).graphicsLayer { rotationZ = cameraSpin })
+                    modifier = Modifier.align(Alignment.BottomEnd).size(42.dp).graphicsLayer { rotationZ = cameraSpin })
                 Icon(Icons.Outlined.VideoLibrary, "Orbiting video library", tint = Gold.copy(alpha = .8f),
-                    modifier = Modifier.align(Alignment.TopEnd).size(36.dp).graphicsLayer { rotationZ = -orbit })
+                    modifier = Modifier.align(Alignment.TopEnd).size(28.dp).graphicsLayer { rotationZ = -orbit })
                 Icon(Icons.Outlined.AutoAwesome, "Orbiting star", tint = Gold,
                     modifier = Modifier.align(Alignment.TopStart).size(30.dp).graphicsLayer { rotationZ = orbit })
             }
