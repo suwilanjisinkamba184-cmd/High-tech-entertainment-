@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.ActivityManager
 import android.content.pm.PackageManager
 import android.content.Intent
+import android.widget.Toast
 import android.net.ConnectivityManager
 import androidx.core.net.toUri
 import android.os.Build
@@ -391,10 +392,21 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                         Icon(Icons.Outlined.DeleteForever, null); Spacer(Modifier.width(8.dp)); Text("Clear application data")
                     }
                     SettingsDivider()
-                    SettingsInfoRow("Privacy & security", "Account and permission controls remain in your account and Android settings.")
+                    SettingsActionRow("Privacy Policy", "Read how HTE handles your account and device data.") {
+                        openSettingsUrl(context, "https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html")
+                    }
+                    SettingsActionRow("Terms of Service", "Review the terms for using HTE Universe.") {
+                        openSettingsUrl(context, "https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/terms-of-service.html")
+                    }
+                    SettingsActionRow("Contact Support", "Get help from High-Tech Entertainment.") {
+                        openSupportEmail(context, "Support request — HTE Universe")
+                    }
+                    SettingsActionRow("Send Feedback", "Report a problem or suggest an improvement.") {
+                        openSupportEmail(context, "HTE Universe app feedback")
+                    }
+                    SettingsDivider()
                     SettingsInfoRow("AI & voice assistant", "Voice controls are available from the main navigation.")
                     SettingsInfoRow("Artist & Founder tools", "Publishing permissions are controlled by your verified account role.")
-                    SettingsInfoRow("Help & support", "Contact High-Tech Entertainment for assistance.")
                     Text("HTE Universe · The Pride of Africa", color = SettingsGold, fontSize = 10.sp, letterSpacing = 1.2.sp)
                 }
             }
@@ -506,6 +518,33 @@ private fun SettingsChips(options: List<String>, selected: String, onSelect: (St
             )
         }
     }
+}
+
+@Composable
+private fun SettingsActionRow(title: String, description: String, onClick: () -> Unit) {
+    TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 4.dp, vertical = 9.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(title, color = SettingsSilver, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Text(description, color = SettingsMuted, fontSize = 10.sp)
+            }
+            Icon(Icons.Outlined.ChevronRight, contentDescription = "Open $title", tint = SettingsGold)
+        }
+    }
+}
+
+private fun openSettingsUrl(context: android.content.Context, url: String) {
+    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) }
+        .onFailure { Toast.makeText(context, "Unable to open this page. Please try again later.", Toast.LENGTH_LONG).show() }
+}
+
+private fun openSupportEmail(context: android.content.Context, subject: String) {
+    val emailIntent = Intent(Intent.ACTION_SENDTO, "mailto:suwilanjisinkamba184@gmail.com".toUri()).apply {
+        putExtra(Intent.EXTRA_SUBJECT, subject)
+        putExtra(Intent.EXTRA_TEXT, "HTE Universe version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})\n\nPlease describe your issue or feedback below:\n")
+    }
+    runCatching { context.startActivity(emailIntent) }
+        .onFailure { Toast.makeText(context, "No email app is available. Contact suwilanjisinkamba184@gmail.com.", Toast.LENGTH_LONG).show() }
 }
 
 @Composable
