@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
       const detail = typeof data.detail === "string" ? data.detail : data.detail?.message || JSON.stringify(data.detail || data);
       return reply({ error: `ElevenLabs voice list failed (${response.status}): ${String(detail).slice(0, 400)}` }, 502, origin);
     }
-    return reply({ voices: (data.voices || []).map((v: any) => ({ voice_id: v.voice_id, name: v.name, category: v.category, labels: v.labels })) }, 200, origin);
+    return reply({ voices: (data.voices || []).map((v: any) => ({ voice_id: v.voice_id, name: v.name, category: v.category, labels: v.labels, available_for_tiers: Array.isArray(v.available_for_tiers) ? v.available_for_tiers : [] })) }, 200, origin);
   }
 
   const title = String(body.title || "").trim().slice(0, 120);
@@ -94,8 +94,20 @@ Deno.serve(async (req) => {
     }),
   });
   if (!tts.ok) {
-    const detail = await tts.text();
-    return reply({ error: `ElevenLabs generation failed (${tts.status}): ${detail.slice(0, 500)}` }, 502, origin);
+    const rawDetail = await tts.text();
+    let detail: any = {};
+    try { detail = JSON.parse(rawDetail); } catch { detail = { message: rawDetail }; }
+    const providerCode = String(detail?.detail?.code || detail?.code || "");
+    if (tts.status === 402 || providerCode === "paid_plan_required") {
+      return reply({
+        error: "This ElevenLabs voice requires a paid plan for API generation. Your script has been preserved and no advertisement was created. Choose a voice explicitly marked as Free-tier eligible, or upgrade your ElevenLabs subscription.",
+        code: "paid_plan_required",
+        status: 402,
+        voice_id: voiceId,
+      }, 402, origin);
+    }
+    const providerMessage = String(detail?.detail?.message || detail?.message || rawDetail).slice(0, 400);
+    return reply({ error: `ElevenLabs generation failed (${tts.status}): ${providerMessage}`, code: "elevenlabs_generation_failed", status: tts.status }, 502, origin);
   }
   const audio = new Uint8Array(await tts.arrayBuffer());
   if (!audio.length || audio.length > 25 * 1024 * 1024) return reply({ error: "Generated audio is empty or exceeds the 25 MB upload limit." }, 502, origin);
