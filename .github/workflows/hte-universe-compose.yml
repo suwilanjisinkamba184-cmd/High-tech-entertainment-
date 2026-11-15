@@ -154,8 +154,8 @@ jobs:
           mkdir -p ../release-assets
           VERSION_NAME=$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts | head -n1)
           VERSION_CODE=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' app/build.gradle.kts | head -n1)
-          test "$VERSION_NAME" = "4.0.6"
-          test "$VERSION_CODE" = "40"
+          test "$VERSION_NAME" = "4.0.7"
+          test "$VERSION_CODE" = "41"
           test "$GITHUB_REF_NAME" = "native-v${VERSION_NAME}-build${VERSION_CODE}"
           APK_NAME="HTE-Universe-${VERSION_NAME}.apk"
           cp app/build/outputs/apk/release/app-release.apk "../release-assets/$APK_NAME"
@@ -184,20 +184,23 @@ jobs:
               exit 1
               ;;
           esac
-      - name: Publish HTE Universe 4.0.6 GitHub Release
+      - name: Publish HTE Universe 4.0.7 GitHub Release
         if: startsWith(github.ref, 'refs/tags/native-v') && steps.release_state.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: HTE Universe 4.0.6 — Production build 40
+          name: HTE Universe 4.0.7 — Production build 41
           body: |
-            ## HTE Universe 4.0.6
+            ## HTE Universe 4.0.7
 
             Official signed Android release from the verified `main` build.
 
-            Production version: `4.0.6` (version code `40`).
+            Production version: `4.0.7` (version code `41`).
 
             ### Changes
+            - Working Privacy Policy and Terms of Service links in Settings.
+            - Contact Support and Send Feedback actions with app version/build context.
+            - Immersive landscape fullscreen video mode with system UI restoration.
             - Adaptive settings layout for compact phones, tablets and wide screens.
             - New ten-band studio equalizer curve mapped to each device's supported audio-effect bands.
             - Migration of saved five-band equalizer settings without discarding the user's previous curve.
@@ -228,7 +231,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name }}
-          APK_NAME: HTE-Universe-4.0.6.apk
+          APK_NAME: HTE-Universe-4.0.7.apk
         shell: bash
         run: |
           set -euo pipefail
@@ -259,7 +262,7 @@ jobs:
           AAPT="$ANDROID_HOME/build-tools/37.0.0/aapt"
           "$APK_SIGNER" verify --verbose --print-certs "$RELEASE_DIR/$APK_NAME"
           PUBLISHED_BADGING="$("$AAPT" dump badging "$RELEASE_DIR/$APK_NAME")"
-          echo "$PUBLISHED_BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='40' versionName='4.0.6'"
+          echo "$PUBLISHED_BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='41' versionName='4.0.7'"
           LOCAL_CERT="$("$APK_SIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
           PUBLISHED_CERT="$("$APK_SIGNER" verify --print-certs "$RELEASE_DIR/$APK_NAME" | awk -F': ' '/certificate SHA-256 digest:/ {print $NF; exit}' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
           test -n "$LOCAL_CERT" && test "$LOCAL_CERT" = "$PUBLISHED_CERT"
