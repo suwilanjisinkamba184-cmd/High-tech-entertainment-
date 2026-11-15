@@ -15,7 +15,16 @@ class HteDiagnosticsActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        render(HteDeviceDiagnostics.savedReport(this))
+        render(combinedReport())
+    }
+
+    private fun combinedReport(): String = buildString {
+        append(HteDeviceDiagnostics.savedReport(this@HteDiagnosticsActivity))
+        HteCrashReporter.pendingReport(this@HteDiagnosticsActivity)?.let {
+            appendLine()
+            appendLine()
+            append(it)
+        }
     }
 
     private fun render(report: String) {
@@ -32,7 +41,7 @@ class HteDiagnosticsActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
         })
         root.addView(TextView(this).apply {
-            text = "On-device self-check • safe recovery • founder escalation"
+            text = "On-device self-check • safe recovery • crash review • founder escalation"
             textSize = 12f
             setTextColor(Color.LTGRAY)
             setPadding(0, 8, 0, 18)
@@ -50,7 +59,7 @@ class HteDiagnosticsActivity : Activity() {
             text = "Run diagnostics and safe recovery again"
             setOnClickListener {
                 val result = HteDeviceDiagnostics.run(this@HteDiagnosticsActivity, true)
-                reportText.text = result.asText()
+                reportText.text = combinedReport()
                 Toast.makeText(this@HteDiagnosticsActivity,
                     if (result.hasFailures) "Issues remain. Send the report to the founder."
                     else "Device self-check completed.", Toast.LENGTH_LONG).show()
