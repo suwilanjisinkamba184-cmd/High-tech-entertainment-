@@ -8,11 +8,14 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import java.util.IdentityHashMap
 
 @OptIn(markerClass = [UnstableApi::class])
 object HtePlaybackController {
     @Volatile private var sharedFuture: ListenableFuture<MediaController>? = null
     @Volatile private var activeController: MediaController? = null
+    // A screen/dialog may share the same future. Keep it alive until every caller releases its lease.
+    private val connectionLeases = IdentityHashMap<ListenableFuture<MediaController>, Int>()
 
     fun connect(
         context: Context,
@@ -62,9 +65,20 @@ object HtePlaybackController {
     fun stop() { activeController?.stop() }
 
     fun release(future: ListenableFuture<MediaController>) {
-        synchronized(this) {
-            if (sharedFuture === future) { sharedFuture = null; activeController = null }
+        val shouldRelease = synchronized(this) {
+            val leases = connectionLeases[future] ?: return
+            if (leases > 1) {
+                connectionLeases[future] = leases - 1
+                false
+            } else {
+                connectionLeases.remove(future)
+                if (sharedFuture === future) {
+                    sharedFuture = null
+                    activeController = null
+                }
+                true
+            }
         }
-        MediaController.releaseFuture(future)
+        if (shouldRelease) MediaController.releaseFuture(future)
     }
 }
