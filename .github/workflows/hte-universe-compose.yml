@@ -117,7 +117,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: HTE Universe 4.0.7 — Production build 42
+          name: HTE Universe 4.0.7 — Production build 41
           body: |
             ## HTE Universe 4.0.7
             Signed production APK, build 42.
