@@ -120,7 +120,7 @@ jobs:
           name: HTE Universe 4.0.7 — Production build 41
           body: |
             ## HTE Universe 4.0.7
-            Signed production APK, build 42.
+            Signed production APK, build 41.
 
             ### Changes
             - Removed GitHub emulator compatibility matrix; CI now focuses on build, unit tests, lint, signing and release integrity.
