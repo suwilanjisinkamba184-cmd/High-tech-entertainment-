@@ -7,11 +7,13 @@ import android.content.Context
 import android.app.Activity
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.*
@@ -365,8 +367,30 @@ fun UniverseShell() {
                         if (!url.isNullOrBlank()) {
                             AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
                         } else {
-                            Box(artworkModifier.background(Brush.linearGradient(listOf(Color(0xFF493719), ShellPanel))), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Outlined.Album, null, tint = ShellGold, modifier = Modifier.size(30.dp))
+                            Box(
+                                artworkModifier.background(
+                                    Brush.radialGradient(listOf(Color(0xFF332716), Color(0xFF15120D), ShellBackground)),
+                                    RoundedCornerShape(26.dp)
+                                ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    Modifier.size(184.dp).border(1.dp, ShellGold.copy(alpha = .62f), CircleShape)
+                                        .background(Brush.sweepGradient(listOf(Color(0xFF302516), Color(0xFF090A0C), Color(0xFF302516))), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(Modifier.size(142.dp).border(1.dp, ShellSilver.copy(alpha = .25f), CircleShape)
+                                        .background(Color(0xFF101114), CircleShape), contentAlignment = Alignment.Center) {
+                                        Box(Modifier.size(88.dp).border(2.dp, ShellGold, CircleShape)
+                                            .background(Brush.radialGradient(listOf(Color(0xFF5B4725), Color(0xFF11100D))), CircleShape),
+                                            contentAlignment = Alignment.Center) {
+                                            Text("HTE", color = ShellGold, fontSize = 27.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                                        }
+                                    }
+                                }
+                                Text("HIGH-TECH ORIGINAL", color = ShellGold.copy(alpha = .8f), fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold, letterSpacing = 2.sp,
+                                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp))
                             }
                         }
                     },
@@ -382,8 +406,30 @@ fun UniverseShell() {
                         if (!url.isNullOrBlank()) {
                             AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
                         } else {
-                            Box(artworkModifier.background(Brush.linearGradient(listOf(Color(0xFF493719), ShellPanel))), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Outlined.Album, null, tint = ShellGold, modifier = Modifier.size(30.dp))
+                            Box(
+                                artworkModifier.background(
+                                    Brush.radialGradient(listOf(Color(0xFF332716), Color(0xFF15120D), ShellBackground)),
+                                    RoundedCornerShape(26.dp)
+                                ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    Modifier.size(184.dp).border(1.dp, ShellGold.copy(alpha = .62f), CircleShape)
+                                        .background(Brush.sweepGradient(listOf(Color(0xFF302516), Color(0xFF090A0C), Color(0xFF302516))), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(Modifier.size(142.dp).border(1.dp, ShellSilver.copy(alpha = .25f), CircleShape)
+                                        .background(Color(0xFF101114), CircleShape), contentAlignment = Alignment.Center) {
+                                        Box(Modifier.size(88.dp).border(2.dp, ShellGold, CircleShape)
+                                            .background(Brush.radialGradient(listOf(Color(0xFF5B4725), Color(0xFF11100D))), CircleShape),
+                                            contentAlignment = Alignment.Center) {
+                                            Text("HTE", color = ShellGold, fontSize = 27.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                                        }
+                                    }
+                                }
+                                Text("HIGH-TECH ORIGINAL", color = ShellGold.copy(alpha = .8f), fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold, letterSpacing = 2.sp,
+                                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp))
                             }
                         }
                     },
@@ -978,17 +1024,32 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                     Spacer(Modifier.height(8.dp))
                 }
                 if (validUrl) {
-                    AndroidView(
-                        factory = { viewContext -> PlayerView(viewContext).apply {
-                            this.player = player
-                            useController = false
-                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                            setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-                            keepScreenOn = true
-                        } },
-                        update = { view -> view.player = player },
-                        modifier = Modifier.fillMaxWidth().weight(1f)
-                    )
+                    if (immersiveVideo) {
+                        AndroidView(
+                            factory = { viewContext -> PlayerView(viewContext).apply {
+                                this.player = player
+                                useController = false
+                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                                keepScreenOn = true
+                            } },
+                            update = { view -> view.player = player },
+                            modifier = Modifier.fillMaxWidth().weight(1f)
+                        )
+                    } else {
+                        AndroidView(
+                            factory = { viewContext -> PlayerView(viewContext).apply {
+                                this.player = player
+                                useController = false
+                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                                keepScreenOn = true
+                            } },
+                            update = { view -> view.player = player },
+                            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                        )
+                        Spacer(Modifier.weight(1f))
+                    }
                 } else {
                     Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                         Text("This video does not have a valid playback URL.", color = ShellGold)
