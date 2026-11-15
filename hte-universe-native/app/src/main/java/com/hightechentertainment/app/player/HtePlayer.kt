@@ -189,7 +189,7 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
     val progress = if (state.durationMs > 0) (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f) else 0f
     val bars = state.amplitudes ?: remember(track.id) { placeholderWaveform(track.id) }
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val artworkMaxHeight = maxHeight * .34f
+        val artworkMaxHeight = maxHeight * .28f
         val horizontalInset = when {
             maxWidth < 360.dp -> 12.dp
             maxWidth < 600.dp -> 18.dp
@@ -216,8 +216,10 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
         Spacer(Modifier.height(4.dp))
         artwork(track.artworkUrl, Modifier.fillMaxWidth().heightIn(max = artworkMaxHeight).aspectRatio(1f).graphicsLayer { scaleX = scale; scaleY = scale }.clip(MaterialTheme.shapes.large).background(HteColors.Panel))
         Spacer(Modifier.height(4.dp))
-        Text(track.title, style = MaterialTheme.typography.headlineMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(track.title, color = HteColors.OnDark, style = MaterialTheme.typography.headlineMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(track.artist, style = MaterialTheme.typography.bodyLarge, color = HteColors.Silver, maxLines = 1)
+        Text("NOW STREAMING  •  HIGH-TECH ENTERTAINMENT", color = HteColors.Gold.copy(alpha = .82f),
+            fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
         if (state.playbackError) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
