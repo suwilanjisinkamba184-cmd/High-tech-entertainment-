@@ -199,8 +199,13 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
         ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onCollapse) { Icon(Icons.Rounded.KeyboardArrowDown, "Close player", tint = HteColors.OnDark, modifier = Modifier.size(32.dp)) }
-            Text("NOW PLAYING", style = MaterialTheme.typography.labelLarge, color = HteColors.Silver, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            Spacer(Modifier.size(48.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("HTE STUDIO PLAYER", color = HteColors.Gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp)
+                Text("NOW PLAYING", style = MaterialTheme.typography.labelMedium, color = HteColors.Silver)
+            }
+            Surface(shape = RoundedCornerShape(50), color = HteColors.Gold.copy(alpha = .12f)) {
+                Text("HTE AUDIO", color = HteColors.Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
+            }
         }
         Spacer(Modifier.height(4.dp))
         artwork(track.artworkUrl, Modifier.fillMaxWidth().heightIn(max = artworkMaxHeight).aspectRatio(1f).graphicsLayer { scaleX = scale; scaleY = scale }.clip(MaterialTheme.shapes.large).background(HteColors.Panel))
