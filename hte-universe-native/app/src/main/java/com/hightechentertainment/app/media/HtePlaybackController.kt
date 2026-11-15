@@ -23,10 +23,13 @@ object HtePlaybackController {
         onError: (Throwable) -> Unit
     ): ListenableFuture<MediaController> {
         val future = synchronized(this) {
-            sharedFuture ?: run {
+            val connection = sharedFuture ?: run {
                 val token = SessionToken(context, ComponentName(context, HtePlaybackService::class.java))
                 MediaController.Builder(context, token).buildAsync().also { sharedFuture = it }
             }
+            // Count every consumer, including callers reusing an in-flight or completed future.
+            connectionLeases[connection] = (connectionLeases[connection] ?: 0) + 1
+            connection
         }
         future.addListener({
             runCatching { future.get() }
