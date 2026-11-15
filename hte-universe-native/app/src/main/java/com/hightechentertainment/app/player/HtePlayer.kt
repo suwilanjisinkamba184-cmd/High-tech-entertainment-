@@ -170,7 +170,11 @@ private fun MiniPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
                 Text(track.artist, style = MaterialTheme.typography.bodySmall, color = HteColors.Silver, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             IconButton(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); controller.togglePlay() }) {
-                Icon(if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (state.isPlaying) "Pause" else "Play", tint = HteColors.OnDark)
+                if (state.isBuffering) {
+                    CircularProgressIndicator(Modifier.size(22.dp), color = HteColors.Gold, strokeWidth = 2.dp)
+                } else {
+                    Icon(if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (state.isPlaying) "Pause" else "Play", tint = HteColors.OnDark)
+                }
             }
         }
         LinearProgressIndicator(progress = { progress }, Modifier.fillMaxWidth().height(2.dp), color = HteColors.Gold, trackColor = Color.Transparent)
