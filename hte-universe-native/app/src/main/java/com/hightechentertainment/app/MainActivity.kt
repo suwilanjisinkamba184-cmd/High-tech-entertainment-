@@ -143,17 +143,17 @@ private fun UniverseSplash(onFinished: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
         listOf(Color(0xFF17130B), Obsidian, Color(0xFF050608))))) {
         StarField(Modifier.fillMaxSize(), orbit)
-        Column(Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 36.dp),
+        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Box(Modifier.size(88.dp).background(Brush.radialGradient(listOf(Gold.copy(alpha = .25f), Color.Transparent)), CircleShape), contentAlignment = Alignment.Center) {
-                Image(painter = painterResource(R.drawable.ic_hte_crown), contentDescription = "High-Tech Entertainment crown", modifier = Modifier.size(72.dp).graphicsLayer { rotationZ = if (reduceMotion) 0f else animatedCameraSpin * .035f })
+            Box(Modifier.size(72.dp).background(Brush.radialGradient(listOf(Gold.copy(alpha = .25f), Color.Transparent)), CircleShape), contentAlignment = Alignment.Center) {
+                Image(painter = painterResource(R.drawable.ic_hte_crown), contentDescription = "High-Tech Entertainment crown", modifier = Modifier.size(60.dp).graphicsLayer { rotationZ = if (reduceMotion) 0f else animatedCameraSpin * .035f })
             }
             Spacer(Modifier.height(2.dp))
-            Image(painter = painterResource(R.drawable.ht_logo), contentDescription = "High-Tech Entertainment official logo", contentScale = ContentScale.Fit, modifier = Modifier.size(142.dp))
+            Image(painter = painterResource(R.drawable.ht_logo), contentDescription = "High-Tech Entertainment official logo", contentScale = ContentScale.Fit, modifier = Modifier.size(118.dp))
             Spacer(Modifier.height(8.dp))
             Text("UNIVERSE", color = Gold, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 7.sp)
-            Spacer(Modifier.height(44.dp))
-            Box(Modifier.size(250.dp).background(Brush.radialGradient(listOf(Gold.copy(alpha = .13f), Color.Transparent)), CircleShape), contentAlignment = Alignment.Center) {
+            Spacer(Modifier.height(22.dp))
+            Box(Modifier.size(190.dp).background(Brush.radialGradient(listOf(Gold.copy(alpha = .13f), Color.Transparent)), CircleShape), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxSize().graphicsLayer { rotationZ = orbit }) {
                     drawCircle(Gold.copy(alpha = .45f), style = Stroke(width = 1.3.dp.toPx()))
                     drawCircle(Silver.copy(alpha = .22f), radius = size.minDimension * .39f, style = Stroke(width = 1.dp.toPx()))
@@ -169,7 +169,7 @@ private fun UniverseSplash(onFinished: () -> Unit) {
                 Icon(Icons.Outlined.AutoAwesome, "Orbiting star", tint = Gold,
                     modifier = Modifier.align(Alignment.TopStart).size(30.dp).graphicsLayer { rotationZ = orbit })
             }
-            Spacer(Modifier.height(30.dp))
+            Spacer(Modifier.height(18.dp))
             Text("A NEW SOUND. A NEW UNIVERSE.", color = Gold.copy(alpha = .82f), fontSize = 9.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
             Text(captions[(elapsed / 4).coerceIn(0, 3)], color = Color.White, fontSize = 20.sp,
@@ -177,7 +177,7 @@ private fun UniverseSplash(onFinished: () -> Unit) {
             Spacer(Modifier.height(9.dp))
             Text(HTE_STARTUP_TAGLINE, color = Gold, fontSize = 12.sp,
                 fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
-            Spacer(Modifier.height(36.dp))
+            Spacer(Modifier.height(18.dp))
             LinearProgressIndicator(progress = { elapsed / 15f },
                 modifier = Modifier.fillMaxWidth(.72f).height(3.dp).clip(CircleShape),
                 color = Gold, trackColor = Silver.copy(alpha = .18f))
