@@ -113,7 +113,7 @@ fun UniverseShell() {
             onError = { error ->
                 if (effectActive) Toast.makeText(
                     context,
-                    error.message?.take(120) ?: "The background player could not start.",
+                    "The audio player couldn't connect. Check your connection and try again.",
                     Toast.LENGTH_LONG,
                 ).show()
             },
@@ -232,7 +232,7 @@ fun UniverseShell() {
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {
-                Toast.makeText(context, error.message?.take(120) ?: "Sign in to save favourites.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "We couldn't update your favourites. Please sign in and try again.", Toast.LENGTH_SHORT).show()
             }
         }
     }
