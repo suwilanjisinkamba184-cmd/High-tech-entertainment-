@@ -30,10 +30,27 @@ data class HteDownloadProgress(val downloaded: Long, val total: Long) {
     val fraction: Float get() = if (total > 0L) (downloaded.toFloat() / total).coerceIn(0f, 1f) else 0f
 }
 
+private class RetryableUpdateCheckException(message: String) : java.io.IOException(message)
+
 class HteUpdateManager(private val context: Context) {
     private val updateDirectory = File(context.filesDir, "updates")
 
-    suspend fun checkForUpdate(currentVersion: String): HteUpdateInfo = withContext(Dispatchers.IO) {
+    suspend fun checkForUpdate(currentVersion: String): HteUpdateInfo {
+        var lastNetworkError: java.io.IOException? = null
+        for (attempt in 0..2) {
+            currentCoroutineContext().ensureActive()
+            try {
+                return checkForUpdateOnce(currentVersion)
+            } catch (error: java.io.IOException) {
+                lastNetworkError = error
+                if (attempt == 2 || (!error.isTransientUpdateNetworkError() && error !is RetryableUpdateCheckException)) throw error
+                delay(750L * (attempt + 1))
+            }
+        }
+        throw lastNetworkError ?: java.io.IOException("The update check could not reach GitHub. Please retry.")
+    }
+
+    private suspend fun checkForUpdateOnce(currentVersion: String): HteUpdateInfo = withContext(Dispatchers.IO) {
         val connection = (URL(LATEST_RELEASE_URL).openConnection() as HttpURLConnection).apply {
             connectTimeout = 15_000
             readTimeout = 20_000
@@ -43,6 +60,9 @@ class HteUpdateManager(private val context: Context) {
         }
         try {
             val code = connection.responseCode
+            if (code == 408 || code == 429 || code in 500..599) {
+                throw RetryableUpdateCheckException(httpError(connection, code, "Update check"))
+            }
             if (code !in 200..299) throw IllegalStateException(httpError(connection, code, "Update check"))
             val releases = JSONArray(connection.inputStream.bufferedReader().use { it.readText() })
             // The repository still has a legacy Flutter/Shorebird release stream. Never
@@ -93,6 +113,7 @@ class HteUpdateManager(private val context: Context) {
         url: String,
         expectedSize: Long = 0L,
         expectedSha256: String? = null,
+        canDownload: () -> Boolean = { true },
         onProgress: (HteDownloadProgress) -> Unit
     ): File = withContext(Dispatchers.IO) {
         require(url.startsWith("https://")) { "Updates must be downloaded over HTTPS." }
@@ -103,6 +124,7 @@ class HteUpdateManager(private val context: Context) {
         // Keep partial bytes and resume with HTTP Range after transient disconnects.
         for (attempt in 0..3) {
             currentCoroutineContext().ensureActive()
+            check(canDownload()) { "Update download paused because the Wi-Fi-only policy blocks the active metered connection. Your partial download is preserved." }
             val offset = if (partial.exists()) partial.length() else 0L
             val connection = (URL(url).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 20_000
@@ -136,6 +158,7 @@ class HteUpdateManager(private val context: Context) {
                         val buffer = ByteArray(DEFAULT_BUFFER_SIZE * 8)
                         while (true) {
                             currentCoroutineContext().ensureActive()
+                            check(canDownload()) { "Update download paused because the Wi-Fi-only policy blocks the active metered connection. Your partial download is preserved." }
                             val count = input.read(buffer)
                             if (count < 0) break
                             output.write(buffer, 0, count)
@@ -189,6 +212,19 @@ class HteUpdateManager(private val context: Context) {
     fun partialDownloadSize(): Long = File(updateDirectory, "HTE-Universe-update.apk.part").takeIf { it.exists() }?.length() ?: 0L
     fun clearPartialDownload() { File(updateDirectory, "HTE-Universe-update.apk.part").delete() }
     fun clearCachedUpdate() { File(updateDirectory, "HTE-Universe-update.apk").delete(); clearPartialDownload() }
+
+    private fun java.io.IOException.isTransientUpdateNetworkError(): Boolean {
+        var cause: Throwable? = this
+        while (cause != null) {
+            if (cause is java.net.UnknownHostException ||
+                cause is java.net.SocketTimeoutException ||
+                cause is java.net.ConnectException ||
+                cause is java.net.NoRouteToHostException
+            ) return true
+            cause = cause.cause
+        }
+        return false
+    }
 
     private fun httpError(connection: HttpURLConnection, code: Int, operation: String): String {
         val body = runCatching { connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty() }.getOrDefault("")

@@ -23,6 +23,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.core.net.toUri
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import coil.compose.AsyncImage
 import com.hightechentertainment.app.player.Media3PlayerController
 import com.hightechentertainment.app.player.PlayerHost
@@ -60,6 +62,8 @@ import com.hightechentertainment.app.data.VideoDto
 import com.hightechentertainment.app.media.HtePlaybackController
 import com.hightechentertainment.app.media.OfflineDownloadManager
 import com.hightechentertainment.app.media.OfflineDownloadRecord
+import com.hightechentertainment.app.ui.design.HteIcons
+import com.hightechentertainment.app.ui.design.HteGlowingIconBadge
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -258,17 +262,11 @@ fun UniverseShell() {
             if (!isWideLayout) {
                 NavigationBar(containerColor = ShellPanel, contentColor = ShellGold) {
                     UniverseTab.entries.forEach { tab ->
-                        val icon = when (tab) {
-                            UniverseTab.HOME -> Icons.Outlined.Home
-                            UniverseTab.DISCOVER -> Icons.Outlined.Explore
-                            UniverseTab.VIDEOS -> Icons.Outlined.VideoLibrary
-                            UniverseTab.LIBRARY -> Icons.Outlined.LibraryMusic
-                            UniverseTab.ACCOUNT -> Icons.Outlined.Person
-                        }
+                        val icon = HteIcons.navigation(tab.label)
                         NavigationBarItem(
                             selected = selectedTab == tab,
                             onClick = { selectedTab = tab },
-                            icon = { Icon(icon, contentDescription = tab.label) },
+                            icon = { HteGlowingIconBadge(icon = icon, selected = selectedTab == tab, contentDescription = tab.label) },
                             label = { Text(tab.label, fontSize = 10.sp) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = ShellGold, selectedTextColor = ShellGold,
@@ -285,17 +283,11 @@ fun UniverseShell() {
             if (isWideLayout) {
                 NavigationRail(containerColor = ShellPanel, contentColor = ShellGold) {
                     UniverseTab.entries.forEach { tab ->
-                        val icon = when (tab) {
-                            UniverseTab.HOME -> Icons.Outlined.Home
-                            UniverseTab.DISCOVER -> Icons.Outlined.Explore
-                            UniverseTab.VIDEOS -> Icons.Outlined.VideoLibrary
-                            UniverseTab.LIBRARY -> Icons.Outlined.LibraryMusic
-                            UniverseTab.ACCOUNT -> Icons.Outlined.Person
-                        }
+                        val icon = HteIcons.navigation(tab.label)
                         NavigationRailItem(
                             selected = selectedTab == tab,
                             onClick = { selectedTab = tab },
-                            icon = { Icon(icon, contentDescription = tab.label) },
+                            icon = { HteGlowingIconBadge(icon = icon, selected = selectedTab == tab, contentDescription = tab.label) },
                             label = { Text(tab.label, fontSize = 9.sp) },
                             alwaysShowLabel = true,
                             colors = NavigationRailItemDefaults.colors(
@@ -893,10 +885,26 @@ private fun formatMediaTime(milliseconds: Long): String {
 private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
-    DisposableEffect(activity) {
-        val previousOrientation = activity?.requestedOrientation
+    val window = remember(activity) { activity?.window }
+    val systemBars = remember(window) { window?.let { WindowInsetsControllerCompat(it, it.decorView) } }
+    val previousOrientation = remember(activity) { activity?.requestedOrientation }
+    var immersiveVideo by remember(video.id) { mutableStateOf(false) }
+    val toggleImmersive = {
+        immersiveVideo = !immersiveVideo
+        if (immersiveVideo) {
+            systemBars?.hide(WindowInsetsCompat.Type.systemBars())
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } else {
+            systemBars?.show(WindowInsetsCompat.Type.systemBars())
+            activity?.requestedOrientation = previousOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+    DisposableEffect(activity, systemBars) {
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
-        onDispose { if (previousOrientation != null) activity?.requestedOrientation = previousOrientation }
+        onDispose {
+            systemBars?.show(WindowInsetsCompat.Type.systemBars())
+            if (previousOrientation != null) activity?.requestedOrientation = previousOrientation
+        }
     }
     val validUrl = remember(video.videoUrl) {
         runCatching {
@@ -957,15 +965,18 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize(), color = Color.Black) {
-            Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 12.dp, vertical = 10.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 10.sp)
+            Column(Modifier.fillMaxSize().background(Color.Black).padding(if (immersiveVideo) 0.dp else 12.dp)) {
+                if (!immersiveVideo) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 10.sp)
+                        }
+                        IconButton(onClick = toggleImmersive) { Icon(Icons.Outlined.Fullscreen, "Enter fullscreen", tint = ShellGold) }
+                        IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close video", tint = Color.White) }
                     }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close video", tint = Color.White) }
+                    Spacer(Modifier.height(8.dp))
                 }
-                Spacer(Modifier.height(8.dp))
                 if (validUrl) {
                     AndroidView(
                         factory = { viewContext -> PlayerView(viewContext).apply {
@@ -1008,6 +1019,9 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 7.dp)
                             ) { Text(if (videoPlaying) "Pause" else "Play", fontWeight = FontWeight.Bold) }
                             TextButton(onClick = { if (videoDuration > 0L) player.seekTo((player.currentPosition + 10_000L).coerceAtMost(videoDuration)) }) { Text("+10s", color = ShellSilver) }
+                            IconButton(onClick = toggleImmersive) {
+                                Icon(if (immersiveVideo) Icons.Outlined.FullscreenExit else Icons.Outlined.Fullscreen, if (immersiveVideo) "Exit fullscreen" else "Enter fullscreen", tint = ShellGold)
+                            }
                             Spacer(Modifier.weight(1f))
                             Text(formatVideoTime(videoDuration), color = ShellMuted, fontSize = 10.sp)
                         }

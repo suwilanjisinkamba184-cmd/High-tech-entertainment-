@@ -20,4 +20,15 @@ class AppSettingsStoreTest {
     fun mobileDownloadsRequireBothMobilePolicyAndDataSaverOff() {
         assertTrue(allowsMeteredMediaDownloads("WIFI_AND_MOBILE", dataSaverEnabled = false))
     }
+
+    @Test
+    fun wifiOnlyUpdateDownloadsAreBlockedOnMeteredNetworks() {
+        assertFalse(allowsUpdateDownload("WIFI_ONLY", isMeteredNetwork = true))
+        assertTrue(allowsUpdateDownload("WIFI_ONLY", isMeteredNetwork = false))
+    }
+
+    @Test
+    fun mobileUpdateDownloadsRequireExplicitUserChoice() {
+        assertTrue(allowsUpdateDownload("WIFI_AND_MOBILE", isMeteredNetwork = true))
+    }
 }

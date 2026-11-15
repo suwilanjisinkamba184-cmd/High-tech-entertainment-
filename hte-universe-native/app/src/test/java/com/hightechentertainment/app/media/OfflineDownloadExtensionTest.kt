@@ -17,4 +17,15 @@ class OfflineDownloadExtensionTest {
         assertEquals("mp3", resolveMediaFileExtension("https://cdn.example/stream", "audio"))
         assertEquals("mp4", resolveMediaFileExtension("https://cdn.example/stream", "video"))
     }
+    @Test fun sameTitleDifferentUrlsGetDifferentOfflineFileNames() {
+        val first = buildOfflineDownloadFileName("Same Song", "https://cdn.example/audio/track-a.mp3", "audio")
+        val second = buildOfflineDownloadFileName("Same Song", "https://cdn.example/audio/track-b.mp3", "audio")
+        org.junit.Assert.assertNotEquals(first, second)
+    }
+    @Test fun offlineFileNameIsStableForTheSameUrl() {
+        val first = buildOfflineDownloadFileName("Same Song", "https://cdn.example/audio/track-a.mp3", "audio")
+        val second = buildOfflineDownloadFileName("Same Song", "https://cdn.example/audio/track-a.mp3", "audio")
+        assertEquals(first, second)
+        org.junit.Assert.assertTrue(first.endsWith(".mp3"))
+    }
 }

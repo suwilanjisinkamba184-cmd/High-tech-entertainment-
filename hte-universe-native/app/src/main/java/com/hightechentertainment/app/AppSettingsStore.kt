@@ -8,6 +8,10 @@ import kotlin.math.roundToInt
 internal fun allowsMeteredMediaDownloads(networkPolicy: String, dataSaverEnabled: Boolean): Boolean =
     networkPolicy == "WIFI_AND_MOBILE" && !dataSaverEnabled
 
+/** Keeps Wi-Fi-only update downloads off metered connections, including network handoffs. */
+internal fun allowsUpdateDownload(networkPolicy: String, isMeteredNetwork: Boolean): Boolean =
+    networkPolicy != "WIFI_ONLY" || !isMeteredNetwork
+
 /** Local, non-sensitive preferences. Secrets and authentication tokens never belong here. */
 class AppSettingsStore(context: Context) {
     private val preferences = context.applicationContext.getSharedPreferences("hte_universe_preferences", Context.MODE_PRIVATE)
