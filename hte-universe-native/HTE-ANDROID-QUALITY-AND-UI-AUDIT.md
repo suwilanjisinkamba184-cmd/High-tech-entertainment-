@@ -56,6 +56,7 @@ The current shell already uses a Material 3 `Scaffold`, a bottom navigation bar 
 - Keep HTE black/obsidian, metallic gold and silver tokens consistent across Home, Discover, Videos, Library, Account, settings, dialogs and player.
 - Use consistent spacing, typography, corner radii, loading skeletons, empty states and friendly retry states. Do not expose raw API/stack-trace messages to users.
 - Keep reduced-motion preferences respected by animation-heavy surfaces.
+- Audit TalkBack labels, focus order, text scaling and contrast; keep custom touch targets at least 48dp (Material controls provide this by default, but custom hit areas still need inspection).
 
 ### P1 — Audio player interaction
 
@@ -79,12 +80,13 @@ Then:
 - Cache expensive transformations; avoid allocations and sorting in frequently recomposed composables.
 - Collect rapidly changing state narrowly; avoid making the entire shell recompose on player progress ticks.
 - Generate an app-specific Baseline Profile for cold start, tab navigation, catalogue scrolling and opening the player.
+- Record TTID and TTFD/reportFullyDrawn; trace Compose recomposition/layout/draw on real user journeys.
 - Test optimized release builds with R8/resource shrinking; debug performance is not a release proxy.
 - Compare before/after metrics on the same physical device and build type.
 
 ### P2 — Network, downloads and offline UX
 
-The shell already catches catalogue failures and shows a friendly retry message, uses IO dispatch for download work, and exposes network/data-saver settings.
+The shell already catches catalogue failures and shows a friendly retry message, uses IO dispatch for download work, and exposes network/data-saver settings. The inspected download implementation uses Android's system `DownloadManager`, stores metadata in app preferences, and writes into app-specific external files. That is a reasonable fit for straightforward HTTP file downloads and provides system-managed background transfer; it is not the same as Media3 adaptive-stream offline download support.
 
 **Required improvements and tests:**
 - Distinguish offline, timeout, authorization/session expiry, unavailable media, and server errors without displaying internal exception text.
@@ -92,6 +94,8 @@ The shell already catches catalogue failures and shows a friendly retry message,
 - Verify downloads survive process death, report progress/failure, handle duplicate enqueue, clean up partial files, and respect metered/data-saver settings.
 - Confirm offline playback uses local content URIs and does not accidentally fall back to the remote URL.
 - Test network loss during streaming/download and recovery after reconnect.
+
+**Download follow-up:** test reboot/process-death recovery, paused/failed/missing download records, storage-full conditions, duplicate downloads, and whether completed files are playable after app updates. For HLS/DASH offline media, evaluate Media3 `DownloadService` + `DownloadManager` + `DownloadIndex` rather than treating a single-file DownloadManager transfer as an adaptive-stream download. Android's Media3 documentation explicitly recommends its DownloadService architecture for downloads that should continue when the app is backgrounded.
 
 ### P2 — Security and privacy
 
@@ -134,3 +138,7 @@ A successful CI build does not replace physical-device validation. If the physic
 - App startup analysis: https://developer.android.com/topic/performance/appstartup/analysis-optimization
 - Android security best practices: https://developer.android.com/privacy-and-security/security-best-practices
 - Android vitals: https://developer.android.com/topic/performance/vitals
+- Android accessibility and 48dp touch targets: https://developer.android.com/guide/topics/ui/accessibility/apps
+- Media3 offline downloads: https://developer.android.com/media/media3/exoplayer/downloading-media
+- Android memory management: https://developer.android.com/topic/performance/memory-overview
+- Android app startup and TTID/TTFD: https://developer.android.com/topic/performance/issues/launch-time
