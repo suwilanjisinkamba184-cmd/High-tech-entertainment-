@@ -34,13 +34,13 @@ document.addEventListener('submit',async function(event){
       let parsed;
       try{parsed=new URL(sourceUrl)}catch{throw new Error('Enter a valid YouTube or Spotify URL.')}
       if(parsed.protocol!=='https:'||parsed.username||parsed.password)throw new Error('External music links must use a secure HTTPS URL.');
-      const host=parsed.hostname.toLowerCase().replace(/^www\\./,'');
+      const host=parsed.hostname.toLowerCase().replace(/^www\./,'');
       if(host==='youtu.be'||host==='youtube.com'||host==='m.youtube.com'||host==='music.youtube.com'||host==='youtube-nocookie.com'){
         const videoId=host==='youtu.be'?parsed.pathname.split('/').filter(Boolean)[0]:parsed.searchParams.get('v')||parsed.pathname.split('/').filter(Boolean).slice(-1)[0];
         if(!videoId||!/^[A-Za-z0-9_-]{11}$/.test(videoId))throw new Error('That YouTube URL does not appear to point to a valid video.');
         sourcePlatform='youtube';
       }else if(host==='open.spotify.com'||host==='spotify.com'||host==='spotify.link'){
-        if(host!=='spotify.link'&&!/\\/(track|album|playlist|episode|show)\\//.test(parsed.pathname))throw new Error('Use a Spotify track, album or playlist link.');
+        if(host!=='spotify.link'&&!/(?:^|\/)(track|album|playlist|episode|show)\//.test(parsed.pathname))throw new Error('Use a Spotify track, album or playlist link.');
         sourcePlatform='spotify';
       }else{
         throw new Error('For now, Founder Studio accepts YouTube and Spotify links, or an uploaded audio file.');
