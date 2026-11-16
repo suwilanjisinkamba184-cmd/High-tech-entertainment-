@@ -417,16 +417,20 @@ fun UniverseShell() {
         // The expanded phone player is a true immersive surface. System bars remain
         // available through the Android swipe gesture and are restored on every exit.
         val immersiveAudio = playerExpanded && playerHasTrack && !isWideLayout && selectedVideo == null
-        SideEffect {
+        LaunchedEffect(immersiveAudio, audioSystemBars) {
             if (immersiveAudio) {
                 audioSystemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 audioSystemBars?.hide(WindowInsetsCompat.Type.systemBars())
             } else {
                 audioSystemBars?.show(WindowInsetsCompat.Type.systemBars())
+                audioSystemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
             }
         }
         DisposableEffect(audioSystemBars) {
-            onDispose { audioSystemBars?.show(WindowInsetsCompat.Type.systemBars()) }
+            onDispose {
+                audioSystemBars?.show(WindowInsetsCompat.Type.systemBars())
+                audioSystemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+            }
         }
         Scaffold(
         containerColor = ShellBackground,
