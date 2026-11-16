@@ -32,10 +32,10 @@ private val U26Black = Color(0xFF08090B)
 private val U26Panel = Color(0xFF121418)
 private val U26Raised = Color(0xFF1A1E25)
 private val U26Gold = Color(0xFFD6B15E)
+private val U26GoldLight = Color(0xFFF0DCA7)
 private val U26Silver = Color(0xFFC7CCD6)
 private val U26Muted = Color(0xFF89919D)
-private val U26Violet = Color(0xFFB78BFF)
-private val U26Lime = Color(0xFFD4F542)
+private val U26Line = Color(0xFF2A2E36)
 
 @Composable
 fun Universe2026Home(
@@ -45,211 +45,169 @@ fun Universe2026Home(
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
 ) {
-    var selectedCategory by remember { mutableStateOf("All") }
     val featured = tracks.firstOrNull()
-    val wideGenres = tracks.mapNotNull { it.genre?.takeIf(String::isNotBlank) }.distinct().take(8)
+    val genres = tracks.mapNotNull { it.genre?.takeIf(String::isNotBlank) }.distinct().take(10)
+
     BoxWithConstraints(Modifier.fillMaxSize().background(U26Black)) {
         val wide = maxWidth >= 720.dp
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = if (wide) 26.dp else 18.dp, end = if (wide) 26.dp else 18.dp, top = 14.dp, bottom = 118.dp),
-            verticalArrangement = Arrangement.spacedBy(22.dp)
+            contentPadding = PaddingValues(
+                start = if (wide) 28.dp else 18.dp,
+                end = if (wide) 28.dp else 18.dp,
+                top = 10.dp,
+                bottom = 118.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(23.dp)
         ) {
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(7.dp).clip(RoundedCornerShape(50)).background(U26Lime))
-                        Spacer(Modifier.width(8.dp))
-                        Text("HIGH-TECH ENTERTAINMENT  /  UNIVERSE 4.0", color = U26Lime, fontSize = 9.sp, letterSpacing = 1.35.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.weight(1f))
-                        Text("HI-RES • 4K", color = U26Muted, fontSize = 9.sp, letterSpacing = 1.sp)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(U26Gold))
+                            Spacer(Modifier.width(8.dp))
+                            Text("HIGH-TECH ENTERTAINMENT", color = U26Gold, fontSize = 9.sp, letterSpacing = 1.45.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Text(
+                            "Sound beyond limits.",
+                            color = Color.White,
+                            fontSize = if (wide) 32.sp else 27.sp,
+                            lineHeight = if (wide) 38.sp else 33.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-.7).sp
+                        )
+                        Text("Music. Beats. Production. Beyond.", color = U26Silver, fontSize = 12.sp)
                     }
-                    Text("Your universe.\nYour sound.", color = Color.White, fontSize = if (wide) 38.sp else 33.sp, lineHeight = if (wide) 42.sp else 38.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1).sp)
-                    Text("Music. Beats. Production. Beyond.", color = U26Silver, fontSize = 13.sp)
-                }
-            }
-            item {
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("All", "Music", "4K Videos", "Trending", "Podcasts").forEach { category ->
-                        val selected = selectedCategory == category
-                        Surface(
-                            modifier = Modifier.clip(RoundedCornerShape(50)).clickable {
-                                selectedCategory = category
-                                if (category == "4K Videos") onVideos()
-                                else if (category == "Music" || category == "Trending" || category == "Podcasts") onExplore()
-                            },
-                            color = if (selected) U26Lime else U26Raised,
-                            shape = RoundedCornerShape(50),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, if (selected) U26Lime else Color.White.copy(alpha = .08f))
-                        ) {
-                            Text(category, modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp), color = if (selected) U26Black else U26Silver, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Surface(
+                        onClick = onVoice,
+                        shape = RoundedCornerShape(17.dp),
+                        color = U26Gold.copy(alpha = .12f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, U26Gold.copy(alpha = .38f))
+                    ) {
+                        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Outlined.GraphicEq, "Open HTE voice assistant", tint = U26Gold, modifier = Modifier.size(24.dp))
                         }
                     }
                 }
             }
+
             item {
-                U26SectionHeading("QUICK ACCESS", "OPEN LIBRARY", onExplore)
-                val shortcuts = tracks.take(4)
-                if (shortcuts.isEmpty()) {
-                    U26EmptyState(if (isLoading) "Syncing your universe…" else "Your library is ready for its first release", isLoading, onRefresh)
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp))
+                        .background(U26Panel).border(1.dp, U26Line, RoundedCornerShape(15.dp))
+                        .clickable(onClick = onExplore).padding(horizontal = 14.dp, vertical = 13.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Outlined.Search, null, tint = U26Gold, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(11.dp))
+                    Text("Search music, artists and genres", Modifier.weight(1f), color = U26Muted, fontSize = 12.sp)
+                    Icon(Icons.Outlined.ArrowForward, null, tint = U26Silver, modifier = Modifier.size(17.dp))
+                }
+            }
+
+            item {
+                if (featured != null) {
+                    U26FeaturedRelease(featured, onPlay = { onPlayTrack(featured) }, wide = wide)
                 } else {
-                    val rows = if (wide) 4 else 2
-                    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        shortcuts.chunked(rows).forEach { group ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                                group.forEach { track ->
-                                    Row(
-                                        Modifier.weight(1f).clip(RoundedCornerShape(13.dp)).background(U26Raised).clickable { onPlayTrack(track) },
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        if (!track.coverUrl.isNullOrBlank()) {
-                                            AsyncImage(model = track.coverUrl, contentDescription = "Artwork for ${track.title}", modifier = Modifier.size(48.dp), contentScale = ContentScale.Crop)
-                                        } else {
-                                            Box(Modifier.size(48.dp).background(Brush.linearGradient(listOf(U26Violet.copy(alpha = .55f), U26Raised))), contentAlignment = Alignment.Center) {
-                                                Icon(Icons.Outlined.MusicNote, null, tint = U26Lime)
-                                            }
-                                        }
-                                        Text(track.title, Modifier.weight(1f).padding(horizontal = 9.dp), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                    }
-                                }
-                                repeat((rows - group.size).coerceAtLeast(0)) { Spacer(Modifier.weight(1f)) }
-                            }
-                        }
-                    }
+                    U26EmptyFeature(isLoading, onRefresh)
                 }
             }
+
             item {
-                U26SectionHeading("CURATED & TRENDING", "DISCOVER MORE", onExplore)
-                if (wide) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        U26FeatureCard(
-                            title = featured?.title ?: "Discover HTE",
-                            subtitle = featured?.artist ?: "Fresh releases from High-Tech Entertainment",
-                            tag = "FEATURED AUDIO",
-                            colors = listOf(Color(0xFFB78BFF), Color(0xFF7C3AED)),
-                            modifier = Modifier.weight(1f),
-                            actionLabel = if (featured == null) "Explore" else "Listen now",
-                            onClick = { if (featured != null) onPlayTrack(featured) else onExplore() }
-                        )
-                        U26FeatureCard(
-                            title = videos.firstOrNull()?.title ?: "HTE Visual Network",
-                            subtitle = videos.firstOrNull()?.artist ?: "Music videos and performances",
-                            tag = "VIDEO THEATER",
-                            colors = listOf(Color(0xFFD4F542), Color(0xFF84CC16)),
-                            modifier = Modifier.weight(1f),
-                            actionLabel = "Open videos",
-                            onClick = { if (videos.isNotEmpty()) onPlayVideo(videos.first()) else onVideos() }
-                        )
-                    }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    U26QuickStat("MUSIC", tracks.size.toString(), Icons.Outlined.MusicNote, Modifier.weight(1f), onExplore)
+                    U26QuickStat("VIDEOS", videos.size.toString(), Icons.Outlined.Movie, Modifier.weight(1f), onVideos)
+                    U26QuickStat("YOUR LIBRARY", "OPEN", Icons.Outlined.LibraryMusic, Modifier.weight(1f), onExplore)
+                }
+            }
+
+            item {
+                U26SectionHeading("FRESH FROM HTE", "EXPLORE ALL", onExplore)
+                if (tracks.isEmpty()) {
+                    U26EmptyState(if (isLoading) "Loading new releases…" else "New releases will appear here.", isLoading, onRefresh)
                 } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        U26FeatureCard(
-                            title = featured?.title ?: "Discover HTE",
-                            subtitle = featured?.artist ?: "Fresh releases from High-Tech Entertainment",
-                            tag = "FEATURED AUDIO",
-                            colors = listOf(Color(0xFFB78BFF), Color(0xFF7C3AED)),
-                            modifier = Modifier.fillMaxWidth(),
-                            actionLabel = if (featured == null) "Explore music" else "Listen now",
-                            onClick = { if (featured != null) onPlayTrack(featured) else onExplore() }
-                        )
-                        U26FeatureCard(
-                            title = videos.firstOrNull()?.title ?: "HTE Visual Network",
-                            subtitle = videos.firstOrNull()?.artist ?: "Music videos and performances",
-                            tag = "VIDEO THEATER",
-                            colors = listOf(Color(0xFFD4F542), Color(0xFF84CC16)),
-                            modifier = Modifier.fillMaxWidth(),
-                            actionLabel = "Open videos",
-                            onClick = { if (videos.isNotEmpty()) onPlayVideo(videos.first()) else onVideos() }
-                        )
-                    }
-                }
-            }
-            item {
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(19.dp)).background(Color(0xFF101A20)).border(1.dp, U26Violet.copy(alpha = .25f), RoundedCornerShape(19.dp)).clickable(onClick = onVoice).padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(U26Violet.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Outlined.GraphicEq, null, tint = U26Violet, modifier = Modifier.size(24.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text("SYNAPSE AI  /  VOICE COMPANION", color = U26Violet, fontSize = 9.sp, letterSpacing = 1.1.sp, fontWeight = FontWeight.Bold)
-                        Text("Your voice. Your universe.", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Search, navigate and control playback by voice", color = U26Muted, fontSize = 11.sp)
-                    }
-                    Icon(Icons.Outlined.Mic, null, tint = U26Violet, modifier = Modifier.size(23.dp))
-                }
-            }
-            item {
-                U26SectionHeading("CONTINUE LISTENING", "VIEW ALL", onExplore)
-                if (tracks.isEmpty()) U26EmptyState(if (isLoading) "Syncing your universe…" else "Your next favourite is waiting", isLoading, onRefresh)
-                else LazyRow(horizontalArrangement = Arrangement.spacedBy(11.dp), contentPadding = PaddingValues(top = 10.dp)) {
-                    items(tracks.take(8), key = { it.id }) { track ->
-                        Card(modifier = Modifier.width(if (wide) 190.dp else 164.dp).clickable { onPlayTrack(track) }, shape = RoundedCornerShape(17.dp), colors = CardDefaults.cardColors(containerColor = U26Panel)) {
-                            Column(Modifier.padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Box(Modifier.fillMaxWidth().height(if (wide) 112.dp else 96.dp).clip(RoundedCornerShape(12.dp)).background(U26Raised), contentAlignment = Alignment.Center) {
-                                    if (!track.coverUrl.isNullOrBlank()) AsyncImage(model = track.coverUrl, contentDescription = "Artwork for ${track.title}", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                                    else Icon(Icons.Outlined.Album, null, tint = U26Gold, modifier = Modifier.size(34.dp))
-                                    IconButton(onClick = { onPlayTrack(track) }, modifier = Modifier.align(Alignment.BottomEnd).size(36.dp)) { Icon(Icons.Outlined.PlayCircle, "Play ${track.title}", tint = U26Lime) }
-                                }
-                                Text(track.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(track.artist, color = U26Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(track.genre ?: "HTE release", Modifier.weight(1f), color = U26Muted, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    IconButton(onClick = { onToggleFavourite(track) }, modifier = Modifier.size(28.dp)) {
-                                        Icon(if (track.id in favouriteTrackIds) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder, "Toggle favourite", tint = if (track.id in favouriteTrackIds) U26Lime else U26Muted, modifier = Modifier.size(16.dp))
-                                    }
-                                }
-                            }
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(top = 10.dp)) {
+                        items(tracks.take(10), key = { it.id }) { track ->
+                            U26ReleaseCard(
+                                track = track,
+                                wide = wide,
+                                isFavourite = track.id in favouriteTrackIds,
+                                onPlay = { onPlayTrack(track) },
+                                onFavourite = { onToggleFavourite(track) },
+                                onDownload = { onDownloadTrack(track) }
+                            )
                         }
                     }
                 }
             }
+
             item {
-                U26SectionHeading("TRENDING IN UNIVERSE", "ALL TRACKS", onExplore)
+                U26SectionHeading("TRENDING IN THE UNIVERSE", "FULL CATALOGUE", onExplore)
                 if (tracks.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         tracks.take(5).forEachIndexed { index, track ->
-                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(U26Panel).clickable { onPlayTrack(track) }.padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text("%02d".format(index + 1), color = U26Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(30.dp))
-                                if (!track.coverUrl.isNullOrBlank()) AsyncImage(model = track.coverUrl, contentDescription = null, modifier = Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop)
-                                else Box(Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(U26Raised), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Album, null, tint = U26Gold) }
-                                Spacer(Modifier.width(11.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(track.title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(track.artist, color = U26Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                }
-                                IconButton(onClick = { onDownloadTrack(track) }) { Icon(Icons.Outlined.Download, "Download ${track.title}", tint = U26Silver) }
-                                Icon(Icons.Outlined.PlayArrow, null, tint = U26Lime)
-                            }
+                            U26TrendingRow(
+                                index = index + 1,
+                                track = track,
+                                onPlay = { onPlayTrack(track) },
+                                onDownload = { onDownloadTrack(track) }
+                            )
                         }
                     }
-                } else if (!isLoading) Text("New releases will appear here when published.", color = U26Muted, fontSize = 12.sp)
+                } else if (!isLoading) {
+                    U26EmptyState("Your next favourite is waiting.", false, onRefresh)
+                }
             }
+
             item {
-                U26SectionHeading("TRENDING MUSIC VIDEOS", "OPEN VIDEO HUB", onVideos)
-                if (videos.isEmpty()) Text(if (isLoading) "Loading visual catalogue…" else "Published music videos and performances will appear here.", color = U26Muted, fontSize = 12.sp)
-                else LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(videos.take(8), key = { it.id }) { video ->
-                        Column(Modifier.width(if (wide) 230.dp else 190.dp).clickable { onPlayVideo(video) }, verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                            Box(Modifier.fillMaxWidth().height(if (wide) 132.dp else 108.dp).clip(RoundedCornerShape(15.dp)).background(Brush.linearGradient(listOf(U26Violet.copy(alpha = .5f), U26Raised, Color(0xFF101820)))), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Outlined.PlayCircle, null, tint = U26Lime, modifier = Modifier.size(42.dp))
-                                Text("HTE VIDEO", Modifier.align(Alignment.TopStart).padding(9.dp), color = U26Lime, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
-                            }
-                            Text(video.title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(video.artist ?: "High-Tech Entertainment", color = U26Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Row {
-                                TextButton(onClick = { onPlayVideo(video) }, contentPadding = PaddingValues(horizontal = 4.dp)) { Icon(Icons.Outlined.PlayArrow, null, tint = U26Lime, modifier = Modifier.size(16.dp)); Text("Watch", color = U26Lime, fontSize = 10.sp) }
-                                TextButton(onClick = { onDownloadVideo(video) }, contentPadding = PaddingValues(horizontal = 4.dp)) { Icon(Icons.Outlined.Download, null, tint = U26Silver, modifier = Modifier.size(15.dp)); Text("Save", color = U26Silver, fontSize = 10.sp) }
-                            }
+                U26SectionHeading("HTE VISUALS", "OPEN VIDEO HUB", onVideos)
+                if (videos.isEmpty()) {
+                    Text(
+                        if (isLoading) "Loading music videos…" else "Music videos, performances and stories will appear here.",
+                        color = U26Muted, fontSize = 12.sp
+                    )
+                } else {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(top = 10.dp)) {
+                        items(videos.take(8), key = { it.id }) { video ->
+                            U26VideoCard(video, wide, onPlay = { onPlayVideo(video) }, onDownload = { onDownloadVideo(video) })
                         }
                     }
                 }
             }
-            if (wideGenres.isNotEmpty()) item {
-                U26SectionHeading("EXPLORE GENRES", "BROWSE CATALOGUE", onExplore)
+
+            if (genres.isNotEmpty()) item {
+                U26SectionHeading("FIND YOUR FREQUENCY", "BROWSE GENRES", onExplore)
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(wideGenres) { genre ->
-                        AssistChip(onClick = onExplore, label = { Text(genre, color = U26Silver) }, leadingIcon = { Icon(Icons.Outlined.MusicNote, null, tint = U26Gold, modifier = Modifier.size(15.dp)) }, colors = AssistChipDefaults.assistChipColors(containerColor = U26Panel))
+                    items(genres) { genre ->
+                        AssistChip(
+                            onClick = onExplore,
+                            label = { Text(genre, color = U26Silver) },
+                            leadingIcon = { Icon(Icons.Outlined.Equalizer, null, tint = U26Gold, modifier = Modifier.size(16.dp)) },
+                            colors = AssistChipDefaults.assistChipColors(containerColor = U26Panel),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, U26Line)
+                        )
                     }
+                }
+            }
+
+            item {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                        .background(Brush.horizontalGradient(listOf(Color(0xFF292116), U26Panel)))
+                        .border(1.dp, U26Gold.copy(alpha = .24f), RoundedCornerShape(18.dp))
+                        .clickable(onClick = onVoice).padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(U26Gold.copy(alpha = .13f)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Outlined.Mic, null, tint = U26Gold, modifier = Modifier.size(23.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("SYNAPSE AI", color = U26Gold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+                        Text("Control your universe by voice", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Search, navigate and manage playback", color = U26Muted, fontSize = 10.sp)
+                    }
+                    Icon(Icons.Outlined.ArrowForward, null, tint = U26Gold)
                 }
             }
         }
@@ -257,25 +215,172 @@ fun Universe2026Home(
 }
 
 @Composable
-private fun U26FeatureCard(title: String, subtitle: String, tag: String, colors: List<Color>, modifier: Modifier, actionLabel: String, onClick: () -> Unit) {
-    Card(modifier = modifier.height(178.dp).clickable(onClick = onClick), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = colors.first())) {
-        Box(Modifier.fillMaxSize().background(Brush.linearGradient(colors))) {
-            Icon(Icons.Outlined.GraphicEq, null, tint = Color.Black.copy(alpha = .10f), modifier = Modifier.align(Alignment.CenterEnd).size(130.dp))
-            Column(Modifier.fillMaxSize().padding(17.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                Column(Modifier.fillMaxWidth(.76f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(tag, color = Color.Black.copy(alpha = .72f), fontSize = 9.sp, letterSpacing = 1.2.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(title, color = Color(0xFF101014), fontSize = 18.sp, lineHeight = 21.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(subtitle, color = Color.Black.copy(alpha = .72f), fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+private fun U26FeaturedRelease(track: TrackDto, onPlay: () -> Unit, wide: Boolean) {
+    Card(
+        modifier = Modifier.fillMaxWidth().height(if (wide) 270.dp else 242.dp).clickable(onClick = onPlay),
+        shape = RoundedCornerShape(25.dp),
+        colors = CardDefaults.cardColors(containerColor = U26Panel)
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            if (!track.coverUrl.isNullOrBlank()) {
+                AsyncImage(model = track.coverUrl, contentDescription = "Featured artwork for ${track.title}", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            } else {
+                Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF594321), Color(0xFF1B1B1C), U26Black))))
+                Icon(Icons.Outlined.GraphicEq, null, tint = U26Gold.copy(alpha = .18f), modifier = Modifier.align(Alignment.Center).size(190.dp))
+            }
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .08f), Color.Black.copy(alpha = .38f), Color.Black.copy(alpha = .94f)))))
+            Column(
+                Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                Surface(color = U26Gold, shape = RoundedCornerShape(50)) {
+                    Text("FEATURED RELEASE", Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = U26Black, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = Color(0xFF101014), shape = RoundedCornerShape(50)) {
-                        Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.PlayArrow, null, tint = colors.first(), modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(actionLabel, color = colors.first(), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(track.title, color = Color.White, fontSize = if (wide) 25.sp else 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(track.artist, color = U26Silver, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(onClick = onPlay, color = U26Gold, shape = RoundedCornerShape(50)) {
+                        Row(Modifier.padding(horizontal = 15.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.PlayArrow, null, tint = U26Black, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(5.dp))
+                            Text("LISTEN NOW", color = U26Black, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
                         }
                     }
+                    Spacer(Modifier.weight(1f))
+                    Text("HIGH-TECH ORIGINAL", color = U26GoldLight, fontSize = 8.sp, letterSpacing = 1.2.sp, fontWeight = FontWeight.Bold)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun U26EmptyFeature(isLoading: Boolean, onRefresh: () -> Unit) {
+    Box(
+        Modifier.fillMaxWidth().height(218.dp).clip(RoundedCornerShape(25.dp))
+            .background(Brush.linearGradient(listOf(Color(0xFF302516), U26Panel, U26Black)))
+            .border(1.dp, U26Gold.copy(alpha = .22f), RoundedCornerShape(25.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Icon(Icons.Outlined.GraphicEq, null, tint = U26Gold, modifier = Modifier.size(40.dp))
+            Text("THE HTE SOUND STARTS HERE", color = U26Gold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+            Text(if (isLoading) "Preparing your catalogue…" else "Your next favourite is on its way.", color = Color.White, fontSize = 13.sp)
+            if (!isLoading) TextButton(onClick = onRefresh) { Text("Refresh catalogue", color = U26Gold) }
+        }
+    }
+}
+
+@Composable
+private fun U26QuickStat(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, onClick: () -> Unit) {
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        color = U26Panel,
+        shape = RoundedCornerShape(15.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, U26Line)
+    ) {
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Icon(icon, null, tint = U26Gold, modifier = Modifier.size(18.dp))
+            Text(value, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text(label, color = U26Muted, fontSize = 8.sp, letterSpacing = .6.sp, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun U26ReleaseCard(
+    track: TrackDto, wide: Boolean, isFavourite: Boolean,
+    onPlay: () -> Unit, onFavourite: () -> Unit, onDownload: () -> Unit
+) {
+    Card(
+        modifier = Modifier.width(if (wide) 198.dp else 158.dp).clickable(onClick = onPlay),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = U26Panel)
+    ) {
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(Modifier.fillMaxWidth().height(if (wide) 142.dp else 116.dp).clip(RoundedCornerShape(13.dp)).background(U26Raised)) {
+                if (!track.coverUrl.isNullOrBlank()) {
+                    AsyncImage(model = track.coverUrl, contentDescription = "Artwork for ${track.title}", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                } else {
+                    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF49391F), U26Raised))), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Outlined.Album, null, tint = U26Gold, modifier = Modifier.size(38.dp))
+                    }
+                }
+                Surface(
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(7.dp),
+                    shape = RoundedCornerShape(50),
+                    color = U26Gold
+                ) {
+                    Icon(Icons.Outlined.PlayArrow, "Play ${track.title}", tint = U26Black, modifier = Modifier.padding(7.dp).size(19.dp))
+                }
+            }
+            Text(track.title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(track.artist, color = U26Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(track.genre ?: "HTE release", Modifier.weight(1f), color = U26Gold, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                IconButton(onClick = onFavourite, modifier = Modifier.size(32.dp)) {
+                    Icon(if (isFavourite) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder, if (isFavourite) "Remove favourite" else "Add favourite", tint = if (isFavourite) U26Gold else U26Muted, modifier = Modifier.size(17.dp))
+                }
+                IconButton(onClick = onDownload, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Outlined.Download, "Download ${track.title}", tint = U26Silver, modifier = Modifier.size(17.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun U26TrendingRow(index: Int, track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(U26Panel)
+            .border(1.dp, U26Line.copy(alpha = .7f), RoundedCornerShape(15.dp))
+            .clickable(onClick = onPlay).padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("%02d".format(index), color = U26Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(30.dp))
+        if (!track.coverUrl.isNullOrBlank()) {
+            AsyncImage(model = track.coverUrl, contentDescription = null, modifier = Modifier.size(46.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop)
+        } else {
+            Box(Modifier.size(46.dp).clip(RoundedCornerShape(10.dp)).background(U26Raised), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.Album, null, tint = U26Gold)
+            }
+        }
+        Spacer(Modifier.width(11.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(track.title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(track.artist, color = U26Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        IconButton(onClick = onDownload) { Icon(Icons.Outlined.Download, "Download ${track.title}", tint = U26Silver) }
+        Icon(Icons.Outlined.PlayArrow, null, tint = U26Gold)
+    }
+}
+
+@Composable
+private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onDownload: () -> Unit) {
+    Column(Modifier.width(if (wide) 238.dp else 194.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Box(
+            Modifier.fillMaxWidth().height(if (wide) 140.dp else 112.dp).clip(RoundedCornerShape(16.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFF3A3020), U26Raised, Color(0xFF101216))))
+                .clickable(onClick = onPlay),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Outlined.Movie, null, tint = U26Gold.copy(alpha = .45f), modifier = Modifier.size(62.dp))
+            Surface(Modifier.align(Alignment.Center), color = Color.Black.copy(alpha = .65f), shape = RoundedCornerShape(50)) {
+                Icon(Icons.Outlined.PlayArrow, "Watch ${video.title}", tint = Color.White, modifier = Modifier.padding(8.dp).size(24.dp))
+            }
+            Text("HTE VISUALS", Modifier.align(Alignment.BottomStart).padding(10.dp), color = U26GoldLight, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+        }
+        Text(video.title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(video.artist ?: "High-Tech Entertainment", color = U26Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = onPlay, contentPadding = PaddingValues(horizontal = 0.dp)) {
+                Icon(Icons.Outlined.PlayArrow, null, tint = U26Gold, modifier = Modifier.size(16.dp))
+                Text("WATCH", color = U26Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.width(8.dp))
+            TextButton(onClick = onDownload, contentPadding = PaddingValues(horizontal = 0.dp)) {
+                Icon(Icons.Outlined.Download, null, tint = U26Silver, modifier = Modifier.size(15.dp))
+                Text("SAVE", color = U26Silver, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -284,11 +389,11 @@ private fun U26FeatureCard(title: String, subtitle: String, tag: String, colors:
 @Composable
 private fun U26SectionHeading(title: String, action: String, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(title, color = U26Silver, fontSize = 10.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
-            Box(Modifier.width(34.dp).height(2.dp).clip(RoundedCornerShape(2.dp)).background(U26Lime))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(title, color = U26Silver, fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+            Box(Modifier.width(34.dp).height(2.dp).clip(RoundedCornerShape(2.dp)).background(U26Gold))
         }
-        TextButton(onClick = onClick) { Text(action, color = U26Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+        TextButton(onClick = onClick) { Text(action, color = U26Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold) }
     }
 }
 
