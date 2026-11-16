@@ -34,13 +34,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v4
+      - uses: premex-ab/setup-android-cli@ec4f446c5fdea3c206fb73b4b3277709e7227e63
         with:
-          packages: platform-tools
-      - name: Install Android SDK 37
+          packages: |
+            platform-tools
+            platforms/android-37.0
+            build-tools/37.0.0
+      - name: Validate Android SDK 37 installation
         run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+          set -euo pipefail
           test -d "$ANDROID_HOME/platforms/android-37.0"
           if [[ ! -e "$ANDROID_HOME/platforms/android-37" ]]; then
             ln -s "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
@@ -79,7 +81,11 @@ jobs:
           set -euo pipefail
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose --print-certs "$APK"
+          VERIFY_OUTPUT=$("$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose --print-certs "$APK")
+          printf '%s\n' "$VERIFY_OUTPUT"
+          grep -F "Verified using v3 scheme (APK Signature Scheme v3): true" <<< "$VERIFY_OUTPUT"
+          grep -F "Verified using v4 scheme (APK Signature Scheme v4): true" <<< "$VERIFY_OUTPUT"
+          test -s "$APK.idsig"
           BADGING=$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK")
           echo "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='41' versionName='4.0.7'"
           sha256sum "$APK" | tee app/build/outputs/apk/release/SHA256SUMS.txt
@@ -103,6 +109,7 @@ jobs:
           name: hte-universe-release-signed
           path: |
             hte-universe-native/app/build/outputs/apk/release/*.apk
+            hte-universe-native/app/build/outputs/apk/release/*.idsig
             hte-universe-native/app/build/outputs/apk/release/SHA256SUMS.txt
           if-no-files-found: error
       - name: Prepare permanent release assets
@@ -111,6 +118,7 @@ jobs:
           set -euo pipefail
           mkdir -p ../release-assets
           cp app/build/outputs/apk/release/app-release.apk ../release-assets/HTE-Universe-4.0.7.apk
+          cp app/build/outputs/apk/release/app-release.apk.idsig ../release-assets/HTE-Universe-4.0.7.apk.idsig
           (cd ../release-assets && sha256sum HTE-Universe-4.0.7.apk > SHA256SUMS.txt)
       - name: Publish HTE Universe 4.0.7
         if: startsWith(github.ref, 'refs/tags/native-v')
@@ -131,6 +139,7 @@ jobs:
             Device diagnostics run on the installed phone. Physical-device validation remains the responsibility of real installations and user/device reports.
           files: |
             release-assets/HTE-Universe-4.0.7.apk
+            release-assets/HTE-Universe-4.0.7.apk.idsig
             release-assets/SHA256SUMS.txt
           fail_on_unmatched_files: true
           make_latest: true
@@ -148,11 +157,11 @@ jobs:
           assert d["tagName"] == "native-v4.0.7-build41"
           assert not d["isDraft"] and not d["isPrerelease"]
           names={a["name"] for a in d["assets"]}
-          assert {"HTE-Universe-4.0.7.apk","SHA256SUMS.txt"} <= names
+          assert {"HTE-Universe-4.0.7.apk","HTE-Universe-4.0.7.apk.idsig","SHA256SUMS.txt"} <= names
           print("Public stable release and APK assets verified.")
           PY
           mkdir -p "$RUNNER_TEMP/published"
-          gh release download "$RELEASE_TAG" --pattern "HTE-Universe-4.0.7.apk" --pattern "SHA256SUMS.txt" --dir "$RUNNER_TEMP/published"
+          gh release download "$RELEASE_TAG" --pattern "HTE-Universe-4.0.7.apk" --pattern "HTE-Universe-4.0.7.apk.idsig" --pattern "SHA256SUMS.txt" --dir "$RUNNER_TEMP/published"
           (cd "$RUNNER_TEMP/published" && sha256sum --check SHA256SUMS.txt)
       - name: Remove temporary signing keystore
         if: always()
