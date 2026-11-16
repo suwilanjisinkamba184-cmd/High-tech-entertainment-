@@ -255,8 +255,8 @@ fun UniverseShell() {
                     }
                     Triple(profile, savedPlaylists, trackMap)
                 }
-                homeProfileName = result.first.displayName.takeIf(String::isNotBlank)
-                homeProfileAvatar = result.first.avatarUrl.takeIf(String::isNotBlank)
+                homeProfileName = result.first?.displayName?.takeIf { it.isNotBlank() }
+                homeProfileAvatar = result.first?.avatarUrl?.takeIf { it.isNotBlank() }
                 playlists = result.second
                 playlistTracks = result.third
             } catch (cancelled: CancellationException) {
