@@ -46,7 +46,7 @@ private val U26Line = Color(0xFF302D38)
 fun Universe2026Home(
     tracks: List<TrackDto>, artists: List<ArtistDto>, releases: List<ReleaseDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
     playlistTracks: Map<String, List<TrackDto>>, profileName: String?, profileAvatarUrl: String?, isLoading: Boolean,
-    onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit,
+    onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit, onSettings: () -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
@@ -106,6 +106,9 @@ fun Universe2026Home(
                         Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                             Icon(Icons.Outlined.GraphicEq, "Open HTE voice assistant", tint = U26Gold, modifier = Modifier.size(24.dp))
                         }
+                    }
+                    IconButton(onClick = onSettings, modifier = Modifier.size(44.dp)) {
+                        Icon(Icons.Outlined.Settings, "Open HTE settings", tint = U26Silver, modifier = Modifier.size(23.dp))
                     }
                     IconButton(onClick = onProfile, modifier = Modifier.size(44.dp)) {
                         if (!profileAvatarUrl.isNullOrBlank()) {

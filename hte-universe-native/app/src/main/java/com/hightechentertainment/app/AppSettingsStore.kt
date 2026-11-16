@@ -1,6 +1,7 @@
 package com.hightechentertainment.app
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.core.content.edit
 import kotlin.math.roundToInt
 
@@ -63,6 +64,15 @@ class AppSettingsStore(context: Context) {
     var reduceMotion: Boolean
         get() = preferences.getBoolean("reduce_motion", false)
         set(value) { preferences.edit { putBoolean("reduce_motion", value) } }
+
+    /** Observe live changes so accessibility preferences take effect without restarting the app. */
+    fun observeReduceMotion(onChanged: (Boolean) -> Unit): () -> Unit {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "reduce_motion") onChanged(reduceMotion)
+        }
+        preferences.registerOnSharedPreferenceChangeListener(listener)
+        return { preferences.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
 
     var personalisedRecommendations: Boolean
         get() = preferences.getBoolean("personalised_recommendations", true)

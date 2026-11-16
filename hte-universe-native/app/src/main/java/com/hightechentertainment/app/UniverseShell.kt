@@ -113,6 +113,7 @@ fun UniverseShell() {
     var selectedTrackQueue by remember { mutableStateOf<List<TrackDto>?>(null) }
     var selectedVideo by remember { mutableStateOf<VideoDto?>(null) }
     var showVoiceAssistant by remember { mutableStateOf(false) }
+    var showSettingsHub by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -480,7 +481,7 @@ fun UniverseShell() {
                     .padding(end = if (isWideLayout && playerHasTrack) playerPanelWidth + 8.dp else 0.dp)
             ) {
             if (selectedTab != UniverseTab.HOME) {
-                UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true })
+                UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true }, onSettings = { showSettingsHub = true })
             }
             when (selectedTab) {
                 UniverseTab.HOME -> HomeScreen(
@@ -490,6 +491,7 @@ fun UniverseShell() {
                     onVideos = { selectedTab = UniverseTab.VIDEOS },
                     onVoice = { showVoiceAssistant = true },
                     onProfile = { selectedTab = UniverseTab.ACCOUNT },
+                    onSettings = { showSettingsHub = true },
                     playlists = playlists, playlistTracks = playlistTracks,
                     profileName = homeProfileName, profileAvatarUrl = homeProfileAvatar,
                     onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true },
@@ -636,6 +638,18 @@ fun UniverseShell() {
 
     }
 
+    if (showSettingsHub) {
+        Dialog(onDismissRequest = { showSettingsHub = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Surface(Modifier.fillMaxSize(), color = Color(0xFF08090B)) {
+                SettingsHub(
+                    onClose = { showSettingsHub = false },
+                    settingsStore = settingsStore,
+                    downloadManager = offlineManager,
+                    onSettingsChanged = { settingsRevision++ }
+                )
+            }
+        }
+    }
     selectedVideo?.let { VideoPlayerDialog(video = it, quality = videoQuality, onDismiss = { selectedVideo = null }) }
     if (showVoiceAssistant) {
         VoiceAssistantDialog(
@@ -664,7 +678,7 @@ fun UniverseShell() {
 }
 
 @Composable
-private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, onVoice: () -> Unit) {
+private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, onVoice: () -> Unit, onSettings: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().background(ShellBackground)
             .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -714,6 +728,16 @@ private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, on
                 Icon(Icons.Outlined.NotificationsNone, "Notifications", tint = ShellSilver, modifier = Modifier.size(19.dp))
             }
         }
+        Surface(
+            onClick = onSettings,
+            shape = RoundedCornerShape(12.dp),
+            color = ShellPanel,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .07f))
+        ) {
+            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.Settings, "Open settings", tint = ShellSilver, modifier = Modifier.size(19.dp))
+            }
+        }
     }
 }
 
@@ -721,7 +745,7 @@ private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, on
 private fun HomeScreen(
     tracks: List<TrackDto>, artists: List<ArtistDto>, releases: List<ReleaseDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
     playlistTracks: Map<String, List<TrackDto>>, profileName: String?, profileAvatarUrl: String?, isLoading: Boolean,
-    onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit,
+    onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit, onSettings: () -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
@@ -729,7 +753,7 @@ private fun HomeScreen(
     Universe2026Home(
         tracks = tracks, artists = artists, releases = releases, videos = videos, playlists = playlists, playlistTracks = playlistTracks,
         profileName = profileName, profileAvatarUrl = profileAvatarUrl, isLoading = isLoading,
-        onExplore = onExplore, onLibrary = onLibrary, onVideos = onVideos, onVoice = onVoice, onProfile = onProfile,
+        onExplore = onExplore, onLibrary = onLibrary, onVideos = onVideos, onVoice = onVoice, onProfile = onProfile, onSettings = onSettings,
         onPlayTrack = onPlayTrack, onPlayPlaylist = onPlayPlaylist, onPlayVideo = onPlayVideo,
         onDownloadTrack = onDownloadTrack, onDownloadVideo = onDownloadVideo,
         favouriteTrackIds = favouriteTrackIds, onToggleFavourite = onToggleFavourite,
