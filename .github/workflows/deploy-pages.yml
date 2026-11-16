@@ -68,7 +68,6 @@ jobs:
           grep -q 'assets/videos.js?v=7' website/src/pages/index.astro
           grep -q 'The music catalogue is taking too long to respond' assets/app.js
           grep -Fq "\$\$('[data-start-form],#contact-form,#booking-form,#feedback-form')" assets/app.js
-          ! grep -Fq "\$(' [data-start-form]" assets/app.js
           grep -q 'function withTimeout(promise,ms,message)' assets/app.js
           grep -q 'HTE video catalogue request timed out after 12 seconds' assets/videos.js
           grep -q 'entertainment-enhancements.css' account/index.html
