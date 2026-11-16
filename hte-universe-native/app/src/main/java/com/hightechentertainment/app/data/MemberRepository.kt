@@ -5,6 +5,8 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 @Serializable
 data class ProfileDto(
@@ -98,11 +100,38 @@ class MemberRepository {
         client.auth.currentUserOrNull()?.id ?: error("Sign in to use your HTE account.")
 
     suspend fun getMyProfile(): ProfileDto? {
-        val userId = requireUserId()
-        return client.from("profiles")
+        val user = client.auth.currentUserOrNull()
+            ?: error("Sign in to use your HTE account.")
+        val userId = user.id
+        val storedProfile = client.from("profiles")
             .select { filter { eq("id", userId) } }
             .decodeList<ProfileDto>()
             .firstOrNull()
+
+        // Google OAuth metadata carries the provider photo even when the member
+        // has never uploaded an HTE avatar. Prefer a saved HTE avatar when present.
+        val metadata = user.userMetadata
+        fun metadataText(vararg keys: String): String? =
+            keys.firstNotNullOfOrNull { key ->
+                metadata?.get(key)?.jsonPrimitive?.contentOrNull
+                    ?.trim()
+                    ?.takeIf { it.startsWith("https://", ignoreCase = true) || it.startsWith("http://", ignoreCase = true) }
+            }
+        val googleAvatar = metadataText("avatar_url", "picture", "photo_url", "photoUrl")
+        val googleName = metadataText("full_name", "name", "given_name")
+
+        return when {
+            storedProfile != null -> storedProfile.copy(
+                displayName = storedProfile.displayName.ifBlank { googleName.orEmpty() },
+                avatarUrl = storedProfile.avatarUrl.ifBlank { googleAvatar.orEmpty() }
+            )
+            googleAvatar != null || googleName != null -> ProfileDto(
+                id = userId,
+                displayName = googleName.orEmpty(),
+                avatarUrl = googleAvatar.orEmpty()
+            )
+            else -> null
+        }
     }
 
     suspend fun saveMyProfile(displayName: String, bio: String, phone: String, avatarUrl: String = "") {
