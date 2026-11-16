@@ -15,7 +15,7 @@ async function load(){
   title.textContent=track.title||'HTE track';artist.textContent=track.artist||'High-Tech Entertainment';
   const platform=String(track.source_platform||'direct').toLowerCase(),source=String(track.source_url||'').trim();
   const audioHost=(()=>{try{return new URL(String(track.audio_url||'')).hostname.toLowerCase()}catch{return ''}})();
-  const externalHost=audioHost==='youtu.be'||audioHost.endsWith('youtube.com')||audioHost.endsWith('spotify.com')||audioHost==='spotify.link';
+  const externalHost=audioHost==='youtu.be'||(audioHost==='youtube.com'||audioHost.endsWith('.youtube.com'))||(audioHost==='spotify.com'||audioHost.endsWith('.spotify.com'))||audioHost==='spotify.link';
   if(platform!=='direct'||source||externalHost||!safeUrl(track.audio_url))throw Error('This is an external streaming link. Open it on YouTube or Spotify; HTE cannot create a download from that source.');
   if(track.download_allowed!==true||!['owned_or_licensed','legacy_existing'].includes(track.rights_status))throw Error('Download is disabled because HTE download rights have not been confirmed for this audio.');
   if(track.branded_audio_url&&track.download_branding_status==='ready'){
