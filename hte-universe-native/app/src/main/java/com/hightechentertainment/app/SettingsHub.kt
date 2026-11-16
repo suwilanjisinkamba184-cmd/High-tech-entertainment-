@@ -485,7 +485,7 @@ private fun SettingsSwitch(title: String, subtitle: String, checked: Boolean, on
             Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
             Text(subtitle, color = SettingsMuted, fontSize = 10.sp)
         }
-        Switch(checked = checked, onCheckedChange = onChanged, colors = SwitchDefaults.colors(checkedThumbColor = SettingsBackground, checkedTrackColor = SettingsGold))
+        Switch(checked = checked, onCheckedChange = onChanged, colors = SwitchDefaults.colors(checkedThumbColor = SettingsBackground, checkedTrackColor = Color(0xFFD7F36A)))
     }
 }
 
@@ -512,8 +512,8 @@ private fun SettingsChips(options: List<String>, selected: String, onSelect: (St
                 onClick = { onSelect(option) },
                 label = { Text(label, fontSize = 10.sp, maxLines = 1) },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = SettingsGold.copy(alpha = .18f),
-                    selectedLabelColor = SettingsGold
+                    selectedContainerColor = Color(0xFFD7F36A).copy(alpha = .16f),
+                    selectedLabelColor = Color(0xFFD7F36A)
                 )
             )
         }
