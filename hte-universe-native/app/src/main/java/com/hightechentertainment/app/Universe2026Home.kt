@@ -44,7 +44,7 @@ private val U26Line = Color(0xFF302D38)
 fun Universe2026Home(
     tracks: List<TrackDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
     playlistTracks: Map<String, List<TrackDto>>, profileName: String?, profileAvatarUrl: String?, isLoading: Boolean,
-    onExplore: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit,
+    onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
@@ -134,6 +134,24 @@ fun Universe2026Home(
                 }
             }
 
+            if (favouriteTracks.isNotEmpty()) item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    U26SectionHeading("YOUR FAVOURITES", "OPEN LIBRARY", onLibrary)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(favouriteTracks, key = { it.id }) { track ->
+                            U26ReleaseCard(
+                                track = track,
+                                wide = wide,
+                                isFavourite = true,
+                                onPlay = { onPlayTrack(track) },
+                                onFavourite = { onToggleFavourite(track) },
+                                onDownload = { onDownloadTrack(track) }
+                            )
+                        }
+                    }
+                }
+            }
+
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text("BROWSE YOUR SOUND", color = U26Muted, fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
@@ -174,27 +192,9 @@ fun Universe2026Home(
                 }
             }
 
-            if (favouriteTracks.isNotEmpty()) item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    U26SectionHeading("YOUR FAVOURITES", "OPEN LIBRARY", onExplore)
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(favouriteTracks, key = { it.id }) { track ->
-                            U26ReleaseCard(
-                                track = track,
-                                wide = wide,
-                                isFavourite = true,
-                                onPlay = { onPlayTrack(track) },
-                                onFavourite = { onToggleFavourite(track) },
-                                onDownload = { onDownloadTrack(track) }
-                            )
-                        }
-                    }
-                }
-            }
-
             if (playlists.isNotEmpty()) item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    U26SectionHeading("YOUR PLAYLISTS", "OPEN LIBRARY", onExplore)
+                    U26SectionHeading("YOUR PLAYLISTS", "OPEN LIBRARY", onLibrary)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(playlists, key = { it.id }) { playlist ->
                             U26PlaylistCard(
@@ -212,7 +212,7 @@ fun Universe2026Home(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                     U26QuickStat("MUSIC", tracks.size.toString(), Icons.Outlined.MusicNote, Modifier.weight(1f), onExplore)
                     U26QuickStat("VIDEOS", videos.size.toString(), Icons.Outlined.VideoLibrary, Modifier.weight(1f), onVideos)
-                    U26QuickStat("YOUR LIBRARY", "OPEN", Icons.Outlined.MusicNote, Modifier.weight(1f), onExplore)
+                    U26QuickStat("YOUR LIBRARY", "OPEN", Icons.Outlined.MusicNote, Modifier.weight(1f), onLibrary)
                 }
             }
 
