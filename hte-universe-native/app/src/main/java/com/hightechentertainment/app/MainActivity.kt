@@ -54,7 +54,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 
 private val Obsidian = Color(0xFF08090B)
-private val Panel = Color(0xFF121418)
+private val Panel = Color(0xFF15111B)
 private val Gold = Color(0xFFD6B15E)
 private val Silver = Color(0xFFC4CAD2)
 private val Muted = Color(0xFF8B929D)
@@ -166,7 +166,7 @@ private fun UniverseSplash(onFinished: () -> Unit) {
         if (elapsed >= 15) onFinished()
     }
     BoxWithConstraints(Modifier.fillMaxSize().background(Brush.verticalGradient(
-        listOf(Color(0xFF17130B), Obsidian, Color(0xFF050608))))) {
+        listOf(Color(0xFF1B0C24), Obsidian, Color(0xFF050608))))) {
         val compactHeight = maxHeight < 680.dp
         val veryCompactHeight = maxHeight < 520.dp
         val crownBoxSize = if (veryCompactHeight) 54.dp else if (compactHeight) 62.dp else 72.dp

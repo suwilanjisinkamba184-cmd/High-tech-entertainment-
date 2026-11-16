@@ -28,7 +28,7 @@ import com.hightechentertainment.app.data.FounderVideoDto
 import kotlinx.coroutines.launch
 
 private val FounderGold = Color(0xFFD6B15E)
-private val FounderPanel = Color(0xFF121418)
+private val FounderPanel = Color(0xFF15111B)
 private val FounderMuted = Color(0xFF8B929D)
 
 @Composable
@@ -75,7 +75,7 @@ fun FounderStudioScreen(onClose: () -> Unit) {
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Card(colors = CardDefaults.cardColors(containerColor = FounderPanel), shape = RoundedCornerShape(22.dp)) {
-            Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF352818), FounderPanel, Color(0xFF0D1117)))).padding(17.dp)) {
+            Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF431744), FounderPanel, Color(0xFF0D1117)))).padding(17.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {

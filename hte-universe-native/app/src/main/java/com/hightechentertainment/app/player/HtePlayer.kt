@@ -52,7 +52,7 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.random.Random
 
-data class PlayerTrack(val id: String, val title: String, val artist: String, val artworkUrl: String?, val accent: Color = HteColors.Gold)
+data class PlayerTrack(val id: String, val title: String, val artist: String, val artworkUrl: String?, val accent: Color = HteColors.Violet)
 enum class HteRepeatMode { OFF, ALL, ONE }
 data class PlayerUiState(
     val track: PlayerTrack? = null, val isPlaying: Boolean = false, val isBuffering: Boolean = false,
@@ -177,7 +177,7 @@ private fun MiniPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
                 }
             }
         }
-        LinearProgressIndicator(progress = { progress }, Modifier.fillMaxWidth().height(2.dp), color = HteColors.Gold, trackColor = Color.Transparent)
+        LinearProgressIndicator(progress = { progress }, Modifier.fillMaxWidth().height(2.dp), color = HteColors.NeonLime, trackColor = Color.Transparent)
     }
 }
 
@@ -231,7 +231,7 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
                 TextButton(onClick = controller::retry) { Text("Retry", color = HteColors.Gold) }
             }
         }
-        WaveformScrubber(progress, bars, HteColors.Gold, { if (state.durationMs > 0) controller.seekTo((it * state.durationMs).toLong()) }, Modifier.fillMaxWidth())
+        WaveformScrubber(progress, bars, HteColors.NeonLime, { if (state.durationMs > 0) controller.seekTo((it * state.durationMs).toLong()) }, Modifier.fillMaxWidth())
         Row(Modifier.fillMaxWidth()) {
             Text(formatTime(state.positionMs), color = HteColors.Muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
             Text(formatTime(state.durationMs), color = HteColors.Muted, style = MaterialTheme.typography.bodySmall)
