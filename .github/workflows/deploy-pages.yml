@@ -78,6 +78,11 @@ jobs:
           grep -q 'authNext' website/src/pages/index.astro
           grep -q 'callbackParams.delete' website/src/pages/index.astro
           grep -q 'loadAccountDownloads' assets/app.js
+          grep -q "const base = import.meta.env.BASE_URL.replace" website/src/pages/download.astro
+          grep -q "base: process.env.CF_PAGES === '1' ? '/' : '/High-tech-entertainment-/'" website/astro.config.mjs
+          grep -q 'source_url,source_platform,rights_status,download_allowed,branded_audio_url,download_branding_status' website/src/components/PublicCatalogue.tsx
+          grep -q 'Download HTE-branded audio' website/src/components/PublicCatalogue.tsx
+          ! grep -Fq 'href={downloadUrl || src}' website/src/components/PublicCatalogue.tsx
           test -s admin/index.html
           grep -q 'id="artists"' website/src/components/PublicCatalogue.tsx
           grep -q "from('artists')" website/src/components/PublicCatalogue.tsx
