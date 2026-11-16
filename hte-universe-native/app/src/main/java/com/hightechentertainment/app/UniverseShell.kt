@@ -342,6 +342,12 @@ fun UniverseShell() {
     fun startDownload(url: String?, title: String, mediaType: String, trackId: String? = null) {
         scope.launch {
             try {
+                if (mediaType == "audio" && trackId != null) {
+                    val downloadPage = "https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/download/?track=${Uri.encode(trackId)}"
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(downloadPage)))
+                    Toast.makeText(context, "Opening HTE branded download for $title…", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
                 if (url.isNullOrBlank()) error(
                     if (mediaType == "audio") "The HTE-branded download is not ready yet, or this external source is not downloadable."
                     else "This item has no download URL yet."
