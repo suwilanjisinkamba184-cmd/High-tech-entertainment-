@@ -170,7 +170,11 @@ private fun MiniPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
                 Text(track.artist, style = MaterialTheme.typography.bodySmall, color = HteColors.Silver, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             IconButton(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); controller.togglePlay() }) {
-                Icon(if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (state.isPlaying) "Pause" else "Play", tint = HteColors.OnDark)
+                if (state.isBuffering) {
+                    CircularProgressIndicator(Modifier.size(22.dp), color = HteColors.Gold, strokeWidth = 2.dp)
+                } else {
+                    Icon(if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (state.isPlaying) "Pause" else "Play", tint = HteColors.OnDark)
+                }
             }
         }
         LinearProgressIndicator(progress = { progress }, Modifier.fillMaxWidth().height(2.dp), color = HteColors.Gold, trackColor = Color.Transparent)
@@ -185,7 +189,8 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
     val progress = if (state.durationMs > 0) (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f) else 0f
     val bars = state.amplitudes ?: remember(track.id) { placeholderWaveform(track.id) }
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val artworkMaxHeight = maxHeight * .34f
+        // Bound artwork by both available height and width so compact and wide screens stay balanced.
+        val artworkMaxHeight = minOf(maxHeight * .30f, maxWidth * .72f)
         val horizontalInset = when {
             maxWidth < 360.dp -> 12.dp
             maxWidth < 600.dp -> 18.dp
@@ -194,8 +199,7 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
         Column(
             Modifier.fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .windowInsetsPadding(WindowInsets.navigationBars)
+                .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(horizontal = horizontalInset, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -212,8 +216,10 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
         Spacer(Modifier.height(4.dp))
         artwork(track.artworkUrl, Modifier.fillMaxWidth().heightIn(max = artworkMaxHeight).aspectRatio(1f).graphicsLayer { scaleX = scale; scaleY = scale }.clip(MaterialTheme.shapes.large).background(HteColors.Panel))
         Spacer(Modifier.height(4.dp))
-        Text(track.title, style = MaterialTheme.typography.headlineMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(track.title, color = HteColors.OnDark, style = MaterialTheme.typography.headlineMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(track.artist, style = MaterialTheme.typography.bodyLarge, color = HteColors.Silver, maxLines = 1)
+        Text("NOW STREAMING  •  HIGH-TECH ENTERTAINMENT", color = HteColors.Gold.copy(alpha = .82f),
+            fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
         if (state.playbackError) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(

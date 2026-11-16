@@ -94,7 +94,7 @@ fun FounderStudioScreen(onClose: () -> Unit) {
             }
         }
         Spacer(Modifier.height(12.dp))
-        TabRow(selectedTabIndex = selectedTab, containerColor = FounderPanel, contentColor = FounderGold) {
+        PrimaryTabRow(selectedTabIndex = selectedTab, containerColor = FounderPanel, contentColor = FounderGold) {
             Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Music") })
             Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Videos") })
             Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("Manage") })

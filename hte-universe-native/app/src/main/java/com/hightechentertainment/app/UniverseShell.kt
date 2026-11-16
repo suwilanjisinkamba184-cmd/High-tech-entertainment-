@@ -6,18 +6,22 @@ import android.content.ContextWrapper
 import android.content.Context
 import android.app.Activity
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
@@ -113,7 +117,7 @@ fun UniverseShell() {
             onError = { error ->
                 if (effectActive) Toast.makeText(
                     context,
-                    error.message?.take(120) ?: "The background player could not start.",
+                    "The audio player couldn't connect. Check your connection and try again.",
                     Toast.LENGTH_LONG,
                 ).show()
             },
@@ -211,15 +215,25 @@ fun UniverseShell() {
     LaunchedEffect(configured) { refreshCatalogue() }
     LaunchedEffect(selectedTab) {
         if (selectedTab == UniverseTab.LIBRARY) {
-            downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
+            try {
+                downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Throwable) {
+                Toast.makeText(context, "Your library could not be loaded. Please try again.", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
     LaunchedEffect(configured, selectedTab) {
         if (configured && selectedTab == UniverseTab.LIBRARY) {
-            favouriteTrackIds = runCatching {
-                withContext(Dispatchers.IO) { MemberRepository().getFavouriteTrackIds() }
-            }.getOrDefault(favouriteTrackIds)
+            try {
+                favouriteTrackIds = withContext(Dispatchers.IO) { MemberRepository().getFavouriteTrackIds() }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Throwable) {
+                Toast.makeText(context, "Your favourites could not be refreshed. Please try again.", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -232,7 +246,7 @@ fun UniverseShell() {
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {
-                Toast.makeText(context, error.message?.take(120) ?: "Sign in to save favourites.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "We couldn't update your favourites. Please sign in and try again.", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -246,8 +260,8 @@ fun UniverseShell() {
                 Toast.makeText(context, "Download started: $title", Toast.LENGTH_SHORT).show()
             } catch (cancelled: CancellationException) {
                 throw cancelled
-            } catch (error: Throwable) {
-                Toast.makeText(context, error.message?.take(120) ?: "Download could not start.", Toast.LENGTH_LONG).show()
+            } catch (_: Throwable) {
+                Toast.makeText(context, "The download could not start. Check your connection and available storage, then try again.", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -255,7 +269,9 @@ fun UniverseShell() {
     Box(Modifier.fillMaxSize()) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
         // Use a navigation rail on wide/landscape windows and bottom navigation on phones.
-        val isWideLayout = maxWidth >= 600.dp
+        val isWideLayout = maxWidth >= 720.dp
+        // Give the listening theater a proportional width on compact landscape and tablet windows.
+        val playerPanelWidth = minOf(maxWidth * 0.48f, 400.dp)
         Scaffold(
         containerColor = ShellBackground,
         bottomBar = {
@@ -279,7 +295,7 @@ fun UniverseShell() {
             }
         }
     ) { insets ->
-        Row(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxSize().padding(insets)) {
             if (isWideLayout) {
                 NavigationRail(containerColor = ShellPanel, contentColor = ShellGold) {
                     UniverseTab.entries.forEach { tab ->
@@ -301,8 +317,7 @@ fun UniverseShell() {
             }
             Column(
                 Modifier.weight(1f).fillMaxHeight()
-                    .padding(insets)
-                    .padding(end = if (isWideLayout && playerHasTrack) 360.dp else 0.dp)
+                    .padding(end = if (isWideLayout && playerHasTrack) playerPanelWidth + 8.dp else 0.dp)
             ) {
             UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true })
             when (selectedTab) {
@@ -334,7 +349,18 @@ fun UniverseShell() {
                     onPlayFavourite = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks.filter { track -> track.id in favouriteTrackIds } else listOf(it); playerExpanded = true },
                     onToggleFavourite = ::toggleFavourite,
                     onDownloadFavourite = { startDownload(it.audioUrl, it.title, "audio") },
-                    onRemoveDownload = { record -> scope.launch { withContext(Dispatchers.IO) { offlineManager.remove(record.id) }; downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() } } },
+                    onRemoveDownload = { record ->
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) { offlineManager.remove(record.id) }
+                                downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (_: Throwable) {
+                                Toast.makeText(context, "This download could not be removed. Please try again.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
                     onPlayDownload = { record ->
                         if (record.localUri.isNullOrBlank()) Toast.makeText(context, "This download is not ready yet.", Toast.LENGTH_SHORT).show()
                         else if (record.mediaType == "video") selectedVideo = VideoDto(record.id.toString(), record.title, videoUrl = record.localUri)
@@ -358,15 +384,37 @@ fun UniverseShell() {
                     expanded = playerExpanded,
                     onExpandedChange = { playerExpanded = it },
                     modifier = Modifier.align(Alignment.CenterEnd)
-                        .width(352.dp).fillMaxHeight()
+                        .width(playerPanelWidth).fillMaxHeight()
                         .padding(start = 8.dp, top = 10.dp, end = 10.dp, bottom = 10.dp),
                     collapsedBottomInset = 0.dp,
                     artwork = { url, artworkModifier ->
                         if (!url.isNullOrBlank()) {
                             AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
                         } else {
-                            Box(artworkModifier.background(Brush.linearGradient(listOf(Color(0xFF493719), ShellPanel))), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Outlined.Album, null, tint = ShellGold, modifier = Modifier.size(30.dp))
+                            Box(
+                                artworkModifier.background(
+                                    Brush.radialGradient(listOf(Color(0xFF332716), Color(0xFF15120D), ShellBackground)),
+                                    RoundedCornerShape(26.dp)
+                                ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    Modifier.size(184.dp).border(1.dp, ShellGold.copy(alpha = .62f), CircleShape)
+                                        .background(Brush.sweepGradient(listOf(Color(0xFF302516), Color(0xFF090A0C), Color(0xFF302516))), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(Modifier.size(142.dp).border(1.dp, ShellSilver.copy(alpha = .25f), CircleShape)
+                                        .background(Color(0xFF101114), CircleShape), contentAlignment = Alignment.Center) {
+                                        Box(Modifier.size(88.dp).border(2.dp, ShellGold, CircleShape)
+                                            .background(Brush.radialGradient(listOf(Color(0xFF5B4725), Color(0xFF11100D))), CircleShape),
+                                            contentAlignment = Alignment.Center) {
+                                            Text("HTE", color = ShellGold, fontSize = 27.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                                        }
+                                    }
+                                }
+                                Text("HIGH-TECH ORIGINAL", color = ShellGold.copy(alpha = .8f), fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold, letterSpacing = 2.sp,
+                                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp))
                             }
                         }
                     },
@@ -382,8 +430,30 @@ fun UniverseShell() {
                         if (!url.isNullOrBlank()) {
                             AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
                         } else {
-                            Box(artworkModifier.background(Brush.linearGradient(listOf(Color(0xFF493719), ShellPanel))), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Outlined.Album, null, tint = ShellGold, modifier = Modifier.size(30.dp))
+                            Box(
+                                artworkModifier.background(
+                                    Brush.radialGradient(listOf(Color(0xFF332716), Color(0xFF15120D), ShellBackground)),
+                                    RoundedCornerShape(26.dp)
+                                ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    Modifier.size(184.dp).border(1.dp, ShellGold.copy(alpha = .62f), CircleShape)
+                                        .background(Brush.sweepGradient(listOf(Color(0xFF302516), Color(0xFF090A0C), Color(0xFF302516))), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(Modifier.size(142.dp).border(1.dp, ShellSilver.copy(alpha = .25f), CircleShape)
+                                        .background(Color(0xFF101114), CircleShape), contentAlignment = Alignment.Center) {
+                                        Box(Modifier.size(88.dp).border(2.dp, ShellGold, CircleShape)
+                                            .background(Brush.radialGradient(listOf(Color(0xFF5B4725), Color(0xFF11100D))), CircleShape),
+                                            contentAlignment = Alignment.Center) {
+                                            Text("HTE", color = ShellGold, fontSize = 27.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                                        }
+                                    }
+                                }
+                                Text("HIGH-TECH ORIGINAL", color = ShellGold.copy(alpha = .8f), fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold, letterSpacing = 2.sp,
+                                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp))
                             }
                         }
                     },
@@ -425,16 +495,54 @@ fun UniverseShell() {
 @Composable
 private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, onVoice: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().background(ShellBackground).padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
+        Modifier.fillMaxWidth().background(ShellBackground)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(9.dp)
     ) {
-        Column(Modifier.weight(1f)) {
-            Text("HTE UNIVERSE", color = ShellGold, fontSize = 12.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
-            Text("The Pride of Africa", color = ShellSilver, fontSize = 11.sp)
+        Box(
+            Modifier.size(39.dp).background(
+                Brush.linearGradient(listOf(Color(0xFF5A4522), Color(0xFF17130D))),
+                RoundedCornerShape(13.dp)
+            ).border(1.dp, ShellGold.copy(alpha = .42f), RoundedCornerShape(13.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("HT", color = ShellGold, fontSize = 14.sp, fontWeight = FontWeight.Black, letterSpacing = -.5.sp)
         }
-        IconButton(onClick = onSearch) { Icon(Icons.Outlined.Search, "Search", tint = ShellSilver) }
-        IconButton(onClick = onVoice) { Icon(Icons.Outlined.Mic, "Voice assistant", tint = ShellGold) }
-        IconButton(onClick = onNotifications) { Icon(Icons.Outlined.NotificationsNone, "Notifications", tint = ShellSilver) }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text("HIGH-TECH", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.ExtraBold)
+            Text("ENTERTAINMENT  /  UNIVERSE", color = ShellSilver, fontSize = 8.sp, letterSpacing = .8.sp)
+        }
+        Surface(
+            onClick = onSearch,
+            shape = RoundedCornerShape(12.dp),
+            color = ShellPanel,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .07f))
+        ) {
+            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.Search, "Search", tint = ShellSilver, modifier = Modifier.size(19.dp))
+            }
+        }
+        Surface(
+            onClick = onVoice,
+            shape = RoundedCornerShape(12.dp),
+            color = ShellGold.copy(alpha = .14f),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ShellGold.copy(alpha = .35f))
+        ) {
+            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.GraphicEq, "Voice assistant", tint = ShellGold, modifier = Modifier.size(20.dp))
+            }
+        }
+        Surface(
+            onClick = onNotifications,
+            shape = RoundedCornerShape(12.dp),
+            color = ShellPanel,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .07f))
+        ) {
+            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.NotificationsNone, "Notifications", tint = ShellSilver, modifier = Modifier.size(19.dp))
+            }
+        }
     }
 }
 
@@ -585,26 +693,55 @@ private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: Stri
 
 @Composable
 private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit, isFavourite: Boolean, onToggleFavourite: () -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp).background(ShellGold.copy(alpha = .12f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.MusicNote, null, tint = ShellGold, modifier = Modifier.size(25.dp))
+    Card(
+        colors = CardDefaults.cardColors(containerColor = ShellPanel),
+        shape = RoundedCornerShape(17.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(horizontal = 11.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                Modifier.size(58.dp).background(
+                    Brush.linearGradient(listOf(Color(0xFF49391F), ShellPanel)),
+                    RoundedCornerShape(12.dp)
+                ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!track.coverUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = track.coverUrl,
+                        contentDescription = "Artwork for ${track.title}",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp))
+                    )
+                } else {
+                    Icon(Icons.Outlined.Album, null, tint = ShellGold, modifier = Modifier.size(27.dp))
+                }
             }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(track.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(track.artist, color = ShellMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                track.genre?.let { Text(it, color = ShellGold, fontSize = 10.sp) }
+            Spacer(Modifier.width(11.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(track.title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(track.artist, color = ShellMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                track.genre?.let {
+                    Text(it.uppercase(), color = ShellGold, fontSize = 8.sp, letterSpacing = .8.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                }
             }
-            IconButton(onClick = onToggleFavourite) {
+            IconButton(onClick = onToggleFavourite, modifier = Modifier.size(40.dp)) {
                 Icon(
                     imageVector = if (isFavourite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                     contentDescription = if (isFavourite) "Remove from favourites" else "Add to favourites",
-                    tint = if (isFavourite) ShellGold else ShellMuted
+                    tint = if (isFavourite) ShellGold else ShellMuted,
+                    modifier = Modifier.size(19.dp)
                 )
             }
-            IconButton(onClick = onDownload) { Icon(Icons.Outlined.Download, "Download ${track.title}", tint = ShellSilver) }
-            IconButton(onClick = onPlay) { Icon(Icons.Outlined.PlayCircle, "Play ${track.title}", tint = ShellGold, modifier = Modifier.size(28.dp)) }
+            IconButton(onClick = onDownload, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Outlined.Download, "Download ${track.title}", tint = ShellSilver, modifier = Modifier.size(19.dp))
+            }
+            IconButton(onClick = onPlay, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Outlined.PlayCircle, "Play ${track.title}", tint = ShellGold, modifier = Modifier.size(25.dp))
+            }
         }
     }
 }
@@ -613,15 +750,23 @@ private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit
 private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: () -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.fillMaxWidth().height(164.dp).background(
-                androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF392D1D), Color(0xFF171B22), Color(0xFF0D1117))),
-                RoundedCornerShape(13.dp)
+            Box(Modifier.fillMaxWidth().height(164.dp).clip(RoundedCornerShape(13.dp)).background(
+                androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF392D1D), Color(0xFF171B22), Color(0xFF0D1117)))
             ), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.VideoLibrary, null, tint = ShellGold.copy(alpha = .72f), modifier = Modifier.size(52.dp))
-                Box(Modifier.align(Alignment.Center).size(48.dp).background(Color.Black.copy(alpha = .52f), RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
+                if (!video.thumbnailUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = video.thumbnailUrl,
+                        contentDescription = "Thumbnail for ${video.title}",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(Icons.Outlined.VideoLibrary, null, tint = ShellGold.copy(alpha = .72f), modifier = Modifier.size(52.dp))
+                }
+                Box(Modifier.align(Alignment.Center).size(48.dp).background(Color.Black.copy(alpha = .62f), RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
                     Icon(Icons.Outlined.PlayArrow, "Play ${video.title}", tint = Color.White, modifier = Modifier.size(30.dp))
                 }
-                Text("HTE VISUALS", color = ShellSilver, fontSize = 8.sp, letterSpacing = 1.6.sp, modifier = Modifier.align(Alignment.BottomStart).padding(10.dp))
+                Text("HTE VISUALS", color = Color.White, fontSize = 8.sp, letterSpacing = 1.6.sp, modifier = Modifier.align(Alignment.BottomStart).padding(10.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -889,9 +1034,11 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     val systemBars = remember(window) { window?.let { WindowInsetsControllerCompat(it, it.decorView) } }
     val previousOrientation = remember(activity) { activity?.requestedOrientation }
     var immersiveVideo by remember(video.id) { mutableStateOf(false) }
+
     val toggleImmersive = {
-        immersiveVideo = !immersiveVideo
-        if (immersiveVideo) {
+        val enteringImmersive = !immersiveVideo
+        immersiveVideo = enteringImmersive
+        if (enteringImmersive) {
             systemBars?.hide(WindowInsetsCompat.Type.systemBars())
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         } else {
@@ -899,29 +1046,31 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
             activity?.requestedOrientation = previousOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
+    BackHandler(enabled = immersiveVideo) { toggleImmersive() }
     DisposableEffect(activity, systemBars) {
-        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
         onDispose {
             systemBars?.show(WindowInsetsCompat.Type.systemBars())
             if (previousOrientation != null) activity?.requestedOrientation = previousOrientation
         }
     }
+
     val validUrl = remember(video.videoUrl) {
         runCatching {
-            val uri = Uri.parse(video.videoUrl)
-            uri.scheme in listOf("https", "http", "content", "file") && !video.videoUrl.isBlank()
+            val value = video.videoUrl.trim()
+            val uri = Uri.parse(value)
+            !uri.isOpaque && uri.scheme?.lowercase() in setOf("https", "http", "content", "file") && value.isNotBlank()
         }.getOrDefault(false)
     }
     val player = remember(video.id, video.videoUrl) {
         ExoPlayer.Builder(context)
             .setAudioAttributes(AudioAttributes.DEFAULT, true)
             .build().apply {
-            if (validUrl) {
-                setMediaItem(MediaItem.fromUri(video.videoUrl))
-                prepare()
-                playWhenReady = true
+                if (validUrl) {
+                    setMediaItem(MediaItem.fromUri(video.videoUrl.trim()))
+                    prepare()
+                    playWhenReady = true
+                }
             }
-        }
     }
     LaunchedEffect(player, quality) {
         val maxVideoSize = when (quality) {
@@ -934,6 +1083,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
             .setMaxVideoSize(maxVideoSize.first, maxVideoSize.second)
             .build()
     }
+
     var playbackError by remember { mutableStateOf<String?>(null) }
     var isBuffering by remember { mutableStateOf(false) }
     var videoPlaying by remember { mutableStateOf(false) }
@@ -942,6 +1092,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     var isSeeking by remember { mutableStateOf(false) }
     var seekFraction by remember { mutableStateOf(0f) }
     val isSeekingNow by rememberUpdatedState(isSeeking)
+
     LaunchedEffect(player) {
         while (true) {
             videoPlaying = player.isPlaying
@@ -954,6 +1105,8 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
         val listener = object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 playbackError = "Video playback failed. Check the connection or retry the stream."
+                videoPlaying = false
+                isBuffering = false
             }
             override fun onPlaybackStateChanged(playbackState: Int) {
                 isBuffering = playbackState == Player.STATE_BUFFERING
@@ -961,78 +1114,135 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
             }
         }
         player.addListener(listener)
-        onDispose { player.removeListener(listener); player.release() }
+        onDispose {
+            player.removeListener(listener)
+            player.release()
+        }
     }
+
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize(), color = Color.Black) {
-            Column(Modifier.fillMaxSize().background(Color.Black).padding(if (immersiveVideo) 0.dp else 12.dp)) {
-                if (!immersiveVideo) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 10.sp)
-                        }
-                        IconButton(onClick = toggleImmersive) { Icon(Icons.Outlined.Fullscreen, "Enter fullscreen", tint = ShellGold) }
-                        IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close video", tint = Color.White) }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                }
-                if (validUrl) {
-                    AndroidView(
-                        factory = { viewContext -> PlayerView(viewContext).apply {
-                            this.player = player
-                            useController = false
-                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                            setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-                            keepScreenOn = true
-                        } },
-                        update = { view -> view.player = player },
-                        modifier = Modifier.fillMaxWidth().weight(1f)
-                    )
-                } else {
-                    Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                        Text("This video does not have a valid playback URL.", color = ShellGold)
-                    }
-                }
-                if (validUrl) {
-                    Column(
-                        Modifier.fillMaxWidth().background(ShellPanel, RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalArrangement = Arrangement.spacedBy(7.dp)
-                    ) {
-                        Slider(
-                            value = if (isSeeking) seekFraction else if (videoDuration > 0L) (videoPosition.toFloat() / videoDuration).coerceIn(0f, 1f) else 0f,
-                            onValueChange = { fraction -> isSeeking = true; seekFraction = fraction },
-                            onValueChangeFinished = {
-                                if (videoDuration > 0L) player.seekTo((seekFraction * videoDuration).toLong())
-                                isSeeking = false
-                            },
-                            enabled = videoDuration > 0L,
-                            colors = SliderDefaults.colors(thumbColor = ShellGold, activeTrackColor = ShellGold)
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(formatVideoTime(videoPosition), color = ShellMuted, fontSize = 10.sp)
-                            Spacer(Modifier.weight(1f))
-                            TextButton(onClick = { player.seekTo((player.currentPosition - 10_000L).coerceAtLeast(0L)) }) { Text("−10s", color = ShellSilver) }
-                            Button(
-                                onClick = { if (player.isPlaying) player.pause() else player.play() },
-                                colors = ButtonDefaults.buttonColors(containerColor = ShellGold, contentColor = Color.Black),
-                                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 7.dp)
-                            ) { Text(if (videoPlaying) "Pause" else "Play", fontWeight = FontWeight.Bold) }
-                            TextButton(onClick = { if (videoDuration > 0L) player.seekTo((player.currentPosition + 10_000L).coerceAtMost(videoDuration)) }) { Text("+10s", color = ShellSilver) }
-                            IconButton(onClick = toggleImmersive) {
-                                Icon(if (immersiveVideo) Icons.Outlined.FullscreenExit else Icons.Outlined.Fullscreen, if (immersiveVideo) "Exit fullscreen" else "Enter fullscreen", tint = ShellGold)
+            BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
+                // Capture BoxWithConstraints values before entering ColumnScope to avoid receiver ambiguity.
+                val availableWidth = maxWidth
+                val availableHeight = maxHeight
+                val landscape = availableWidth > availableHeight
+                val safePadding = if (immersiveVideo) Modifier else Modifier.windowInsetsPadding(WindowInsets.safeDrawing)
+                Column(
+                    Modifier.fillMaxSize()
+                        .then(safePadding)
+                        .padding(horizontal = if (immersiveVideo) 0.dp else 12.dp,
+                            vertical = if (immersiveVideo) 0.dp else 12.dp)
+                ) {
+                    if (!immersiveVideo) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(video.title, color = Color.White, fontWeight = FontWeight.Bold,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 10.sp)
                             }
-                            Spacer(Modifier.weight(1f))
-                            Text(formatVideoTime(videoDuration), color = ShellMuted, fontSize = 10.sp)
+                            IconButton(onClick = toggleImmersive) {
+                                Icon(Icons.Outlined.Fullscreen, "Enter fullscreen", tint = ShellGold)
+                            }
+                            IconButton(onClick = onDismiss) {
+                                Icon(Icons.Outlined.Close, "Close video", tint = Color.White)
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+
+                    if (validUrl) {
+                        AndroidView(
+                            factory = { viewContext ->
+                                PlayerView(viewContext).apply {
+                                    this.player = player
+                                    useController = false
+                                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                    setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                                    keepScreenOn = true
+                                }
+                            },
+                            update = { view ->
+                                if (view.player !== player) view.player = player
+                            },
+                            onRelease = { view ->
+                                view.player = null
+                                view.keepScreenOn = false
+                            },
+                            modifier = if (immersiveVideo || landscape) {
+                                Modifier.fillMaxWidth().weight(1f)
+                            } else {
+                                Modifier.fillMaxWidth().height(minOf(availableWidth * (9f / 16f), availableHeight * .46f))
+                            }
+                        )
+                        if (!immersiveVideo && !landscape) Spacer(Modifier.weight(1f))
+                    } else {
+                        Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                            Text("This video does not have a valid playback URL.", color = ShellGold)
                         }
                     }
-                }
-                if (isBuffering) LinearProgressIndicator(Modifier.fillMaxWidth(), color = ShellGold)
-                playbackError?.let { message ->
-                    Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(14.dp)) {
-                        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(message, color = ShellSilver, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                            TextButton(onClick = { playbackError = null; player.prepare(); player.playWhenReady = true }) { Text("Retry", color = ShellGold) }
+
+                    if (validUrl) {
+                        Column(
+                            Modifier.fillMaxWidth()
+                                .background(ShellPanel, RoundedCornerShape(16.dp))
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Slider(
+                                value = if (isSeeking) seekFraction else if (videoDuration > 0L)
+                                    (videoPosition.toFloat() / videoDuration).coerceIn(0f, 1f) else 0f,
+                                onValueChange = { fraction -> isSeeking = true; seekFraction = fraction },
+                                onValueChangeFinished = {
+                                    if (videoDuration > 0L) player.seekTo((seekFraction * videoDuration).toLong())
+                                    isSeeking = false
+                                },
+                                enabled = videoDuration > 0L,
+                                colors = SliderDefaults.colors(thumbColor = ShellGold, activeTrackColor = ShellGold)
+                            )
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(formatVideoTime(videoPosition), color = ShellMuted, fontSize = 10.sp)
+                                TextButton(
+                                    onClick = { player.seekTo((player.currentPosition - 10_000L).coerceAtLeast(0L)) },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
+                                ) { Text("−10s", color = ShellSilver) }
+                                Button(
+                                    onClick = { if (player.isPlaying) player.pause() else player.play() },
+                                    colors = ButtonDefaults.buttonColors(containerColor = ShellGold, contentColor = Color.Black),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                ) { Text(if (videoPlaying) "Pause" else "Play", fontWeight = FontWeight.Bold) }
+                                TextButton(
+                                    onClick = {
+                                        if (videoDuration > 0L) player.seekTo((player.currentPosition + 10_000L).coerceAtMost(videoDuration))
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
+                                ) { Text("+10s", color = ShellSilver) }
+                                IconButton(onClick = toggleImmersive, modifier = Modifier.size(40.dp)) {
+                                    Icon(
+                                        if (immersiveVideo) Icons.Outlined.FullscreenExit else Icons.Outlined.Fullscreen,
+                                        if (immersiveVideo) "Exit fullscreen" else "Enter fullscreen",
+                                        tint = ShellGold
+                                    )
+                                }
+                                Text(formatVideoTime(videoDuration), color = ShellMuted, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                    if (isBuffering) LinearProgressIndicator(Modifier.fillMaxWidth(), color = ShellGold)
+                    playbackError?.let { message ->
+                        Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(14.dp)) {
+                            Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(message, color = ShellSilver, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                                TextButton(onClick = {
+                                    playbackError = null
+                                    player.prepare()
+                                    player.playWhenReady = true
+                                }) { Text("Retry", color = ShellGold) }
+                            }
                         }
                     }
                 }
@@ -1040,7 +1250,6 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
         }
     }
 }
-
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this

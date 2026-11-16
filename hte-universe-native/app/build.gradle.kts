@@ -1,6 +1,7 @@
+import com.android.build.api.dsl.ApplicationExtension
+
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
@@ -13,7 +14,7 @@ val releaseStorePassword = providers.environmentVariable("ANDROID_STORE_PASSWORD
 val releaseKeyAlias = providers.environmentVariable("ANDROID_KEY_ALIAS").orNull
 val releaseKeyPassword = providers.environmentVariable("ANDROID_KEY_PASSWORD").orNull
 
-android {
+extensions.configure<ApplicationExtension>("android") {
     if (!releaseKeystorePath.isNullOrBlank()) {
         signingConfigs {
             create("release") {
@@ -21,6 +22,10 @@ android {
                 storePassword = releaseStorePassword
                 keyAlias = releaseKeyAlias
                 keyPassword = releaseKeyPassword
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+                enableV4Signing = true
             }
         }
     }
@@ -63,7 +68,7 @@ dependencies {
     implementation("androidx.credentials:credentials:1.6.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.2.1")
-    val composeBom = platform("androidx.compose:compose-bom:2026.06.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
     implementation("androidx.activity:activity-compose:1.13.0")

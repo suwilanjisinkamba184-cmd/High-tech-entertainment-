@@ -8,11 +8,14 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import java.util.IdentityHashMap
 
 @OptIn(markerClass = [UnstableApi::class])
 object HtePlaybackController {
     @Volatile private var sharedFuture: ListenableFuture<MediaController>? = null
     @Volatile private var activeController: MediaController? = null
+    // A screen/dialog may share the same future. Keep it alive until every caller releases its lease.
+    private val connectionLeases = IdentityHashMap<ListenableFuture<MediaController>, Int>()
 
     fun connect(
         context: Context,
@@ -20,22 +23,37 @@ object HtePlaybackController {
         onError: (Throwable) -> Unit
     ): ListenableFuture<MediaController> {
         val future = synchronized(this) {
-            sharedFuture ?: run {
+            val connection = sharedFuture ?: run {
                 val token = SessionToken(context, ComponentName(context, HtePlaybackService::class.java))
                 MediaController.Builder(context, token).buildAsync().also { sharedFuture = it }
             }
+            // Count every consumer, including callers reusing an in-flight or completed future.
+            connectionLeases[connection] = (connectionLeases[connection] ?: 0) + 1
+            connection
         }
         future.addListener({
             runCatching { future.get() }
-                .onSuccess { controller -> activeController = controller; onConnected(controller) }
+                .onSuccess { controller ->
+                    val isCurrentConnection = synchronized(this) {
+                        if (sharedFuture === future && connectionLeases.containsKey(future)) {
+                            activeController = controller
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    if (isCurrentConnection) onConnected(controller)
+                }
                 .onFailure { error ->
-                    synchronized(this) {
+                    val stillLeased = synchronized(this) {
                         if (sharedFuture === future) {
                             sharedFuture = null
                             activeController = null
                         }
+                        connectionLeases.containsKey(future)
                     }
-                    onError(error)
+                    // Ignore failures from a connection whose last consumer has already left.
+                    if (stillLeased) onError(error)
                 }
         }, MoreExecutors.directExecutor())
         return future
@@ -62,9 +80,20 @@ object HtePlaybackController {
     fun stop() { activeController?.stop() }
 
     fun release(future: ListenableFuture<MediaController>) {
-        synchronized(this) {
-            if (sharedFuture === future) { sharedFuture = null; activeController = null }
+        val shouldRelease = synchronized(this) {
+            val leases = connectionLeases[future] ?: return
+            if (leases > 1) {
+                connectionLeases[future] = leases - 1
+                false
+            } else {
+                connectionLeases.remove(future)
+                if (sharedFuture === future) {
+                    sharedFuture = null
+                    activeController = null
+                }
+                true
+            }
         }
-        MediaController.releaseFuture(future)
+        if (shouldRelease) MediaController.releaseFuture(future)
     }
 }

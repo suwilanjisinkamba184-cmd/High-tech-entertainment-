@@ -18,6 +18,8 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -46,6 +48,10 @@ import com.hightechentertainment.app.data.SupabaseClientProvider
 import com.hightechentertainment.app.media.HtePlaybackController
 import com.hightechentertainment.app.security.HteSecurityFirewall
 import com.hightechentertainment.app.ui.design.HteTheme
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 
 private val Obsidian = Color(0xFF08090B)
 private val Panel = Color(0xFF121418)
@@ -66,6 +72,8 @@ class MainActivity : ComponentActivity() {
         }
         SupabaseClientProvider.initialize(applicationContext)
         handleSupabaseIntent(intent)
+        // Make edge-to-edge behavior explicit on Android 15+ and keep Compose responsible for safe insets.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars = false
             isAppearanceLightNavigationBars = false
@@ -112,18 +120,28 @@ private fun HteUniverseApp() {
 @Composable
 private fun UniverseSplash(onFinished: () -> Unit) {
     val context = LocalContext.current
-    DisposableEffect(context) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var elapsed by remember { mutableIntStateOf(0) }
+    DisposableEffect(context, lifecycleOwner) {
         val startupEnabled = AppSettingsStore(context).startupSoundEnabled
         val player = if (startupEnabled) MediaPlayer.create(context, R.raw.hte_universe_intro) else null
         // The packaged stereo MP3 is 14.054s; pitch-preserving 0.937x playback aligns it to the 15s splash.
         runCatching { player?.setPlaybackParams(PlaybackParams().setSpeed(0.937f).setPitch(1.0f)) }
         player?.start()
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> if (player?.isPlaying == true) player.pause()
+                Lifecycle.Event.ON_START -> if (elapsed < 15 && player?.isPlaying == false) runCatching { player.start() }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
             try { player?.stop() } catch (_: IllegalStateException) { }
             player?.release()
         }
     }
-    var elapsed by remember { mutableIntStateOf(0) }
     val reduceMotion = remember(context) { AppSettingsStore(context).reduceMotion }
     val transition = rememberInfiniteTransition(label = "universe-motion")
     val animatedOrbit by transition.animateFloat(0f, 360f,
@@ -136,24 +154,40 @@ private fun UniverseSplash(onFinished: () -> Unit) {
     val headsetSpin = if (reduceMotion) 0f else animatedHeadsetSpin
     val cameraSpin = if (reduceMotion) 0f else animatedCameraSpin
     val captions = listOf("Beyond the sound…", "Beyond the rhythm…", "Beyond boundaries…", "This is our universe.")
-    LaunchedEffect(Unit) {
-        while (elapsed < 15) { delay(1000); elapsed++ }
-        onFinished()
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (elapsed < 15) {
+                delay(1000)
+                elapsed++
+            }
+        }
     }
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
+    LaunchedEffect(elapsed) {
+        if (elapsed >= 15) onFinished()
+    }
+    BoxWithConstraints(Modifier.fillMaxSize().background(Brush.verticalGradient(
         listOf(Color(0xFF17130B), Obsidian, Color(0xFF050608))))) {
+        val compactHeight = maxHeight < 680.dp
+        val veryCompactHeight = maxHeight < 520.dp
+        val crownBoxSize = if (veryCompactHeight) 54.dp else if (compactHeight) 62.dp else 72.dp
+        val logoSize = if (veryCompactHeight) 86.dp else if (compactHeight) 100.dp else 118.dp
+        val orbitSize = if (veryCompactHeight) 116.dp else if (compactHeight) 136.dp else 160.dp
+        val headlineGap = if (compactHeight) 10.dp else 22.dp
+        val sectionGap = if (compactHeight) 10.dp else 18.dp
         StarField(Modifier.fillMaxSize(), orbit)
-        Column(Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 36.dp),
+        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = if (compactHeight) 8.dp else 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Box(Modifier.size(88.dp).background(Brush.radialGradient(listOf(Gold.copy(alpha = .25f), Color.Transparent)), CircleShape), contentAlignment = Alignment.Center) {
-                Image(painter = painterResource(R.drawable.ic_hte_crown), contentDescription = "High-Tech Entertainment crown", modifier = Modifier.size(72.dp).graphicsLayer { rotationZ = if (reduceMotion) 0f else animatedCameraSpin * .035f })
+            Box(Modifier.size(crownBoxSize).background(Brush.radialGradient(listOf(Gold.copy(alpha = .25f), Color.Transparent)), CircleShape), contentAlignment = Alignment.Center) {
+                Image(painter = painterResource(R.drawable.ic_hte_crown), contentDescription = "High-Tech Entertainment crown", modifier = Modifier.size(crownBoxSize - 12.dp).graphicsLayer { rotationZ = if (reduceMotion) 0f else animatedCameraSpin * .035f })
             }
             Spacer(Modifier.height(2.dp))
-            Image(painter = painterResource(R.drawable.ht_logo), contentDescription = "High-Tech Entertainment official logo", contentScale = ContentScale.Fit, modifier = Modifier.size(142.dp))
+            Image(painter = painterResource(R.drawable.ht_logo), contentDescription = "High-Tech Entertainment official logo", contentScale = ContentScale.Fit, modifier = Modifier.size(logoSize))
             Spacer(Modifier.height(8.dp))
             Text("UNIVERSE", color = Gold, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 7.sp)
-            Spacer(Modifier.height(44.dp))
-            Box(Modifier.size(250.dp).background(Brush.radialGradient(listOf(Gold.copy(alpha = .13f), Color.Transparent)), CircleShape), contentAlignment = Alignment.Center) {
+            Spacer(Modifier.height(headlineGap))
+            Box(Modifier.size(orbitSize).background(Brush.radialGradient(listOf(Gold.copy(alpha = .13f), Color.Transparent)), CircleShape), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxSize().graphicsLayer { rotationZ = orbit }) {
                     drawCircle(Gold.copy(alpha = .45f), style = Stroke(width = 1.3.dp.toPx()))
                     drawCircle(Silver.copy(alpha = .22f), radius = size.minDimension * .39f, style = Stroke(width = 1.dp.toPx()))
@@ -161,23 +195,24 @@ private fun UniverseSplash(onFinished: () -> Unit) {
                         center = androidx.compose.ui.geometry.Offset(size.width * .5f, 4.dp.toPx()))
                 }
                 Icon(Icons.Outlined.Headphones, "Spinning headphones", tint = Gold,
-                    modifier = Modifier.size(142.dp).graphicsLayer { rotationZ = headsetSpin; scaleX = 1.04f; scaleY = 1.04f })
+                    modifier = Modifier.size(orbitSize * .66f).graphicsLayer { rotationZ = headsetSpin; scaleX = 1.04f; scaleY = 1.04f })
                 Icon(Icons.Outlined.Videocam, "Spinning video camera", tint = Silver,
-                    modifier = Modifier.align(Alignment.BottomEnd).size(58.dp).graphicsLayer { rotationZ = cameraSpin })
+                    modifier = Modifier.align(Alignment.BottomEnd).size(orbitSize * .26f).graphicsLayer { rotationZ = cameraSpin })
                 Icon(Icons.Outlined.VideoLibrary, "Orbiting video library", tint = Gold.copy(alpha = .8f),
-                    modifier = Modifier.align(Alignment.TopEnd).size(36.dp).graphicsLayer { rotationZ = -orbit })
+                    modifier = Modifier.align(Alignment.TopEnd).size(orbitSize * .175f).graphicsLayer { rotationZ = -orbit })
                 Icon(Icons.Outlined.AutoAwesome, "Orbiting star", tint = Gold,
-                    modifier = Modifier.align(Alignment.TopStart).size(30.dp).graphicsLayer { rotationZ = orbit })
+                    modifier = Modifier.align(Alignment.TopStart).size(orbitSize * .19f).graphicsLayer { rotationZ = orbit })
             }
-            Spacer(Modifier.height(30.dp))
+            Spacer(Modifier.height(sectionGap))
             Text("A NEW SOUND. A NEW UNIVERSE.", color = Gold.copy(alpha = .82f), fontSize = 9.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
-            Text(captions[(elapsed / 4).coerceIn(0, 3)], color = Color.White, fontSize = 20.sp,
+            Text(captions[(elapsed / 4).coerceIn(0, 3)], color = Color.White,
+                fontSize = if (compactHeight) 18.sp else 20.sp,
                 fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
             Spacer(Modifier.height(9.dp))
             Text(HTE_STARTUP_TAGLINE, color = Gold, fontSize = 12.sp,
                 fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
-            Spacer(Modifier.height(36.dp))
+            Spacer(Modifier.height(18.dp))
             LinearProgressIndicator(progress = { elapsed / 15f },
                 modifier = Modifier.fillMaxWidth(.72f).height(3.dp).clip(CircleShape),
                 color = Gold, trackColor = Silver.copy(alpha = .18f))
