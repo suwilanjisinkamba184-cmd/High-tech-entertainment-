@@ -136,7 +136,7 @@
               <div class="field"><label>Uploader / producer</label><input name="uploader" value="High Tech Entertainment" maxlength="80"></div>
               <div class="field"><label>Genre</label><input name="genre" maxlength="80" placeholder="Afrobeats, Dancehall, Drill"></div>
               <div class="field full"><label>Cover artwork URL <span class="optional">OPTIONAL</span></label><input name="cover_url" type="url" placeholder="https://…"></div>
-              <div class="field full"><label>Spotify track URL <span class="optional">OPTIONAL</span></label><input name="spotify_url" type="url" placeholder="https://open.spotify.com/track/…"><small class="admin-field-help">Paste a Spotify track link to stream it from the website and Android app.</small></div><div class="field full"><label>Audio file <span class="optional">OPTIONAL</span></label><input name="audio" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.webm,.flac"><small class="admin-field-help">Upload MP3, M4A, AAC, WAV, OGG, FLAC or WebM (maximum 100 MB). Provide either a Spotify URL or an audio file.</small></div>
+              <div class="field full"><label>YouTube or Spotify link <span class="optional">OPTIONAL</span></label><input name="source_url" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=… or https://open.spotify.com/track/…"><small class="admin-field-help">Paste an official YouTube or Spotify URL. The track will appear in the website and Android catalogue and open through the original platform. External links are not downloadable through HTE.</small></div><div class="field full"><label>Audio file <span class="optional">OPTIONAL</span></label><input name="audio" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.webm,.flac"><small class="admin-field-help">Upload MP3, M4A, AAC, WAV, OGG, FLAC or WebM (maximum 100 MB). Provide either an external link or an audio file, not both.</small></div><div class="field full admin-checkbox-field"><label><input name="rights_confirmed" type="checkbox" style="width:auto"> I confirm HTE owns or has distribution rights for this uploaded audio and may offer it for download once HTE branding is applied.</label></div>
               <div class="field full admin-checkbox-field"><label><input name="is_published" type="checkbox" checked style="width:auto"> Publish immediately on the public website</label></div>
             </div>
             <button class="btn gold admin-submit" type="submit">Upload track <span>↑</span></button><div class="status" id="track-status" role="status" aria-live="polite"></div>
@@ -251,12 +251,12 @@
 <div id="toast" class="toast" role="status"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script src="../supabase-config.js"></script>
-<script src="../assets/app.js?v=20"></script>
-<script src="../assets/admin-upload.js?v=20261116-timeout1"></script>
+<script src="../assets/app.js?v=21"></script>
+<script src="../assets/admin-upload.js?v=20261116-catalogue1"></script>
 <script src="../assets/admin-video.js?v=20261116-timeout1"></script>
 <script src="../assets/admin-ui.js?v=20261112-1"></script>
 <script src="../assets/founder-studio-navigation.js?v=20261112-1"></script>
-<script src="../assets/admin-enhancements.js?v=20261116-timeout1"></script>
+<script src="../assets/admin-enhancements.js?v=20261116-audience1"></script>
 <script src="../assets/ai-ad-studio.js?v=20261116-timeout1"></script>
 <script src="../assets/ai-marketing-agent.js?v=20261116-timeout1"></script>
 </body>

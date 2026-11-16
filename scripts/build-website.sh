@@ -84,7 +84,7 @@ required_homepage_markers = (
     "HTE Universe.",
     "topbar",
     "high-tech-logo.svg",
-    "assets/app.js?v=20",
+    "assets/app.js?v=21",
     "assets/videos.js?v=7",
     "public-tracks",
     "supabase-config.js",
@@ -104,9 +104,11 @@ for page in root.rglob("*.html"):
         target = value.split("?", 1)[0].split("#", 1)[0]
         if not target:
             continue
+        is_root_reference = target.startswith("/")
         if target.startswith("/High-tech-entertainment-/"):
             target = target[len("/High-tech-entertainment-/"):]
-        resolved = (page.parent / target.lstrip("/") if not target.startswith("/") else root / target.lstrip("/")).resolve()
+            is_root_reference = True
+        resolved = (root / target.lstrip("/") if is_root_reference else page.parent / target).resolve()
         if target.startswith("../"):
             resolved = (page.parent / target).resolve()
         try:
@@ -124,9 +126,11 @@ for stylesheet in root.rglob("*.css"):
         if re.match(r"^(?:https?:|data:|#|//)", value, flags=re.I):
             continue
         target = value.split("?", 1)[0].split("#", 1)[0]
+        is_root_reference = target.startswith("/")
         if target.startswith("/High-tech-entertainment-/"):
             target = target[len("/High-tech-entertainment-/"):]
-        resolved = (stylesheet.parent / target.lstrip("/") if not target.startswith("/") else root / target.lstrip("/")).resolve()
+            is_root_reference = True
+        resolved = (root / target.lstrip("/") if is_root_reference else stylesheet.parent / target).resolve()
         try:
             resolved.relative_to(root.resolve())
         except ValueError:

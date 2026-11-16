@@ -3,11 +3,9 @@ package com.hightechentertainment.app.player
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -20,9 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -30,7 +25,6 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -50,14 +44,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Locale
-import kotlin.random.Random
 
 data class PlayerTrack(val id: String, val title: String, val artist: String, val artworkUrl: String?, val accent: Color = HteColors.Gold)
 enum class HteRepeatMode { OFF, ALL, ONE }
 data class PlayerUiState(
     val track: PlayerTrack? = null, val isPlaying: Boolean = false, val isBuffering: Boolean = false,
     val positionMs: Long = 0L, val durationMs: Long = 0L, val shuffle: Boolean = false,
-    val repeat: HteRepeatMode = HteRepeatMode.OFF, val amplitudes: List<Float>? = null,
+    val repeat: HteRepeatMode = HteRepeatMode.OFF, 
     val playbackError: Boolean = false,
 )
 interface PlayerController {
@@ -73,7 +66,6 @@ interface PlayerController {
 
 /** Main-thread adapter over the app-scoped Media3 controller. release() also stops its polling job. */
 class Media3PlayerController(private val player: Player, scope: CoroutineScope) : PlayerController {
-    private var waveform: Pair<String, List<Float>>? = null
     private val _state = MutableStateFlow(snapshot())
     override val state: StateFlow<PlayerUiState> = _state.asStateFlow()
     private var pollJob: Job? = null
@@ -88,10 +80,6 @@ class Media3PlayerController(private val player: Player, scope: CoroutineScope) 
                 delay(250)
             }
         }
-    }
-    fun setWaveform(trackId: String, amplitudes: List<Float>) {
-        waveform = trackId to amplitudes.map { it.coerceIn(0f, 1f) }
-        _state.value = snapshot()
     }
     fun release() {
         pollJob?.cancel()
@@ -110,7 +98,6 @@ class Media3PlayerController(private val player: Player, scope: CoroutineScope) 
             playbackError = player.playerError != null,
             shuffle = player.shuffleModeEnabled,
             repeat = when (player.repeatMode) { Player.REPEAT_MODE_ONE -> HteRepeatMode.ONE; Player.REPEAT_MODE_ALL -> HteRepeatMode.ALL; else -> HteRepeatMode.OFF },
-            amplitudes = waveform?.takeIf { it.first == item?.mediaId }?.second,
         )
     }
     override fun togglePlay() { if (player.isPlaying) player.pause() else player.play() }
@@ -187,10 +174,9 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
     val haptic = LocalHapticFeedback.current
     val scale by animateFloatAsState(if (state.isPlaying || reduce) 1f else .94f, if (reduce) snap() else spring(stiffness = Spring.StiffnessLow), label = "hte-art-scale")
     val progress = if (state.durationMs > 0) (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f) else 0f
-    val bars = state.amplitudes ?: remember(track.id) { placeholderWaveform(track.id) }
     BoxWithConstraints(modifier.fillMaxSize()) {
         // Bound artwork by both available height and width so compact and wide screens stay balanced.
-        val artworkMaxHeight = minOf(maxHeight * .30f, maxWidth * .72f)
+        val artworkMaxHeight = minOf(maxHeight * .26f, maxWidth * .68f)
         val horizontalInset = when {
             maxWidth < 360.dp -> 12.dp
             maxWidth < 600.dp -> 18.dp
@@ -201,7 +187,7 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
                 .verticalScroll(rememberScrollState())
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(horizontal = horizontalInset, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onCollapse) { Icon(Icons.Rounded.KeyboardArrowDown, "Close player", tint = HteColors.OnDark, modifier = Modifier.size(32.dp)) }
@@ -231,7 +217,25 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
                 TextButton(onClick = controller::retry) { Text("Retry", color = HteColors.Gold) }
             }
         }
-        WaveformScrubber(progress, bars, HteColors.Gold, { if (state.durationMs > 0) controller.seekTo((it * state.durationMs).toLong()) }, Modifier.fillMaxWidth())
+        var scrubPosition by remember(track.id) { mutableStateOf<Float?>(null) }
+        Slider(
+            value = (scrubPosition ?: progress).coerceIn(0f, 1f),
+            onValueChange = { scrubPosition = it },
+            onValueChangeFinished = {
+                scrubPosition?.let { fraction ->
+                    if (state.durationMs > 0L) controller.seekTo((fraction * state.durationMs).toLong())
+                }
+                scrubPosition = null
+            },
+            enabled = state.durationMs > 0L,
+            colors = SliderDefaults.colors(
+                thumbColor = HteColors.Gold,
+                activeTrackColor = HteColors.Gold,
+                inactiveTrackColor = Color.White.copy(alpha = .18f),
+                disabledActiveTrackColor = HteColors.Muted
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
         Row(Modifier.fillMaxWidth()) {
             Text(formatTime(state.positionMs), color = HteColors.Muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
             Text(formatTime(state.durationMs), color = HteColors.Muted, style = MaterialTheme.typography.bodySmall)
@@ -239,12 +243,12 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = controller::toggleShuffle) { Icon(Icons.Rounded.Shuffle, "Shuffle", tint = if (state.shuffle) HteColors.Gold else HteColors.Muted) }
-            IconButton(onClick = controller::previous, modifier = Modifier.size(54.dp)) { Icon(Icons.Rounded.SkipPrevious, "Previous", tint = HteColors.OnDark, modifier = Modifier.size(34.dp)) }
-            Box(Modifier.size(70.dp).clip(CircleShape).background(HteColors.Gold).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); controller.togglePlay() }, contentAlignment = Alignment.Center) {
+            IconButton(onClick = controller::previous, modifier = Modifier.size(50.dp)) { Icon(Icons.Rounded.SkipPrevious, "Previous", tint = HteColors.OnDark, modifier = Modifier.size(30.dp)) }
+            Box(Modifier.size(64.dp).clip(CircleShape).background(HteColors.Gold).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); controller.togglePlay() }, contentAlignment = Alignment.Center) {
                 if (state.isBuffering) CircularProgressIndicator(Modifier.size(30.dp), color = HteColors.Obsidian, strokeWidth = 3.dp)
                 else Icon(if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (state.isPlaying) "Pause" else "Play", tint = HteColors.Obsidian, modifier = Modifier.size(38.dp))
             }
-            IconButton(onClick = controller::next, modifier = Modifier.size(54.dp)) { Icon(Icons.Rounded.SkipNext, "Next", tint = HteColors.OnDark, modifier = Modifier.size(34.dp)) }
+            IconButton(onClick = controller::next, modifier = Modifier.size(50.dp)) { Icon(Icons.Rounded.SkipNext, "Next", tint = HteColors.OnDark, modifier = Modifier.size(30.dp)) }
             IconButton(onClick = controller::cycleRepeat) { Icon(if (state.repeat == HteRepeatMode.ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, "Repeat " + state.repeat.name.lowercase(), tint = if (state.repeat == HteRepeatMode.OFF) HteColors.Muted else HteColors.Gold) }
         }
         Spacer(Modifier.height(8.dp))
@@ -252,26 +256,6 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
     }
 }
 
-@Composable
-fun WaveformScrubber(progress: Float, amplitudes: List<Float>, playedColor: Color, onSeek: (Float) -> Unit, modifier: Modifier = Modifier) {
-    var dragging by remember { mutableStateOf<Float?>(null) }
-    val shown = (dragging ?: progress).coerceIn(0f, 1f)
-    Canvas(modifier.height(48.dp).pointerInput(Unit) { detectTapGestures { onSeek((it.x / size.width).coerceIn(0f, 1f)) } }
-        .pointerInput(Unit) { detectHorizontalDragGestures(onDragStart = { dragging = it.x / size.width }, onDragEnd = { dragging?.let(onSeek); dragging = null }, onDragCancel = { dragging = null }) { change, _ -> dragging = (change.position.x / size.width).coerceIn(0f, 1f) } }
-        .semantics { contentDescription = "Seek bar"; progressBarRangeInfo = ProgressBarRangeInfo(shown, 0f..1f); setProgress { onSeek(it.coerceIn(0f, 1f)); true } }) {
-        if (amplitudes.isEmpty()) return@Canvas
-        val bar = 3.dp.toPx(); val gap = 2.dp.toPx(); val count = (size.width / (bar + gap)).toInt().coerceAtLeast(1)
-        repeat(count) { i ->
-            val amp = amplitudes[(i * amplitudes.size / count).coerceIn(0, amplitudes.lastIndex)]
-            val h = (amp * size.height).coerceAtLeast(4.dp.toPx())
-            drawRoundRect(if (i / count.toFloat() <= shown) playedColor else Color.White.copy(alpha = .22f), Offset(i * (bar + gap), (size.height - h) / 2), Size(bar, h), CornerRadius(bar / 2))
-        }
-    }
-}
-fun placeholderWaveform(seed: String, bars: Int = 72): List<Float> {
-    val random = Random(seed.hashCode()); var last = .5f
-    return List(bars) { last = (last * .6f + random.nextFloat() * .4f + .05f).coerceIn(.12f, 1f); last }
-}
 private fun formatTime(ms: Long): String {
     val seconds = (ms / 1000).coerceAtLeast(0)
     return String.format(Locale.US, "%d:%02d", seconds / 60, seconds % 60)

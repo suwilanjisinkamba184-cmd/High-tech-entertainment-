@@ -1,6 +1,7 @@
 package com.hightechentertainment.app
 
 import android.net.Uri
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.ContextWrapper
 import android.content.Context
@@ -57,8 +58,12 @@ import androidx.media3.ui.PlayerView
 import androidx.media3.ui.AspectRatioFrameLayout
 import io.github.jan.supabase.auth.auth
 import com.hightechentertainment.app.data.AuthRepository
+import com.hightechentertainment.app.data.ArtistDto
+import com.hightechentertainment.app.data.ReleaseDto
+import com.hightechentertainment.app.data.AudienceAnalyticsRepository
 import com.hightechentertainment.app.data.EntertainmentCatalogRepository
 import com.hightechentertainment.app.data.MemberRepository
+import com.hightechentertainment.app.data.PlaylistDto
 import com.hightechentertainment.app.data.SupabaseClientProvider
 import com.hightechentertainment.app.data.TrackDto
 import com.hightechentertainment.app.data.TrackRepository
@@ -72,13 +77,24 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
 
-private val ShellGold = Color(0xFFD6B15E)
+private val ShellGold = Color(0xFFE5C158)
 private val ShellSilver = Color(0xFFC4CAD2)
 private val ShellMuted = Color(0xFF8B929D)
-private val ShellPanel = Color(0xFF121418)
-private val ShellBackground = Color(0xFF08090B)
+private val ShellPanel = Color(0xFF17161E)
+private val ShellBackground = Color(0xFF0B0A0F)
+
+private data class CatalogueSnapshot(
+    val tracks: List<TrackDto>,
+    val artists: List<ArtistDto>,
+    val releases: List<ReleaseDto>,
+    val videos: List<VideoDto>
+)
 
 private enum class UniverseTab(val label: String) {
     HOME("Home"), DISCOVER("Discover"), VIDEOS("Videos"), LIBRARY("Library"), ACCOUNT("Account")
@@ -88,6 +104,8 @@ private enum class UniverseTab(val label: String) {
 fun UniverseShell() {
     var selectedTab by remember { mutableStateOf(UniverseTab.HOME) }
     var tracks by remember { mutableStateOf<List<TrackDto>>(emptyList()) }
+    var artists by remember { mutableStateOf<List<ArtistDto>>(emptyList()) }
+    var releases by remember { mutableStateOf<List<ReleaseDto>>(emptyList()) }
     var videos by remember { mutableStateOf<List<VideoDto>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var catalogueError by remember { mutableStateOf<String?>(null) }
@@ -100,6 +118,7 @@ fun UniverseShell() {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val settingsStore = remember(context) { AppSettingsStore(context) }
+    val audienceAnalytics = remember(context) { AudienceAnalyticsRepository(context) }
     var settingsRevision by remember { mutableStateOf(0) }
     val backgroundPlayback = remember(settingsRevision) { settingsStore.backgroundPlayback }
     val streamingQuality = remember(settingsRevision) { settingsStore.streamingQuality }
@@ -151,8 +170,25 @@ fun UniverseShell() {
             .build()
     }
     LaunchedEffect(mediaController, selectedTrack?.id, selectedTrackQueue) {
-        val player = mediaController ?: return@LaunchedEffect
         val selected = selectedTrack ?: return@LaunchedEffect
+        val sourceUrl = selected.sourceUrl?.takeIf(String::isNotBlank) ?: selected.audioUrl
+        val sourceHost = sourceUrl?.let { runCatching { Uri.parse(it).host.orEmpty().lowercase() }.getOrDefault("") }.orEmpty()
+        val externalPlatform = selected.sourcePlatform.lowercase() in setOf("youtube", "spotify") ||
+            sourceHost == "youtu.be" || (sourceHost == "youtube.com" || sourceHost.endsWith(".youtube.com")) || (sourceHost == "spotify.com" || sourceHost.endsWith(".spotify.com"))
+        if (externalPlatform) {
+            try {
+                val url = sourceUrl?.takeIf(String::isNotBlank) ?: error("This external track has no source link.")
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                scope.launch { runCatching { withContext(Dispatchers.IO) { audienceAnalytics.record("track_play", selected.id) } } }
+            } catch (_: Throwable) {
+                Toast.makeText(context, "This external music link could not be opened. Check the link and try again.", Toast.LENGTH_LONG).show()
+            } finally {
+                selectedTrack = null
+                selectedTrackQueue = null
+            }
+            return@LaunchedEffect
+        }
+        val player = mediaController ?: return@LaunchedEffect
         val candidates = (selectedTrackQueue ?: listOf(selected)).let { queue ->
             if (queue.any { it.id == selected.id }) queue else listOf(selected) + queue
         }
@@ -181,6 +217,7 @@ fun UniverseShell() {
         player.setMediaItems(items, startIndex, C.TIME_UNSET)
         player.prepare()
         player.play()
+        scope.launch { runCatching { withContext(Dispatchers.IO) { audienceAnalytics.record("track_play", selected.id) } } }
         playerExpanded = true
         selectedTrack = null
         selectedTrackQueue = null
@@ -189,6 +226,10 @@ fun UniverseShell() {
     val autoplayNext = remember(settingsRevision) { settingsStore.autoplayNext }
     var downloads by remember { mutableStateOf<List<OfflineDownloadRecord>>(emptyList()) }
     var favouriteTrackIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var playlists by remember { mutableStateOf<List<PlaylistDto>>(emptyList()) }
+    var playlistTracks by remember { mutableStateOf<Map<String, List<TrackDto>>>(emptyMap()) }
+    var homeProfileName by remember { mutableStateOf<String?>(null) }
+    var homeProfileAvatar by remember { mutableStateOf<String?>(null) }
     val configured = BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()
 
     fun refreshCatalogue() {
@@ -200,8 +241,27 @@ fun UniverseShell() {
             isLoading = true
             catalogueError = null
             try {
-                tracks = TrackRepository().getPublishedTracks()
-                videos = EntertainmentCatalogRepository().getPublishedVideos()
+                val snapshot = withTimeout(20_000) {
+                    coroutineScope {
+                        val catalogue = EntertainmentCatalogRepository()
+                        val trackRequest = async { TrackRepository().getPublishedTracks() }
+                        val artistRequest = async { catalogue.getPublishedArtists() }
+                        val releaseRequest = async { catalogue.getPublishedReleases() }
+                        val videoRequest = async { catalogue.getPublishedVideos() }
+                        CatalogueSnapshot(
+                            tracks = trackRequest.await(),
+                            artists = artistRequest.await(),
+                            releases = releaseRequest.await(),
+                            videos = videoRequest.await()
+                        )
+                    }
+                }
+                tracks = snapshot.tracks
+                artists = snapshot.artists
+                releases = snapshot.releases
+                videos = snapshot.videos
+            } catch (_: TimeoutCancellationException) {
+                catalogueError = "The catalogue is taking too long to respond. Check your connection and retry."
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Throwable) {
@@ -212,7 +272,25 @@ fun UniverseShell() {
         }
     }
 
-    LaunchedEffect(configured) { refreshCatalogue() }
+    LaunchedEffect(configured) {
+        refreshCatalogue()
+        if (configured) runCatching { withContext(Dispatchers.IO) { audienceAnalytics.record("page_view") } }
+    }
+    DisposableEffect(lifecycleOwner, configured) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && configured) refreshCatalogue()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(configured) {
+        if (configured) {
+            while (true) {
+                delay(60_000)
+                if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) refreshCatalogue()
+            }
+        }
+    }
     LaunchedEffect(selectedTab) {
         if (selectedTab == UniverseTab.LIBRARY) {
             try {
@@ -226,15 +304,59 @@ fun UniverseShell() {
     }
 
     LaunchedEffect(configured, selectedTab) {
-        if (configured && selectedTab == UniverseTab.LIBRARY) {
+        if (configured && (selectedTab == UniverseTab.LIBRARY || selectedTab == UniverseTab.HOME)) {
             try {
                 favouriteTrackIds = withContext(Dispatchers.IO) { MemberRepository().getFavouriteTrackIds() }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Throwable) {
-                Toast.makeText(context, "Your favourites could not be refreshed. Please try again.", Toast.LENGTH_SHORT).show()
+                favouriteTrackIds = emptySet()
+                if (selectedTab == UniverseTab.LIBRARY) {
+                    Toast.makeText(context, "Your favourites could not be refreshed. Please try again.", Toast.LENGTH_SHORT).show()
+                }
             }
         }
+    }
+
+    LaunchedEffect(configured, selectedTab, tracks) {
+        if (configured && selectedTab == UniverseTab.HOME) {
+            try {
+                val repository = MemberRepository()
+                val result = withContext(Dispatchers.IO) {
+                    val profile = repository.getMyProfile()
+                    val savedPlaylists = repository.getMyPlaylists()
+                    val trackMap = savedPlaylists.associate { playlist ->
+                        playlist.id to repository.getPlaylistTrackIds(playlist.id)
+                            .mapNotNull { trackId -> tracks.firstOrNull { it.id == trackId } }
+                    }
+                    Triple(profile, savedPlaylists, trackMap)
+                }
+                homeProfileName = result.first?.displayName?.takeIf { it.isNotBlank() }
+                homeProfileAvatar = result.first?.avatarUrl?.takeIf { it.isNotBlank() }
+                playlists = result.second
+                playlistTracks = result.third
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Throwable) {
+                // Signed-out visitors and members without playlists see no private playlist rail.
+                homeProfileName = null
+                homeProfileAvatar = null
+                playlists = emptyList()
+                playlistTracks = emptyMap()
+            }
+        }
+    }
+
+    fun playPlaylist(playlist: PlaylistDto) {
+        val queue = playlistTracks[playlist.id].orEmpty()
+            .filter { !it.audioUrl.isNullOrBlank() }
+        if (queue.isEmpty()) {
+            Toast.makeText(context, "This playlist has no playable published tracks yet.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        selectedTrack = queue.first()
+        selectedTrackQueue = queue
+        playerExpanded = true
     }
 
     fun toggleFavourite(track: TrackDto) {
@@ -251,17 +373,33 @@ fun UniverseShell() {
         }
     }
 
-    fun startDownload(url: String?, title: String, mediaType: String) {
+    fun startDownload(url: String?, title: String, mediaType: String, trackId: String? = null) {
         scope.launch {
             try {
-                if (url.isNullOrBlank()) error("This item has no download URL yet.")
+                if (mediaType == "audio" && trackId != null) {
+                    val downloadPage = "https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/download/?track=${Uri.encode(trackId)}"
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(downloadPage)))
+                    Toast.makeText(context, "Opening HTE branded download for $title…", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+                if (url.isNullOrBlank()) error(
+                    if (mediaType == "audio") "The HTE-branded download is not ready yet, or this external source is not downloadable."
+                    else "This item has no download URL yet."
+                )
                 withContext(Dispatchers.IO) { offlineManager.enqueue(url, title, mediaType, allowMetered = allowsMeteredMediaDownloads(settingsStore.networkPolicy, settingsStore.dataSaver)) }
                 downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
+                if (mediaType == "audio" && trackId != null) {
+                    withContext(Dispatchers.IO) { audienceAnalytics.record("track_download", trackId) }
+                }
                 Toast.makeText(context, "Download started: $title", Toast.LENGTH_SHORT).show()
             } catch (cancelled: CancellationException) {
                 throw cancelled
-            } catch (_: Throwable) {
-                Toast.makeText(context, "The download could not start. Check your connection and available storage, then try again.", Toast.LENGTH_LONG).show()
+            } catch (error: Throwable) {
+                Toast.makeText(
+                    context,
+                    "The download could not start. Check your connection and available storage, then try again.",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -276,7 +414,13 @@ fun UniverseShell() {
         containerColor = ShellBackground,
         bottomBar = {
             if (!isWideLayout) {
-                NavigationBar(containerColor = ShellPanel, contentColor = ShellGold) {
+                NavigationBar(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                        .border(1.dp, ShellGold.copy(alpha = .18f), RoundedCornerShape(28.dp)),
+                    containerColor = ShellPanel.copy(alpha = .98f),
+                    contentColor = ShellGold
+                ) {
                     UniverseTab.entries.forEach { tab ->
                         val icon = HteIcons.navigation(tab.label)
                         NavigationBarItem(
@@ -319,22 +463,29 @@ fun UniverseShell() {
                 Modifier.weight(1f).fillMaxHeight()
                     .padding(end = if (isWideLayout && playerHasTrack) playerPanelWidth + 8.dp else 0.dp)
             ) {
-            UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true })
+            if (selectedTab != UniverseTab.HOME) {
+                UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true })
+            }
             when (selectedTab) {
                 UniverseTab.HOME -> HomeScreen(
-                    tracks = tracks, videos = videos, isLoading = isLoading,
+                    tracks = tracks, artists = artists, releases = releases, videos = videos, isLoading = isLoading,
                     onExplore = { selectedTab = UniverseTab.DISCOVER },
+                    onLibrary = { selectedTab = UniverseTab.LIBRARY },
                     onVideos = { selectedTab = UniverseTab.VIDEOS },
                     onVoice = { showVoiceAssistant = true },
-                    onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onPlayVideo = { selectedVideo = it },
-                    onDownloadTrack = { startDownload(it.audioUrl, it.title, "audio") },
+                    onProfile = { selectedTab = UniverseTab.ACCOUNT },
+                    playlists = playlists, playlistTracks = playlistTracks,
+                    profileName = homeProfileName, profileAvatarUrl = homeProfileAvatar,
+                    onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true },
+                    onPlayPlaylist = ::playPlaylist, onPlayVideo = { selectedVideo = it },
+                    onDownloadTrack = { startDownload(if (it.downloadAllowed && it.downloadBrandingStatus == "ready") it.brandedAudioUrl else null, it.title, "audio", it.id) },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     onDownloadVideo = { startDownload(it.videoUrl, it.title, "video") },
                     onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.DISCOVER -> DiscoverScreen(
                     tracks = tracks, isLoading = isLoading, error = catalogueError,
-                    onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onDownload = { startDownload(it.audioUrl, it.title, "audio") },
+                    onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onDownload = { startDownload(if (it.downloadAllowed && it.downloadBrandingStatus == "ready") it.brandedAudioUrl else null, it.title, "audio", it.id) },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     initialQuery = searchQuery, onQueryChanged = { searchQuery = it }, onRefresh = ::refreshCatalogue
                 )
@@ -348,7 +499,7 @@ fun UniverseShell() {
                     favouriteTracks = tracks.filter { it.id in favouriteTrackIds },
                     onPlayFavourite = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks.filter { track -> track.id in favouriteTrackIds } else listOf(it); playerExpanded = true },
                     onToggleFavourite = ::toggleFavourite,
-                    onDownloadFavourite = { startDownload(it.audioUrl, it.title, "audio") },
+                    onDownloadFavourite = { startDownload(if (it.downloadAllowed && it.downloadBrandingStatus == "ready") it.brandedAudioUrl else null, it.title, "audio", it.id) },
                     onRemoveDownload = { record ->
                         scope.launch {
                             try {
@@ -425,7 +576,7 @@ fun UniverseShell() {
                     expanded = playerExpanded,
                     onExpandedChange = { playerExpanded = it },
                     modifier = Modifier.align(Alignment.BottomCenter),
-                    collapsedBottomInset = 80.dp,
+                    collapsedBottomInset = 96.dp,
                     artwork = { url, artworkModifier ->
                         if (!url.isNullOrBlank()) {
                             AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
@@ -548,16 +699,18 @@ private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, on
 
 @Composable
 private fun HomeScreen(
-    tracks: List<TrackDto>, videos: List<VideoDto>, isLoading: Boolean,
-    onExplore: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit,
-    onPlayTrack: (TrackDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
+    tracks: List<TrackDto>, artists: List<ArtistDto>, releases: List<ReleaseDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
+    playlistTracks: Map<String, List<TrackDto>>, profileName: String?, profileAvatarUrl: String?, isLoading: Boolean,
+    onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit,
+    onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
 ) {
     Universe2026Home(
-        tracks = tracks, videos = videos, isLoading = isLoading,
-        onExplore = onExplore, onVideos = onVideos, onVoice = onVoice,
-        onPlayTrack = onPlayTrack, onPlayVideo = onPlayVideo,
+        tracks = tracks, artists = artists, releases = releases, videos = videos, playlists = playlists, playlistTracks = playlistTracks,
+        profileName = profileName, profileAvatarUrl = profileAvatarUrl, isLoading = isLoading,
+        onExplore = onExplore, onLibrary = onLibrary, onVideos = onVideos, onVoice = onVoice, onProfile = onProfile,
+        onPlayTrack = onPlayTrack, onPlayPlaylist = onPlayPlaylist, onPlayVideo = onPlayVideo,
         onDownloadTrack = onDownloadTrack, onDownloadVideo = onDownloadVideo,
         favouriteTrackIds = favouriteTrackIds, onToggleFavourite = onToggleFavourite,
         onRefresh = onRefresh
@@ -921,8 +1074,8 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
             { mediaController -> if (effectActive) controller = mediaController },
             { error ->
                 if (effectActive) {
-                    playbackError = error.message?.take(160)
-                        ?: "The background audio service could not start."
+                    android.util.Log.e("HTEPlayback", "Background playback service failed", error)
+                    playbackError = "Audio playback is temporarily unavailable. Please try again."
                 }
             }
         )
@@ -946,7 +1099,10 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
             .build()
         val startIndex = if (selectedIndex >= 0) selectedIndex else items.lastIndex
         runCatching { player.setMediaItems(items, startIndex, C.TIME_UNSET); player.prepare(); player.play() }
-            .onFailure { playbackError = it.message?.take(160) ?: "Unable to start this track." }
+            .onFailure { error ->
+                android.util.Log.e("HTEPlayback", "Unable to start selected track", error)
+                playbackError = "This track could not be played right now. Check your connection and try again."
+            }
     }
     LaunchedEffect(controller) {
         while (controller != null) {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-type Track = { id:string; title:string; artist?:string|null; genre?:string|null; audio_url?:string|null; cover_url?:string|null };
+type Track = { id:string; title:string; artist?:string|null; genre?:string|null; audio_url?:string|null; source_url?:string|null; source_platform?:string|null; rights_status?:string|null; download_allowed?:boolean|null; branded_audio_url?:string|null; download_branding_status?:string|null; cover_url?:string|null };
 type Artist = { id:string; name:string; bio?:string|null; image_url?:string|null };
 type Release = { id:string; title:string; release_date?:string|null; cover_url?:string|null; spotify_url?:string|null };
 type Video = { id:string; title:string; artist?:string|null; description?:string|null; video_url:string; thumbnail_url?:string|null };
@@ -18,6 +18,16 @@ function supabase() {
   if (!cfg?.url || !cfg?.publishableKey) throw new Error('The music service is not configured.');
   client = createClient(cfg.url, cfg.publishableKey, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, flowType:'pkce' } });
   return client;
+}
+
+function withTimeout<T>(request:PromiseLike<T>,ms=12000):Promise<T> {
+  let timer:number|undefined;
+  return Promise.race([
+    Promise.resolve(request),
+    new Promise<never>((_,reject)=>{
+      timer=window.setTimeout(()=>reject(new Error('The catalogue request took too long. Check your connection and retry.')),ms);
+    })
+  ]).finally(()=>{if(timer!==undefined)window.clearTimeout(timer)});
 }
 
 function safeHttps(value?:string|null) {
@@ -65,7 +75,7 @@ function formatMediaTime(seconds:number) {
   return mins + ":" + secs;
 }
 
-function AudioPlayer({src,title,downloadUrl,onPlay,onEnded}:{src:string;title:string;downloadUrl:string;onPlay?:()=>void;onEnded?:()=>void}) {
+function AudioPlayer({src,title,downloadUrl,onPlay,onEnded}:{src:string;title:string;downloadUrl?:string;onPlay?:()=>void;onEnded?:()=>void}) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing,setPlaying] = useState(false);
   const [current,setCurrent] = useState(0);
@@ -106,7 +116,7 @@ function AudioPlayer({src,title,downloadUrl,onPlay,onEnded}:{src:string;title:st
       <span className="hte-player-time" aria-live="polite">{failed ? "Unavailable" : duration > 0 ? formatMediaTime(current) + " / " + formatMediaTime(duration) : metadataLoaded ? "Duration unavailable" : "Tap play to load duration"}</span>
     </div>
     {failed && <div className="hte-player-error" role="alert"><p>This audio could not be loaded. Check your connection and try again.</p><button type="button" className="video-retry-button" onClick={()=>void retryPlayback()}>Retry audio ↻</button></div>}
-    <a className="hte-player-download" href={downloadUrl || src} download>Download audio <span aria-hidden="true">↓</span></a>
+    {downloadUrl && <a className="hte-player-download" href={downloadUrl} download={downloadUrl.startsWith('https://') ? true : undefined}>Download HTE-branded audio <span aria-hidden="true">↓</span></a>}
   </div>;
 }
 
@@ -255,10 +265,10 @@ export default function PublicCatalogue() {
       setLoading(true);
       setErrors([]);
       const requests = await Promise.allSettled([
-        db.from('tracks').select('id,title,artist,genre,audio_url,cover_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),
-        db.from('artists').select('id,name,bio,image_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),
-        db.from('releases').select('id,title,release_date,cover_url,spotify_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),
-        db.from('videos').select('id,title,artist,description,video_url,thumbnail_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(40)
+        withTimeout(db.from('tracks').select('id,title,artist,genre,audio_url,source_url,source_platform,rights_status,download_allowed,branded_audio_url,download_branding_status,cover_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),12000),
+        withTimeout(db.from('artists').select('id,name,bio,image_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),12000),
+        withTimeout(db.from('releases').select('id,title,release_date,cover_url,spotify_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),12000),
+        withTimeout(db.from('videos').select('id,title,artist,description,video_url,thumbnail_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(40),12000)
       ]);
       if (!active) return;
       const names = ['tracks','artists','releases','videos'];
@@ -269,7 +279,7 @@ export default function PublicCatalogue() {
           (next as any)[names[index]] = result.value.data || [];
         } else {
           failed.push(names[index]);
-          console.error('HTE catalogue ' + names[index] + ' query failed', result.status === 'rejected' ? result.reason : result.value.error);
+          console.warn('HTE catalogue section unavailable:', names[index]);
         }
       });
       setData(next);
@@ -309,7 +319,7 @@ export default function PublicCatalogue() {
         }
         if (active && currentUserId.current === id) setSyncNotice('');
       } catch (e) {
-        console.error('HTE favourite sync failed',e);
+        console.warn('HTE favourites could not sync.');
         if (active && currentUserId.current === id) setSyncNotice('Your saved tracks remain on this device. Cloud sync is temporarily unavailable.');
       }
     };
@@ -327,7 +337,7 @@ export default function PublicCatalogue() {
       if (active) setUserId(id);
       if (id) void syncFavorites(id);
       else if (active) setSavedIds(readSavedIds(GUEST_SAVED_KEY));
-    }).catch(e => console.error('HTE auth state unavailable',e));
+    }).catch(e => console.warn('HTE account state could not be refreshed.'));
 
     return () => { active = false; subscription.unsubscribe(); };
   },[]);
@@ -357,7 +367,7 @@ export default function PublicCatalogue() {
         : db.from('user_favorites').upsert({user_id:userId,track_id:trackId},{onConflict:'user_id,track_id'});
       void request.then(({error}) => {
         if (error) {
-          console.error('HTE favourite update failed',error);
+          console.warn('HTE favourite change could not be synced.');
           setSyncNotice('A favourite could not sync. It is still saved on this device.');
         } else setSyncNotice('');
       });
@@ -385,7 +395,7 @@ export default function PublicCatalogue() {
     } catch (e) {
       completedPending.current.delete(playKey);
       recordedPlays.current.delete(playKey);
-      console.error('HTE listening history could not be recorded',e);
+      console.warn('HTE listening activity could not be recorded.');
     }
   };
 
@@ -400,7 +410,7 @@ export default function PublicCatalogue() {
       if (error) throw error;
       recordedPlays.current.delete(playKey);
       playHistoryIds.current.delete(playKey);
-    } catch (e) { console.error('HTE listening completion could not be recorded',e); }
+    } catch (e) { console.warn('HTE listening completion could not be recorded.'); }
   };
 
   const queryError = errors.length > 0;
@@ -418,20 +428,27 @@ export default function PublicCatalogue() {
       </div>
       {syncNotice && <p className="catalogue-sync-note" role="status">{syncNotice}</p>}
       {filteredTracks.length ? <div className="card-grid">{filteredTracks.map(track=>{
+        const platform = String(track.source_platform || 'direct').toLowerCase();
         const source = safeHttps(track.audio_url);
-        const spotify = spotifyEmbed(track.audio_url);
+        const externalSource = safeHttps(track.source_url);
+        const spotifyUrl = platform === 'spotify' ? externalSource : track.audio_url;
+        const spotify = spotifyEmbed(spotifyUrl);
+        const isYoutube = platform === 'youtube' && !!externalSource;
         const placeholderTitle = !!spotify && /^spotify track(?:\s+[a-z0-9]{22})?$/i.test(track.title.trim());
         const placeholderArtist = !!spotify && (!track.artist?.trim() || /^(artist details pending|unknown artist|tba|to be announced)$/i.test(track.artist.trim()));
         const isStorageAudio = !!source && new URL(source).pathname.includes('/storage/v1/object/');
-        const isAudioFile = !!source && (isStorageAudio || /\.(mp3|mp4|m4a|wav|aac|ogg|flac|opus|webm)$/i.test(new URL(source).pathname));
-        const downloadUrl = source && isStorageAudio ? (()=>{const url=new URL(source);url.searchParams.set('download','1');return url.href})() : source;
+        const isAudioFile = platform === 'direct' && !!source && (isStorageAudio || /\.(mp3|mp4|m4a|wav|aac|ogg|flac|opus|webm)$/i.test(new URL(source).pathname));
+        const canDownload = platform === 'direct' && track.download_allowed === true && ['owned_or_licensed','legacy_existing'].includes(String(track.rights_status || ''));
+        const brandedMaster = canDownload && track.download_branding_status === 'ready' ? safeHttps(track.branded_audio_url) : '';
+        const downloadPage = (location.pathname.startsWith('/High-tech-entertainment-/') ? '/High-tech-entertainment-/' : '/') + 'download/?track=' + encodeURIComponent(track.id);
+        const downloadUrl = brandedMaster || (canDownload ? downloadPage : '');
         const saved = savedIds.includes(track.id);
         return <article className="media-card" key={track.id}>
           <Cover src={track.cover_url} alt={track.title + ' artwork'} />
           <div className="card-copy">
             <span className="tag">{track.genre || 'Music'}</span>{!placeholderTitle && <h3>{track.title}</h3>}{!placeholderArtist && <p className="muted">{track.artist || 'High-Tech Entertainment'}</p>}
             {spotify && (placeholderTitle || placeholderArtist) && <p className="muted small">Track details are shown in the Spotify player.</p>}
-            {spotify ? <Spotify url={track.audio_url || ''} title={placeholderTitle ? 'this track' : track.title} /> : isAudioFile ? <AudioPlayer src={source} title={track.title} downloadUrl={downloadUrl || source} onPlay={()=>void recordPlay(track.id)} onEnded={()=>void markCompleted(track.id)} /> : source ? <a className="text-link" href={source} target="_blank" rel="noopener noreferrer">Open audio ↗</a> : <p className="muted small">Audio coming soon.</p>}
+            {spotify ? <Spotify url={safeHttps(spotifyUrl) || ''} title={placeholderTitle ? 'this track' : track.title} /> : isYoutube ? <VideoPlayer url={externalSource} title={track.title} /> : isAudioFile ? <AudioPlayer src={source} title={track.title} downloadUrl={downloadUrl} onPlay={()=>void recordPlay(track.id)} onEnded={()=>void markCompleted(track.id)} /> : platform !== 'direct' && externalSource ? <a className="text-link" href={externalSource} target="_blank" rel="noopener noreferrer">Open original platform ↗</a> : source ? <a className="text-link" href={source} target="_blank" rel="noopener noreferrer">Open audio ↗</a> : <p className="muted small">Audio coming soon.</p>}
             <button type="button" className="catalogue-save-button" aria-pressed={saved} onClick={()=>toggleSaved(track.id)}>{saved ? '♥ Saved' : '♡ Save track'}</button>
           </div>
         </article>;

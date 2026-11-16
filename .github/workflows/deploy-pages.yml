@@ -56,7 +56,7 @@ jobs:
           grep -q 'id="auth-mode-toggle"' account/index.html
           grep -q 'id="forgot-password"' account/index.html
           grep -q 'id="password-update-form"' account/index.html
-          grep -q 'assets/app.js?v=20' account/index.html
+          grep -q 'assets/app.js?v=21' account/index.html
           grep -q 'onAuthStateChange' assets/app.js
           grep -q "rpc('hte_is_admin')" assets/app.js
           grep -q 'HTE_SUPABASE_CLIENT' assets/app.js
@@ -64,7 +64,7 @@ jobs:
           grep -q "client.rpc('hte_is_admin')" assets/admin-upload.js
           grep -q 'async function profileLoad' assets/app.js
           grep -q 'profiles.*insert' assets/app.js
-          grep -q 'assets/app.js?v=20' website/src/pages/index.astro
+          grep -q 'assets/app.js?v=21' website/src/pages/index.astro
           grep -q 'assets/videos.js?v=7' website/src/pages/index.astro
           grep -q 'The music catalogue is taking too long to respond' assets/app.js
           grep -Fq "\$\$('[data-start-form],#contact-form,#booking-form,#feedback-form')" assets/app.js
@@ -73,11 +73,22 @@ jobs:
           grep -q 'entertainment-enhancements.css' account/index.html
           grep -q 'id="primary-navigation"' website/src/pages/index.astro
           grep -q 'class="menu-toggle"' website/src/pages/index.astro
-          grep -q 'assets/app.js?v=20' admin/index.html
-          grep -q 'assets/admin-upload.js?v=20261116-timeout1' admin/index.html
+          grep -q 'assets/app.js?v=21' admin/index.html
+          grep -q 'assets/admin-upload.js?v=20261116-catalogue1' admin/index.html
           grep -q 'authNext' website/src/pages/index.astro
           grep -q 'callbackParams.delete' website/src/pages/index.astro
           grep -q 'loadAccountDownloads' assets/app.js
+          grep -q "const base = import.meta.env.BASE_URL.replace" website/src/pages/download.astro
+          grep -q "base: process.env.CF_PAGES === '1' ? '/' : '/High-tech-entertainment-/'" website/astro.config.mjs
+          grep -q 'source_url,source_platform,rights_status,download_allowed,branded_audio_url,download_branding_status' website/src/components/PublicCatalogue.tsx
+          grep -q 'The catalogue request took too long' website/src/components/PublicCatalogue.tsx
+          grep -q 'withTimeout(db.from(' website/src/components/PublicCatalogue.tsx
+          grep -q 'function logDiagnostic(label,error){if(founderAccess)' assets/app.js
+          grep -q 'HTE catalogue section unavailable:' website/src/components/PublicCatalogue.tsx
+          ! grep -Fq "console.error('HTE catalogue '" website/src/components/PublicCatalogue.tsx
+          grep -q 'Download HTE-branded audio' website/src/components/PublicCatalogue.tsx
+          grep -q 'is_root_reference = target.startswith("/")' scripts/build-website.sh
+          ! grep -Fq 'href={downloadUrl || src}' website/src/components/PublicCatalogue.tsx
           test -s admin/index.html
           grep -q 'id="artists"' website/src/components/PublicCatalogue.tsx
           grep -q "from('artists')" website/src/components/PublicCatalogue.tsx

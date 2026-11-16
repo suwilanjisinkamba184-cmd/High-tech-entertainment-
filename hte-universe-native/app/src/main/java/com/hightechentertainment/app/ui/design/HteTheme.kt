@@ -17,10 +17,10 @@ import androidx.compose.ui.unit.sp
 
 object HteColors {
     val Obsidian = Color(0xFF090909)
-    val Panel = Color(0xFF121418)
-    val PanelRaised = Color(0xFF1B1E24)
-    val Hairline = Color(0xFF2A2E36)
-    val Gold = Color(0xFFC5A45A)
+    val Panel = Color(0xFF17161E)
+    val PanelRaised = Color(0xFF211F29)
+    val Hairline = Color(0xFF302D38)
+    val Gold = Color(0xFFE5C158)
     val Silver = Color(0xFFC4CAD2)
     val Muted = Color(0xFF8B929D)
     val Cyan = Color(0xFF4FD1E8)
