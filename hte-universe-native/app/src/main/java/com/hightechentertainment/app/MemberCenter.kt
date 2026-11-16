@@ -21,6 +21,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.dp
@@ -169,8 +173,24 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
             item {
                 MemberCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.AccountCircle, null, tint = MemberGold, modifier = Modifier.size(34.dp))
-                        Spacer(Modifier.width(10.dp))
+                        Box(
+                            Modifier.size(64.dp).clip(CircleShape)
+                                .background(MemberGold.copy(alpha = .12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val avatarUrl = profile?.avatarUrl?.takeIf(String::isNotBlank)
+                            if (avatarUrl != null) {
+                                AsyncImage(
+                                    model = avatarUrl,
+                                    contentDescription = "Account profile photo",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize().clip(CircleShape)
+                                )
+                            } else {
+                                Icon(Icons.Outlined.AccountCircle, null, tint = MemberGold, modifier = Modifier.size(42.dp))
+                            }
+                        }
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(profile?.displayName?.takeIf { it.isNotBlank() } ?: "HTE Member", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                             Text(auth.currentUserOrNull()?.email ?: email, color = MemberMuted, fontSize = 12.sp)
