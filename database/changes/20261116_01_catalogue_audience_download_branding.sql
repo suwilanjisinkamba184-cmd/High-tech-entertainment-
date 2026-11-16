@@ -43,6 +43,9 @@ CREATE INDEX IF NOT EXISTS hte_audience_events_visitor_created_idx
 CREATE INDEX IF NOT EXISTS hte_audience_events_track_created_idx
   ON public.hte_audience_events (track_id, created_at DESC)
   WHERE track_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS hte_audience_events_artist_created_idx
+  ON public.hte_audience_events (artist_id, created_at DESC)
+  WHERE artist_id IS NOT NULL;
 
 ALTER TABLE public.hte_audience_events ENABLE ROW LEVEL SECURITY;
 
