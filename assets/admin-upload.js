@@ -1,4 +1,5 @@
 (()=>{'use strict';
+const withTimeout=(promise,ms,message)=>{let timer;return Promise.race([Promise.resolve(promise),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),ms)})]).finally(()=>clearTimeout(timer))};
 const form=document.getElementById('track-form');
 if(!form)return;
 document.addEventListener('submit',async function(event){
@@ -15,11 +16,11 @@ document.addEventListener('submit',async function(event){
     if(!window.supabase||!config.url||!config.publishableKey)throw new Error('The upload service did not load. Refresh the page and try again.');
     const client=window.HTE_SUPABASE_CLIENT;if(!client)throw new Error('The shared High-Tech Entertainment session could not be restored. Reload Founder Studio and try again.');
     say('Checking founder access…');
-    const {data:auth,error:authError}=await client.auth.getSession();
+    const {data:auth,error:authError}=await withTimeout(client.auth.getSession(),12000,'Founder sign-in check timed out. Reload and retry.');
     if(authError)throw authError;
     const user=auth.session?.user;
     if(!user)throw new Error('Your founder session is not active. Sign in again and retry.');
-    const {data:founderAllowed,error:founderError}=await client.rpc('hte_is_admin');
+    const {data:founderAllowed,error:founderError}=await withTimeout(client.rpc('hte_is_admin'),12000,'Founder permission check timed out. Reload and retry.');
     if(founderError)throw founderError;
     if(founderAllowed!==true)throw new Error('This account is not authorised to upload music to Founder Studio.');
     const data=new FormData(form);
@@ -33,12 +34,12 @@ document.addEventListener('submit',async function(event){
     const contentType=(file.type&&file.type!=='application/octet-stream')?file.type:mimeByExt[ext];
     say('Uploading audio file… This may take a moment.');
     const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-    const {data:stored,error:storageError}=await client.storage.from('hte-audio').upload(user.id+'/'+Date.now()+'-'+safeName,file,{upsert:false,contentType});
+    const {data:stored,error:storageError}=await withTimeout(client.storage.from('hte-audio').upload(user.id+'/'+Date.now()+'-'+safeName,file,{upsert:false,contentType}),90000,'Audio upload timed out. Check your connection before retrying.');
     if(storageError)throw storageError;
     uploadedPath=stored.path;
     const audioUrl=client.storage.from('hte-audio').getPublicUrl(stored.path).data.publicUrl;
     say('Saving track details…');
-    const {error:dbError}=await client.from('tracks').insert({
+    const {error:dbError}=await withTimeout(client.from('tracks').insert({
       title:String(data.get('title')||'').trim(),
       artist:String(data.get('artist')||'').trim(),
       uploader:String(data.get('uploader')||'High Tech Entertainment').trim(),
@@ -46,7 +47,7 @@ document.addEventListener('submit',async function(event){
       cover_url:String(data.get('cover_url')||'').trim()||null,
       audio_url:audioUrl,
       is_published:data.get('is_published')==='on'
-    });
+    }),15000,'Track details could not be saved before the request timed out.')
     if(dbError)throw dbError;
     recordSaved=true;
     form.reset();

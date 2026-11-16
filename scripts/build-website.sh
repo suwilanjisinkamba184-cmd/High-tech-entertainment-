@@ -84,7 +84,7 @@ required_homepage_markers = (
     "HTE Universe.",
     "topbar",
     "high-tech-logo.svg",
-    "assets/app.js?v=18",
+    "assets/app.js?v=20",
     "assets/videos.js?v=7",
     "public-tracks",
     "supabase-config.js",
@@ -244,6 +244,13 @@ if syntax_failures:
 
 app_js = (root / "assets/app.js").read_text(encoding="utf-8")
 video_js = (root / "assets/videos.js").read_text(encoding="utf-8")
+selector = "$$('[data-start-form],#contact-form,#booking-form,#feedback-form')"
+if selector not in app_js:
+    raise SystemExit("Shared form initialization must use querySelectorAll.")
+if "$('[data-start-form],#contact-form,#booking-form,#feedback-form')" in app_js.replace(selector, ""):
+    raise SystemExit("Shared form initialization contains the fatal single-element selector.")
+if "function withTimeout(promise,ms,message)" not in app_js:
+    raise SystemExit("Shared Supabase operations must have bounded timeouts.")
 if "The music catalogue is taking too long to respond" not in app_js:
     raise SystemExit("Public music catalogue timeout fallback is missing.")
 if "HTE video catalogue request timed out after 12 seconds" not in video_js:
