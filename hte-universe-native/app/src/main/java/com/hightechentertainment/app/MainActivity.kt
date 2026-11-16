@@ -159,7 +159,9 @@ private fun UniverseSplash(onFinished: () -> Unit) {
                 elapsed++
             }
         }
-        onFinished()
+    }
+    LaunchedEffect(elapsed) {
+        if (elapsed >= 15) onFinished()
     }
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
         listOf(Color(0xFF17130B), Obsidian, Color(0xFF050608))))) {
