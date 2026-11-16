@@ -58,6 +58,8 @@ import androidx.media3.ui.PlayerView
 import androidx.media3.ui.AspectRatioFrameLayout
 import io.github.jan.supabase.auth.auth
 import com.hightechentertainment.app.data.AuthRepository
+import com.hightechentertainment.app.data.ArtistDto
+import com.hightechentertainment.app.data.ReleaseDto
 import com.hightechentertainment.app.data.AudienceAnalyticsRepository
 import com.hightechentertainment.app.data.EntertainmentCatalogRepository
 import com.hightechentertainment.app.data.MemberRepository
@@ -75,6 +77,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.TimeoutCancellationException
@@ -85,6 +89,13 @@ private val ShellMuted = Color(0xFF8B929D)
 private val ShellPanel = Color(0xFF17161E)
 private val ShellBackground = Color(0xFF0B0A0F)
 
+private data class CatalogueSnapshot(
+    val tracks: List<TrackDto>,
+    val artists: List<ArtistDto>,
+    val releases: List<ReleaseDto>,
+    val videos: List<VideoDto>
+)
+
 private enum class UniverseTab(val label: String) {
     HOME("Home"), DISCOVER("Discover"), VIDEOS("Videos"), LIBRARY("Library"), ACCOUNT("Account")
 }
@@ -93,6 +104,8 @@ private enum class UniverseTab(val label: String) {
 fun UniverseShell() {
     var selectedTab by remember { mutableStateOf(UniverseTab.HOME) }
     var tracks by remember { mutableStateOf<List<TrackDto>>(emptyList()) }
+    var artists by remember { mutableStateOf<List<ArtistDto>>(emptyList()) }
+    var releases by remember { mutableStateOf<List<ReleaseDto>>(emptyList()) }
     var videos by remember { mutableStateOf<List<VideoDto>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var catalogueError by remember { mutableStateOf<String?>(null) }
@@ -228,12 +241,25 @@ fun UniverseShell() {
             isLoading = true
             catalogueError = null
             try {
-                withTimeout(15_000) {
-                    val loadedTracks = TrackRepository().getPublishedTracks()
-                    val loadedVideos = EntertainmentCatalogRepository().getPublishedVideos()
-                    tracks = loadedTracks
-                    videos = loadedVideos
+                val snapshot = withTimeout(20_000) {
+                    coroutineScope {
+                        val catalogue = EntertainmentCatalogRepository()
+                        val trackRequest = async { TrackRepository().getPublishedTracks() }
+                        val artistRequest = async { catalogue.getPublishedArtists() }
+                        val releaseRequest = async { catalogue.getPublishedReleases() }
+                        val videoRequest = async { catalogue.getPublishedVideos() }
+                        CatalogueSnapshot(
+                            tracks = trackRequest.await(),
+                            artists = artistRequest.await(),
+                            releases = releaseRequest.await(),
+                            videos = videoRequest.await()
+                        )
+                    }
                 }
+                tracks = snapshot.tracks
+                artists = snapshot.artists
+                releases = snapshot.releases
+                videos = snapshot.videos
             } catch (_: TimeoutCancellationException) {
                 catalogueError = "The catalogue is taking too long to respond. Check your connection and retry."
             } catch (cancelled: CancellationException) {
@@ -442,7 +468,7 @@ fun UniverseShell() {
             }
             when (selectedTab) {
                 UniverseTab.HOME -> HomeScreen(
-                    tracks = tracks, videos = videos, isLoading = isLoading,
+                    tracks = tracks, artists = artists, releases = releases, videos = videos, isLoading = isLoading,
                     onExplore = { selectedTab = UniverseTab.DISCOVER },
                     onLibrary = { selectedTab = UniverseTab.LIBRARY },
                     onVideos = { selectedTab = UniverseTab.VIDEOS },
@@ -673,7 +699,7 @@ private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, on
 
 @Composable
 private fun HomeScreen(
-    tracks: List<TrackDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
+    tracks: List<TrackDto>, artists: List<ArtistDto>, releases: List<ReleaseDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
     playlistTracks: Map<String, List<TrackDto>>, profileName: String?, profileAvatarUrl: String?, isLoading: Boolean,
     onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
@@ -681,7 +707,7 @@ private fun HomeScreen(
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
 ) {
     Universe2026Home(
-        tracks = tracks, videos = videos, playlists = playlists, playlistTracks = playlistTracks,
+        tracks = tracks, artists = artists, releases = releases, videos = videos, playlists = playlists, playlistTracks = playlistTracks,
         profileName = profileName, profileAvatarUrl = profileAvatarUrl, isLoading = isLoading,
         onExplore = onExplore, onLibrary = onLibrary, onVideos = onVideos, onVoice = onVoice, onProfile = onProfile,
         onPlayTrack = onPlayTrack, onPlayPlaylist = onPlayPlaylist, onPlayVideo = onPlayVideo,
