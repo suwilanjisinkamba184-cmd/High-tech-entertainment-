@@ -46,7 +46,7 @@ private val U26Line = Color(0xFF302D38)
 fun Universe2026Home(
     tracks: List<TrackDto>, artists: List<ArtistDto>, releases: List<ReleaseDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
     playlistTracks: Map<String, List<TrackDto>>, profileName: String?, profileAvatarUrl: String?, isLoading: Boolean,
-    onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit, onSettings: () -> Unit,
+    onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit, onSettings: () -> Unit, onArtistClick: (ArtistDto) -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
@@ -143,7 +143,7 @@ fun Universe2026Home(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     U26SectionHeading("MEET THE ARTISTS", "DISCOVER MUSIC", onExplore)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(artists, key = { it.id }) { artist -> U26ArtistCard(artist, wide) }
+                        items(artists, key = { it.id }) { artist -> U26ArtistCard(artist, wide) { onArtistClick(artist) } }
                     }
                 }
             }
@@ -334,9 +334,9 @@ fun Universe2026Home(
 }
 
 @Composable
-private fun U26ArtistCard(artist: ArtistDto, wide: Boolean) {
+private fun U26ArtistCard(artist: ArtistDto, wide: Boolean, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.width(if (wide) 190.dp else 156.dp),
+        modifier = Modifier.width(if (wide) 190.dp else 156.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = U26Panel)
     ) {

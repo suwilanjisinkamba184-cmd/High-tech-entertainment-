@@ -35,9 +35,12 @@ data class VideoDto(
 
 /** Published catalogue queries only. Supabase RLS remains the source of truth for access. */
 class EntertainmentCatalogRepository {
-    suspend fun getPublishedArtists(): List<ArtistDto> =
+    /** Artist profiles are intentionally discoverable while in draft, per HTE catalogue requirements.
+     * Supabase row-level security remains the source of truth for which records the public client can read.
+     */
+    suspend fun getVisibleArtists(): List<ArtistDto> =
         SupabaseClientProvider.client.from("artists")
-            .select { filter { eq("is_published", true) } }
+            .select()
             .decodeList<ArtistDto>()
 
     suspend fun getPublishedReleases(): List<ReleaseDto> =

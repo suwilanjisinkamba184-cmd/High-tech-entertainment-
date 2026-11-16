@@ -112,6 +112,7 @@ fun UniverseShell() {
     var selectedTrack by remember { mutableStateOf<TrackDto?>(null) }
     var selectedTrackQueue by remember { mutableStateOf<List<TrackDto>?>(null) }
     var selectedVideo by remember { mutableStateOf<VideoDto?>(null) }
+    var selectedArtist by remember { mutableStateOf<ArtistDto?>(null) }
     var showVoiceAssistant by remember { mutableStateOf(false) }
     var showSettingsHub by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -248,7 +249,7 @@ fun UniverseShell() {
                     coroutineScope {
                         val catalogue = EntertainmentCatalogRepository()
                         val trackRequest = async { TrackRepository().getPublishedTracks() }
-                        val artistRequest = async { catalogue.getPublishedArtists() }
+                        val artistRequest = async { catalogue.getVisibleArtists() }
                         val releaseRequest = async { catalogue.getPublishedReleases() }
                         val videoRequest = async { catalogue.getPublishedVideos() }
                         CatalogueSnapshot(
@@ -492,6 +493,7 @@ fun UniverseShell() {
                     onVoice = { showVoiceAssistant = true },
                     onProfile = { selectedTab = UniverseTab.ACCOUNT },
                     onSettings = { showSettingsHub = true },
+                    onArtistClick = { selectedArtist = it },
                     playlists = playlists, playlistTracks = playlistTracks,
                     profileName = homeProfileName, profileAvatarUrl = homeProfileAvatar,
                     onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true },
@@ -502,7 +504,8 @@ fun UniverseShell() {
                     onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.DISCOVER -> DiscoverScreen(
-                    tracks = tracks, isLoading = isLoading, error = catalogueError,
+                    tracks = tracks, artists = artists, isLoading = isLoading, error = catalogueError,
+                    onArtistClick = { selectedArtist = it },
                     onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onDownload = { startDownload(if (it.downloadAllowed && it.downloadBrandingStatus == "ready") it.brandedAudioUrl else null, it.title, "audio", it.id) },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     initialQuery = searchQuery, onQueryChanged = { searchQuery = it }, onRefresh = ::refreshCatalogue
@@ -650,6 +653,22 @@ fun UniverseShell() {
             }
         }
     }
+    selectedArtist?.let { artist ->
+        ArtistProfileDialog(
+            artist = artist,
+            tracks = tracks.filter { it.artist.equals(artist.name, ignoreCase = true) },
+            favouriteTrackIds = favouriteTrackIds,
+            onPlayTrack = { track ->
+                selectedTrack = track
+                selectedTrackQueue = if (autoplayNext) tracks.filter { it.artist.equals(artist.name, true) } else listOf(track)
+                playerExpanded = true
+                selectedArtist = null
+            },
+            onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id) },
+            onToggleFavourite = ::toggleFavourite,
+            onDismiss = { selectedArtist = null }
+        )
+    }
     selectedVideo?.let { VideoPlayerDialog(video = it, quality = videoQuality, onDismiss = { selectedVideo = null }) }
     if (showVoiceAssistant) {
         VoiceAssistantDialog(
@@ -745,7 +764,7 @@ private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, on
 private fun HomeScreen(
     tracks: List<TrackDto>, artists: List<ArtistDto>, releases: List<ReleaseDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
     playlistTracks: Map<String, List<TrackDto>>, profileName: String?, profileAvatarUrl: String?, isLoading: Boolean,
-    onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit, onSettings: () -> Unit,
+    onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit, onSettings: () -> Unit, onArtistClick: (ArtistDto) -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
@@ -753,7 +772,7 @@ private fun HomeScreen(
     Universe2026Home(
         tracks = tracks, artists = artists, releases = releases, videos = videos, playlists = playlists, playlistTracks = playlistTracks,
         profileName = profileName, profileAvatarUrl = profileAvatarUrl, isLoading = isLoading,
-        onExplore = onExplore, onLibrary = onLibrary, onVideos = onVideos, onVoice = onVoice, onProfile = onProfile, onSettings = onSettings,
+        onExplore = onExplore, onLibrary = onLibrary, onVideos = onVideos, onVoice = onVoice, onProfile = onProfile, onSettings = onSettings, onArtistClick = onArtistClick,
         onPlayTrack = onPlayTrack, onPlayPlaylist = onPlayPlaylist, onPlayVideo = onPlayVideo,
         onDownloadTrack = onDownloadTrack, onDownloadVideo = onDownloadVideo,
         favouriteTrackIds = favouriteTrackIds, onToggleFavourite = onToggleFavourite,
@@ -763,8 +782,8 @@ private fun HomeScreen(
 
 @Composable
 private fun DiscoverScreen(
-    tracks: List<TrackDto>, isLoading: Boolean, error: String?,
-    onPlay: (TrackDto) -> Unit, onDownload: (TrackDto) -> Unit,
+    tracks: List<TrackDto>, artists: List<ArtistDto>, isLoading: Boolean, error: String?,
+    onArtistClick: (ArtistDto) -> Unit, onPlay: (TrackDto) -> Unit, onDownload: (TrackDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit,
     initialQuery: String, onQueryChanged: (String) -> Unit, onRefresh: () -> Unit
 ) {
@@ -772,6 +791,9 @@ private fun DiscoverScreen(
     var selectedGenre by remember { mutableStateOf("All") }
     LaunchedEffect(initialQuery) { query = initialQuery }
     val genres = listOf("All") + tracks.mapNotNull { it.genre?.takeIf(String::isNotBlank) }.distinct().sorted()
+    val matchingArtists = artists.filter { artist ->
+        query.isBlank() || artist.name.contains(query.trim(), true) || artist.bio.orEmpty().contains(query.trim(), true)
+    }
     val filtered = tracks.filter { track ->
         val q = query.trim()
         (q.isBlank() || track.title.contains(q, true) || track.artist.contains(q, true) || track.genre.orEmpty().contains(q, true)) &&
@@ -836,10 +858,84 @@ private fun DiscoverScreen(
             }
         }
         if (error != null) item { Text(error, color = ShellGold, fontSize = 12.sp) }
-        if (filtered.isEmpty()) item {
-            EmptyCatalogueState(if (isLoading) "Loading the HTE catalogue…" else "No tracks match this search yet.", isLoading, onRefresh)
-        } else items(filtered, key = { it.id }) { track ->
+        if (matchingArtists.isNotEmpty()) {
+            item { Text("ARTISTS", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold) }
+            items(matchingArtists, key = { "artist-${it.id}" }) { artist -> ArtistResultRow(artist) { onArtistClick(artist) } }
+        }
+        if (filtered.isEmpty() && matchingArtists.isEmpty()) item {
+            EmptyCatalogueState(if (isLoading) "Loading the HTE catalogue…" else "No tracks or artists match this search yet.", isLoading, onRefresh)
+        } else items(filtered, key = { "track-${it.id}" }) { track ->
             TrackRow(track, { onPlay(track) }, { onDownload(track) }, track.id in favouriteTrackIds, { onToggleFavourite(track) })
+        }
+    }
+}
+
+@Composable
+private fun ArtistResultRow(artist: ArtistDto, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = ShellPanel),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(58.dp).clip(CircleShape).background(ShellGold.copy(alpha = .12f)), contentAlignment = Alignment.Center) {
+                if (!artist.imageUrl.isNullOrBlank()) AsyncImage(
+                    model = artist.imageUrl, contentDescription = "${artist.name} artist image",
+                    contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
+                ) else Icon(Icons.Outlined.Person, null, tint = ShellGold, modifier = Modifier.size(27.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(artist.name, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(artist.bio?.takeIf(String::isNotBlank) ?: "High-Tech Entertainment artist", color = ShellMuted, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            Icon(Icons.Outlined.ChevronRight, "View artist", tint = ShellGold)
+        }
+    }
+}
+
+@Composable
+private fun ArtistProfileDialog(
+    artist: ArtistDto,
+    tracks: List<TrackDto>,
+    favouriteTrackIds: Set<String>,
+    onPlayTrack: (TrackDto) -> Unit,
+    onDownloadTrack: (TrackDto) -> Unit,
+    onToggleFavourite: (TrackDto) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(Modifier.fillMaxSize(), color = ShellBackground) {
+            Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("ARTIST PROFILE", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close artist profile", tint = ShellSilver) }
+                }
+                LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    item {
+                        Box(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(22.dp)).background(ShellPanel), contentAlignment = Alignment.Center) {
+                            if (!artist.imageUrl.isNullOrBlank()) AsyncImage(
+                                model = artist.imageUrl, contentDescription = "${artist.name} artist artwork",
+                                contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
+                            ) else Icon(Icons.Outlined.Person, null, tint = ShellGold, modifier = Modifier.size(70.dp))
+                        }
+                    }
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(artist.name, color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Bold)
+                            Text(artist.bio?.takeIf(String::isNotBlank) ?: "Artist · High-Tech Entertainment", color = ShellSilver, fontSize = 12.sp)
+                        }
+                    }
+                    item { Text("MUSIC BY ${artist.name.uppercase()}", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.6.sp, fontWeight = FontWeight.Bold) }
+                    if (tracks.isEmpty()) item {
+                        Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(16.dp)) {
+                            Text("This artist profile is available. Music will appear here when tracks are added to the catalogue.", color = ShellSilver, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().padding(16.dp))
+                        }
+                    } else items(tracks, key = { "artist-track-${it.id}" }) { track ->
+                        TrackRow(track, { onPlayTrack(track) }, { onDownloadTrack(track) }, track.id in favouriteTrackIds, { onToggleFavourite(track) })
+                    }
+                }
+            }
         }
     }
 }
