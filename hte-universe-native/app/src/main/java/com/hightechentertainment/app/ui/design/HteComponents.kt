@@ -45,9 +45,9 @@ fun HteChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Mod
         label = { Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1) },
         colors = FilterChipDefaults.filterChipColors(
             containerColor = HteColors.PanelRaised, labelColor = HteColors.Silver,
-            selectedContainerColor = HteColors.Gold.copy(alpha = .2f), selectedLabelColor = HteColors.Gold
+            selectedContainerColor = HteColors.NeonLime.copy(alpha = .16f), selectedLabelColor = HteColors.NeonLime
         ),
-        border = FilterChipDefaults.filterChipBorder(true, selected, borderColor = HteColors.Hairline, selectedBorderColor = HteColors.Gold.copy(alpha = .6f))
+        border = FilterChipDefaults.filterChipBorder(true, selected, borderColor = HteColors.Hairline, selectedBorderColor = HteColors.NeonLime.copy(alpha = .58f))
     )
 }
 
