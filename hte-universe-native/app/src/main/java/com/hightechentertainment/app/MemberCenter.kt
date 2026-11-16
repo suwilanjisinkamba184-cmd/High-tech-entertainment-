@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 private val MemberGold = Color(0xFFD6B15E)
-private val MemberPanel = Color(0xFF121418)
+private val MemberPanel = Color(0xFF15111B)
 private val MemberMuted = Color(0xFF8B929D)
 
 @Composable
@@ -88,7 +88,7 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
     LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MemberPanel), shape = RoundedCornerShape(22.dp)) {
-                Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF302514), MemberPanel, Color(0xFF0C1118)))).padding(18.dp)) {
+                Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF3A1746), MemberPanel, Color(0xFF0C1118)))).padding(18.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Outlined.AccountCircle, null, tint = MemberGold, modifier = Modifier.size(34.dp))
