@@ -59,6 +59,7 @@ import io.github.jan.supabase.auth.auth
 import com.hightechentertainment.app.data.AuthRepository
 import com.hightechentertainment.app.data.EntertainmentCatalogRepository
 import com.hightechentertainment.app.data.MemberRepository
+import com.hightechentertainment.app.data.PlaylistDto
 import com.hightechentertainment.app.data.SupabaseClientProvider
 import com.hightechentertainment.app.data.TrackDto
 import com.hightechentertainment.app.data.TrackRepository
@@ -189,6 +190,8 @@ fun UniverseShell() {
     val autoplayNext = remember(settingsRevision) { settingsStore.autoplayNext }
     var downloads by remember { mutableStateOf<List<OfflineDownloadRecord>>(emptyList()) }
     var favouriteTrackIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var playlists by remember { mutableStateOf<List<PlaylistDto>>(emptyList()) }
+    var playlistTracks by remember { mutableStateOf<Map<String, List<TrackDto>>>(emptyMap()) }
     val configured = BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()
 
     fun refreshCatalogue() {
@@ -235,6 +238,42 @@ fun UniverseShell() {
                 Toast.makeText(context, "Your favourites could not be refreshed. Please try again.", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    LaunchedEffect(configured, selectedTab, tracks) {
+        if (configured && selectedTab == UniverseTab.HOME) {
+            try {
+                val repository = MemberRepository()
+                val result = withContext(Dispatchers.IO) {
+                    val savedPlaylists = repository.getMyPlaylists()
+                    val trackMap = savedPlaylists.associate { playlist ->
+                        playlist.id to repository.getPlaylistTrackIds(playlist.id)
+                            .mapNotNull { trackId -> tracks.firstOrNull { it.id == trackId } }
+                    }
+                    savedPlaylists to trackMap
+                }
+                playlists = result.first
+                playlistTracks = result.second
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Throwable) {
+                // Signed-out visitors and members without playlists see no private playlist rail.
+                playlists = emptyList()
+                playlistTracks = emptyMap()
+            }
+        }
+    }
+
+    fun playPlaylist(playlist: PlaylistDto) {
+        val queue = playlistTracks[playlist.id].orEmpty()
+            .filter { !it.audioUrl.isNullOrBlank() }
+        if (queue.isEmpty()) {
+            Toast.makeText(context, "This playlist has no playable published tracks yet.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        selectedTrack = queue.first()
+        selectedTrackQueue = queue
+        playerExpanded = true
     }
 
     fun toggleFavourite(track: TrackDto) {
@@ -327,7 +366,9 @@ fun UniverseShell() {
                     onVideos = { selectedTab = UniverseTab.VIDEOS },
                     onVoice = { showVoiceAssistant = true },
                     onProfile = { selectedTab = UniverseTab.ACCOUNT },
-                    onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onPlayVideo = { selectedVideo = it },
+                    playlists = playlists, playlistTracks = playlistTracks,
+                    onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true },
+                    onPlayPlaylist = ::playPlaylist, onPlayVideo = { selectedVideo = it },
                     onDownloadTrack = { startDownload(it.audioUrl, it.title, "audio") },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     onDownloadVideo = { startDownload(it.videoUrl, it.title, "video") },
@@ -549,16 +590,17 @@ private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, on
 
 @Composable
 private fun HomeScreen(
-    tracks: List<TrackDto>, videos: List<VideoDto>, isLoading: Boolean,
+    tracks: List<TrackDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
+    playlistTracks: Map<String, List<TrackDto>>, isLoading: Boolean,
     onExplore: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit,
-    onPlayTrack: (TrackDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
+    onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
 ) {
     Universe2026Home(
-        tracks = tracks, videos = videos, isLoading = isLoading,
+        tracks = tracks, videos = videos, playlists = playlists, playlistTracks = playlistTracks, isLoading = isLoading,
         onExplore = onExplore, onVideos = onVideos, onVoice = onVoice, onProfile = onProfile,
-        onPlayTrack = onPlayTrack, onPlayVideo = onPlayVideo,
+        onPlayTrack = onPlayTrack, onPlayPlaylist = onPlayPlaylist, onPlayVideo = onPlayVideo,
         onDownloadTrack = onDownloadTrack, onDownloadVideo = onDownloadVideo,
         favouriteTrackIds = favouriteTrackIds, onToggleFavourite = onToggleFavourite,
         onRefresh = onRefresh
