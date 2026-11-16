@@ -113,11 +113,10 @@ class MemberRepository {
         val metadata = user.userMetadata
         fun metadataText(vararg keys: String): String? =
             keys.firstNotNullOfOrNull { key ->
-                metadata?.get(key)?.jsonPrimitive?.contentOrNull
-                    ?.trim()
-                    ?.takeIf { it.startsWith("https://", ignoreCase = true) || it.startsWith("http://", ignoreCase = true) }
+                metadata?.get(key)?.jsonPrimitive?.contentOrNull?.trim()?.takeIf(String::isNotBlank)
             }
         val googleAvatar = metadataText("avatar_url", "picture", "photo_url", "photoUrl")
+            ?.takeIf { it.startsWith("https://", ignoreCase = true) || it.startsWith("http://", ignoreCase = true) }
         val googleName = metadataText("full_name", "name", "given_name")
 
         return when {
