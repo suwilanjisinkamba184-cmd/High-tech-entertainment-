@@ -325,7 +325,13 @@ fun UniverseShell() {
         containerColor = ShellBackground,
         bottomBar = {
             if (!isWideLayout) {
-                NavigationBar(containerColor = ShellPanel, contentColor = ShellGold) {
+                NavigationBar(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                        .border(1.dp, ShellGold.copy(alpha = .18f), RoundedCornerShape(28.dp)),
+                    containerColor = ShellPanel.copy(alpha = .98f),
+                    contentColor = ShellGold
+                ) {
                     UniverseTab.entries.forEach { tab ->
                         val icon = HteIcons.navigation(tab.label)
                         NavigationBarItem(
@@ -478,7 +484,7 @@ fun UniverseShell() {
                     expanded = playerExpanded,
                     onExpandedChange = { playerExpanded = it },
                     modifier = Modifier.align(Alignment.BottomCenter),
-                    collapsedBottomInset = 80.dp,
+                    collapsedBottomInset = 96.dp,
                     artwork = { url, artworkModifier ->
                         if (!url.isNullOrBlank()) {
                             AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
