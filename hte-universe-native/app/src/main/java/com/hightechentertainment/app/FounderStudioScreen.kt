@@ -41,12 +41,14 @@ private val FounderGold = Color(0xFFD6B15E)
 private val FounderPanel = Color(0xFF121418)
 private val FounderMuted = Color(0xFF8B929D)
 
+@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FounderStudioScreen(onClose: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val repository = remember { FounderStudioRepository() }
-    val tabs = listOf("Overview", "Music", "Videos", "Artists", "Releases", "Inbox", "AI Ads", "Campaigns", "Settings")
+    val tabs = listOf("Overview", "Music catalogue", "Video library", "Artists", "Releases", "Enquiries inbox", "AI Ad Studio", "AI Marketing Agent", "Settings")
     var selectedTab by remember { mutableStateOf(0) }
     var tracks by remember { mutableStateOf<List<FounderTrackDto>>(emptyList()) }
     var videos by remember { mutableStateOf<List<FounderVideoDto>>(emptyList()) }
@@ -222,8 +224,8 @@ fun FounderStudioScreen(onClose: () -> Unit) {
                                 OutlinedButton(onClick = { selectedTab = 4 }, modifier = Modifier.weight(1f)) { Icon(Icons.Outlined.Album, null); Spacer(Modifier.width(5.dp)); Text("Release", fontSize = 11.sp) }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(onClick = { selectedTab = 6 }, modifier = Modifier.weight(1f)) { Icon(Icons.Outlined.RecordVoiceOver, null); Spacer(Modifier.width(5.dp)); Text("AI Ad", fontSize = 11.sp) }
-                                OutlinedButton(onClick = { selectedTab = 7 }, modifier = Modifier.weight(1f)) { Icon(Icons.Outlined.Campaign, null); Spacer(Modifier.width(5.dp)); Text("Campaign", fontSize = 11.sp) }
+                                OutlinedButton(onClick = { selectedTab = 6 }, modifier = Modifier.weight(1f)) { Icon(Icons.Outlined.RecordVoiceOver, null); Spacer(Modifier.width(5.dp)); Text("AI Ad Studio", fontSize = 11.sp) }
+                                OutlinedButton(onClick = { selectedTab = 7 }, modifier = Modifier.weight(1f)) { Icon(Icons.Outlined.Campaign, null); Spacer(Modifier.width(5.dp)); Text("Marketing", fontSize = 11.sp) }
                             }
                         }
                     }
@@ -365,13 +367,13 @@ fun FounderStudioScreen(onClose: () -> Unit) {
                 if (releases.isEmpty()) item { Text("No releases have been added yet.", color = FounderMuted, fontSize = 11.sp) }
             }
             5 -> LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) {
-                item { Row(verticalAlignment = Alignment.CenterVertically) { Text("WEBSITE INBOX", color = FounderGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f)); IconButton(onClick = { loadInbox() }) { Icon(Icons.Outlined.Refresh, "Refresh inbox", tint = FounderGold) } } }
+                item { Row(verticalAlignment = Alignment.CenterVertically) { Text("ENQUIRIES INBOX", color = FounderGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f)); IconButton(onClick = { loadInbox() }) { Icon(Icons.Outlined.Refresh, "Refresh inbox", tint = FounderGold) } } }
                 if (isLoadingModule) item { CircularProgressIndicator(color = FounderGold, modifier = Modifier.size(22.dp)) }
                 if (!isLoadingModule && inboxMessages.isEmpty()) item { Text("No website enquiries yet.", color = FounderMuted, fontSize = 11.sp) }
                 items(inboxMessages, key = { it.id }) { message -> FounderInboxCard(message, context) }
             }
             6 -> LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) {
-                item { Text("AI AUDIO AD STUDIO", color = FounderGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
+                item { Text("AI AD STUDIO", color = FounderGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
                 item { OutlinedTextField(adTitle, { adTitle = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Advertisement title") }, singleLine = true) }
                 item { OutlinedTextField(adScript, { if (it.length <= 2500) adScript = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Presenter script") }, minLines = 5, maxLines = 8) }
                 item { Text("${adScript.length} / 2,500 characters", color = FounderMuted, fontSize = 10.sp) }
@@ -421,7 +423,7 @@ fun FounderStudioScreen(onClose: () -> Unit) {
                 if (audioAds.isEmpty() && !isLoadingModule) item { Text("No generated advertisements yet. Choose a voice and create your first draft.", color = FounderMuted, fontSize = 11.sp) }
             }
             7 -> LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) {
-                item { Text("CAMPAIGN PLANNER", color = FounderGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
+                item { Text("AI MARKETING AGENT", color = FounderGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
                 item { OutlinedTextField(campaignTitle, { campaignTitle = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Campaign title") }, singleLine = true) }
                 item { OutlinedTextField(campaignMessage, { campaignMessage = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Campaign message") }, minLines = 4) }
                 item {

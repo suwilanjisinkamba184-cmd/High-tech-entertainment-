@@ -20,6 +20,10 @@ This repair extends the original mini-player and Google-profile fixes into a coo
 - **Settings:** shared Settings hub is accessible from Home and the shared top bar; Reduce Motion updates the theme immediately. The download-quality control is presented as unavailable until alternate downloadable masters exist, rather than storing a no-op selection.
 - **Error handling:** normal Account, Founder Studio, Settings and Voice Companion screens show friendly actionable messages instead of raw service exceptions. Technical details remain for diagnostics.
 
+## Founder Studio parity with the web console
+
+The phone Studio now follows the web console navigation: Overview, Music catalogue, Video library, Artists, Releases, Enquiries inbox, AI Ad Studio, AI Marketing Agent and Settings. Its data operations are owner-guarded and reuse existing Supabase tables and the `elevenlabs-ad-studio` Edge Function. Marketing posts are saved as drafts only; no social publishing is attempted.
+
 ## Existing application destinations
 
 | Destination | Integration expectation |
@@ -29,13 +33,13 @@ This repair extends the original mini-player and Google-profile fixes into a coo
 | Videos | Media3 playback, responsive fullscreen, seeking and retry |
 | Library | Favourites, downloads and local playback |
 | Account | Authentication, Google avatar, profile, bookings and Settings |
-| Founder Studio | Founder-authorized uploads and catalogue management |
+| Founder Studio | Overview, Music catalogue, Video library, Artists, Releases, Enquiries inbox, AI Ad Studio, AI Marketing Agent and Settings |
 | Audio player | Compact and expanded modes, queue controls and background playback |
 | Settings | Real preference consumers, live accessibility behavior and honest unavailable states |
 
 ## Verification status
 
-- The existing unit-test suite passed on commit `08f5d27`; three additional regression tests now cover generic error redaction, nested network failures and permission failures. Those new tests await the final PR-head run.
+- Unit tests passed on commit `09e92ce`, which includes the nine-module Founder Studio and the three new regression tests for generic error redaction, nested network failures and permission failures. Lint/debug identity verification on the final workflow head is still required.
 - The latest application/workflow changes are committed on PR #129. The final PR-head run must pass unit tests, lint, debug APK assembly and package/version identity verification before merge.
 - Pull-request verification no longer decodes production signing secrets or uploads signed production APKs. PR runs build an unsigned/debug APK and retain it for 3 days; production signing and 90-day signed-artifact retention are limited to explicit `native-v*` release tags.
 - A Cloudflare Pages preview check is separate from the Android build and is not evidence of Android correctness.
