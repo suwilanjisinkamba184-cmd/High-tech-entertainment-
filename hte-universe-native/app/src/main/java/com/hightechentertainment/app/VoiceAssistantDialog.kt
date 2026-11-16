@@ -116,7 +116,7 @@ fun VoiceAssistantDialog(
         if (granted) startVoiceSession(scope, context, toolContext, selectedVoiceId,
             onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
             onSession = { active -> session = active; isConnecting = false },
-            onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = voiceFailureMessage(error) }
+            onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = error.toHteUserMessage("Voice Companion could not connect. Please try again.") }
         ) else errorMessage = "Microphone permission is required for Voice Companion."
     }
 
@@ -128,7 +128,7 @@ fun VoiceAssistantDialog(
             startVoiceSession(scope, context, toolContext, selectedVoiceId,
                 onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
                 onSession = { active -> session = active; isConnecting = false },
-                onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = voiceFailureMessage(error) }
+                onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = error.toHteUserMessage("Voice Companion could not connect. Please try again.") }
             )
         }
     }
