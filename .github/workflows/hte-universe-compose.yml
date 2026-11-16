@@ -48,7 +48,7 @@ jobs:
         with:
           gradle-version: '9.6.0'
       - name: Validate Supabase runtime configuration
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         run: |
           set -euo pipefail
           test -n "$SUPABASE_URL"
@@ -63,7 +63,7 @@ jobs:
 
       # Pull requests validate source only. Main/dispatch builds the real installable release APK.
       - name: Validate production signing configuration
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -76,7 +76,7 @@ jobs:
           test -n "$ANDROID_KEY_PASSWORD"
           test -n "$ANDROID_STORE_PASSWORD"
       - name: Decode production keystore
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
@@ -85,14 +85,14 @@ jobs:
           test -s "$RUNNER_TEMP/hte-release.jks"
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/hte-release.jks" >> "$GITHUB_ENV"
       - name: Assemble signed production APK
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         env:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
         run: gradle --no-daemon :app:assembleRelease --console=plain
       - name: Finalize APK v4 signature
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         env:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
@@ -115,7 +115,7 @@ jobs:
             "$APK"
           test -s "$APK.idsig"
       - name: Verify production APK identity, version and signer
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         run: |
           set -euo pipefail
           APK="app/build/outputs/apk/release/app-release.apk"
@@ -129,7 +129,7 @@ jobs:
           printf '%s\n' "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='45' versionName='4.1.1'"
           sha256sum "$APK" | sed "s|$APK|HTE-Universe-4.1.1.apk|" | tee app/build/outputs/apk/release/SHA256SUMS.txt
       - name: Confirm production certificate continuity
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         env:
           PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/native-v4.0.9-build43/HTE-Universe-4.0.9.apk
         run: |
@@ -144,7 +144,7 @@ jobs:
           test "$NEW_CERT" = "$TRUSTED_CERT_SHA256"
           test "$RUNTIME_CERT_SHA256" = "$TRUSTED_CERT_SHA256"
       - name: Prepare production release assets
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         run: |
           set -euo pipefail
           mkdir -p ../release-assets
@@ -152,7 +152,7 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk.idsig ../release-assets/HTE-Universe-4.1.1.apk.idsig
           cp app/build/outputs/apk/release/SHA256SUMS.txt ../release-assets/SHA256SUMS.txt
       - name: Upload verified production APK artifact
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v7
         with:
           name: hte-universe-production-4.1.1-build45
@@ -163,7 +163,7 @@ jobs:
           if-no-files-found: error
           retention-days: 90
       - name: Publish HTE Universe 4.1.1
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: native-v4.1.1-build45
@@ -185,7 +185,7 @@ jobs:
           overwrite_files: true
           make_latest: true
       - name: Verify public production release assets
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: native-v4.1.1-build45
