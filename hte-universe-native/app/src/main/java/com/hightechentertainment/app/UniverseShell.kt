@@ -76,6 +76,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
 
 private val ShellGold = Color(0xFFE5C158)
 private val ShellSilver = Color(0xFFC4CAD2)
@@ -226,8 +228,14 @@ fun UniverseShell() {
             isLoading = true
             catalogueError = null
             try {
-                tracks = TrackRepository().getPublishedTracks()
-                videos = EntertainmentCatalogRepository().getPublishedVideos()
+                withTimeout(15_000) {
+                    val loadedTracks = TrackRepository().getPublishedTracks()
+                    val loadedVideos = EntertainmentCatalogRepository().getPublishedVideos()
+                    tracks = loadedTracks
+                    videos = loadedVideos
+                }
+            } catch (_: TimeoutCancellationException) {
+                catalogueError = "The catalogue is taking too long to respond. Check your connection and retry."
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Throwable) {
