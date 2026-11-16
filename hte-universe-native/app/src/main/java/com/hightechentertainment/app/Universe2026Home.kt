@@ -364,8 +364,18 @@ private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onD
                 .clickable(onClick = onPlay),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Outlined.Movie, null, tint = U26Gold.copy(alpha = .45f), modifier = Modifier.size(62.dp))
-            Surface(Modifier.align(Alignment.Center), color = Color.Black.copy(alpha = .65f), shape = RoundedCornerShape(50)) {
+            if (!video.thumbnailUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = video.thumbnailUrl,
+                    contentDescription = "Thumbnail for ${video.title}",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(Icons.Outlined.Movie, null, tint = U26Gold.copy(alpha = .45f), modifier = Modifier.size(62.dp))
+            }
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .52f)))))
+            Surface(Modifier.align(Alignment.Center), color = Color.Black.copy(alpha = .68f), shape = RoundedCornerShape(50)) {
                 Icon(Icons.Outlined.PlayArrow, "Watch ${video.title}", tint = Color.White, modifier = Modifier.padding(8.dp).size(24.dp))
             }
             Text("HTE VISUALS", Modifier.align(Alignment.BottomStart).padding(10.dp), color = U26GoldLight, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
