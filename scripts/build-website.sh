@@ -84,7 +84,7 @@ required_homepage_markers = (
     "HTE Universe.",
     "topbar",
     "high-tech-logo.svg",
-    "assets/app.js?v=18",
+    "assets/app.js?v=19",
     "assets/videos.js?v=7",
     "public-tracks",
     "supabase-config.js",
