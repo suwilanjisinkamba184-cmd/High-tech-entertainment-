@@ -146,10 +146,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: HTE Universe 4.0.8 — Production build 41
+          name: HTE Universe 4.0.8 — Production build 42
           body: |
             ## HTE Universe 4.0.8
-            Signed production APK, build 41.
+            Signed production APK, build 42.
 
             ### Changes
             - Removed GitHub emulator compatibility matrix; CI now focuses on build, unit tests, lint, signing and release integrity.
