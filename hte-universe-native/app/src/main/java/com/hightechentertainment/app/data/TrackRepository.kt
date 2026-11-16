@@ -11,6 +11,11 @@ data class TrackDto(
     val artist: String = "Unknown artist",
     val genre: String? = null,
     @SerialName("audio_url") val audioUrl: String? = null,
+    @SerialName("source_url") val sourceUrl: String? = null,
+    @SerialName("source_platform") val sourcePlatform: String = "direct",
+    @SerialName("download_allowed") val downloadAllowed: Boolean = false,
+    @SerialName("branded_audio_url") val brandedAudioUrl: String? = null,
+    @SerialName("download_branding_status") val downloadBrandingStatus: String = "pending",
     @SerialName("cover_url") val coverUrl: String? = null,
     @SerialName("duration_seconds") val durationSeconds: Int? = null
 )
