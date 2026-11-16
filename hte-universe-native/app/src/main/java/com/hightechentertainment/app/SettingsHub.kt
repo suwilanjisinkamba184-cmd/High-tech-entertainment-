@@ -45,11 +45,11 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import javax.net.ssl.SSLException
 
-private val SettingsGold = Color(0xFFD6B15E)
+private val SettingsGold = Color(0xFFE5C158)
 private val SettingsSilver = Color(0xFFC4CAD2)
 private val SettingsMuted = Color(0xFF8B929D)
-private val SettingsPanel = Color(0xFF121418)
-private val SettingsBackground = Color(0xFF08090B)
+private val SettingsPanel = Color(0xFF17161E)
+private val SettingsBackground = Color(0xFF0B0A0F)
 
 @androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
 @Composable
