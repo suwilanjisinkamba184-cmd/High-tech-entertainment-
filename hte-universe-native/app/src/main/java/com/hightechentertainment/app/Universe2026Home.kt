@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.*
@@ -42,7 +43,7 @@ private val U26Line = Color(0xFF302D38)
 @Composable
 fun Universe2026Home(
     tracks: List<TrackDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
-    playlistTracks: Map<String, List<TrackDto>>, isLoading: Boolean,
+    playlistTracks: Map<String, List<TrackDto>>, profileName: String?, profileAvatarUrl: String?, isLoading: Boolean,
     onExplore: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
@@ -74,7 +75,11 @@ fun Universe2026Home(
             item {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text("WELCOME BACK", color = U26Muted, fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (profileName.isNullOrBlank()) "WELCOME BACK" else "WELCOME BACK, ${profileName.trim().uppercase()}",
+                            color = U26Muted, fontSize = 9.sp, letterSpacing = 1.1.sp,
+                            fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis
+                        )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(U26Gold))
                             Spacer(Modifier.width(8.dp))
@@ -101,7 +106,16 @@ fun Universe2026Home(
                         }
                     }
                     IconButton(onClick = onProfile, modifier = Modifier.size(44.dp)) {
-                        Icon(Icons.Outlined.AccountCircle, "Open your HTE account", tint = U26Silver, modifier = Modifier.size(27.dp))
+                        if (!profileAvatarUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = profileAvatarUrl,
+                                contentDescription = "Open your HTE account",
+                                modifier = Modifier.size(36.dp).clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(Icons.Outlined.AccountCircle, "Open your HTE account", tint = U26Silver, modifier = Modifier.size(27.dp))
+                        }
                     }
                 }
             }
