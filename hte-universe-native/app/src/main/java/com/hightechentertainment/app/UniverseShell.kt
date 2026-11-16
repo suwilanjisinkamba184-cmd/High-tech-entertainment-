@@ -276,7 +276,13 @@ fun UniverseShell() {
         containerColor = ShellBackground,
         bottomBar = {
             if (!isWideLayout) {
-                NavigationBar(containerColor = ShellPanel, contentColor = ShellGold) {
+                NavigationBar(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                        .border(1.dp, ShellGold.copy(alpha = .16f), RoundedCornerShape(28.dp)),
+                    containerColor = ShellPanel.copy(alpha = .98f),
+                    contentColor = ShellGold
+                ) {
                     UniverseTab.entries.forEach { tab ->
                         val icon = HteIcons.navigation(tab.label)
                         NavigationBarItem(
@@ -285,9 +291,9 @@ fun UniverseShell() {
                             icon = { HteGlowingIconBadge(icon = icon, selected = selectedTab == tab, contentDescription = tab.label) },
                             label = { Text(tab.label, fontSize = 10.sp) },
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = ShellGold, selectedTextColor = ShellGold,
+                                selectedIconColor = Color(0xFFD7F36A), selectedTextColor = Color(0xFFD7F36A),
                                 unselectedIconColor = ShellMuted, unselectedTextColor = ShellMuted,
-                                indicatorColor = ShellGold.copy(alpha = .12f)
+                                indicatorColor = Color(0xFFD7F36A).copy(alpha = .14f)
                             )
                         )
                     }
