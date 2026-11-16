@@ -243,12 +243,12 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = controller::toggleShuffle) { Icon(Icons.Rounded.Shuffle, "Shuffle", tint = if (state.shuffle) HteColors.Gold else HteColors.Muted) }
-            IconButton(onClick = controller::previous, modifier = Modifier.size(54.dp)) { Icon(Icons.Rounded.SkipPrevious, "Previous", tint = HteColors.OnDark, modifier = Modifier.size(30.dp)) }
+            IconButton(onClick = controller::previous, modifier = Modifier.size(50.dp)) { Icon(Icons.Rounded.SkipPrevious, "Previous", tint = HteColors.OnDark, modifier = Modifier.size(30.dp)) }
             Box(Modifier.size(64.dp).clip(CircleShape).background(HteColors.Gold).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); controller.togglePlay() }, contentAlignment = Alignment.Center) {
                 if (state.isBuffering) CircularProgressIndicator(Modifier.size(30.dp), color = HteColors.Obsidian, strokeWidth = 3.dp)
                 else Icon(if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (state.isPlaying) "Pause" else "Play", tint = HteColors.Obsidian, modifier = Modifier.size(38.dp))
             }
-            IconButton(onClick = controller::next, modifier = Modifier.size(54.dp)) { Icon(Icons.Rounded.SkipNext, "Next", tint = HteColors.OnDark, modifier = Modifier.size(34.dp)) }
+            IconButton(onClick = controller::next, modifier = Modifier.size(50.dp)) { Icon(Icons.Rounded.SkipNext, "Next", tint = HteColors.OnDark, modifier = Modifier.size(30.dp)) }
             IconButton(onClick = controller::cycleRepeat) { Icon(if (state.repeat == HteRepeatMode.ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, "Repeat " + state.repeat.name.lowercase(), tint = if (state.repeat == HteRepeatMode.OFF) HteColors.Muted else HteColors.Gold) }
         }
         Spacer(Modifier.height(8.dp))
