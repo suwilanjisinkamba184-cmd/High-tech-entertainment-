@@ -41,13 +41,21 @@ private val U26Line = Color(0xFF2A2E36)
 @Composable
 fun Universe2026Home(
     tracks: List<TrackDto>, videos: List<VideoDto>, isLoading: Boolean,
-    onExplore: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit,
+    onExplore: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
 ) {
-    val featured = tracks.firstOrNull()
-    val genres = tracks.mapNotNull { it.genre?.takeIf(String::isNotBlank) }.distinct().take(10)
+    var selectedCategory by remember { mutableStateOf("All") }
+    val genres = tracks.mapNotNull { it.genre?.takeIf(String::isNotBlank) }.distinct().sorted()
+    val categories = listOf("All", "Favourites") + genres
+    val visibleTracks = when (selectedCategory) {
+        "Favourites" -> tracks.filter { it.id in favouriteTrackIds }
+        "All" -> tracks
+        else -> tracks.filter { it.genre.equals(selectedCategory, ignoreCase = true) }
+    }
+    val featuredTracks = tracks.take(5)
+    val favouriteTracks = tracks.filter { it.id in favouriteTrackIds }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(U26Black)) {
         val wide = maxWidth >= 720.dp
@@ -64,6 +72,7 @@ fun Universe2026Home(
             item {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("WELCOME BACK", color = U26Muted, fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.SemiBold)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(U26Gold))
                             Spacer(Modifier.width(8.dp))
@@ -89,6 +98,9 @@ fun Universe2026Home(
                             Icon(Icons.Outlined.GraphicEq, "Open HTE voice assistant", tint = U26Gold, modifier = Modifier.size(24.dp))
                         }
                     }
+                    IconButton(onClick = onProfile, modifier = Modifier.size(44.dp)) {
+                        Icon(Icons.Outlined.AccountCircle, "Open your HTE account", tint = U26Silver, modifier = Modifier.size(27.dp))
+                    }
                 }
             }
 
@@ -107,10 +119,60 @@ fun Universe2026Home(
             }
 
             item {
-                if (featured != null) {
-                    U26FeaturedRelease(featured, onPlay = { onPlayTrack(featured) }, wide = wide)
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text("BROWSE YOUR SOUND", color = U26Muted, fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        items(categories, key = { it }) { category ->
+                            FilterChip(
+                                selected = selectedCategory == category,
+                                onClick = { selectedCategory = category },
+                                label = { Text(category, fontSize = 10.sp, maxLines = 1) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = U26Gold.copy(alpha = .18f),
+                                    selectedLabelColor = U26Gold,
+                                    labelColor = U26Silver
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                if (featuredTracks.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        U26SectionHeading("FEATURED ON HTE", "EXPLORE ALL", onExplore)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(featuredTracks, key = { it.id }) { track ->
+                                U26FeaturedRelease(
+                                    track,
+                                    onPlay = { onPlayTrack(track) },
+                                    wide = wide,
+                                    modifier = Modifier.width(if (wide) 360.dp else 300.dp)
+                                )
+                            }
+                        }
+                    }
                 } else {
                     U26EmptyFeature(isLoading, onRefresh)
+                }
+            }
+
+            if (favouriteTracks.isNotEmpty()) item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    U26SectionHeading("YOUR FAVOURITES", "OPEN LIBRARY", onExplore)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(favouriteTracks, key = { it.id }) { track ->
+                            U26ReleaseCard(
+                                track = track,
+                                wide = wide,
+                                isFavourite = true,
+                                onPlay = { onPlayTrack(track) },
+                                onFavourite = { onToggleFavourite(track) },
+                                onDownload = { onDownloadTrack(track) }
+                            )
+                        }
+                    }
                 }
             }
 
@@ -124,11 +186,11 @@ fun Universe2026Home(
 
             item {
                 U26SectionHeading("FRESH FROM HTE", "EXPLORE ALL", onExplore)
-                if (tracks.isEmpty()) {
+                if (visibleTracks.isEmpty()) {
                     U26EmptyState(if (isLoading) "Loading new releases…" else "New releases will appear here.", isLoading, onRefresh)
                 } else {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(top = 10.dp)) {
-                        items(tracks.take(10), key = { it.id }) { track ->
+                        items(visibleTracks.take(10), key = { it.id }) { track ->
                             U26ReleaseCard(
                                 track = track,
                                 wide = wide,
@@ -144,9 +206,9 @@ fun Universe2026Home(
 
             item {
                 U26SectionHeading("TRENDING IN THE UNIVERSE", "FULL CATALOGUE", onExplore)
-                if (tracks.isNotEmpty()) {
+                if (visibleTracks.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        tracks.take(5).forEachIndexed { index, track ->
+                        visibleTracks.take(5).forEachIndexed { index, track ->
                             U26TrendingRow(
                                 index = index + 1,
                                 track = track,
@@ -156,7 +218,7 @@ fun Universe2026Home(
                         }
                     }
                 } else if (!isLoading) {
-                    U26EmptyState("Your next favourite is waiting.", false, onRefresh)
+                    U26EmptyState("No tracks in this selection yet.", false, onRefresh)
                 }
             }
 
@@ -181,7 +243,7 @@ fun Universe2026Home(
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(genres) { genre ->
                         AssistChip(
-                            onClick = onExplore,
+                            onClick = { selectedCategory = genre },
                             label = { Text(genre, color = U26Silver) },
                             leadingIcon = { Icon(Icons.Outlined.GraphicEq, null, tint = U26Gold, modifier = Modifier.size(16.dp)) },
                             colors = AssistChipDefaults.assistChipColors(containerColor = U26Panel),
@@ -216,9 +278,9 @@ fun Universe2026Home(
 }
 
 @Composable
-private fun U26FeaturedRelease(track: TrackDto, onPlay: () -> Unit, wide: Boolean) {
+private fun U26FeaturedRelease(track: TrackDto, onPlay: () -> Unit, wide: Boolean, modifier: Modifier = Modifier) {
     Card(
-        modifier = Modifier.fillMaxWidth().height(if (wide) 270.dp else 242.dp).clickable(onClick = onPlay),
+        modifier = modifier.height(if (wide) 270.dp else 242.dp).clickable(onClick = onPlay),
         shape = RoundedCornerShape(25.dp),
         colors = CardDefaults.cardColors(containerColor = U26Panel)
     ) {
