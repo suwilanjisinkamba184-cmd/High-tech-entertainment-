@@ -590,6 +590,6 @@ private fun friendlyUpdateError(error: Throwable): String {
         is UnknownHostException -> "Can't reach GitHub right now. Check your internet connection or Private DNS, then retry. You can also open GitHub Releases below."
         is SocketTimeoutException -> "GitHub took too long to respond. Check your connection and retry."
         is SSLException -> "A secure connection to GitHub could not be established. Check your device date, time and network."
-        else -> (rootCause.message ?: error.message)?.take(220) ?: "The update could not be completed. Please retry."
+        else -> rootCause.toHteUserMessage("The update could not be completed. Please retry.")
     }
 }

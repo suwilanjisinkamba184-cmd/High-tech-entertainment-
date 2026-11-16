@@ -386,26 +386,17 @@ private fun startVoiceSession(
                 clientTools = clientTools,
                 onUserTranscriptEvent = { text, _ -> toolContext.onUserTranscript(text) },
                 onAgentResponseEvent = { text, _ -> toolContext.onAgentResponse(text) },
-                onError = { code, message -> toolContext.onError(message ?: "Voice service error ($code).") }
+                onError = { _, _ -> toolContext.onError("Voice Companion could not complete that request. Please try again.") }
             )
             val active = ConversationClient.startSession(config, context)
             onSession(active)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            onFailure(voiceFailureMessage(error.message?.take(220) ?: "Could not connect to the HTE Voice Companion."))
+            onFailure(error.toHteUserMessage("Voice Companion could not connect. Please try again."))
         }
     }
 }
 
 
-private fun voiceFailureMessage(message: String): String {
-    val normalized = message.lowercase()
-    return when {
-        "convai_write" in normalized || "missing permission" in normalized || "401" in normalized || "502" in normalized ->
-            "Voice service authentication failed. The HTE ElevenLabs API key must include Conversational AI (ConvAI) write permission. Please update the key stored in Supabase and try again."
-        "sign in" in normalized || "unauthorized" in normalized ->
-            "Please sign in again, then reconnect Voice Companion."
-        else -> message.take(220).ifBlank { "Could not connect to the HTE Voice Companion. Please try again." }
-    }
-}
+

@@ -61,7 +61,7 @@ fun FounderStudioScreen(onClose: () -> Unit) {
             runCatching {
                 tracks = repository.getTracks()
                 videos = repository.getVideos()
-            }.onFailure { status = it.message?.take(180) ?: "Founder catalogue could not be loaded." }
+            }.onFailure { status = it.toHteUserMessage("Founder catalogue could not be loaded. Please retry.") }
             isLoading = false
         }
     }
@@ -136,7 +136,7 @@ fun FounderStudioScreen(onClose: () -> Unit) {
                                 status = "Track uploaded as a draft. Publish it from Manage when ready."
                                 trackTitle = ""; trackGenre = ""; audioUri = null; coverUri = null
                                 refresh()
-                            }.onFailure { status = it.message?.take(180) ?: "Track upload failed." }
+                            }.onFailure { status = it.toHteUserMessage("Track upload failed. Check the file and try again.") }
                             isUploading = false
                         }
                     }, enabled = !isUploading, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = FounderGold, contentColor = Color.Black)) {
@@ -181,7 +181,7 @@ fun FounderStudioScreen(onClose: () -> Unit) {
                                 status = "Video uploaded as a draft. Publish it from Manage when ready."
                                 videoTitle = ""; videoDescription = ""; videoUri = null; thumbnailUri = null
                                 refresh()
-                            }.onFailure { status = it.message?.take(180) ?: "Video upload failed." }
+                            }.onFailure { status = it.toHteUserMessage("Video upload failed. Check the file and try again.") }
                             isUploading = false
                         }
                     }, enabled = !isUploading, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = FounderGold, contentColor = Color.Black)) {
@@ -202,16 +202,16 @@ fun FounderStudioScreen(onClose: () -> Unit) {
                 items(tracks, key = { "track-${it.id}" }) { track ->
                     FounderContentRow(
                         title = track.title, subtitle = "${track.artist} · ${track.genre ?: "No genre"}", published = track.isPublished,
-                        onTogglePublish = { publish -> scope.launch { runCatching { repository.setTrackPublished(track.id, publish); tracks = repository.getTracks() }.onFailure { status = it.message } } },
-                        onDelete = { scope.launch { runCatching { repository.deleteTrack(track); tracks = repository.getTracks() }.onFailure { status = it.message } } }
+                        onTogglePublish = { publish -> scope.launch { runCatching { repository.setTrackPublished(track.id, publish); tracks = repository.getTracks() }.onFailure { status = it.toHteUserMessage("Could not update track publication. Please retry.") } } },
+                        onDelete = { scope.launch { runCatching { repository.deleteTrack(track); tracks = repository.getTracks() }.onFailure { status = it.toHteUserMessage("Could not delete this track. Please retry.") } } }
                     )
                 }
                 item { Text("VIDEOS · ${videos.size}", color = Color.White, fontWeight = FontWeight.Bold) }
                 items(videos, key = { "video-${it.id}" }) { video ->
                     FounderContentRow(
                         title = video.title, subtitle = video.artist ?: "High-Tech Entertainment", published = video.isPublished,
-                        onTogglePublish = { publish -> scope.launch { runCatching { repository.setVideoPublished(video.id, publish); videos = repository.getVideos() }.onFailure { status = it.message } } },
-                        onDelete = { scope.launch { runCatching { repository.deleteVideo(video); videos = repository.getVideos() }.onFailure { status = it.message } } }
+                        onTogglePublish = { publish -> scope.launch { runCatching { repository.setVideoPublished(video.id, publish); videos = repository.getVideos() }.onFailure { status = it.toHteUserMessage("Could not update video publication. Please retry.") } } },
+                        onDelete = { scope.launch { runCatching { repository.deleteVideo(video); videos = repository.getVideos() }.onFailure { status = it.toHteUserMessage("Could not delete this video. Please retry.") } } }
                     )
                 }
                 if (isLoading) item { CircularProgressIndicator(color = FounderGold) }
