@@ -24,10 +24,6 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
-      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -62,22 +58,57 @@ jobs:
         run: gradle --no-daemon :app:testDebugUnitTest
       - name: Run Android lint
         run: gradle --no-daemon :app:lintDebug :app:lintRelease --console=plain
+      - name: Assemble debug APK for verification
+        if: ${{ !startsWith(github.ref, 'refs/tags/native-v') }}
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Verify debug APK identity
+        if: ${{ !startsWith(github.ref, 'refs/tags/native-v') }}
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          BADGING=$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK")
+          echo "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='43' versionName='4.0.9'"
+      - name: Upload temporary PR debug APK
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: hte-universe-pr-debug-${{ github.run_number }}
+          path: hte-universe-native/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 3
       - name: Validate production signing configuration
+        if: startsWith(github.ref, 'refs/tags/native-v')
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
         run: |
           test -n "$ANDROID_KEYSTORE_BASE64"
           test -n "$ANDROID_KEY_ALIAS"
           test -n "$ANDROID_KEY_PASSWORD"
           test -n "$ANDROID_STORE_PASSWORD"
       - name: Decode production keystore
+        if: startsWith(github.ref, 'refs/tags/native-v')
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           set -euo pipefail
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hte-release.jks"
           test -s "$RUNNER_TEMP/hte-release.jks"
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/hte-release.jks" >> "$GITHUB_ENV"
       - name: Assemble signed production APK
+        if: startsWith(github.ref, 'refs/tags/native-v')
+        env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
         run: gradle --no-daemon :app:assembleRelease
       - name: Finalize APK v4 signature
+        if: startsWith(github.ref, 'refs/tags/native-v')
         env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
@@ -98,6 +129,7 @@ jobs:
             "$APK"
           test -s "$APK.idsig"
       - name: Verify APK identity, version and signer
+        if: startsWith(github.ref, 'refs/tags/native-v')
         run: |
           set -euo pipefail
           APK="app/build/outputs/apk/release/app-release.apk"
@@ -111,6 +143,7 @@ jobs:
           echo "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='43' versionName='4.0.9'"
           sha256sum "$APK" | tee app/build/outputs/apk/release/SHA256SUMS.txt
       - name: Confirm production certificate continuity
+        if: startsWith(github.ref, 'refs/tags/native-v')
         env:
           PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/native-v4.0.5-build38/HTE-Universe-4.0.5.apk
         run: |
@@ -125,6 +158,7 @@ jobs:
           test "$NEW_CERT" = "$TRUSTED_CERT_SHA256"
           test "$RUNTIME_CERT_SHA256" = "$TRUSTED_CERT_SHA256"
       - name: Upload signed production APK
+        if: startsWith(github.ref, 'refs/tags/native-v')
         uses: actions/upload-artifact@v7
         with:
           name: hte-universe-release-signed
@@ -133,6 +167,7 @@ jobs:
             hte-universe-native/app/build/outputs/apk/release/*.idsig
             hte-universe-native/app/build/outputs/apk/release/SHA256SUMS.txt
           if-no-files-found: error
+          retention-days: 90
       - name: Prepare permanent release assets
         if: github.ref == 'refs/tags/native-v4.0.9-build43'
         run: |
