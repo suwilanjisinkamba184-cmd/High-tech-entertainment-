@@ -1,6 +1,8 @@
 package com.hightechentertainment.app
 
 import com.hightechentertainment.app.data.TrackDto
+import com.hightechentertainment.app.data.ArtistDto
+import com.hightechentertainment.app.data.ReleaseDto
 import com.hightechentertainment.app.data.VideoDto
 import com.hightechentertainment.app.data.PlaylistDto
 import androidx.compose.foundation.background
@@ -42,7 +44,7 @@ private val U26Line = Color(0xFF302D38)
 
 @Composable
 fun Universe2026Home(
-    tracks: List<TrackDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
+    tracks: List<TrackDto>, artists: List<ArtistDto>, releases: List<ReleaseDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
     playlistTracks: Map<String, List<TrackDto>>, profileName: String?, profileAvatarUrl: String?, isLoading: Boolean,
     onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
@@ -134,6 +136,24 @@ fun Universe2026Home(
                 }
             }
 
+            if (artists.isNotEmpty()) item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    U26SectionHeading("MEET THE ARTISTS", "DISCOVER MUSIC", onExplore)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(artists, key = { it.id }) { artist -> U26ArtistCard(artist, wide) }
+                    }
+                }
+            }
+
+            if (releases.isNotEmpty()) item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    U26SectionHeading("OFFICIAL PROJECTS", "EXPLORE ALL", onExplore)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(releases, key = { it.id }) { release -> U26ProjectCard(release, wide) }
+                    }
+                }
+            }
+
             if (favouriteTracks.isNotEmpty()) item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     U26SectionHeading("YOUR FAVOURITES", "OPEN LIBRARY", onLibrary)
@@ -211,8 +231,9 @@ fun Universe2026Home(
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                     U26QuickStat("MUSIC", tracks.size.toString(), Icons.Outlined.MusicNote, Modifier.weight(1f), onExplore)
+                    U26QuickStat("ARTISTS", artists.size.toString(), Icons.Outlined.Groups, Modifier.weight(1f), onExplore)
                     U26QuickStat("VIDEOS", videos.size.toString(), Icons.Outlined.VideoLibrary, Modifier.weight(1f), onVideos)
-                    U26QuickStat("YOUR LIBRARY", "OPEN", Icons.Outlined.MusicNote, Modifier.weight(1f), onLibrary)
+                    U26QuickStat("LIBRARY", "OPEN", Icons.Outlined.MusicNote, Modifier.weight(1f), onLibrary)
                 }
             }
 
@@ -304,6 +325,74 @@ fun Universe2026Home(
                     }
                     Icon(Icons.AutoMirrored.Outlined.ArrowForward, null, tint = U26Gold)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun U26ArtistCard(artist: ArtistDto, wide: Boolean) {
+    Card(
+        modifier = Modifier.width(if (wide) 190.dp else 156.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = U26Panel)
+    ) {
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Box(
+                Modifier.fillMaxWidth().height(if (wide) 142.dp else 118.dp)
+                    .clip(RoundedCornerShape(13.dp)).background(U26Raised),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!artist.imageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = artist.imageUrl,
+                        contentDescription = "${artist.name} artist artwork",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF49391F), U26Raised))), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Outlined.Person, null, tint = U26Gold, modifier = Modifier.size(42.dp))
+                    }
+                }
+            }
+            Text(artist.name, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                artist.bio?.takeIf(String::isNotBlank) ?: "Artist · High-Tech Entertainment",
+                color = U26Muted, fontSize = 9.sp, maxLines = 2, overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun U26ProjectCard(release: ReleaseDto, wide: Boolean) {
+    Card(
+        modifier = Modifier.width(if (wide) 230.dp else 192.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = U26Panel)
+    ) {
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Box(
+                Modifier.fillMaxWidth().height(if (wide) 132.dp else 108.dp)
+                    .clip(RoundedCornerShape(13.dp)).background(U26Raised),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!release.coverUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = release.coverUrl,
+                        contentDescription = "${release.title} cover artwork",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(Icons.Outlined.Album, null, tint = U26Gold, modifier = Modifier.size(42.dp))
+                }
+            }
+            Text(release.title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(release.releaseDate ?: "Official HTE release", color = U26Gold, fontSize = 9.sp)
+            if (!release.description.isNullOrBlank()) {
+                Text(release.description, color = U26Muted, fontSize = 9.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
     }
