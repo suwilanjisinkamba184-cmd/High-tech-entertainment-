@@ -27,7 +27,7 @@ function youtubeVideoId(raw){
     const u=new URL(String(raw||'')),host=u.hostname.toLowerCase().replace(/^www\./,'');
     let id='';
     if(host==='youtu.be')id=u.pathname.split('/').filter(Boolean)[0]||'';
-    else if(host.endsWith('youtube.com')||host==='youtube-nocookie.com'){
+    else if((host==='youtube.com'||host.endsWith('.youtube.com'))||host==='youtube-nocookie.com'){
       id=u.searchParams.get('v')||u.pathname.split('/').filter(Boolean).slice(-1)[0]||'';
     }else return '';
     return /^[A-Za-z0-9_-]{11}$/.test(id)?id:'';
@@ -37,7 +37,7 @@ function trackPlayer(x){
   const source=String(x.source_url||'').trim(),raw=source||String(x.audio_url||'').trim();
   const platform=String(x.source_platform||'').toLowerCase(),youtubeId=youtubeVideoId(raw);
   if(platform==='youtube'||youtubeId){
-    if(!youtubeId)return '<p class="muted small">This YouTube link is not available. <a target="_blank" rel="noopener noreferrer" href="'+esc(raw)+'">Open source ↗</a></p>';
+    if(!youtubeId){const safeSource=safeHttpsUrl(raw);return safeSource?'<p class="muted small">This YouTube link is not available. <a target="_blank" rel="noopener noreferrer" href="'+esc(safeSource)+'">Open source ↗</a></p>':'<p class="muted small">This YouTube link is not available.</p>'}
     return '<iframe title="Watch '+esc(x.title)+' on YouTube" src="https://www.youtube-nocookie.com/embed/'+esc(youtubeId)+'?rel=0&modestbranding=1" width="100%" height="200" style="border:0;border-radius:12px" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe><a class="btn gold" style="width:100%;margin-top:8px" target="_blank" rel="noopener noreferrer" data-track-open="'+esc(x.id)+'" href="'+esc(raw)+'">Open on YouTube ↗</a>';
   }
   const embed=spotifyEmbed(raw),safe=safeHttpsUrl(raw);
