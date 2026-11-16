@@ -40,6 +40,24 @@ data class NotificationDto(
 )
 
 @Serializable
+data class PlaylistDto(
+    val id: String,
+    @SerialName("user_id") val userId: String,
+    val name: String,
+    val description: String? = null,
+    @SerialName("is_public") val isPublic: Boolean = false,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null
+)
+
+@Serializable
+data class PlaylistTrackDto(
+    @SerialName("playlist_id") val playlistId: String,
+    @SerialName("track_id") val trackId: String,
+    val position: Int = 0
+)
+
+@Serializable
 data class FavoriteDto(
     @SerialName("user_id") val userId: String,
     @SerialName("track_id") val trackId: String,
@@ -122,6 +140,23 @@ class MemberRepository {
         client.from("bookings").insert(
             BookingInsertDto(userId, name.trim(), email.trim(), bookingType, requestedDate, message.trim())
         )
+    }
+
+    suspend fun getMyPlaylists(): List<PlaylistDto> {
+        val userId = requireUserId()
+        return client.from("playlists")
+            .select { filter { eq("user_id", userId) } }
+            .decodeList<PlaylistDto>()
+            .sortedBy { it.name.lowercase() }
+    }
+
+    suspend fun getPlaylistTrackIds(playlistId: String): List<String> {
+        requireUserId()
+        return client.from("playlist_tracks")
+            .select { filter { eq("playlist_id", playlistId) } }
+            .decodeList<PlaylistTrackDto>()
+            .sortedBy { it.position }
+            .map { it.trackId }
     }
 
     suspend fun getFavouriteTrackIds(): Set<String> {
