@@ -326,6 +326,7 @@ fun UniverseShell() {
                     onExplore = { selectedTab = UniverseTab.DISCOVER },
                     onVideos = { selectedTab = UniverseTab.VIDEOS },
                     onVoice = { showVoiceAssistant = true },
+                    onProfile = { selectedTab = UniverseTab.ACCOUNT },
                     onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onPlayVideo = { selectedVideo = it },
                     onDownloadTrack = { startDownload(it.audioUrl, it.title, "audio") },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
@@ -549,14 +550,14 @@ private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, on
 @Composable
 private fun HomeScreen(
     tracks: List<TrackDto>, videos: List<VideoDto>, isLoading: Boolean,
-    onExplore: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit,
+    onExplore: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
 ) {
     Universe2026Home(
         tracks = tracks, videos = videos, isLoading = isLoading,
-        onExplore = onExplore, onVideos = onVideos, onVoice = onVoice,
+        onExplore = onExplore, onVideos = onVideos, onVoice = onVoice, onProfile = onProfile,
         onPlayTrack = onPlayTrack, onPlayVideo = onPlayVideo,
         onDownloadTrack = onDownloadTrack, onDownloadVideo = onDownloadVideo,
         favouriteTrackIds = favouriteTrackIds, onToggleFavourite = onToggleFavourite,
