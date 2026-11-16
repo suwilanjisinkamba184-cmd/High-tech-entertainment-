@@ -237,7 +237,10 @@ fun UniverseShell() {
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Throwable) {
-                Toast.makeText(context, "Your favourites could not be refreshed. Please try again.", Toast.LENGTH_SHORT).show()
+                favouriteTrackIds = emptySet()
+                if (selectedTab == UniverseTab.LIBRARY) {
+                    Toast.makeText(context, "Your favourites could not be refreshed. Please try again.", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
