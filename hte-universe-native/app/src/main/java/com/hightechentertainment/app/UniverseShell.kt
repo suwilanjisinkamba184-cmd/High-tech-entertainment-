@@ -159,7 +159,7 @@ fun UniverseShell() {
         val sourceUrl = selected.sourceUrl?.takeIf(String::isNotBlank) ?: selected.audioUrl
         val sourceHost = sourceUrl?.let { runCatching { Uri.parse(it).host.orEmpty().lowercase() }.getOrDefault("") }.orEmpty()
         val externalPlatform = selected.sourcePlatform.lowercase() in setOf("youtube", "spotify") ||
-            sourceHost == "youtu.be" || sourceHost.endsWith("youtube.com") || sourceHost.endsWith("spotify.com")
+            sourceHost == "youtu.be" || (sourceHost == "youtube.com" || sourceHost.endsWith(".youtube.com")) || (sourceHost == "spotify.com" || sourceHost.endsWith(".spotify.com"))
         if (externalPlatform) {
             try {
                 val url = sourceUrl?.takeIf(String::isNotBlank) ?: error("This external track has no source link.")
