@@ -1,6 +1,7 @@
 package com.hightechentertainment.app
 
 import android.net.Uri
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.ContextWrapper
 import android.content.Context
@@ -152,8 +153,24 @@ fun UniverseShell() {
             .build()
     }
     LaunchedEffect(mediaController, selectedTrack?.id, selectedTrackQueue) {
-        val player = mediaController ?: return@LaunchedEffect
         val selected = selectedTrack ?: return@LaunchedEffect
+        val sourceUrl = selected.sourceUrl?.takeIf(String::isNotBlank) ?: selected.audioUrl
+        val sourceHost = sourceUrl?.let { runCatching { Uri.parse(it).host.orEmpty().lowercase() }.getOrDefault("") }.orEmpty()
+        val externalPlatform = selected.sourcePlatform.lowercase() in setOf("youtube", "spotify") ||
+            sourceHost == "youtu.be" || sourceHost.endsWith("youtube.com") || sourceHost.endsWith("spotify.com")
+        if (externalPlatform) {
+            try {
+                val url = sourceUrl?.takeIf(String::isNotBlank) ?: error("This external track has no source link.")
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            } catch (_: Throwable) {
+                Toast.makeText(context, "This external music link could not be opened. Check the link and try again.", Toast.LENGTH_LONG).show()
+            } finally {
+                selectedTrack = null
+                selectedTrackQueue = null
+            }
+            return@LaunchedEffect
+        }
+        val player = mediaController ?: return@LaunchedEffect
         val candidates = (selectedTrackQueue ?: listOf(selected)).let { queue ->
             if (queue.any { it.id == selected.id }) queue else listOf(selected) + queue
         }
@@ -218,6 +235,21 @@ fun UniverseShell() {
     }
 
     LaunchedEffect(configured) { refreshCatalogue() }
+    DisposableEffect(lifecycleOwner, configured) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && configured) refreshCatalogue()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(configured) {
+        if (configured) {
+            while (true) {
+                delay(60_000)
+                if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) refreshCatalogue()
+            }
+        }
+    }
     LaunchedEffect(selectedTab) {
         if (selectedTab == UniverseTab.LIBRARY) {
             try {
@@ -303,14 +335,21 @@ fun UniverseShell() {
     fun startDownload(url: String?, title: String, mediaType: String) {
         scope.launch {
             try {
-                if (url.isNullOrBlank()) error("This item has no download URL yet.")
+                if (url.isNullOrBlank()) error(
+                    if (mediaType == "audio") "The HTE-branded download is not ready yet, or this external source is not downloadable."
+                    else "This item has no download URL yet."
+                )
                 withContext(Dispatchers.IO) { offlineManager.enqueue(url, title, mediaType, allowMetered = allowsMeteredMediaDownloads(settingsStore.networkPolicy, settingsStore.dataSaver)) }
                 downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
                 Toast.makeText(context, "Download started: $title", Toast.LENGTH_SHORT).show()
             } catch (cancelled: CancellationException) {
                 throw cancelled
-            } catch (_: Throwable) {
-                Toast.makeText(context, "The download could not start. Check your connection and available storage, then try again.", Toast.LENGTH_LONG).show()
+            } catch (error: Throwable) {
+                Toast.makeText(
+                    context,
+                    error.message?.takeIf { it.isNotBlank() } ?: "The download could not start. Check your connection and available storage, then try again.",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -389,14 +428,14 @@ fun UniverseShell() {
                     profileName = homeProfileName, profileAvatarUrl = homeProfileAvatar,
                     onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true },
                     onPlayPlaylist = ::playPlaylist, onPlayVideo = { selectedVideo = it },
-                    onDownloadTrack = { startDownload(it.audioUrl, it.title, "audio") },
+                    onDownloadTrack = { startDownload(if (it.downloadAllowed && it.downloadBrandingStatus == "ready") it.brandedAudioUrl else null, it.title, "audio") },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     onDownloadVideo = { startDownload(it.videoUrl, it.title, "video") },
                     onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.DISCOVER -> DiscoverScreen(
                     tracks = tracks, isLoading = isLoading, error = catalogueError,
-                    onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onDownload = { startDownload(it.audioUrl, it.title, "audio") },
+                    onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onDownload = { startDownload(if (it.downloadAllowed && it.downloadBrandingStatus == "ready") it.brandedAudioUrl else null, it.title, "audio") },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     initialQuery = searchQuery, onQueryChanged = { searchQuery = it }, onRefresh = ::refreshCatalogue
                 )
@@ -410,7 +449,7 @@ fun UniverseShell() {
                     favouriteTracks = tracks.filter { it.id in favouriteTrackIds },
                     onPlayFavourite = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks.filter { track -> track.id in favouriteTrackIds } else listOf(it); playerExpanded = true },
                     onToggleFavourite = ::toggleFavourite,
-                    onDownloadFavourite = { startDownload(it.audioUrl, it.title, "audio") },
+                    onDownloadFavourite = { startDownload(if (it.downloadAllowed && it.downloadBrandingStatus == "ready") it.brandedAudioUrl else null, it.title, "audio") },
                     onRemoveDownload = { record ->
                         scope.launch {
                             try {
