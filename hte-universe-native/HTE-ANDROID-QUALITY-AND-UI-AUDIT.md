@@ -35,8 +35,9 @@ This repair extends the original mini-player and Google-profile fixes into a coo
 
 ## Verification status
 
-- Unit tests passed on commit `08f5d27` before the subsequent immersive-swipe lifecycle correction.
-- Commit `a6b9aef` is the latest code change at the time of this audit; its Android build, lint, signed APK assembly, APK identity checks and certificate-continuity checks must complete before merge.
+- The existing unit-test suite passed on commit `08f5d27`; three additional regression tests now cover generic error redaction, nested network failures and permission failures. Those new tests await the final PR-head run.
+- The latest application/workflow changes are committed on PR #129. The final PR-head run must pass unit tests, lint, debug APK assembly and package/version identity verification before merge.
+- Pull-request verification no longer decodes production signing secrets or uploads signed production APKs. PR runs build an unsigned/debug APK and retain it for 3 days; production signing and 90-day signed-artifact retention are limited to explicit `native-v*` release tags.
 - A Cloudflare Pages preview check is separate from the Android build and is not evidence of Android correctness.
 - **Physical-device acceptance has not been completed.** The itel A50 / Android 14 Go still needs testing for gesture and three-button navigation, system-bar reveal/restore, mini-player docking, Google avatar persistence, video orientation, audio background playback, settings behavior, offline recovery, memory and battery.
 
@@ -46,7 +47,7 @@ This repair extends the original mini-player and Google-profile fixes into a coo
 - Current internal `versionCode` remains `43`; do not claim an in-place update over build 43 is possible without a higher code. Before publishing an update for existing installations, obtain approval to use code 44 while retaining visible versionName `4.0.9`.
 - Preserve `com.hightechentertainment.app`, the production signing certificate, Supabase backend and existing user data.
 - No public release, tag, or historical APK has been deleted or repointed. Cleanup of public releases `4.0.8` and below still requires the owner's explicit choice.
-- CI currently produces signed production artifacts for pull-request runs. A separate non-signing PR verification path and short retention for temporary PR artifacts should be implemented before the next release cycle. Existing artifacts should not be deleted without approval.
+- Existing historical Actions artifacts remain untouched. The new retention policy applies to future runs only; deletion of existing artifacts or public releases still requires approval.
 
 ## Acceptance gates before publication
 
