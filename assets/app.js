@@ -24,7 +24,7 @@ function spotifyLink(raw){
 }
 function youtubeVideoId(raw){
   try{
-    const u=new URL(String(raw||'')),host=u.hostname.toLowerCase().replace(/^www\\./,'');
+    const u=new URL(String(raw||'')),host=u.hostname.toLowerCase().replace(/^www\./,'');
     let id='';
     if(host==='youtu.be')id=u.pathname.split('/').filter(Boolean)[0]||'';
     else if(host.endsWith('youtube.com')||host==='youtube-nocookie.com'){
@@ -42,9 +42,9 @@ function trackPlayer(x){
   }
   const embed=spotifyEmbed(raw),safe=safeHttpsUrl(raw);
   if(embed)return '<iframe title="Listen to '+esc(x.title)+' on Spotify" src="'+esc(embed)+'" width="100%" height="152" style="border:0" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe><a class="btn gold" style="width:100%;margin-top:8px" target="_blank" rel="noopener noreferrer" data-track-open="'+esc(x.id)+'" href="'+esc(spotifyLink(raw))+'">Open in Spotify ↗</a>';
-  if(/spotify\\.link|spotify\\.com/i.test(raw))return '<a class="btn gold" style="width:100%;margin-top:8px" target="_blank" rel="noopener noreferrer" data-track-open="'+esc(x.id)+'" href="'+esc(spotifyLink(raw))+'">Listen on Spotify ↗</a>';
+  if(/spotify\.link|spotify\.com/i.test(raw))return '<a class="btn gold" style="width:100%;margin-top:8px" target="_blank" rel="noopener noreferrer" data-track-open="'+esc(x.id)+'" href="'+esc(spotifyLink(raw))+'">Listen on Spotify ↗</a>';
   if(safe){
-    const url=new URL(safe),path=url.pathname.toLowerCase(),storage=path.includes('/storage/v1/object/'),direct=storage||/\\.(mp3|mp4|m4a|wav|aac|ogg|flac|opus|webm)$/i.test(path);
+    const url=new URL(safe),path=url.pathname.toLowerCase(),storage=path.includes('/storage/v1/object/'),direct=storage||/\.(mp3|mp4|m4a|wav|aac|ogg|flac|opus|webm)$/i.test(path);
     if(direct){
       const downloadReady=x.download_allowed===true;
       const downloadUrl=siteBasePath()+'download/?track='+encodeURIComponent(x.id);
