@@ -494,16 +494,54 @@ fun UniverseShell() {
 @Composable
 private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, onVoice: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().background(ShellBackground).padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
+        Modifier.fillMaxWidth().background(ShellBackground)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(9.dp)
     ) {
-        Column(Modifier.weight(1f)) {
-            Text("HTE UNIVERSE", color = ShellGold, fontSize = 12.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
-            Text("The Pride of Africa", color = ShellSilver, fontSize = 11.sp)
+        Box(
+            Modifier.size(39.dp).background(
+                Brush.linearGradient(listOf(Color(0xFF5A4522), Color(0xFF17130D))),
+                RoundedCornerShape(13.dp)
+            ).border(1.dp, ShellGold.copy(alpha = .42f), RoundedCornerShape(13.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("HT", color = ShellGold, fontSize = 14.sp, fontWeight = FontWeight.Black, letterSpacing = -.5.sp)
         }
-        IconButton(onClick = onSearch) { Icon(Icons.Outlined.Search, "Search", tint = ShellSilver) }
-        IconButton(onClick = onVoice) { Icon(Icons.Outlined.Mic, "Voice assistant", tint = ShellGold) }
-        IconButton(onClick = onNotifications) { Icon(Icons.Outlined.NotificationsNone, "Notifications", tint = ShellSilver) }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text("HIGH-TECH", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.ExtraBold)
+            Text("ENTERTAINMENT  /  UNIVERSE", color = ShellSilver, fontSize = 8.sp, letterSpacing = .8.sp)
+        }
+        Surface(
+            onClick = onSearch,
+            shape = RoundedCornerShape(12.dp),
+            color = ShellPanel,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .07f))
+        ) {
+            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.Search, "Search", tint = ShellSilver, modifier = Modifier.size(19.dp))
+            }
+        }
+        Surface(
+            onClick = onVoice,
+            shape = RoundedCornerShape(12.dp),
+            color = ShellGold.copy(alpha = .14f),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ShellGold.copy(alpha = .35f))
+        ) {
+            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.GraphicEq, "Voice assistant", tint = ShellGold, modifier = Modifier.size(20.dp))
+            }
+        }
+        Surface(
+            onClick = onNotifications,
+            shape = RoundedCornerShape(12.dp),
+            color = ShellPanel,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .07f))
+        ) {
+            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.NotificationsNone, "Notifications", tint = ShellSilver, modifier = Modifier.size(19.dp))
+            }
+        }
     }
 }
 
@@ -654,26 +692,55 @@ private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: Stri
 
 @Composable
 private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit, isFavourite: Boolean, onToggleFavourite: () -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp).background(ShellGold.copy(alpha = .12f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.MusicNote, null, tint = ShellGold, modifier = Modifier.size(25.dp))
+    Card(
+        colors = CardDefaults.cardColors(containerColor = ShellPanel),
+        shape = RoundedCornerShape(17.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(horizontal = 11.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                Modifier.size(58.dp).background(
+                    Brush.linearGradient(listOf(Color(0xFF49391F), ShellPanel)),
+                    RoundedCornerShape(12.dp)
+                ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!track.coverUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = track.coverUrl,
+                        contentDescription = "Artwork for ${track.title}",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp))
+                    )
+                } else {
+                    Icon(Icons.Outlined.Album, null, tint = ShellGold, modifier = Modifier.size(27.dp))
+                }
             }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(track.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(track.artist, color = ShellMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                track.genre?.let { Text(it, color = ShellGold, fontSize = 10.sp) }
+            Spacer(Modifier.width(11.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(track.title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(track.artist, color = ShellMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                track.genre?.let {
+                    Text(it.uppercase(), color = ShellGold, fontSize = 8.sp, letterSpacing = .8.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                }
             }
-            IconButton(onClick = onToggleFavourite) {
+            IconButton(onClick = onToggleFavourite, modifier = Modifier.size(40.dp)) {
                 Icon(
                     imageVector = if (isFavourite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                     contentDescription = if (isFavourite) "Remove from favourites" else "Add to favourites",
-                    tint = if (isFavourite) ShellGold else ShellMuted
+                    tint = if (isFavourite) ShellGold else ShellMuted,
+                    modifier = Modifier.size(19.dp)
                 )
             }
-            IconButton(onClick = onDownload) { Icon(Icons.Outlined.Download, "Download ${track.title}", tint = ShellSilver) }
-            IconButton(onClick = onPlay) { Icon(Icons.Outlined.PlayCircle, "Play ${track.title}", tint = ShellGold, modifier = Modifier.size(28.dp)) }
+            IconButton(onClick = onDownload, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Outlined.Download, "Download ${track.title}", tint = ShellSilver, modifier = Modifier.size(19.dp))
+            }
+            IconButton(onClick = onPlay, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Outlined.PlayCircle, "Play ${track.title}", tint = ShellGold, modifier = Modifier.size(25.dp))
+            }
         }
     }
 }
