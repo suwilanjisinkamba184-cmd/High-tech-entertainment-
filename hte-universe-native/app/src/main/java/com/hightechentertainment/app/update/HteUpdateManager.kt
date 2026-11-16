@@ -2,6 +2,7 @@ package com.hightechentertainment.app.update
 
 import android.content.Context
 import android.content.pm.PackageManager
+import androidx.core.content.pm.PackageInfoCompat
 import android.os.Build
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -201,8 +202,8 @@ class HteUpdateManager(private val context: Context) {
         val archive = context.packageManager.getPackageArchiveInfo(file.absolutePath, signingFlags) ?: return false
         if (archive.packageName != context.packageName) return false
         val installed = context.packageManager.getPackageInfo(context.packageName, signingFlags)
-        val archiveCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) archive.longVersionCode else archive.versionCode.toLong()
-        val installedCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) installed.longVersionCode else installed.versionCode.toLong()
+        val archiveCode = PackageInfoCompat.getLongVersionCode(archive)
+        val installedCode = PackageInfoCompat.getLongVersionCode(installed)
         val archiveSigners = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) archive.signingInfo?.apkContentsSigners else archive.signatures
         val installedSigners = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) installed.signingInfo?.apkContentsSigners else installed.signatures
         val sameSigningIdentity = !archiveSigners.isNullOrEmpty() && !installedSigners.isNullOrEmpty() &&
