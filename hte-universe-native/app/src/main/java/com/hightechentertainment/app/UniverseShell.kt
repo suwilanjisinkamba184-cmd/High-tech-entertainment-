@@ -363,7 +363,7 @@ fun UniverseShell() {
             } catch (error: Throwable) {
                 Toast.makeText(
                     context,
-                    error.message?.takeIf { it.isNotBlank() } ?: "The download could not start. Check your connection and available storage, then try again.",
+                    "The download could not start. Check your connection and available storage, then try again.",
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -1040,8 +1040,8 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
             { mediaController -> if (effectActive) controller = mediaController },
             { error ->
                 if (effectActive) {
-                    playbackError = error.message?.take(160)
-                        ?: "The background audio service could not start."
+                    android.util.Log.e("HTEPlayback", "Background playback service failed", error)
+                    playbackError = "Audio playback is temporarily unavailable. Please try again."
                 }
             }
         )
@@ -1065,7 +1065,10 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
             .build()
         val startIndex = if (selectedIndex >= 0) selectedIndex else items.lastIndex
         runCatching { player.setMediaItems(items, startIndex, C.TIME_UNSET); player.prepare(); player.play() }
-            .onFailure { playbackError = it.message?.take(160) ?: "Unable to start this track." }
+            .onFailure { error ->
+                android.util.Log.e("HTEPlayback", "Unable to start selected track", error)
+                playbackError = "This track could not be played right now. Check your connection and try again."
+            }
     }
     LaunchedEffect(controller) {
         while (controller != null) {
