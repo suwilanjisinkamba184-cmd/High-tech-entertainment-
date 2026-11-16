@@ -198,18 +198,62 @@ class HteUpdateManager(private val context: Context) {
     /** Reject stale, malformed or foreign APKs before invoking Android's package installer. */
     fun isInstallableUpdate(file: File): Boolean = runCatching {
         if (!file.isFile || file.length() <= 0L) return false
-        val signingFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
-        val archive = context.packageManager.getPackageArchiveInfo(file.absolutePath, signingFlags) ?: return false
+        val archive = packageInfoForArchive(file.absolutePath) ?: return false
         if (archive.packageName != context.packageName) return false
-        val installed = context.packageManager.getPackageInfo(context.packageName, signingFlags)
+        val installed = packageInfoForInstalled(context.packageName)
         val archiveCode = PackageInfoCompat.getLongVersionCode(archive)
         val installedCode = PackageInfoCompat.getLongVersionCode(installed)
-        val archiveSigners = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) archive.signingInfo?.apkContentsSigners else archive.signatures
-        val installedSigners = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) installed.signingInfo?.apkContentsSigners else installed.signatures
+        val archiveSigners = currentSigners(archive)
+        val installedSigners = currentSigners(installed)
         val sameSigningIdentity = !archiveSigners.isNullOrEmpty() && !installedSigners.isNullOrEmpty() &&
             archiveSigners.map { it.toCharsString() }.toSet() == installedSigners.map { it.toCharsString() }.toSet()
         archiveCode > installedCode && sameSigningIdentity
     }.getOrDefault(false)
+
+    /**
+     * Use typed PackageInfoFlags on Android 13+. The legacy integer overload is
+     * isolated here solely for devices below API 33 (the app supports API 25+).
+     */
+    @Suppress("DEPRECATION")
+    private fun packageInfoForArchive(path: String) =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.packageManager.getPackageArchiveInfo(
+                path,
+                PackageManager.PackageInfoFlags.of(PackageManager.GET_SIGNING_CERTIFICATES.toLong())
+            )
+        } else {
+            val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                PackageManager.GET_SIGNING_CERTIFICATES
+            } else {
+                PackageManager.GET_SIGNATURES
+            }
+            context.packageManager.getPackageArchiveInfo(path, flags)
+        }
+
+    @Suppress("DEPRECATION")
+    private fun packageInfoForInstalled(packageName: String) =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.packageManager.getPackageInfo(
+                packageName,
+                PackageManager.PackageInfoFlags.of(PackageManager.GET_SIGNING_CERTIFICATES.toLong())
+            )
+        } else {
+            val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                PackageManager.GET_SIGNING_CERTIFICATES
+            } else {
+                PackageManager.GET_SIGNATURES
+            }
+            context.packageManager.getPackageInfo(packageName, flags)
+        }
+
+    /** Return current APK content signers; retain the pre-P fallback for minSdk 25. */
+    @Suppress("DEPRECATION")
+    private fun currentSigners(info: android.content.pm.PackageInfo) =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            info.signingInfo?.apkContentsSigners
+        } else {
+            info.signatures
+        }
     fun partialDownloadSize(): Long = File(updateDirectory, "HTE-Universe-update.apk.part").takeIf { it.exists() }?.length() ?: 0L
     fun clearPartialDownload() { File(updateDirectory, "HTE-Universe-update.apk.part").delete() }
     fun clearCachedUpdate() { File(updateDirectory, "HTE-Universe-update.apk").delete(); clearPartialDownload() }
