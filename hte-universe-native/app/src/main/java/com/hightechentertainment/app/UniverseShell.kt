@@ -74,11 +74,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-private val ShellGold = Color(0xFFD6B15E)
+private val ShellGold = Color(0xFFE5C158)
 private val ShellSilver = Color(0xFFC4CAD2)
 private val ShellMuted = Color(0xFF8B929D)
-private val ShellPanel = Color(0xFF121418)
-private val ShellBackground = Color(0xFF08090B)
+private val ShellPanel = Color(0xFF17161E)
+private val ShellBackground = Color(0xFF0B0A0F)
 
 private enum class UniverseTab(val label: String) {
     HOME("Home"), DISCOVER("Discover"), VIDEOS("Videos"), LIBRARY("Library"), ACCOUNT("Account")
