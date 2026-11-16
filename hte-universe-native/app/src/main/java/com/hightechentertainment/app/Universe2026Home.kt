@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -101,7 +102,7 @@ fun Universe2026Home(
                     Icon(Icons.Outlined.Search, null, tint = U26Gold, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(11.dp))
                     Text("Search music, artists and genres", Modifier.weight(1f), color = U26Muted, fontSize = 12.sp)
-                    Icon(Icons.Outlined.ArrowForward, null, tint = U26Silver, modifier = Modifier.size(17.dp))
+                    Icon(Icons.AutoMirrored.Outlined.ArrowForward, null, tint = U26Silver, modifier = Modifier.size(17.dp))
                 }
             }
 
@@ -207,7 +208,7 @@ fun Universe2026Home(
                         Text("Control your universe by voice", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         Text("Search, navigate and manage playback", color = U26Muted, fontSize = 10.sp)
                     }
-                    Icon(Icons.Outlined.ArrowForward, null, tint = U26Gold)
+                    Icon(Icons.AutoMirrored.Outlined.ArrowForward, null, tint = U26Gold)
                 }
             }
         }
