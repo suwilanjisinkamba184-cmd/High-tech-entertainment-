@@ -50,7 +50,7 @@ enum class HteRepeatMode { OFF, ALL, ONE }
 data class PlayerUiState(
     val track: PlayerTrack? = null, val isPlaying: Boolean = false, val isBuffering: Boolean = false,
     val positionMs: Long = 0L, val durationMs: Long = 0L, val shuffle: Boolean = false,
-    val repeat: HteRepeatMode = HteRepeatMode.OFF, val amplitudes: List<Float>? = null,
+    val repeat: HteRepeatMode = HteRepeatMode.OFF, 
     val playbackError: Boolean = false,
 )
 interface PlayerController {
@@ -66,7 +66,6 @@ interface PlayerController {
 
 /** Main-thread adapter over the app-scoped Media3 controller. release() also stops its polling job. */
 class Media3PlayerController(private val player: Player, scope: CoroutineScope) : PlayerController {
-    private var waveform: Pair<String, List<Float>>? = null
     private val _state = MutableStateFlow(snapshot())
     override val state: StateFlow<PlayerUiState> = _state.asStateFlow()
     private var pollJob: Job? = null
@@ -81,10 +80,6 @@ class Media3PlayerController(private val player: Player, scope: CoroutineScope) 
                 delay(250)
             }
         }
-    }
-    fun setWaveform(trackId: String, amplitudes: List<Float>) {
-        waveform = trackId to amplitudes.map { it.coerceIn(0f, 1f) }
-        _state.value = snapshot()
     }
     fun release() {
         pollJob?.cancel()
@@ -103,7 +98,6 @@ class Media3PlayerController(private val player: Player, scope: CoroutineScope) 
             playbackError = player.playerError != null,
             shuffle = player.shuffleModeEnabled,
             repeat = when (player.repeatMode) { Player.REPEAT_MODE_ONE -> HteRepeatMode.ONE; Player.REPEAT_MODE_ALL -> HteRepeatMode.ALL; else -> HteRepeatMode.OFF },
-            amplitudes = waveform?.takeIf { it.first == item?.mediaId }?.second,
         )
     }
     override fun togglePlay() { if (player.isPlaying) player.pause() else player.play() }
@@ -182,7 +176,7 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
     val progress = if (state.durationMs > 0) (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f) else 0f
     BoxWithConstraints(modifier.fillMaxSize()) {
         // Bound artwork by both available height and width so compact and wide screens stay balanced.
-        val artworkMaxHeight = minOf(maxHeight * .30f, maxWidth * .72f)
+        val artworkMaxHeight = minOf(maxHeight * .26f, maxWidth * .68f)
         val horizontalInset = when {
             maxWidth < 360.dp -> 12.dp
             maxWidth < 600.dp -> 18.dp
@@ -193,7 +187,7 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
                 .verticalScroll(rememberScrollState())
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(horizontal = horizontalInset, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onCollapse) { Icon(Icons.Rounded.KeyboardArrowDown, "Close player", tint = HteColors.OnDark, modifier = Modifier.size(32.dp)) }
@@ -249,8 +243,8 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = controller::toggleShuffle) { Icon(Icons.Rounded.Shuffle, "Shuffle", tint = if (state.shuffle) HteColors.Gold else HteColors.Muted) }
-            IconButton(onClick = controller::previous, modifier = Modifier.size(54.dp)) { Icon(Icons.Rounded.SkipPrevious, "Previous", tint = HteColors.OnDark, modifier = Modifier.size(34.dp)) }
-            Box(Modifier.size(70.dp).clip(CircleShape).background(HteColors.Gold).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); controller.togglePlay() }, contentAlignment = Alignment.Center) {
+            IconButton(onClick = controller::previous, modifier = Modifier.size(54.dp)) { Icon(Icons.Rounded.SkipPrevious, "Previous", tint = HteColors.OnDark, modifier = Modifier.size(30.dp)) }
+            Box(Modifier.size(64.dp).clip(CircleShape).background(HteColors.Gold).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); controller.togglePlay() }, contentAlignment = Alignment.Center) {
                 if (state.isBuffering) CircularProgressIndicator(Modifier.size(30.dp), color = HteColors.Obsidian, strokeWidth = 3.dp)
                 else Icon(if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (state.isPlaying) "Pause" else "Play", tint = HteColors.Obsidian, modifier = Modifier.size(38.dp))
             }
