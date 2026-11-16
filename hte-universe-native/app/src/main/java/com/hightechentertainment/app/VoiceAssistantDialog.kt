@@ -64,6 +64,17 @@ private data class VoiceTokenResponse(
     @SerialName("user_id") val userId: String
 )
 
+private fun voiceFailureMessage(details: String): String {
+    val normalized = details.lowercase()
+    return when {
+        listOf("timeout", "network", "connection", "offline", "unreachable").any(normalized::contains) ->
+            "Voice Companion could not connect. Check your internet connection and try again."
+        listOf("convai_write", "missing permission", "unauthorized", "forbidden").any(normalized::contains) ->
+            "Voice Companion is not fully available yet. Please try again later or contact HTE support."
+        else -> "Voice Companion is temporarily unavailable. Please try again."
+    }
+}
+
 @Composable
 fun VoiceAssistantDialog(
     tracks: List<TrackDto>,
@@ -116,7 +127,7 @@ fun VoiceAssistantDialog(
         if (granted) startVoiceSession(scope, context, toolContext, selectedVoiceId,
             onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
             onSession = { active -> session = active; isConnecting = false },
-            onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = error.toHteUserMessage("Voice Companion could not connect. Please try again.") }
+            onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = voiceFailureMessage(error) }
         ) else errorMessage = "Microphone permission is required for Voice Companion."
     }
 
@@ -128,7 +139,7 @@ fun VoiceAssistantDialog(
             startVoiceSession(scope, context, toolContext, selectedVoiceId,
                 onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
                 onSession = { active -> session = active; isConnecting = false },
-                onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = error.toHteUserMessage("Voice Companion could not connect. Please try again.") }
+                onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = voiceFailureMessage(error) }
             )
         }
     }
