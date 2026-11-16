@@ -82,6 +82,7 @@ jobs:
           grep -q "base: process.env.CF_PAGES === '1' ? '/' : '/High-tech-entertainment-/'" website/astro.config.mjs
           grep -q 'source_url,source_platform,rights_status,download_allowed,branded_audio_url,download_branding_status' website/src/components/PublicCatalogue.tsx
           grep -q 'Download HTE-branded audio' website/src/components/PublicCatalogue.tsx
+          grep -q 'is_root_reference = target.startswith("/")' scripts/build-website.sh
           ! grep -Fq 'href={downloadUrl || src}' website/src/components/PublicCatalogue.tsx
           test -s admin/index.html
           grep -q 'id="artists"' website/src/components/PublicCatalogue.tsx
