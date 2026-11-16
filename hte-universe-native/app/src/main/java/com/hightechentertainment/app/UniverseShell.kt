@@ -575,8 +575,10 @@ fun UniverseShell() {
                     controller = uiController,
                     expanded = playerExpanded,
                     onExpandedChange = { playerExpanded = it },
+                    // The player is layered above Scaffold content, so use the
+                    // measured bottom-bar + system-bar inset instead of a fixed offset.
                     modifier = Modifier.align(Alignment.BottomCenter),
-                    collapsedBottomInset = 96.dp,
+                    collapsedBottomInset = insets.calculateBottomPadding(),
                     artwork = { url, artworkModifier ->
                         if (!url.isNullOrBlank()) {
                             AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
