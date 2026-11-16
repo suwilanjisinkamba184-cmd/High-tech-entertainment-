@@ -749,15 +749,23 @@ private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit
 private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: () -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.fillMaxWidth().height(164.dp).background(
-                androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF392D1D), Color(0xFF171B22), Color(0xFF0D1117))),
-                RoundedCornerShape(13.dp)
+            Box(Modifier.fillMaxWidth().height(164.dp).clip(RoundedCornerShape(13.dp)).background(
+                androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF392D1D), Color(0xFF171B22), Color(0xFF0D1117)))
             ), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.VideoLibrary, null, tint = ShellGold.copy(alpha = .72f), modifier = Modifier.size(52.dp))
-                Box(Modifier.align(Alignment.Center).size(48.dp).background(Color.Black.copy(alpha = .52f), RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
+                if (!video.thumbnailUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = video.thumbnailUrl,
+                        contentDescription = "Thumbnail for ${video.title}",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(Icons.Outlined.VideoLibrary, null, tint = ShellGold.copy(alpha = .72f), modifier = Modifier.size(52.dp))
+                }
+                Box(Modifier.align(Alignment.Center).size(48.dp).background(Color.Black.copy(alpha = .62f), RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
                     Icon(Icons.Outlined.PlayArrow, "Play ${video.title}", tint = Color.White, modifier = Modifier.size(30.dp))
                 }
-                Text("HTE VISUALS", color = ShellSilver, fontSize = 8.sp, letterSpacing = 1.6.sp, modifier = Modifier.align(Alignment.BottomStart).padding(10.dp))
+                Text("HTE VISUALS", color = Color.White, fontSize = 8.sp, letterSpacing = 1.6.sp, modifier = Modifier.align(Alignment.BottomStart).padding(10.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
