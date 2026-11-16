@@ -61,7 +61,20 @@ jobs:
       - name: Run release lint
         run: gradle --no-daemon :app:lintRelease --console=plain
 
-      # Pull requests validate source only. Main/dispatch builds the real installable release APK.
+      # Pull requests produce an unsigned debug APK for hands-on testing; they never publish a release.
+      - name: Assemble debug test APK
+        if: github.event_name == 'pull_request'
+        run: gradle --no-daemon :app:assembleDebug --console=plain
+      - name: Upload debug test APK
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: hte-universe-pr-${{ github.event.pull_request.number }}-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      # Production signing and publishing are available only through an explicit manual dispatch.
       - name: Validate production signing configuration
         if: github.event_name == 'workflow_dispatch'
         env:
