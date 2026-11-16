@@ -192,6 +192,8 @@ fun UniverseShell() {
     var favouriteTrackIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var playlists by remember { mutableStateOf<List<PlaylistDto>>(emptyList()) }
     var playlistTracks by remember { mutableStateOf<Map<String, List<TrackDto>>>(emptyMap()) }
+    var homeProfileName by remember { mutableStateOf<String?>(null) }
+    var homeProfileAvatar by remember { mutableStateOf<String?>(null) }
     val configured = BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()
 
     fun refreshCatalogue() {
@@ -229,7 +231,7 @@ fun UniverseShell() {
     }
 
     LaunchedEffect(configured, selectedTab) {
-        if (configured && selectedTab == UniverseTab.LIBRARY) {
+        if (configured && (selectedTab == UniverseTab.LIBRARY || selectedTab == UniverseTab.HOME)) {
             try {
                 favouriteTrackIds = withContext(Dispatchers.IO) { MemberRepository().getFavouriteTrackIds() }
             } catch (cancelled: CancellationException) {
@@ -245,19 +247,24 @@ fun UniverseShell() {
             try {
                 val repository = MemberRepository()
                 val result = withContext(Dispatchers.IO) {
+                    val profile = repository.getMyProfile()
                     val savedPlaylists = repository.getMyPlaylists()
                     val trackMap = savedPlaylists.associate { playlist ->
                         playlist.id to repository.getPlaylistTrackIds(playlist.id)
                             .mapNotNull { trackId -> tracks.firstOrNull { it.id == trackId } }
                     }
-                    savedPlaylists to trackMap
+                    Triple(profile, savedPlaylists, trackMap)
                 }
-                playlists = result.first
-                playlistTracks = result.second
+                homeProfileName = result.first.displayName.takeIf(String::isNotBlank)
+                homeProfileAvatar = result.first.avatarUrl.takeIf(String::isNotBlank)
+                playlists = result.second
+                playlistTracks = result.third
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Throwable) {
                 // Signed-out visitors and members without playlists see no private playlist rail.
+                homeProfileName = null
+                homeProfileAvatar = null
                 playlists = emptyList()
                 playlistTracks = emptyMap()
             }
@@ -367,6 +374,7 @@ fun UniverseShell() {
                     onVoice = { showVoiceAssistant = true },
                     onProfile = { selectedTab = UniverseTab.ACCOUNT },
                     playlists = playlists, playlistTracks = playlistTracks,
+                    profileName = homeProfileName, profileAvatarUrl = homeProfileAvatar,
                     onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true },
                     onPlayPlaylist = ::playPlaylist, onPlayVideo = { selectedVideo = it },
                     onDownloadTrack = { startDownload(it.audioUrl, it.title, "audio") },
@@ -591,14 +599,15 @@ private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, on
 @Composable
 private fun HomeScreen(
     tracks: List<TrackDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
-    playlistTracks: Map<String, List<TrackDto>>, isLoading: Boolean,
+    playlistTracks: Map<String, List<TrackDto>>, profileName: String?, profileAvatarUrl: String?, isLoading: Boolean,
     onExplore: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
 ) {
     Universe2026Home(
-        tracks = tracks, videos = videos, playlists = playlists, playlistTracks = playlistTracks, isLoading = isLoading,
+        tracks = tracks, videos = videos, playlists = playlists, playlistTracks = playlistTracks,
+        profileName = profileName, profileAvatarUrl = profileAvatarUrl, isLoading = isLoading,
         onExplore = onExplore, onVideos = onVideos, onVoice = onVoice, onProfile = onProfile,
         onPlayTrack = onPlayTrack, onPlayPlaylist = onPlayPlaylist, onPlayVideo = onPlayVideo,
         onDownloadTrack = onDownloadTrack, onDownloadVideo = onDownloadVideo,
