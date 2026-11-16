@@ -66,6 +66,8 @@ class MainActivity : ComponentActivity() {
         }
         SupabaseClientProvider.initialize(applicationContext)
         handleSupabaseIntent(intent)
+        // Make edge-to-edge behavior explicit on Android 15+ and keep Compose responsible for safe insets.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars = false
             isAppearanceLightNavigationBars = false
