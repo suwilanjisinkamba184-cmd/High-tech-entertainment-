@@ -42,7 +42,6 @@ private val FounderPanel = Color(0xFF121418)
 private val FounderMuted = Color(0xFF8B929D)
 
 @OptIn(ExperimentalMaterial3Api::class)
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FounderStudioScreen(onClose: () -> Unit) {
     val context = LocalContext.current
