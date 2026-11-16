@@ -6,6 +6,7 @@ import android.content.ContextWrapper
 import android.content.Context
 import android.app.Activity
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -213,7 +214,13 @@ fun UniverseShell() {
     LaunchedEffect(configured) { refreshCatalogue() }
     LaunchedEffect(selectedTab) {
         if (selectedTab == UniverseTab.LIBRARY) {
-            downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
+            try {
+                downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Throwable) {
+                Toast.makeText(context, "Your library could not be loaded. Please try again.", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -248,8 +255,8 @@ fun UniverseShell() {
                 Toast.makeText(context, "Download started: $title", Toast.LENGTH_SHORT).show()
             } catch (cancelled: CancellationException) {
                 throw cancelled
-            } catch (error: Throwable) {
-                Toast.makeText(context, error.message?.take(120) ?: "Download could not start.", Toast.LENGTH_LONG).show()
+            } catch (_: Throwable) {
+                Toast.makeText(context, "The download could not start. Check your connection and available storage, then try again.", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -281,7 +288,7 @@ fun UniverseShell() {
             }
         }
     ) { insets ->
-        Row(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxSize().padding(insets)) {
             if (isWideLayout) {
                 NavigationRail(containerColor = ShellPanel, contentColor = ShellGold) {
                     UniverseTab.entries.forEach { tab ->
@@ -303,7 +310,6 @@ fun UniverseShell() {
             }
             Column(
                 Modifier.weight(1f).fillMaxHeight()
-                    .padding(insets)
                     .padding(end = if (isWideLayout && playerHasTrack) 360.dp else 0.dp)
             ) {
             UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true })
@@ -336,7 +342,18 @@ fun UniverseShell() {
                     onPlayFavourite = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks.filter { track -> track.id in favouriteTrackIds } else listOf(it); playerExpanded = true },
                     onToggleFavourite = ::toggleFavourite,
                     onDownloadFavourite = { startDownload(it.audioUrl, it.title, "audio") },
-                    onRemoveDownload = { record -> scope.launch { withContext(Dispatchers.IO) { offlineManager.remove(record.id) }; downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() } } },
+                    onRemoveDownload = { record ->
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) { offlineManager.remove(record.id) }
+                                downloads = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (_: Throwable) {
+                                Toast.makeText(context, "This download could not be removed. Please try again.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
                     onPlayDownload = { record ->
                         if (record.localUri.isNullOrBlank()) Toast.makeText(context, "This download is not ready yet.", Toast.LENGTH_SHORT).show()
                         else if (record.mediaType == "video") selectedVideo = VideoDto(record.id.toString(), record.title, videoUrl = record.localUri)
@@ -935,9 +952,11 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     val systemBars = remember(window) { window?.let { WindowInsetsControllerCompat(it, it.decorView) } }
     val previousOrientation = remember(activity) { activity?.requestedOrientation }
     var immersiveVideo by remember(video.id) { mutableStateOf(false) }
+
     val toggleImmersive = {
-        immersiveVideo = !immersiveVideo
-        if (immersiveVideo) {
+        val enteringImmersive = !immersiveVideo
+        immersiveVideo = enteringImmersive
+        if (enteringImmersive) {
             systemBars?.hide(WindowInsetsCompat.Type.systemBars())
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         } else {
@@ -945,29 +964,31 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
             activity?.requestedOrientation = previousOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
+    BackHandler(enabled = immersiveVideo) { toggleImmersive() }
     DisposableEffect(activity, systemBars) {
-        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
         onDispose {
             systemBars?.show(WindowInsetsCompat.Type.systemBars())
             if (previousOrientation != null) activity?.requestedOrientation = previousOrientation
         }
     }
+
     val validUrl = remember(video.videoUrl) {
         runCatching {
-            val uri = Uri.parse(video.videoUrl)
-            uri.scheme in listOf("https", "http", "content", "file") && !video.videoUrl.isBlank()
+            val value = video.videoUrl.trim()
+            val uri = Uri.parse(value)
+            !uri.isOpaque && uri.scheme?.lowercase() in setOf("https", "http", "content", "file") && value.isNotBlank()
         }.getOrDefault(false)
     }
     val player = remember(video.id, video.videoUrl) {
         ExoPlayer.Builder(context)
             .setAudioAttributes(AudioAttributes.DEFAULT, true)
             .build().apply {
-            if (validUrl) {
-                setMediaItem(MediaItem.fromUri(video.videoUrl))
-                prepare()
-                playWhenReady = true
+                if (validUrl) {
+                    setMediaItem(MediaItem.fromUri(video.videoUrl.trim()))
+                    prepare()
+                    playWhenReady = true
+                }
             }
-        }
     }
     LaunchedEffect(player, quality) {
         val maxVideoSize = when (quality) {
@@ -980,6 +1001,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
             .setMaxVideoSize(maxVideoSize.first, maxVideoSize.second)
             .build()
     }
+
     var playbackError by remember { mutableStateOf<String?>(null) }
     var isBuffering by remember { mutableStateOf(false) }
     var videoPlaying by remember { mutableStateOf(false) }
@@ -988,6 +1010,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     var isSeeking by remember { mutableStateOf(false) }
     var seekFraction by remember { mutableStateOf(0f) }
     val isSeekingNow by rememberUpdatedState(isSeeking)
+
     LaunchedEffect(player) {
         while (true) {
             videoPlaying = player.isPlaying
@@ -1000,6 +1023,8 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
         val listener = object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 playbackError = "Video playback failed. Check the connection or retry the stream."
+                videoPlaying = false
+                isBuffering = false
             }
             override fun onPlaybackStateChanged(playbackState: Int) {
                 isBuffering = playbackState == Player.STATE_BUFFERING
@@ -1007,93 +1032,132 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
             }
         }
         player.addListener(listener)
-        onDispose { player.removeListener(listener); player.release() }
+        onDispose {
+            player.removeListener(listener)
+            player.release()
+        }
     }
+
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize(), color = Color.Black) {
-            Column(Modifier.fillMaxSize().background(Color.Black).padding(if (immersiveVideo) 0.dp else 12.dp)) {
-                if (!immersiveVideo) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 10.sp)
-                        }
-                        IconButton(onClick = toggleImmersive) { Icon(Icons.Outlined.Fullscreen, "Enter fullscreen", tint = ShellGold) }
-                        IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close video", tint = Color.White) }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                }
-                if (validUrl) {
-                    if (immersiveVideo) {
-                        AndroidView(
-                            factory = { viewContext -> PlayerView(viewContext).apply {
-                                this.player = player
-                                useController = false
-                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-                                keepScreenOn = true
-                            } },
-                            update = { view -> view.player = player },
-                            modifier = Modifier.fillMaxWidth().weight(1f)
-                        )
-                    } else {
-                        AndroidView(
-                            factory = { viewContext -> PlayerView(viewContext).apply {
-                                this.player = player
-                                useController = false
-                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-                                keepScreenOn = true
-                            } },
-                            update = { view -> view.player = player },
-                            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
-                        )
-                        Spacer(Modifier.weight(1f))
-                    }
-                } else {
-                    Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                        Text("This video does not have a valid playback URL.", color = ShellGold)
-                    }
-                }
-                if (validUrl) {
-                    Column(
-                        Modifier.fillMaxWidth().background(ShellPanel, RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalArrangement = Arrangement.spacedBy(7.dp)
-                    ) {
-                        Slider(
-                            value = if (isSeeking) seekFraction else if (videoDuration > 0L) (videoPosition.toFloat() / videoDuration).coerceIn(0f, 1f) else 0f,
-                            onValueChange = { fraction -> isSeeking = true; seekFraction = fraction },
-                            onValueChangeFinished = {
-                                if (videoDuration > 0L) player.seekTo((seekFraction * videoDuration).toLong())
-                                isSeeking = false
-                            },
-                            enabled = videoDuration > 0L,
-                            colors = SliderDefaults.colors(thumbColor = ShellGold, activeTrackColor = ShellGold)
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(formatVideoTime(videoPosition), color = ShellMuted, fontSize = 10.sp)
-                            Spacer(Modifier.weight(1f))
-                            TextButton(onClick = { player.seekTo((player.currentPosition - 10_000L).coerceAtLeast(0L)) }) { Text("−10s", color = ShellSilver) }
-                            Button(
-                                onClick = { if (player.isPlaying) player.pause() else player.play() },
-                                colors = ButtonDefaults.buttonColors(containerColor = ShellGold, contentColor = Color.Black),
-                                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 7.dp)
-                            ) { Text(if (videoPlaying) "Pause" else "Play", fontWeight = FontWeight.Bold) }
-                            TextButton(onClick = { if (videoDuration > 0L) player.seekTo((player.currentPosition + 10_000L).coerceAtMost(videoDuration)) }) { Text("+10s", color = ShellSilver) }
-                            IconButton(onClick = toggleImmersive) {
-                                Icon(if (immersiveVideo) Icons.Outlined.FullscreenExit else Icons.Outlined.Fullscreen, if (immersiveVideo) "Exit fullscreen" else "Enter fullscreen", tint = ShellGold)
+            BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
+                val landscape = maxWidth > maxHeight
+                val safePadding = if (immersiveVideo) Modifier else Modifier.windowInsetsPadding(WindowInsets.safeDrawing)
+                Column(
+                    Modifier.fillMaxSize()
+                        .then(safePadding)
+                        .padding(horizontal = if (immersiveVideo) 0.dp else 12.dp,
+                            vertical = if (immersiveVideo) 0.dp else 12.dp)
+                ) {
+                    if (!immersiveVideo) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(video.title, color = Color.White, fontWeight = FontWeight.Bold,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 10.sp)
                             }
-                            Spacer(Modifier.weight(1f))
-                            Text(formatVideoTime(videoDuration), color = ShellMuted, fontSize = 10.sp)
+                            IconButton(onClick = toggleImmersive) {
+                                Icon(Icons.Outlined.Fullscreen, "Enter fullscreen", tint = ShellGold)
+                            }
+                            IconButton(onClick = onDismiss) {
+                                Icon(Icons.Outlined.Close, "Close video", tint = Color.White)
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+
+                    if (validUrl) {
+                        AndroidView(
+                            factory = { viewContext ->
+                                PlayerView(viewContext).apply {
+                                    this.player = player
+                                    useController = false
+                                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                    setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                                    keepScreenOn = true
+                                }
+                            },
+                            update = { view ->
+                                if (view.player !== player) view.player = player
+                            },
+                            onRelease = { view ->
+                                view.player = null
+                                view.keepScreenOn = false
+                            },
+                            modifier = if (immersiveVideo || landscape) {
+                                Modifier.fillMaxWidth().weight(1f)
+                            } else {
+                                Modifier.fillMaxWidth().height(minOf(maxWidth * (9f / 16f), maxHeight * .46f))
+                            }
+                        )
+                        if (!immersiveVideo && !landscape) Spacer(Modifier.weight(1f))
+                    } else {
+                        Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                            Text("This video does not have a valid playback URL.", color = ShellGold)
                         }
                     }
-                }
-                if (isBuffering) LinearProgressIndicator(Modifier.fillMaxWidth(), color = ShellGold)
-                playbackError?.let { message ->
-                    Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(14.dp)) {
-                        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(message, color = ShellSilver, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                            TextButton(onClick = { playbackError = null; player.prepare(); player.playWhenReady = true }) { Text("Retry", color = ShellGold) }
+
+                    if (validUrl) {
+                        Column(
+                            Modifier.fillMaxWidth()
+                                .background(ShellPanel, RoundedCornerShape(16.dp))
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Slider(
+                                value = if (isSeeking) seekFraction else if (videoDuration > 0L)
+                                    (videoPosition.toFloat() / videoDuration).coerceIn(0f, 1f) else 0f,
+                                onValueChange = { fraction -> isSeeking = true; seekFraction = fraction },
+                                onValueChangeFinished = {
+                                    if (videoDuration > 0L) player.seekTo((seekFraction * videoDuration).toLong())
+                                    isSeeking = false
+                                },
+                                enabled = videoDuration > 0L,
+                                colors = SliderDefaults.colors(thumbColor = ShellGold, activeTrackColor = ShellGold)
+                            )
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(formatVideoTime(videoPosition), color = ShellMuted, fontSize = 10.sp)
+                                TextButton(
+                                    onClick = { player.seekTo((player.currentPosition - 10_000L).coerceAtLeast(0L)) },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
+                                ) { Text("−10s", color = ShellSilver) }
+                                Button(
+                                    onClick = { if (player.isPlaying) player.pause() else player.play() },
+                                    colors = ButtonDefaults.buttonColors(containerColor = ShellGold, contentColor = Color.Black),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                ) { Text(if (videoPlaying) "Pause" else "Play", fontWeight = FontWeight.Bold) }
+                                TextButton(
+                                    onClick = {
+                                        if (videoDuration > 0L) player.seekTo((player.currentPosition + 10_000L).coerceAtMost(videoDuration))
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
+                                ) { Text("+10s", color = ShellSilver) }
+                                IconButton(onClick = toggleImmersive, modifier = Modifier.size(40.dp)) {
+                                    Icon(
+                                        if (immersiveVideo) Icons.Outlined.FullscreenExit else Icons.Outlined.Fullscreen,
+                                        if (immersiveVideo) "Exit fullscreen" else "Enter fullscreen",
+                                        tint = ShellGold
+                                    )
+                                }
+                                Text(formatVideoTime(videoDuration), color = ShellMuted, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                    if (isBuffering) LinearProgressIndicator(Modifier.fillMaxWidth(), color = ShellGold)
+                    playbackError?.let { message ->
+                        Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(14.dp)) {
+                            Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(message, color = ShellSilver, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                                TextButton(onClick = {
+                                    playbackError = null
+                                    player.prepare()
+                                    player.playWhenReady = true
+                                }) { Text("Retry", color = ShellGold) }
+                            }
                         }
                     }
                 }
@@ -1101,7 +1165,6 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
         }
     }
 }
-
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
