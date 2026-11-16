@@ -30,13 +30,13 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 
 private val U26Black = Color(0xFF08090B)
-private val U26Panel = Color(0xFF121418)
-private val U26Raised = Color(0xFF1A1E25)
+private val U26Panel = Color(0xFF15111B)
+private val U26Raised = Color(0xFF21182A)
 private val U26Gold = Color(0xFFD6B15E)
 private val U26GoldLight = Color(0xFFF0DCA7)
 private val U26Silver = Color(0xFFC7CCD6)
 private val U26Muted = Color(0xFF89919D)
-private val U26Line = Color(0xFF2A2E36)
+private val U26Line = Color(0xFF33283A)
 
 @Composable
 fun Universe2026Home(
@@ -194,7 +194,7 @@ fun Universe2026Home(
             item {
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                        .background(Brush.horizontalGradient(listOf(Color(0xFF292116), U26Panel)))
+                        .background(Brush.horizontalGradient(listOf(Color(0xFF3B1745), U26Panel)))
                         .border(1.dp, U26Gold.copy(alpha = .24f), RoundedCornerShape(18.dp))
                         .clickable(onClick = onVoice).padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -226,7 +226,7 @@ private fun U26FeaturedRelease(track: TrackDto, onPlay: () -> Unit, wide: Boolea
             if (!track.coverUrl.isNullOrBlank()) {
                 AsyncImage(model = track.coverUrl, contentDescription = "Featured artwork for ${track.title}", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             } else {
-                Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF594321), Color(0xFF1B1B1C), U26Black))))
+                Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF70266F), Color(0xFF1B1B1C), U26Black))))
                 Icon(Icons.Outlined.GraphicEq, null, tint = U26Gold.copy(alpha = .18f), modifier = Modifier.align(Alignment.Center).size(190.dp))
             }
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .08f), Color.Black.copy(alpha = .38f), Color.Black.copy(alpha = .94f)))))
@@ -259,7 +259,7 @@ private fun U26FeaturedRelease(track: TrackDto, onPlay: () -> Unit, wide: Boolea
 private fun U26EmptyFeature(isLoading: Boolean, onRefresh: () -> Unit) {
     Box(
         Modifier.fillMaxWidth().height(218.dp).clip(RoundedCornerShape(25.dp))
-            .background(Brush.linearGradient(listOf(Color(0xFF302516), U26Panel, U26Black)))
+            .background(Brush.linearGradient(listOf(Color(0xFF35123D), U26Panel, U26Black)))
             .border(1.dp, U26Gold.copy(alpha = .22f), RoundedCornerShape(25.dp)),
         contentAlignment = Alignment.Center
     ) {
@@ -303,7 +303,7 @@ private fun U26ReleaseCard(
                 if (!track.coverUrl.isNullOrBlank()) {
                     AsyncImage(model = track.coverUrl, contentDescription = "Artwork for ${track.title}", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 } else {
-                    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF49391F), U26Raised))), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF57205D), U26Raised))), contentAlignment = Alignment.Center) {
                         Icon(Icons.Outlined.Album, null, tint = U26Gold, modifier = Modifier.size(38.dp))
                     }
                 }
@@ -361,7 +361,7 @@ private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onD
     Column(Modifier.width(if (wide) 238.dp else 194.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Box(
             Modifier.fillMaxWidth().height(if (wide) 140.dp else 112.dp).clip(RoundedCornerShape(16.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFF3A3020), U26Raised, Color(0xFF101216))))
+                .background(Brush.linearGradient(listOf(Color(0xFF2C1735), U26Raised, Color(0xFF101216))))
                 .clickable(onClick = onPlay),
             contentAlignment = Alignment.Center
         ) {
