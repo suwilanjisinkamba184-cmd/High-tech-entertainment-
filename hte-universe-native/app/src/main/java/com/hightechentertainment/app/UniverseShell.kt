@@ -77,7 +77,7 @@ import kotlinx.coroutines.withContext
 private val ShellGold = Color(0xFFD6B15E)
 private val ShellSilver = Color(0xFFC4CAD2)
 private val ShellMuted = Color(0xFF8B929D)
-private val ShellPanel = Color(0xFF121418)
+private val ShellPanel = Color(0xFF15111B)
 private val ShellBackground = Color(0xFF08090B)
 
 private enum class UniverseTab(val label: String) {
@@ -393,20 +393,20 @@ fun UniverseShell() {
                         } else {
                             Box(
                                 artworkModifier.background(
-                                    Brush.radialGradient(listOf(Color(0xFF332716), Color(0xFF15120D), ShellBackground)),
+                                    Brush.radialGradient(listOf(Color(0xFF3A1244), Color(0xFF1A0D25), ShellBackground)),
                                     RoundedCornerShape(26.dp)
                                 ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Box(
                                     Modifier.size(184.dp).border(1.dp, ShellGold.copy(alpha = .62f), CircleShape)
-                                        .background(Brush.sweepGradient(listOf(Color(0xFF302516), Color(0xFF090A0C), Color(0xFF302516))), CircleShape),
+                                        .background(Brush.sweepGradient(listOf(Color(0xFF35123D), Color(0xFF090A0C), Color(0xFF35123D))), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Box(Modifier.size(142.dp).border(1.dp, ShellSilver.copy(alpha = .25f), CircleShape)
                                         .background(Color(0xFF101114), CircleShape), contentAlignment = Alignment.Center) {
                                         Box(Modifier.size(88.dp).border(2.dp, ShellGold, CircleShape)
-                                            .background(Brush.radialGradient(listOf(Color(0xFF5B4725), Color(0xFF11100D))), CircleShape),
+                                            .background(Brush.radialGradient(listOf(Color(0xFF8D2D70), Color(0xFF11100D))), CircleShape),
                                             contentAlignment = Alignment.Center) {
                                             Text("HTE", color = ShellGold, fontSize = 27.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                                         }
@@ -432,20 +432,20 @@ fun UniverseShell() {
                         } else {
                             Box(
                                 artworkModifier.background(
-                                    Brush.radialGradient(listOf(Color(0xFF332716), Color(0xFF15120D), ShellBackground)),
+                                    Brush.radialGradient(listOf(Color(0xFF3A1244), Color(0xFF1A0D25), ShellBackground)),
                                     RoundedCornerShape(26.dp)
                                 ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Box(
                                     Modifier.size(184.dp).border(1.dp, ShellGold.copy(alpha = .62f), CircleShape)
-                                        .background(Brush.sweepGradient(listOf(Color(0xFF302516), Color(0xFF090A0C), Color(0xFF302516))), CircleShape),
+                                        .background(Brush.sweepGradient(listOf(Color(0xFF35123D), Color(0xFF090A0C), Color(0xFF35123D))), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Box(Modifier.size(142.dp).border(1.dp, ShellSilver.copy(alpha = .25f), CircleShape)
                                         .background(Color(0xFF101114), CircleShape), contentAlignment = Alignment.Center) {
                                         Box(Modifier.size(88.dp).border(2.dp, ShellGold, CircleShape)
-                                            .background(Brush.radialGradient(listOf(Color(0xFF5B4725), Color(0xFF11100D))), CircleShape),
+                                            .background(Brush.radialGradient(listOf(Color(0xFF8D2D70), Color(0xFF11100D))), CircleShape),
                                             contentAlignment = Alignment.Center) {
                                             Text("HTE", color = ShellGold, fontSize = 27.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                                         }
@@ -502,7 +502,7 @@ private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, on
     ) {
         Box(
             Modifier.size(39.dp).background(
-                Brush.linearGradient(listOf(Color(0xFF5A4522), Color(0xFF17130D))),
+                Brush.linearGradient(listOf(Color(0xFF78265F), Color(0xFF17130D))),
                 RoundedCornerShape(13.dp)
             ).border(1.dp, ShellGold.copy(alpha = .42f), RoundedCornerShape(13.dp)),
             contentAlignment = Alignment.Center
@@ -704,7 +704,7 @@ private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit
         ) {
             Box(
                 Modifier.size(58.dp).background(
-                    Brush.linearGradient(listOf(Color(0xFF49391F), ShellPanel)),
+                    Brush.linearGradient(listOf(Color(0xFF57205D), ShellPanel)),
                     RoundedCornerShape(12.dp)
                 ),
                 contentAlignment = Alignment.Center
@@ -751,7 +751,7 @@ private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: () -> Unit
     Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.fillMaxWidth().height(164.dp).clip(RoundedCornerShape(13.dp)).background(
-                androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF392D1D), Color(0xFF171B22), Color(0xFF0D1117)))
+                androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF32163D), Color(0xFF191322), Color(0xFF0D1117)))
             ), contentAlignment = Alignment.Center) {
                 if (!video.thumbnailUrl.isNullOrBlank()) {
                     AsyncImage(
@@ -970,7 +970,7 @@ private fun AudioPlayerDialog(track: TrackDto, queue: List<TrackDto>, onDismiss:
                 }
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.size(236.dp).background(
-                        androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF58452B), Color(0xFF1A2028), Color(0xFF101216))),
+                        androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF74235F), Color(0xFF21152C), Color(0xFF101216))),
                         RoundedCornerShape(28.dp)
                     ), contentAlignment = Alignment.Center) {
                         Icon(Icons.Outlined.Headphones, null, tint = ShellGold.copy(alpha = .88f), modifier = Modifier.size(104.dp))
