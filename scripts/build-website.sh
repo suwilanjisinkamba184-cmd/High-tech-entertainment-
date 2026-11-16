@@ -244,7 +244,7 @@ if syntax_failures:
 
 app_js = (root / "assets/app.js").read_text(encoding="utf-8")
 video_js = (root / "assets/videos.js").read_text(encoding="utf-8")
-selector = "$$('[data-start-form],#contact-form,#booking-form,#feedback-form')
+selector = "$$('[data-start-form],#contact-form,#booking-form,#feedback-form')"
 if selector not in app_js:
     raise SystemExit("Shared form initialization must use querySelectorAll.")
 if "$('[data-start-form],#contact-form,#booking-form,#feedback-form')" in app_js.replace(selector, ""):
