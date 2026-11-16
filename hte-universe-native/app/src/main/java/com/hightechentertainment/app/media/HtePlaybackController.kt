@@ -45,13 +45,15 @@ object HtePlaybackController {
                     if (isCurrentConnection) onConnected(controller)
                 }
                 .onFailure { error ->
-                    synchronized(this) {
+                    val stillLeased = synchronized(this) {
                         if (sharedFuture === future) {
                             sharedFuture = null
                             activeController = null
                         }
+                        connectionLeases.containsKey(future)
                     }
-                    onError(error)
+                    // Ignore failures from a connection whose last consumer has already left.
+                    if (stillLeased) onError(error)
                 }
         }, MoreExecutors.directExecutor())
         return future
