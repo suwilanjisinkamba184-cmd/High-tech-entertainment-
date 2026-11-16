@@ -206,8 +206,9 @@ private fun UniverseSplash(onFinished: () -> Unit) {
             Spacer(Modifier.height(sectionGap))
             Text("A NEW SOUND. A NEW UNIVERSE.", color = Gold.copy(alpha = .82f), fontSize = 9.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
-            Text(captions[(elapsed / 4).coerceIn(0, 3)], color = Color.White, fontSize = 20.sp,
-                fontWeight = FontWeight.Medium, textAlign = TextAlign.Center, fontSize = if (compactHeight) 18.sp else 20.sp)
+            Text(captions[(elapsed / 4).coerceIn(0, 3)], color = Color.White,
+                fontSize = if (compactHeight) 18.sp else 20.sp,
+                fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
             Spacer(Modifier.height(9.dp))
             Text(HTE_STARTUP_TAGLINE, color = Gold, fontSize = 12.sp,
                 fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
