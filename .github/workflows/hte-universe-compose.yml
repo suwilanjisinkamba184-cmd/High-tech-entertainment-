@@ -149,7 +149,7 @@ jobs:
           name: HTE Universe 4.0.9 — Production build 43
           body: |
             ## HTE Universe 4.0.9
-            Signed production APK, build 42.
+            Signed production APK, build 43.
 
             ### Changes
             - Removed GitHub emulator compatibility matrix; CI now focuses on build, unit tests, lint, signing and release integrity.
@@ -168,14 +168,14 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/native-v')
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/native-v') && github.ref_name || 'native-v4.0.8-build42' }}
+          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/native-v') && github.ref_name || 'native-v4.0.9-build43' }}
         run: |
           set -euo pipefail
           gh release view "$RELEASE_TAG" --json tagName,isDraft,isPrerelease,assets > "$RUNNER_TEMP/release.json"
           python3 - "$RUNNER_TEMP/release.json" <<'PY'
           import json,sys
           d=json.load(open(sys.argv[1]))
-          assert d["tagName"] == "native-v4.0.8-build42"
+          assert d["tagName"] == "native-v4.0.9-build43"
           assert not d["isDraft"] and not d["isPrerelease"]
           names={a["name"] for a in d["assets"]}
           assert {"HTE-Universe-4.0.9.apk","HTE-Universe-4.0.9.apk.idsig","SHA256SUMS.txt"} <= names
