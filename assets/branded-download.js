@@ -11,10 +11,12 @@ async function load(){
  if(!trackId){message('No track was selected. Return to the HTE catalogue and choose a song.','error');return}
  try{
   const result=await client.from('tracks').select('id,title,artist,audio_url,source_url,source_platform,rights_status,download_allowed,branded_audio_url,download_branding_status,is_published').eq('id',trackId).eq('is_published',true).single();
-  if(result.error)throw result.error;track=result.data;
+  if(result.error)throw result.error;track=result.data;button.dataset.trackDownload=track.id;
   title.textContent=track.title||'HTE track';artist.textContent=track.artist||'High-Tech Entertainment';
-  const platform=String(track.source_platform||'direct').toLowerCase();
-  if(platform!=='direct'||!safeUrl(track.audio_url))throw Error('This is an external streaming link. Open it on YouTube or Spotify; HTE cannot create a download from that source.');
+  const platform=String(track.source_platform||'direct').toLowerCase(),source=String(track.source_url||'').trim();
+  const audioHost=(()=>{try{return new URL(String(track.audio_url||'')).hostname.toLowerCase()}catch{return ''}})();
+  const externalHost=audioHost==='youtu.be'||audioHost.endsWith('youtube.com')||audioHost.endsWith('spotify.com')||audioHost==='spotify.link';
+  if(platform!=='direct'||source||externalHost||!safeUrl(track.audio_url))throw Error('This is an external streaming link. Open it on YouTube or Spotify; HTE cannot create a download from that source.');
   if(track.download_allowed!==true||!['owned_or_licensed','legacy_existing'].includes(track.rights_status))throw Error('Download is disabled because HTE download rights have not been confirmed for this audio.');
   if(track.branded_audio_url&&track.download_branding_status==='ready'){
     button.textContent='Download HTE-branded audio';button.disabled=false;message('A branded master is ready. Tap to save it.','success');return;
