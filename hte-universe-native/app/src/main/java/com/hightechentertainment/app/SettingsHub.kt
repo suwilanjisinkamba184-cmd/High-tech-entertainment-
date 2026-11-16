@@ -48,7 +48,7 @@ import javax.net.ssl.SSLException
 private val SettingsGold = Color(0xFFD6B15E)
 private val SettingsSilver = Color(0xFFC4CAD2)
 private val SettingsMuted = Color(0xFF8B929D)
-private val SettingsPanel = Color(0xFF121418)
+private val SettingsPanel = Color(0xFF15111B)
 private val SettingsBackground = Color(0xFF08090B)
 
 @androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
@@ -453,7 +453,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
 @Composable
 private fun SettingsHero() {
     Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = SettingsPanel)) {
-        Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF2A2111), SettingsPanel, Color(0xFF0D1015)))).padding(18.dp)) {
+        Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF3A1742), SettingsPanel, Color(0xFF0D1015)))).padding(18.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("PERSONAL CONTROL SYSTEM", color = SettingsGold, fontSize = 9.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
                 Text("Your sound. Your universe.", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
