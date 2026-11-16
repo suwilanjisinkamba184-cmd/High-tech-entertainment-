@@ -374,7 +374,9 @@ fun UniverseShell() {
                 Modifier.weight(1f).fillMaxHeight()
                     .padding(end = if (isWideLayout && playerHasTrack) playerPanelWidth + 8.dp else 0.dp)
             ) {
-            UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true })
+            if (selectedTab != UniverseTab.HOME) {
+                UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true })
+            }
             when (selectedTab) {
                 UniverseTab.HOME -> HomeScreen(
                     tracks = tracks, videos = videos, isLoading = isLoading,
