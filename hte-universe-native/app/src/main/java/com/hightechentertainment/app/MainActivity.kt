@@ -109,7 +109,12 @@ class MainActivity : ComponentActivity() {
 private fun HteUniverseApp() {
     var splashFinished by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val reduceMotion = remember(context) { AppSettingsStore(context).reduceMotion }
+    val settingsStore = remember(context) { AppSettingsStore(context) }
+    var reduceMotion by remember(settingsStore) { mutableStateOf(settingsStore.reduceMotion) }
+    DisposableEffect(settingsStore) {
+        val stopObserving = settingsStore.observeReduceMotion { reduceMotion = it }
+        onDispose { stopObserving() }
+    }
     HteTheme(reduceMotion = reduceMotion) {
         Surface(Modifier.fillMaxSize(), color = Obsidian) {
             if (!splashFinished) UniverseSplash { splashFinished = true } else UniverseShell()

@@ -69,7 +69,6 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
     var networkPolicy by remember { mutableStateOf(settingsStore.networkPolicy) }
     var updateNetworkPolicy by remember { mutableStateOf(settingsStore.updateNetworkPolicy) }
     var streamingQuality by remember { mutableStateOf(settingsStore.streamingQuality) }
-    var downloadQuality by remember { mutableStateOf(settingsStore.downloadQuality) }
     var videoQuality by remember { mutableStateOf(settingsStore.videoQuality) }
     var downloads by remember { mutableStateOf(emptyList<com.hightechentertainment.app.media.OfflineDownloadRecord>()) }
     var showClearDownloads by remember { mutableStateOf(false) }
@@ -261,8 +260,12 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                         settingsStore.updateNetworkPolicy = updateNetworkPolicy
                     }
                     SettingsDivider()
-                    SettingsChoice("Preferred audio download quality (when variants are available)", downloadQuality, listOf("STANDARD", "HIGH", "HIGHEST")) {
-                        downloadQuality = it; settingsStore.downloadQuality = it
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Audio download quality", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Downloads currently use the approved HTE master supplied by the catalogue. Quality choices will appear when alternate download variants are available.",
+                            color = SettingsMuted, fontSize = 10.sp
+                        )
                     }
                     SettingsSwitch("Data saver", "Restrict downloads over metered mobile connections", dataSaver) {
                         dataSaver = it; settingsStore.dataSaver = it; onSettingsChanged()
@@ -360,7 +363,7 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
                     SettingsInfoRow("Personalised recommendations", "Saved as a future discovery preference; personalised ranking is not yet connected to the catalogue.")
                     SettingsDivider()
                     SettingsSwitch("Reduce motion", "Reduce decorative movement and transitions", reduceMotion) {
-                        reduceMotion = it; settingsStore.reduceMotion = it
+                        reduceMotion = it; settingsStore.reduceMotion = it; onSettingsChanged()
                     }
                     SettingsSwitch("Startup sound", "Play the HTE branded intro audio at launch", startupSound) {
                         startupSound = it; settingsStore.startupSoundEnabled = it
@@ -587,6 +590,6 @@ private fun friendlyUpdateError(error: Throwable): String {
         is UnknownHostException -> "Can't reach GitHub right now. Check your internet connection or Private DNS, then retry. You can also open GitHub Releases below."
         is SocketTimeoutException -> "GitHub took too long to respond. Check your connection and retry."
         is SSLException -> "A secure connection to GitHub could not be established. Check your device date, time and network."
-        else -> (rootCause.message ?: error.message)?.take(220) ?: "The update could not be completed. Please retry."
+        else -> rootCause.toHteUserMessage("The update could not be completed. Please retry.")
     }
 }

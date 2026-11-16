@@ -112,10 +112,14 @@ fun UniverseShell() {
     var selectedTrack by remember { mutableStateOf<TrackDto?>(null) }
     var selectedTrackQueue by remember { mutableStateOf<List<TrackDto>?>(null) }
     var selectedVideo by remember { mutableStateOf<VideoDto?>(null) }
+    var selectedArtist by remember { mutableStateOf<ArtistDto?>(null) }
     var showVoiceAssistant by remember { mutableStateOf(false) }
+    var showSettingsHub by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+    val audioSystemBars = remember(activity) { activity?.window?.let { WindowInsetsControllerCompat(it, it.decorView) } }
     val lifecycleOwner = LocalLifecycleOwner.current
     val settingsStore = remember(context) { AppSettingsStore(context) }
     val audienceAnalytics = remember(context) { AudienceAnalyticsRepository(context) }
@@ -245,7 +249,7 @@ fun UniverseShell() {
                     coroutineScope {
                         val catalogue = EntertainmentCatalogRepository()
                         val trackRequest = async { TrackRepository().getPublishedTracks() }
-                        val artistRequest = async { catalogue.getPublishedArtists() }
+                        val artistRequest = async { catalogue.getVisibleArtists() }
                         val releaseRequest = async { catalogue.getPublishedReleases() }
                         val videoRequest = async { catalogue.getPublishedVideos() }
                         CatalogueSnapshot(
@@ -410,6 +414,24 @@ fun UniverseShell() {
         val isWideLayout = maxWidth >= 720.dp
         // Give the listening theater a proportional width on compact landscape and tablet windows.
         val playerPanelWidth = minOf(maxWidth * 0.48f, 400.dp)
+        // The expanded phone player is a true immersive surface. System bars remain
+        // available through the Android swipe gesture and are restored on every exit.
+        val immersiveAudio = playerExpanded && playerHasTrack && !isWideLayout && selectedVideo == null
+        LaunchedEffect(immersiveAudio, audioSystemBars) {
+            if (immersiveAudio) {
+                audioSystemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                audioSystemBars?.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                audioSystemBars?.show(WindowInsetsCompat.Type.systemBars())
+                audioSystemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+            }
+        }
+        DisposableEffect(audioSystemBars) {
+            onDispose {
+                audioSystemBars?.show(WindowInsetsCompat.Type.systemBars())
+                audioSystemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+            }
+        }
         Scaffold(
         containerColor = ShellBackground,
         bottomBar = {
@@ -464,7 +486,7 @@ fun UniverseShell() {
                     .padding(end = if (isWideLayout && playerHasTrack) playerPanelWidth + 8.dp else 0.dp)
             ) {
             if (selectedTab != UniverseTab.HOME) {
-                UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true })
+                UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true }, onSettings = { showSettingsHub = true })
             }
             when (selectedTab) {
                 UniverseTab.HOME -> HomeScreen(
@@ -474,6 +496,8 @@ fun UniverseShell() {
                     onVideos = { selectedTab = UniverseTab.VIDEOS },
                     onVoice = { showVoiceAssistant = true },
                     onProfile = { selectedTab = UniverseTab.ACCOUNT },
+                    onSettings = { showSettingsHub = true },
+                    onArtistClick = { selectedArtist = it },
                     playlists = playlists, playlistTracks = playlistTracks,
                     profileName = homeProfileName, profileAvatarUrl = homeProfileAvatar,
                     onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true },
@@ -484,7 +508,8 @@ fun UniverseShell() {
                     onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.DISCOVER -> DiscoverScreen(
-                    tracks = tracks, isLoading = isLoading, error = catalogueError,
+                    tracks = tracks, artists = artists, isLoading = isLoading, error = catalogueError,
+                    onArtistClick = { selectedArtist = it },
                     onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onDownload = { startDownload(if (it.downloadAllowed && it.downloadBrandingStatus == "ready") it.brandedAudioUrl else null, it.title, "audio", it.id) },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     initialQuery = searchQuery, onQueryChanged = { searchQuery = it }, onRefresh = ::refreshCatalogue
@@ -538,6 +563,7 @@ fun UniverseShell() {
                         .width(playerPanelWidth).fillMaxHeight()
                         .padding(start = 8.dp, top = 10.dp, end = 10.dp, bottom = 10.dp),
                     collapsedBottomInset = 0.dp,
+                    immersive = false,
                     artwork = { url, artworkModifier ->
                         if (!url.isNullOrBlank()) {
                             AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
@@ -575,8 +601,11 @@ fun UniverseShell() {
                     controller = uiController,
                     expanded = playerExpanded,
                     onExpandedChange = { playerExpanded = it },
+                    // The player is layered above Scaffold content, so use the
+                    // measured bottom-bar + system-bar inset instead of a fixed offset.
                     modifier = Modifier.align(Alignment.BottomCenter),
-                    collapsedBottomInset = 96.dp,
+                    collapsedBottomInset = insets.calculateBottomPadding(),
+                    immersive = true,
                     artwork = { url, artworkModifier ->
                         if (!url.isNullOrBlank()) {
                             AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
@@ -616,6 +645,34 @@ fun UniverseShell() {
 
     }
 
+    if (showSettingsHub) {
+        Dialog(onDismissRequest = { showSettingsHub = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Surface(Modifier.fillMaxSize(), color = Color(0xFF08090B)) {
+                SettingsHub(
+                    onClose = { showSettingsHub = false },
+                    settingsStore = settingsStore,
+                    downloadManager = offlineManager,
+                    onSettingsChanged = { settingsRevision++ }
+                )
+            }
+        }
+    }
+    selectedArtist?.let { artist ->
+        ArtistProfileDialog(
+            artist = artist,
+            tracks = tracks.filter { it.artist.equals(artist.name, ignoreCase = true) },
+            favouriteTrackIds = favouriteTrackIds,
+            onPlayTrack = { track ->
+                selectedTrack = track
+                selectedTrackQueue = if (autoplayNext) tracks.filter { it.artist.equals(artist.name, true) } else listOf(track)
+                playerExpanded = true
+                selectedArtist = null
+            },
+            onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id) },
+            onToggleFavourite = ::toggleFavourite,
+            onDismiss = { selectedArtist = null }
+        )
+    }
     selectedVideo?.let { VideoPlayerDialog(video = it, quality = videoQuality, onDismiss = { selectedVideo = null }) }
     if (showVoiceAssistant) {
         VoiceAssistantDialog(
@@ -644,7 +701,7 @@ fun UniverseShell() {
 }
 
 @Composable
-private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, onVoice: () -> Unit) {
+private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, onVoice: () -> Unit, onSettings: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().background(ShellBackground)
             .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -694,6 +751,16 @@ private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, on
                 Icon(Icons.Outlined.NotificationsNone, "Notifications", tint = ShellSilver, modifier = Modifier.size(19.dp))
             }
         }
+        Surface(
+            onClick = onSettings,
+            shape = RoundedCornerShape(12.dp),
+            color = ShellPanel,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .07f))
+        ) {
+            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.Settings, "Open settings", tint = ShellSilver, modifier = Modifier.size(19.dp))
+            }
+        }
     }
 }
 
@@ -701,7 +768,7 @@ private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, on
 private fun HomeScreen(
     tracks: List<TrackDto>, artists: List<ArtistDto>, releases: List<ReleaseDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
     playlistTracks: Map<String, List<TrackDto>>, profileName: String?, profileAvatarUrl: String?, isLoading: Boolean,
-    onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit,
+    onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit, onSettings: () -> Unit, onArtistClick: (ArtistDto) -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
@@ -709,7 +776,7 @@ private fun HomeScreen(
     Universe2026Home(
         tracks = tracks, artists = artists, releases = releases, videos = videos, playlists = playlists, playlistTracks = playlistTracks,
         profileName = profileName, profileAvatarUrl = profileAvatarUrl, isLoading = isLoading,
-        onExplore = onExplore, onLibrary = onLibrary, onVideos = onVideos, onVoice = onVoice, onProfile = onProfile,
+        onExplore = onExplore, onLibrary = onLibrary, onVideos = onVideos, onVoice = onVoice, onProfile = onProfile, onSettings = onSettings, onArtistClick = onArtistClick,
         onPlayTrack = onPlayTrack, onPlayPlaylist = onPlayPlaylist, onPlayVideo = onPlayVideo,
         onDownloadTrack = onDownloadTrack, onDownloadVideo = onDownloadVideo,
         favouriteTrackIds = favouriteTrackIds, onToggleFavourite = onToggleFavourite,
@@ -719,8 +786,8 @@ private fun HomeScreen(
 
 @Composable
 private fun DiscoverScreen(
-    tracks: List<TrackDto>, isLoading: Boolean, error: String?,
-    onPlay: (TrackDto) -> Unit, onDownload: (TrackDto) -> Unit,
+    tracks: List<TrackDto>, artists: List<ArtistDto>, isLoading: Boolean, error: String?,
+    onArtistClick: (ArtistDto) -> Unit, onPlay: (TrackDto) -> Unit, onDownload: (TrackDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit,
     initialQuery: String, onQueryChanged: (String) -> Unit, onRefresh: () -> Unit
 ) {
@@ -728,6 +795,9 @@ private fun DiscoverScreen(
     var selectedGenre by remember { mutableStateOf("All") }
     LaunchedEffect(initialQuery) { query = initialQuery }
     val genres = listOf("All") + tracks.mapNotNull { it.genre?.takeIf(String::isNotBlank) }.distinct().sorted()
+    val matchingArtists = artists.filter { artist ->
+        query.isBlank() || artist.name.contains(query.trim(), true) || artist.bio.orEmpty().contains(query.trim(), true)
+    }
     val filtered = tracks.filter { track ->
         val q = query.trim()
         (q.isBlank() || track.title.contains(q, true) || track.artist.contains(q, true) || track.genre.orEmpty().contains(q, true)) &&
@@ -792,10 +862,84 @@ private fun DiscoverScreen(
             }
         }
         if (error != null) item { Text(error, color = ShellGold, fontSize = 12.sp) }
-        if (filtered.isEmpty()) item {
-            EmptyCatalogueState(if (isLoading) "Loading the HTE catalogue…" else "No tracks match this search yet.", isLoading, onRefresh)
-        } else items(filtered, key = { it.id }) { track ->
+        if (matchingArtists.isNotEmpty()) {
+            item { Text("ARTISTS", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold) }
+            items(matchingArtists, key = { "artist-${it.id}" }) { artist -> ArtistResultRow(artist) { onArtistClick(artist) } }
+        }
+        if (filtered.isEmpty() && matchingArtists.isEmpty()) item {
+            EmptyCatalogueState(if (isLoading) "Loading the HTE catalogue…" else "No tracks or artists match this search yet.", isLoading, onRefresh)
+        } else items(filtered, key = { "track-${it.id}" }) { track ->
             TrackRow(track, { onPlay(track) }, { onDownload(track) }, track.id in favouriteTrackIds, { onToggleFavourite(track) })
+        }
+    }
+}
+
+@Composable
+private fun ArtistResultRow(artist: ArtistDto, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = ShellPanel),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(58.dp).clip(CircleShape).background(ShellGold.copy(alpha = .12f)), contentAlignment = Alignment.Center) {
+                if (!artist.imageUrl.isNullOrBlank()) AsyncImage(
+                    model = artist.imageUrl, contentDescription = "${artist.name} artist image",
+                    contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
+                ) else Icon(Icons.Outlined.Person, null, tint = ShellGold, modifier = Modifier.size(27.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(artist.name, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(artist.bio?.takeIf(String::isNotBlank) ?: "High-Tech Entertainment artist", color = ShellMuted, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            Icon(Icons.Outlined.ChevronRight, "View artist", tint = ShellGold)
+        }
+    }
+}
+
+@Composable
+private fun ArtistProfileDialog(
+    artist: ArtistDto,
+    tracks: List<TrackDto>,
+    favouriteTrackIds: Set<String>,
+    onPlayTrack: (TrackDto) -> Unit,
+    onDownloadTrack: (TrackDto) -> Unit,
+    onToggleFavourite: (TrackDto) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(Modifier.fillMaxSize(), color = ShellBackground) {
+            Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("ARTIST PROFILE", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close artist profile", tint = ShellSilver) }
+                }
+                LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    item {
+                        Box(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(22.dp)).background(ShellPanel), contentAlignment = Alignment.Center) {
+                            if (!artist.imageUrl.isNullOrBlank()) AsyncImage(
+                                model = artist.imageUrl, contentDescription = "${artist.name} artist artwork",
+                                contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
+                            ) else Icon(Icons.Outlined.Person, null, tint = ShellGold, modifier = Modifier.size(70.dp))
+                        }
+                    }
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(artist.name, color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Bold)
+                            Text(artist.bio?.takeIf(String::isNotBlank) ?: "Artist · High-Tech Entertainment", color = ShellSilver, fontSize = 12.sp)
+                        }
+                    }
+                    item { Text("MUSIC BY ${artist.name.uppercase()}", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.6.sp, fontWeight = FontWeight.Bold) }
+                    if (tracks.isEmpty()) item {
+                        Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(16.dp)) {
+                            Text("This artist profile is available. Music will appear here when tracks are added to the catalogue.", color = ShellSilver, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().padding(16.dp))
+                        }
+                    } else items(tracks, key = { "artist-track-${it.id}" }) { track ->
+                        TrackRow(track, { onPlayTrack(track) }, { onDownloadTrack(track) }, track.id in favouriteTrackIds, { onToggleFavourite(track) })
+                    }
+                }
+            }
         }
     }
 }
@@ -1195,10 +1339,12 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
         val enteringImmersive = !immersiveVideo
         immersiveVideo = enteringImmersive
         if (enteringImmersive) {
+            systemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             systemBars?.hide(WindowInsetsCompat.Type.systemBars())
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         } else {
             systemBars?.show(WindowInsetsCompat.Type.systemBars())
+            systemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
             activity?.requestedOrientation = previousOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
@@ -1206,6 +1352,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     DisposableEffect(activity, systemBars) {
         onDispose {
             systemBars?.show(WindowInsetsCompat.Type.systemBars())
+            systemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
             if (previousOrientation != null) activity?.requestedOrientation = previousOrientation
         }
     }
@@ -1308,29 +1455,42 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                     }
 
                     if (validUrl) {
-                        AndroidView(
-                            factory = { viewContext ->
-                                PlayerView(viewContext).apply {
-                                    this.player = player
-                                    useController = false
-                                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                    setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-                                    keepScreenOn = true
+                        val videoCanvasModifier = if (immersiveVideo || landscape) {
+                            Modifier.fillMaxWidth().weight(1f)
+                        } else {
+                            Modifier.fillMaxWidth().height(minOf(availableWidth * (9f / 16f), availableHeight * .46f))
+                        }
+                        Box(videoCanvasModifier.background(Color(0xFF050506)), contentAlignment = Alignment.Center) {
+                            AndroidView(
+                                factory = { viewContext ->
+                                    PlayerView(viewContext).apply {
+                                        this.player = player
+                                        useController = false
+                                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                        setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                                        keepScreenOn = true
+                                    }
+                                },
+                                update = { view -> if (view.player !== player) view.player = player },
+                                onRelease = { view ->
+                                    view.player = null
+                                    view.keepScreenOn = false
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            if (!videoPlaying || isBuffering) {
+                                Box(
+                                    Modifier.size(66.dp).clip(CircleShape)
+                                        .background(ShellGold.copy(alpha = .94f))
+                                        .border(1.dp, Color.White.copy(alpha = .5f), CircleShape)
+                                        .clickable(enabled = !isBuffering) { if (player.isPlaying) player.pause() else player.play() },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isBuffering) CircularProgressIndicator(Modifier.size(28.dp), color = Color.Black, strokeWidth = 2.5.dp)
+                                    else Icon(Icons.Outlined.PlayArrow, "Play video", tint = Color.Black, modifier = Modifier.size(38.dp))
                                 }
-                            },
-                            update = { view ->
-                                if (view.player !== player) view.player = player
-                            },
-                            onRelease = { view ->
-                                view.player = null
-                                view.keepScreenOn = false
-                            },
-                            modifier = if (immersiveVideo || landscape) {
-                                Modifier.fillMaxWidth().weight(1f)
-                            } else {
-                                Modifier.fillMaxWidth().height(minOf(availableWidth * (9f / 16f), availableHeight * .46f))
                             }
-                        )
+                        }
                         if (!immersiveVideo && !landscape) Spacer(Modifier.weight(1f))
                     } else {
                         Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
