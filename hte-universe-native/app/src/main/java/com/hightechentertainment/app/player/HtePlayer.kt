@@ -119,7 +119,7 @@ class Media3PlayerController(private val player: Player, scope: CoroutineScope) 
 private val MiniHeight = 68.dp
 
 @Composable
-fun PlayerHost(controller: PlayerController, expanded: Boolean, onExpandedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, collapsedBottomInset: Dp = 0.dp, artwork: @Composable (String?, Modifier) -> Unit) {
+fun PlayerHost(controller: PlayerController, expanded: Boolean, onExpandedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, collapsedBottomInset: Dp = 0.dp, immersive: Boolean = false, artwork: @Composable (String?, Modifier) -> Unit) {
     val state by controller.state.collectAsState()
     val track = state.track ?: return
     val reduce = LocalHteReduceMotion.current
@@ -137,7 +137,7 @@ fun PlayerHost(controller: PlayerController, expanded: Boolean, onExpandedChange
             val miniAlpha = (1f - fraction * 2.2f).coerceIn(0f, 1f)
             val fullAlpha = ((fraction - .45f) / .55f).coerceIn(0f, 1f)
             if (miniAlpha > 0f) MiniPlayer(state, track, controller, { onExpandedChange(true) }, artwork, Modifier.graphicsLayer { alpha = miniAlpha })
-            if (fullAlpha > 0f) FullPlayer(state, track, controller, { onExpandedChange(false) }, artwork, Modifier.graphicsLayer { alpha = fullAlpha })
+            if (fullAlpha > 0f) FullPlayer(state, track, controller, { onExpandedChange(false) }, artwork, immersive, Modifier.graphicsLayer { alpha = fullAlpha })
         }
     }
 }
@@ -169,7 +169,7 @@ private fun MiniPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
 }
 
 @Composable
-private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: PlayerController, onCollapse: () -> Unit, artwork: @Composable (String?, Modifier) -> Unit, modifier: Modifier = Modifier) {
+private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: PlayerController, onCollapse: () -> Unit, artwork: @Composable (String?, Modifier) -> Unit, immersive: Boolean, modifier: Modifier = Modifier) {
     val reduce = LocalHteReduceMotion.current
     val haptic = LocalHapticFeedback.current
     val scale by animateFloatAsState(if (state.isPlaying || reduce) 1f else .94f, if (reduce) snap() else spring(stiffness = Spring.StiffnessLow), label = "hte-art-scale")
@@ -185,7 +185,7 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
         Column(
             Modifier.fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .then(if (immersive) Modifier else Modifier.windowInsetsPadding(WindowInsets.safeDrawing))
                 .padding(horizontal = horizontalInset, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {

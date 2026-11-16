@@ -116,6 +116,8 @@ fun UniverseShell() {
     var searchQuery by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+    val audioSystemBars = remember(activity) { activity?.window?.let { WindowInsetsControllerCompat(it, it.decorView) } }
     val lifecycleOwner = LocalLifecycleOwner.current
     val settingsStore = remember(context) { AppSettingsStore(context) }
     val audienceAnalytics = remember(context) { AudienceAnalyticsRepository(context) }
@@ -410,6 +412,20 @@ fun UniverseShell() {
         val isWideLayout = maxWidth >= 720.dp
         // Give the listening theater a proportional width on compact landscape and tablet windows.
         val playerPanelWidth = minOf(maxWidth * 0.48f, 400.dp)
+        // The expanded phone player is a true immersive surface. System bars remain
+        // available through the Android swipe gesture and are restored on every exit.
+        val immersiveAudio = playerExpanded && playerHasTrack && !isWideLayout && selectedVideo == null
+        SideEffect {
+            if (immersiveAudio) {
+                audioSystemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                audioSystemBars?.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                audioSystemBars?.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+        DisposableEffect(audioSystemBars) {
+            onDispose { audioSystemBars?.show(WindowInsetsCompat.Type.systemBars()) }
+        }
         Scaffold(
         containerColor = ShellBackground,
         bottomBar = {
@@ -538,6 +554,7 @@ fun UniverseShell() {
                         .width(playerPanelWidth).fillMaxHeight()
                         .padding(start = 8.dp, top = 10.dp, end = 10.dp, bottom = 10.dp),
                     collapsedBottomInset = 0.dp,
+                    immersive = false,
                     artwork = { url, artworkModifier ->
                         if (!url.isNullOrBlank()) {
                             AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
@@ -579,6 +596,7 @@ fun UniverseShell() {
                     // measured bottom-bar + system-bar inset instead of a fixed offset.
                     modifier = Modifier.align(Alignment.BottomCenter),
                     collapsedBottomInset = insets.calculateBottomPadding(),
+                    immersive = true,
                     artwork = { url, artworkModifier ->
                         if (!url.isNullOrBlank()) {
                             AsyncImage(model = url, contentDescription = "Track artwork", contentScale = ContentScale.Crop, modifier = artworkModifier)
@@ -1197,10 +1215,12 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
         val enteringImmersive = !immersiveVideo
         immersiveVideo = enteringImmersive
         if (enteringImmersive) {
+            systemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             systemBars?.hide(WindowInsetsCompat.Type.systemBars())
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         } else {
             systemBars?.show(WindowInsetsCompat.Type.systemBars())
+            systemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
             activity?.requestedOrientation = previousOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
@@ -1208,6 +1228,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     DisposableEffect(activity, systemBars) {
         onDispose {
             systemBars?.show(WindowInsetsCompat.Type.systemBars())
+            systemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
             if (previousOrientation != null) activity?.requestedOrientation = previousOrientation
         }
     }
@@ -1310,29 +1331,42 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                     }
 
                     if (validUrl) {
-                        AndroidView(
-                            factory = { viewContext ->
-                                PlayerView(viewContext).apply {
-                                    this.player = player
-                                    useController = false
-                                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                    setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-                                    keepScreenOn = true
+                        val videoCanvasModifier = if (immersiveVideo || landscape) {
+                            Modifier.fillMaxWidth().weight(1f)
+                        } else {
+                            Modifier.fillMaxWidth().height(minOf(availableWidth * (9f / 16f), availableHeight * .46f))
+                        }
+                        Box(videoCanvasModifier.background(Color(0xFF050506)), contentAlignment = Alignment.Center) {
+                            AndroidView(
+                                factory = { viewContext ->
+                                    PlayerView(viewContext).apply {
+                                        this.player = player
+                                        useController = false
+                                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                        setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                                        keepScreenOn = true
+                                    }
+                                },
+                                update = { view -> if (view.player !== player) view.player = player },
+                                onRelease = { view ->
+                                    view.player = null
+                                    view.keepScreenOn = false
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            if (!videoPlaying || isBuffering) {
+                                Box(
+                                    Modifier.size(66.dp).clip(CircleShape)
+                                        .background(ShellGold.copy(alpha = .94f))
+                                        .border(1.dp, Color.White.copy(alpha = .5f), CircleShape)
+                                        .clickable(enabled = !isBuffering) { if (player.isPlaying) player.pause() else player.play() },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isBuffering) CircularProgressIndicator(Modifier.size(28.dp), color = Color.Black, strokeWidth = 2.5.dp)
+                                    else Icon(Icons.Outlined.PlayArrow, "Play video", tint = Color.Black, modifier = Modifier.size(38.dp))
                                 }
-                            },
-                            update = { view ->
-                                if (view.player !== player) view.player = player
-                            },
-                            onRelease = { view ->
-                                view.player = null
-                                view.keepScreenOn = false
-                            },
-                            modifier = if (immersiveVideo || landscape) {
-                                Modifier.fillMaxWidth().weight(1f)
-                            } else {
-                                Modifier.fillMaxWidth().height(minOf(availableWidth * (9f / 16f), availableHeight * .46f))
                             }
-                        )
+                        }
                         if (!immersiveVideo && !landscape) Spacer(Modifier.weight(1f))
                     } else {
                         Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
