@@ -516,7 +516,7 @@ private fun U26PlaylistCard(
                 if (!artwork.isNullOrBlank()) {
                     AsyncImage(model = artwork, contentDescription = "Artwork for ${playlist.name}", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 } else {
-                    Icon(Icons.Outlined.QueueMusic, null, tint = U26Gold, modifier = Modifier.size(27.dp))
+                    Icon(Icons.Outlined.MusicNote, null, tint = U26Gold, modifier = Modifier.size(27.dp))
                 }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
