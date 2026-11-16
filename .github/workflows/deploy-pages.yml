@@ -74,7 +74,7 @@ jobs:
           grep -q 'id="primary-navigation"' website/src/pages/index.astro
           grep -q 'class="menu-toggle"' website/src/pages/index.astro
           grep -q 'assets/app.js?v=20' admin/index.html
-          grep -q 'assets/admin-upload.js?v=20261109-session1' admin/index.html
+          grep -q 'assets/admin-upload.js?v=20261116-timeout1' admin/index.html
           grep -q 'authNext' website/src/pages/index.astro
           grep -q 'callbackParams.delete' website/src/pages/index.astro
           grep -q 'loadAccountDownloads' assets/app.js
