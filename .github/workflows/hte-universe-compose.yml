@@ -1,4 +1,4 @@
-name: HTE Universe â production Android build and release
+name: HTE Universe — production Android build and release
 
 on:
   push:
@@ -168,7 +168,7 @@ jobs:
         with:
           tag_name: native-v4.1.1-build45
           target_commitish: ${{ github.sha }}
-          name: HTE Universe 4.1.1 â Production build 45
+          name: HTE Universe 4.1.1 — Production build 45
           body: |
             ## HTE Universe 4.1.1
             Signed production APK, build 45.
