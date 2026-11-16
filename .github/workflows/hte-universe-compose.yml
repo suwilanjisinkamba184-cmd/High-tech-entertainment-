@@ -76,6 +76,27 @@ jobs:
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/hte-release.jks" >> "$GITHUB_ENV"
       - name: Assemble signed production APK
         run: gradle --no-daemon :app:assembleRelease
+      - name: Finalize APK v4 signature
+        env:
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/release/app-release.apk"
+          SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
+          test -s "$APK"
+          rm -f "$APK.idsig"
+          "$SIGNER" sign \
+            --ks "$ANDROID_KEYSTORE_PATH" \
+            --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --ks-pass env:ANDROID_STORE_PASSWORD \
+            --key-pass env:ANDROID_KEY_PASSWORD \
+            --v1-signing-enabled false \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --v4-signing-enabled true \
+            "$APK"
+          test -s "$APK.idsig"
       - name: Verify APK identity, version and signer
         run: |
           set -euo pipefail
