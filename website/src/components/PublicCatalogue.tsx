@@ -20,6 +20,16 @@ function supabase() {
   return client;
 }
 
+function withTimeout<T>(request:PromiseLike<T>,ms=12000):Promise<T> {
+  let timer:number|undefined;
+  return Promise.race([
+    Promise.resolve(request),
+    new Promise<never>((_,reject)=>{
+      timer=window.setTimeout(()=>reject(new Error('The catalogue request took too long. Check your connection and retry.')),ms);
+    })
+  ]).finally(()=>{if(timer!==undefined)window.clearTimeout(timer)});
+}
+
 function safeHttps(value?:string|null) {
   try {
     const url = new URL(String(value || ''));
@@ -255,10 +265,10 @@ export default function PublicCatalogue() {
       setLoading(true);
       setErrors([]);
       const requests = await Promise.allSettled([
-        db.from('tracks').select('id,title,artist,genre,audio_url,source_url,source_platform,rights_status,download_allowed,branded_audio_url,download_branding_status,cover_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),
-        db.from('artists').select('id,name,bio,image_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),
-        db.from('releases').select('id,title,release_date,cover_url,spotify_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),
-        db.from('videos').select('id,title,artist,description,video_url,thumbnail_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(40)
+        withTimeout(db.from('tracks').select('id,title,artist,genre,audio_url,source_url,source_platform,rights_status,download_allowed,branded_audio_url,download_branding_status,cover_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),12000),
+        withTimeout(db.from('artists').select('id,name,bio,image_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),12000),
+        withTimeout(db.from('releases').select('id,title,release_date,cover_url,spotify_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),12000),
+        withTimeout(db.from('videos').select('id,title,artist,description,video_url,thumbnail_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(40),12000)
       ]);
       if (!active) return;
       const names = ['tracks','artists','releases','videos'];
