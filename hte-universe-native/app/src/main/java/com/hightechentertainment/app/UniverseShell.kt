@@ -264,9 +264,9 @@ fun UniverseShell() {
     Box(Modifier.fillMaxSize()) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
         // Use a navigation rail on wide/landscape windows and bottom navigation on phones.
-        val isWideLayout = maxWidth >= 600.dp
+        val isWideLayout = maxWidth >= 720.dp
         // Give the listening theater a proportional width on compact landscape and tablet windows.
-        val playerPanelWidth = minOf(maxWidth * 0.52f, 400.dp)
+        val playerPanelWidth = minOf(maxWidth * 0.48f, 400.dp)
         Scaffold(
         containerColor = ShellBackground,
         bottomBar = {
