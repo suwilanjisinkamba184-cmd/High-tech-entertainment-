@@ -244,6 +244,12 @@ if syntax_failures:
 
 app_js = (root / "assets/app.js").read_text(encoding="utf-8")
 video_js = (root / "assets/videos.js").read_text(encoding="utf-8")
+if "$('[data-start-form],#contact-form,#booking-form,#feedback-form')" not in app_js:
+    raise SystemExit("Shared form initialization must use querySelectorAll.")
+if "$('[data-start-form],#contact-form,#booking-form,#feedback-form')" in app_js:
+    raise SystemExit("Shared form initialization contains the fatal single-element selector.")
+if "function withTimeout(promise,ms,message)" not in app_js:
+    raise SystemExit("Shared Supabase operations must have bounded timeouts.")
 if "The music catalogue is taking too long to respond" not in app_js:
     raise SystemExit("Public music catalogue timeout fallback is missing.")
 if "HTE video catalogue request timed out after 12 seconds" not in video_js:
