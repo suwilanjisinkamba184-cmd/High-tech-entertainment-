@@ -127,7 +127,7 @@ jobs:
           grep -F "Verified using v4 scheme (APK Signature Scheme v4): true" <<< "$VERIFY_OUTPUT"
           BADGING=$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK")
           printf '%s\n' "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='44' versionName='4.1.0'"
-          sha256sum "$APK" | tee app/build/outputs/apk/release/SHA256SUMS.txt
+          sha256sum "$APK" | sed "s|$APK|HTE-Universe-4.1.0.apk|" | tee app/build/outputs/apk/release/SHA256SUMS.txt
       - name: Confirm production certificate continuity
         if: github.event_name != 'pull_request'
         env:
