@@ -199,8 +199,7 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
         Column(
             Modifier.fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .windowInsetsPadding(WindowInsets.navigationBars)
+                .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(horizontal = horizontalInset, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
