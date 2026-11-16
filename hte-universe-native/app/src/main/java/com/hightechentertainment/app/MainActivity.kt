@@ -24,6 +24,8 @@ import com.hightechentertainment.app.ui.design.HteTheme
 
 private val Obsidian = Color(0xFF08090B)
 
+internal const val HTE_STARTUP_TAGLINE = "Music. Beats. Production. Beyond."
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
