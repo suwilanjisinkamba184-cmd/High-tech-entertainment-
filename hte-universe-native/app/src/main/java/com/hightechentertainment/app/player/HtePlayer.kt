@@ -189,7 +189,8 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
     val progress = if (state.durationMs > 0) (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f) else 0f
     val bars = state.amplitudes ?: remember(track.id) { placeholderWaveform(track.id) }
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val artworkMaxHeight = maxHeight * .28f
+        // Bound artwork by both available height and width so compact and wide screens stay balanced.
+        val artworkMaxHeight = minOf(maxHeight * .30f, maxWidth * .72f)
         val horizontalInset = when {
             maxWidth < 360.dp -> 12.dp
             maxWidth < 600.dp -> 18.dp
