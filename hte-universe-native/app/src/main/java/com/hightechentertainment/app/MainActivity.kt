@@ -46,6 +46,10 @@ import com.hightechentertainment.app.data.SupabaseClientProvider
 import com.hightechentertainment.app.media.HtePlaybackController
 import com.hightechentertainment.app.security.HteSecurityFirewall
 import com.hightechentertainment.app.ui.design.HteTheme
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 
 private val Obsidian = Color(0xFF08090B)
 private val Panel = Color(0xFF121418)
@@ -114,18 +118,28 @@ private fun HteUniverseApp() {
 @Composable
 private fun UniverseSplash(onFinished: () -> Unit) {
     val context = LocalContext.current
-    DisposableEffect(context) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var elapsed by remember { mutableIntStateOf(0) }
+    DisposableEffect(context, lifecycleOwner) {
         val startupEnabled = AppSettingsStore(context).startupSoundEnabled
         val player = if (startupEnabled) MediaPlayer.create(context, R.raw.hte_universe_intro) else null
         // The packaged stereo MP3 is 14.054s; pitch-preserving 0.937x playback aligns it to the 15s splash.
         runCatching { player?.setPlaybackParams(PlaybackParams().setSpeed(0.937f).setPitch(1.0f)) }
         player?.start()
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> if (player?.isPlaying == true) player.pause()
+                Lifecycle.Event.ON_START -> if (elapsed < 15 && player?.isPlaying == false) runCatching { player.start() }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
             try { player?.stop() } catch (_: IllegalStateException) { }
             player?.release()
         }
     }
-    var elapsed by remember { mutableIntStateOf(0) }
     val reduceMotion = remember(context) { AppSettingsStore(context).reduceMotion }
     val transition = rememberInfiniteTransition(label = "universe-motion")
     val animatedOrbit by transition.animateFloat(0f, 360f,
@@ -138,8 +152,13 @@ private fun UniverseSplash(onFinished: () -> Unit) {
     val headsetSpin = if (reduceMotion) 0f else animatedHeadsetSpin
     val cameraSpin = if (reduceMotion) 0f else animatedCameraSpin
     val captions = listOf("Beyond the sound…", "Beyond the rhythm…", "Beyond boundaries…", "This is our universe.")
-    LaunchedEffect(Unit) {
-        while (elapsed < 15) { delay(1000); elapsed++ }
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (elapsed < 15) {
+                delay(1000)
+                elapsed++
+            }
+        }
         onFinished()
     }
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
