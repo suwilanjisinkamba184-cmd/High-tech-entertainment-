@@ -279,7 +279,7 @@ export default function PublicCatalogue() {
           (next as any)[names[index]] = result.value.data || [];
         } else {
           failed.push(names[index]);
-          console.error('HTE catalogue ' + names[index] + ' query failed', result.status === 'rejected' ? result.reason : result.value.error);
+          console.warn('HTE catalogue section unavailable:', names[index]);
         }
       });
       setData(next);
@@ -319,7 +319,7 @@ export default function PublicCatalogue() {
         }
         if (active && currentUserId.current === id) setSyncNotice('');
       } catch (e) {
-        console.error('HTE favourite sync failed',e);
+        console.warn('HTE favourites could not sync.');
         if (active && currentUserId.current === id) setSyncNotice('Your saved tracks remain on this device. Cloud sync is temporarily unavailable.');
       }
     };
@@ -337,7 +337,7 @@ export default function PublicCatalogue() {
       if (active) setUserId(id);
       if (id) void syncFavorites(id);
       else if (active) setSavedIds(readSavedIds(GUEST_SAVED_KEY));
-    }).catch(e => console.error('HTE auth state unavailable',e));
+    }).catch(e => console.warn('HTE account state could not be refreshed.'));
 
     return () => { active = false; subscription.unsubscribe(); };
   },[]);
@@ -367,7 +367,7 @@ export default function PublicCatalogue() {
         : db.from('user_favorites').upsert({user_id:userId,track_id:trackId},{onConflict:'user_id,track_id'});
       void request.then(({error}) => {
         if (error) {
-          console.error('HTE favourite update failed',error);
+          console.warn('HTE favourite change could not be synced.');
           setSyncNotice('A favourite could not sync. It is still saved on this device.');
         } else setSyncNotice('');
       });
@@ -395,7 +395,7 @@ export default function PublicCatalogue() {
     } catch (e) {
       completedPending.current.delete(playKey);
       recordedPlays.current.delete(playKey);
-      console.error('HTE listening history could not be recorded',e);
+      console.warn('HTE listening activity could not be recorded.');
     }
   };
 
@@ -410,7 +410,7 @@ export default function PublicCatalogue() {
       if (error) throw error;
       recordedPlays.current.delete(playKey);
       playHistoryIds.current.delete(playKey);
-    } catch (e) { console.error('HTE listening completion could not be recorded',e); }
+    } catch (e) { console.warn('HTE listening completion could not be recorded.'); }
   };
 
   const queryError = errors.length > 0;
