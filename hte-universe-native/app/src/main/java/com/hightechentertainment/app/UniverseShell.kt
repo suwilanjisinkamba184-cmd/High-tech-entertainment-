@@ -1041,7 +1041,10 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize(), color = Color.Black) {
             BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
-                val landscape = maxWidth > maxHeight
+                // Capture BoxWithConstraints values before entering ColumnScope to avoid receiver ambiguity.
+                val availableWidth = maxWidth
+                val availableHeight = maxHeight
+                val landscape = availableWidth > availableHeight
                 val safePadding = if (immersiveVideo) Modifier else Modifier.windowInsetsPadding(WindowInsets.safeDrawing)
                 Column(
                     Modifier.fillMaxSize()
@@ -1087,7 +1090,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                             modifier = if (immersiveVideo || landscape) {
                                 Modifier.fillMaxWidth().weight(1f)
                             } else {
-                                Modifier.fillMaxWidth().height(minOf(maxWidth * (9f / 16f), maxHeight * .46f))
+                                Modifier.fillMaxWidth().height(minOf(availableWidth * (9f / 16f), availableHeight * .46f))
                             }
                         )
                         if (!immersiveVideo && !landscape) Spacer(Modifier.weight(1f))
