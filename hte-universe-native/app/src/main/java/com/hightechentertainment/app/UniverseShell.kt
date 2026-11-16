@@ -265,6 +265,8 @@ fun UniverseShell() {
         BoxWithConstraints(Modifier.fillMaxSize()) {
         // Use a navigation rail on wide/landscape windows and bottom navigation on phones.
         val isWideLayout = maxWidth >= 600.dp
+        // Give the listening theater a proportional width on compact landscape and tablet windows.
+        val playerPanelWidth = minOf(maxWidth * 0.52f, 400.dp)
         Scaffold(
         containerColor = ShellBackground,
         bottomBar = {
@@ -310,7 +312,7 @@ fun UniverseShell() {
             }
             Column(
                 Modifier.weight(1f).fillMaxHeight()
-                    .padding(end = if (isWideLayout && playerHasTrack) 360.dp else 0.dp)
+                    .padding(end = if (isWideLayout && playerHasTrack) playerPanelWidth + 8.dp else 0.dp)
             ) {
             UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true })
             when (selectedTab) {
@@ -377,7 +379,7 @@ fun UniverseShell() {
                     expanded = playerExpanded,
                     onExpandedChange = { playerExpanded = it },
                     modifier = Modifier.align(Alignment.CenterEnd)
-                        .width(352.dp).fillMaxHeight()
+                        .width(playerPanelWidth).fillMaxHeight()
                         .padding(start = 8.dp, top = 10.dp, end = 10.dp, bottom = 10.dp),
                     collapsedBottomInset = 0.dp,
                     artwork = { url, artworkModifier ->
