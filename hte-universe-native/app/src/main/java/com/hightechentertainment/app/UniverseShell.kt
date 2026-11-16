@@ -381,6 +381,7 @@ fun UniverseShell() {
                 UniverseTab.HOME -> HomeScreen(
                     tracks = tracks, videos = videos, isLoading = isLoading,
                     onExplore = { selectedTab = UniverseTab.DISCOVER },
+                    onLibrary = { selectedTab = UniverseTab.LIBRARY },
                     onVideos = { selectedTab = UniverseTab.VIDEOS },
                     onVoice = { showVoiceAssistant = true },
                     onProfile = { selectedTab = UniverseTab.ACCOUNT },
@@ -611,7 +612,7 @@ private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, on
 private fun HomeScreen(
     tracks: List<TrackDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
     playlistTracks: Map<String, List<TrackDto>>, profileName: String?, profileAvatarUrl: String?, isLoading: Boolean,
-    onExplore: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit,
+    onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
@@ -619,7 +620,7 @@ private fun HomeScreen(
     Universe2026Home(
         tracks = tracks, videos = videos, playlists = playlists, playlistTracks = playlistTracks,
         profileName = profileName, profileAvatarUrl = profileAvatarUrl, isLoading = isLoading,
-        onExplore = onExplore, onVideos = onVideos, onVoice = onVoice, onProfile = onProfile,
+        onExplore = onExplore, onLibrary = onLibrary, onVideos = onVideos, onVoice = onVoice, onProfile = onProfile,
         onPlayTrack = onPlayTrack, onPlayPlaylist = onPlayPlaylist, onPlayVideo = onPlayVideo,
         onDownloadTrack = onDownloadTrack, onDownloadVideo = onDownloadVideo,
         favouriteTrackIds = favouriteTrackIds, onToggleFavourite = onToggleFavourite,
