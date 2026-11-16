@@ -29,14 +29,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 
-private val U26Black = Color(0xFF08090B)
-private val U26Panel = Color(0xFF121418)
-private val U26Raised = Color(0xFF1A1E25)
-private val U26Gold = Color(0xFFD6B15E)
+private val U26Black = Color(0xFF0B0A0F)
+private val U26Panel = Color(0xFF17161E)
+private val U26Raised = Color(0xFF211F29)
+private val U26Gold = Color(0xFFE5C158)
 private val U26GoldLight = Color(0xFFF0DCA7)
 private val U26Silver = Color(0xFFC7CCD6)
 private val U26Muted = Color(0xFF89919D)
-private val U26Line = Color(0xFF2A2E36)
+private val U26Line = Color(0xFF302D38)
 
 @Composable
 fun Universe2026Home(
