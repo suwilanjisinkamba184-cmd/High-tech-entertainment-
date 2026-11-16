@@ -116,8 +116,8 @@ fun Universe2026Home(
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                     U26QuickStat("MUSIC", tracks.size.toString(), Icons.Outlined.MusicNote, Modifier.weight(1f), onExplore)
-                    U26QuickStat("VIDEOS", videos.size.toString(), Icons.Outlined.Movie, Modifier.weight(1f), onVideos)
-                    U26QuickStat("YOUR LIBRARY", "OPEN", Icons.Outlined.LibraryMusic, Modifier.weight(1f), onExplore)
+                    U26QuickStat("VIDEOS", videos.size.toString(), Icons.Outlined.VideoLibrary, Modifier.weight(1f), onVideos)
+                    U26QuickStat("YOUR LIBRARY", "OPEN", Icons.Outlined.MusicNote, Modifier.weight(1f), onExplore)
                 }
             }
 
@@ -182,7 +182,7 @@ fun Universe2026Home(
                         AssistChip(
                             onClick = onExplore,
                             label = { Text(genre, color = U26Silver) },
-                            leadingIcon = { Icon(Icons.Outlined.Equalizer, null, tint = U26Gold, modifier = Modifier.size(16.dp)) },
+                            leadingIcon = { Icon(Icons.Outlined.GraphicEq, null, tint = U26Gold, modifier = Modifier.size(16.dp)) },
                             colors = AssistChipDefaults.assistChipColors(containerColor = U26Panel),
                             border = androidx.compose.foundation.BorderStroke(1.dp, U26Line)
                         )
@@ -372,7 +372,7 @@ private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onD
                     contentScale = ContentScale.Crop
                 )
             } else {
-                Icon(Icons.Outlined.Movie, null, tint = U26Gold.copy(alpha = .45f), modifier = Modifier.size(62.dp))
+                Icon(Icons.Outlined.VideoLibrary, null, tint = U26Gold.copy(alpha = .45f), modifier = Modifier.size(62.dp))
             }
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .52f)))))
             Surface(Modifier.align(Alignment.Center), color = Color.Black.copy(alpha = .68f), shape = RoundedCornerShape(50)) {
