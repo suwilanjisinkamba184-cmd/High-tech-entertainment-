@@ -2,6 +2,7 @@ package com.hightechentertainment.app
 
 import com.hightechentertainment.app.data.TrackDto
 import com.hightechentertainment.app.data.VideoDto
+import com.hightechentertainment.app.data.PlaylistDto
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -40,9 +41,10 @@ private val U26Line = Color(0xFF302D38)
 
 @Composable
 fun Universe2026Home(
-    tracks: List<TrackDto>, videos: List<VideoDto>, isLoading: Boolean,
+    tracks: List<TrackDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
+    playlistTracks: Map<String, List<TrackDto>>, isLoading: Boolean,
     onExplore: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit,
-    onPlayTrack: (TrackDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
+    onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
     favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
 ) {
@@ -170,6 +172,22 @@ fun Universe2026Home(
                                 onPlay = { onPlayTrack(track) },
                                 onFavourite = { onToggleFavourite(track) },
                                 onDownload = { onDownloadTrack(track) }
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (playlists.isNotEmpty()) item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    U26SectionHeading("YOUR PLAYLISTS", "OPEN LIBRARY", onExplore)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(playlists, key = { it.id }) { playlist ->
+                            U26PlaylistCard(
+                                playlist = playlist,
+                                tracks = playlistTracks[playlist.id].orEmpty(),
+                                wide = wide,
+                                onPlay = { onPlayPlaylist(playlist) }
                             )
                         }
                     }
@@ -455,6 +473,44 @@ private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onD
                 Icon(Icons.Outlined.Download, null, tint = U26Silver, modifier = Modifier.size(15.dp))
                 Text("SAVE", color = U26Silver, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
+        }
+    }
+}
+
+@Composable
+private fun U26PlaylistCard(
+    playlist: PlaylistDto,
+    tracks: List<TrackDto>,
+    wide: Boolean,
+    onPlay: () -> Unit
+) {
+    Card(
+        modifier = Modifier.width(if (wide) 250.dp else 218.dp).clickable(onClick = onPlay),
+        shape = RoundedCornerShape(17.dp),
+        colors = CardDefaults.cardColors(containerColor = U26Panel)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                Modifier.size(58.dp).clip(RoundedCornerShape(12.dp)).background(U26Raised),
+                contentAlignment = Alignment.Center
+            ) {
+                val artwork = tracks.firstOrNull()?.coverUrl
+                if (!artwork.isNullOrBlank()) {
+                    AsyncImage(model = artwork, contentDescription = "Artwork for ${playlist.name}", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                } else {
+                    Icon(Icons.Outlined.QueueMusic, null, tint = U26Gold, modifier = Modifier.size(27.dp))
+                }
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(playlist.name, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(playlist.description?.takeIf(String::isNotBlank) ?: "Your HTE collection", color = U26Muted, fontSize = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text("${tracks.size} TRACKS", color = U26Gold, fontSize = 8.sp, letterSpacing = 1.sp, fontWeight = FontWeight.Bold)
+            }
+            Icon(Icons.Outlined.PlayCircle, "Play playlist ${playlist.name}", tint = U26Gold, modifier = Modifier.size(23.dp))
         }
     }
 }
