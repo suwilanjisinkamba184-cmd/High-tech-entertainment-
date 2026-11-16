@@ -226,9 +226,13 @@ fun UniverseShell() {
 
     LaunchedEffect(configured, selectedTab) {
         if (configured && selectedTab == UniverseTab.LIBRARY) {
-            favouriteTrackIds = runCatching {
-                withContext(Dispatchers.IO) { MemberRepository().getFavouriteTrackIds() }
-            }.getOrDefault(favouriteTrackIds)
+            try {
+                favouriteTrackIds = withContext(Dispatchers.IO) { MemberRepository().getFavouriteTrackIds() }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Throwable) {
+                Toast.makeText(context, "Your favourites could not be refreshed. Please try again.", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
