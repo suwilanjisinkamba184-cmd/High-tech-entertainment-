@@ -72,9 +72,9 @@ jobs:
           test -s "$APK"
           BADGING=$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK")
           printf '%s\n' "$BADGING" | grep -E "^package:"
-          printf '%s\n' "$BADGING" | grep -F "name='com.hightechentertainment.app'"
+          printf '%s\n' "$BADGING" | grep -F "name='com.hightechentertainment.app.dev'"
           printf '%s\n' "$BADGING" | grep -F "versionCode='43'"
-          printf '%s\n' "$BADGING" | grep -F "versionName='4.0.9'"
+          printf '%s\n' "$BADGING" | grep -F "versionName='4.0.9-dev'"
       - name: Upload temporary PR debug APK
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v7
