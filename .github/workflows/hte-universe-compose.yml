@@ -134,7 +134,7 @@ jobs:
             hte-universe-native/app/build/outputs/apk/release/SHA256SUMS.txt
           if-no-files-found: error
       - name: Prepare permanent release assets
-        if: startsWith(github.ref, 'refs/tags/native-v')
+        if: github.ref == 'refs/tags/native-v4.0.9-build43'
         run: |
           set -euo pipefail
           mkdir -p ../release-assets
@@ -142,7 +142,7 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk.idsig ../release-assets/HTE-Universe-4.0.9.apk.idsig
           (cd ../release-assets && sha256sum HTE-Universe-4.0.9.apk > SHA256SUMS.txt)
       - name: Publish HTE Universe 4.0.9
-        if: startsWith(github.ref, 'refs/tags/native-v')
+        if: github.ref == 'refs/tags/native-v4.0.9-build43'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
@@ -165,10 +165,10 @@ jobs:
           fail_on_unmatched_files: true
           make_latest: true
       - name: Verify public release assets
-        if: startsWith(github.ref, 'refs/tags/native-v')
+        if: github.ref == 'refs/tags/native-v4.0.9-build43'
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/native-v') && github.ref_name || 'native-v4.0.9-build43' }}
+          RELEASE_TAG: native-v4.0.9-build43
         run: |
           set -euo pipefail
           gh release view "$RELEASE_TAG" --json tagName,isDraft,isPrerelease,assets > "$RUNNER_TEMP/release.json"
