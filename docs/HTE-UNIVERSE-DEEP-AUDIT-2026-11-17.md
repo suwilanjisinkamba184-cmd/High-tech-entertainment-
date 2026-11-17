@@ -14,7 +14,7 @@ A focused review after the initial audit found the reported duplicate-logo issue
 
 The Activity was also using Android 12+ system splash attributes on its post-launch theme without installing the AndroidX SplashScreen compatibility API. The app now has a dedicated starting theme, installs the compatibility API before `super.onCreate()`, and transitions into the Compose intro using the same official logo. This follows Android's migration guidance and is intended to prevent a stacked launch experience on Android 12+ while supporting older Android releases.
 
-The main Home header now uses the actual official HTE logo in a restrained black/gold gradient surface instead of relying only on a generic text mark. This is a focused UI polish, not a claim that every screen has completed its full visual redesign.
+The main Home header now uses the actual official HTE logo in a restrained black/gold gradient surface instead of relying only on a generic text mark. This is a focused UI polish, not a claim that every screen has completed its full visual redesign. Startup playback rate is now calculated from the encoded audio duration to target the 15-second Compose intro; if a device rejects playback-rate control, normal-speed playback remains the fallback.
 
 ## Source fixes included in this audit branch
 
