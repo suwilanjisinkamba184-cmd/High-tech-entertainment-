@@ -75,9 +75,11 @@ fun HteSplashScreen(
         val enabled = runCatching { AppSettingsStore(context).startupSoundEnabled }.getOrDefault(true)
         val player = if (enabled) runCatching {
             MediaPlayer.create(context, R.raw.hte_universe_intro)?.apply {
-                // Playback-rate control is device/codec dependent. Keep the intro
-                // playable at normal speed if the optional timing adjustment fails.
-                runCatching { setPlaybackParams(PlaybackParams().setSpeed(0.937f).setPitch(1.0f)) }
+                // Match the encoded intro duration to the 15-second visual timeline.
+                // If a device/codec rejects playback-rate control, normal-speed audio
+                // still plays and the splash remains usable.
+                val syncSpeed = (duration.coerceAtLeast(1).toFloat() / 15_000f).coerceIn(0.5f, 2.0f)
+                runCatching { setPlaybackParams(PlaybackParams().setSpeed(syncSpeed).setPitch(1.0f)) }
                 isLooping = false
             }
         }.getOrNull() else null
