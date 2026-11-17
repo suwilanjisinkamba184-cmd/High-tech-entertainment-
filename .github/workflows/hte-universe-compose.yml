@@ -18,7 +18,8 @@ permissions:
 
 concurrency:
   group: hte-universe-android-${{ github.ref }}
-  cancel-in-progress: false
+  # New PR commits supersede stale validation runs; production runs are never auto-cancelled.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   android-build:
