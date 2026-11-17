@@ -56,7 +56,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
 import androidx.media3.ui.PlayerView
-import androidx.media3.ui.AspectRatioFrameLayout
 import io.github.jan.supabase.auth.auth
 import com.hightechentertainment.app.data.AuthRepository
 import com.hightechentertainment.app.data.ArtistDto
