@@ -296,4 +296,5 @@ private fun formatTime(ms: Long): String {
 
 @Composable
 fun PlayerHost(controller: PlayerController, expanded: Boolean, onExpandedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, collapsedBottomInset: Dp = 0.dp, immersive: Boolean = false, artwork: @Composable (String?, Modifier) -> Unit) =
-    HteStudioPlayerScreen(controller, expanded, onExpandedChange, modifier, collapsedBottomInset, immersive, artwork
+    HteStudioPlayerScreen(controller, expanded, onExpandedChange, modifier, collapsedBottomInset, immersive, artwork)
+

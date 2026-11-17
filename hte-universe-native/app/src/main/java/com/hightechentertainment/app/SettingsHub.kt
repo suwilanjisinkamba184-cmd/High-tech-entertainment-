@@ -601,4 +601,5 @@ private fun friendlyUpdateError(error: Throwable): String {
 
 @Composable
 fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadManager: OfflineDownloadManager, onSettingsChanged: () -> Unit = {}) =
-    HteSettingsScreen(onClose, settingsStore, downloadManager, onSettingsChang
+    HteSettingsScreen(onClose, settingsStore, downloadManager, onSettingsChanged)
+
