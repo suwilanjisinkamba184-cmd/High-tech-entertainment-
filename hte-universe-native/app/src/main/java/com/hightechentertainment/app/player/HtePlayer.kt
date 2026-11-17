@@ -81,7 +81,9 @@ class Media3PlayerController(private val player: Player, scope: CoroutineScope) 
         pollJob = scope.launch {
             while (isActive) {
                 if (player.isPlaying || player.playbackState == Player.STATE_BUFFERING) _state.value = snapshot()
-                delay(250)
+                // Half-second position updates keep scrubbing responsive without needlessly
+                // waking/recomposing the UI four times per second on lower-memory phones.
+                delay(500)
             }
         }
     }
