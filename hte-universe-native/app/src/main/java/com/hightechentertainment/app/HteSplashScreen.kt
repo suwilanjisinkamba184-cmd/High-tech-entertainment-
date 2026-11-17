@@ -81,7 +81,9 @@ fun HteSplashScreen(
         val enabled = runCatching { AppSettingsStore(context).startupSoundEnabled }.getOrDefault(true)
         val player = if (enabled) runCatching {
             MediaPlayer.create(context, R.raw.hte_universe_intro)?.apply {
-                setPlaybackParams(PlaybackParams().setSpeed(0.937f).setPitch(1.0f))
+                // Playback-rate control is device/codec dependent. Keep the intro
+                // playable at normal speed if the optional timing adjustment fails.
+                runCatching { setPlaybackParams(PlaybackParams().setSpeed(0.937f).setPitch(1.0f)) }
                 isLooping = false
             }
         }.getOrNull() else null
