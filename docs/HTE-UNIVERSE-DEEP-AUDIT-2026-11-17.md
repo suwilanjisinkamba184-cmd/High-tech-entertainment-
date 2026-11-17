@@ -8,13 +8,15 @@ The native Android app is a Kotlin/Jetpack Compose application using Media3 for 
 
 A successful build does not establish real-device correctness. No physical-device test was performed during this audit. The current workflow runs JVM unit tests and lint; it does not run an Android emulator/device instrumentation suite.
 
-## Additional UI and launch-screen corrections
+## Recording-led UI and launch-screen corrections
 
-A focused review after the initial audit found the reported duplicate-logo issue in the Compose splash itself: the H/T/E monogram was drawn over the official HT logo during its fade-in and retained 15% opacity after the transition. This is now removed. The official logo is the only central mark and rotates smoothly inside the gold orbital ring.
+The supplied 66-second screen recording clarified the splash defect: the clean animated H/T/E lettering and gold orbital ring are the intended composition. The later black-backed 1024px HTE logo PNG overlays and obscures that animation. The Android change therefore removes the PNG overlay and restores the original staggered H/T/E monogram reveal and ring choreography. It does not remove the ring, letters, stars, tagline, progress indicator, or 15-second intro.
 
-The Activity was also using Android 12+ system splash attributes on its post-launch theme without installing the AndroidX SplashScreen compatibility API. The app now has a dedicated starting theme, installs the compatibility API before `super.onCreate()`, and transitions into the Compose intro using the same official logo. This follows Android's migration guidance and is intended to prevent a stacked launch experience on Android 12+ while supporting older Android releases.
+The Home, Videos, and Library views also use purple-toned surfaces that conflict with the black/gold/silver HTE brand. Their surface and divider tokens have been moved to neutral obsidian/charcoal and muted metallic gold. The Settings selected-chip accent is now HTE gold rather than lime. The audio player's default accent now uses HTE gold.
 
-The main Home header now uses the actual official HTE logo in a restrained black/gold gradient surface instead of relying only on a generic text mark. This is a focused UI polish, not a claim that every screen has completed its full visual redesign. Startup playback rate is now calculated from the encoded audio duration to target the 15-second Compose intro; if a device rejects playback-rate control, normal-speed playback remains the fallback.
+The video surface now displays the catalogue thumbnail while paused or buffering, with a dark readability overlay and centered playback affordance, rather than exposing an empty black canvas when a thumbnail is available. This improves the pre-frame/paused presentation; it does not prove that every stored video URL is playable.
+
+The AndroidX system splash compatibility hand-off remains in place. Startup audio duration is calculated against the 15-second Compose intro with a safe normal-speed fallback. Physical-device verification is still required for timing, visual layering, and media decoding.
 
 ## Source fixes included in this audit branch
 
