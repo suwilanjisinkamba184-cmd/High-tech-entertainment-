@@ -36,8 +36,8 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 private val HTEBlack = Color(0xFF030806)
-private val HTEEmeraldDeep = Color(0xFF061A12)
-private val HTEGreenGlow = Color(0xFF00FF88)
+private val HTEEmeraldDeep = Color(0xFF100D08)
+private val HTEGreenGlow = Color(0xFFD4AF37)
 private val HTEGoldLight = Color(0xFFF5D77F)
 private val HTEGold = Color(0xFFD4AF37)
 private val HTEGoldDark = Color(0xFF8C6D1F)
@@ -164,7 +164,7 @@ fun HteSplashScreen(
             val backdropCenter = Offset(size.width / 2f, size.height * 0.43f)
             drawCircle(
                 brush = Brush.radialGradient(
-                    listOf(HTEGreenGlow.copy(alpha = 0.18f + flashGlow.value * 0.22f), Color(0xFF0A3A24).copy(alpha = 0.25f), Color.Transparent),
+                    listOf(HTEGreenGlow.copy(alpha = 0.18f + flashGlow.value * 0.22f), Color(0xFF5A4215).copy(alpha = 0.16f), Color.Transparent),
                     center = backdropCenter, radius = size.minDimension * 0.7f
                 ), radius = size.minDimension * 0.7f, center = backdropCenter
             )
