@@ -1,5 +1,7 @@
 package com.hightechentertainment.app.update
 
+import com.hightechentertainment.app.BuildConfig
+
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.pm.PackageInfoCompat
@@ -29,6 +31,40 @@ data class HteUpdateInfo(
 
 data class HteDownloadProgress(val downloaded: Long, val total: Long) {
     val fraction: Float get() = if (total > 0L) (downloaded.toFloat() / total).coerceIn(0f, 1f) else 0f
+}
+
+/** Native release tags include a build number because several app builds share versionName 4.1.2. */
+internal data class NativeReleaseVersion(val versionName: String, val buildCode: Long)
+
+internal fun parseNativeReleaseVersion(tag: String): NativeReleaseVersion? {
+    val raw = tag.removePrefix("native-v")
+    val match = Regex("^(.+?)(?:-build(\\d+))?$", RegexOption.IGNORE_CASE).matchEntire(raw) ?: return null
+    val versionName = match.groupValues[1]
+    if (versionName.isBlank()) return null
+    return NativeReleaseVersion(versionName, match.groupValues[2].toLongOrNull() ?: 0L)
+}
+
+private fun compareNumericVersions(left: String, right: String): Int {
+    val a = Regex("\\d+").findAll(left).map { it.value.toIntOrNull() ?: 0 }.toList()
+    val b = Regex("\\d+").findAll(right).map { it.value.toIntOrNull() ?: 0 }.toList()
+    for (index in 0 until maxOf(a.size, b.size)) {
+        val comparison = (a.getOrElse(index) { 0 }).compareTo(b.getOrElse(index) { 0 })
+        if (comparison != 0) return comparison
+    }
+    return 0
+}
+
+internal fun compareNativeReleaseTags(left: String, right: String): Int {
+    val a = parseNativeReleaseVersion(left) ?: return -1
+    val b = parseNativeReleaseVersion(right) ?: return 1
+    val versionComparison = compareNumericVersions(a.versionName, b.versionName)
+    return if (versionComparison != 0) versionComparison else a.buildCode.compareTo(b.buildCode)
+}
+
+internal fun isNativeReleaseNewer(tag: String, currentVersionName: String, currentBuildCode: Long): Boolean {
+    val release = parseNativeReleaseVersion(tag) ?: return false
+    val versionComparison = compareNumericVersions(release.versionName, currentVersionName)
+    return versionComparison > 0 || (versionComparison == 0 && release.buildCode > currentBuildCode)
 }
 
 private class RetryableUpdateCheckException(message: String) : java.io.IOException(message)
@@ -74,7 +110,7 @@ class HteUpdateManager(private val context: Context) {
                 .reduceOrNull { best, candidate ->
                     val bestVersion = best.optString("tag_name").removePrefix(NATIVE_RELEASE_TAG_PREFIX)
                     val candidateVersion = candidate.optString("tag_name").removePrefix(NATIVE_RELEASE_TAG_PREFIX)
-                    if (compareVersions(candidateVersion, bestVersion) > 0) candidate else best
+                    if (compareNativeReleaseTags(candidate.optString("tag_name"), best.optString("tag_name")) > 0) candidate else best
                 }
                 ?: throw IllegalStateException("No published native HTE release is available yet.")
             val tag = nativeRelease.optString("tag_name")
@@ -103,7 +139,7 @@ class HteUpdateManager(private val context: Context) {
                 downloadUrl = apkUrl,
                 downloadSize = apkSize,
                 sha256 = digest,
-                updateAvailable = compareVersions(latest, currentVersion) > 0
+                updateAvailable = isNativeReleaseNewer(tag, currentVersion, BuildConfig.VERSION_CODE.toLong())
             )
         } finally {
             connection.disconnect()
