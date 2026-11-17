@@ -12,7 +12,7 @@ A successful build does not establish real-device correctness. No physical-devic
 
 The supplied 66-second screen recording clarified the splash defect: the clean animated H/T/E lettering and gold orbital ring are the intended composition. The later black-backed 1024px HTE logo PNG overlays and obscures that animation. The Android change therefore removes the PNG overlay and restores the original staggered H/T/E monogram reveal and ring choreography. It does not remove the ring, letters, stars, tagline, progress indicator, or 15-second intro.
 
-The Home, Videos, and Library views also use purple-toned surfaces that conflict with the black/gold/silver HTE brand. Their surface and divider tokens have been moved to neutral obsidian/charcoal and muted metallic gold. The Settings selected-chip accent is now HTE gold rather than lime. The audio player's default accent now uses HTE gold.
+The Home, Videos, and Library views also use purple-toned surfaces that conflict with the black/gold/silver HTE brand. Their surface and divider tokens, plus the shared Material theme surface/secondary/tertiary tokens, have been moved to neutral obsidian/charcoal, metallic gold, and silver. The Settings selected-chip accent is now HTE gold rather than lime. The audio player's default accent now uses HTE gold.
 
 The video surface now displays the catalogue thumbnail while paused or buffering, with a dark readability overlay and centered playback affordance, rather than exposing an empty black canvas when a thumbnail is available. This improves the pre-frame/paused presentation; it does not prove that every stored video URL is playable.
 
