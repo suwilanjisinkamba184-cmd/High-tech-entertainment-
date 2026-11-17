@@ -1,11 +1,10 @@
 package com.hightechentertainment.app.update
 
-import com.hightechentertainment.app.BuildConfig
-
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.pm.PackageInfoCompat
 import android.os.Build
+import com.hightechentertainment.app.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.currentCoroutineContext
@@ -108,8 +107,6 @@ class HteUpdateManager(private val context: Context) {
                 .map { releases.getJSONObject(it) }
                 .filter { it.optString("tag_name").startsWith(NATIVE_RELEASE_TAG_PREFIX) }
                 .reduceOrNull { best, candidate ->
-                    val bestVersion = best.optString("tag_name").removePrefix(NATIVE_RELEASE_TAG_PREFIX)
-                    val candidateVersion = candidate.optString("tag_name").removePrefix(NATIVE_RELEASE_TAG_PREFIX)
                     if (compareNativeReleaseTags(candidate.optString("tag_name"), best.optString("tag_name")) > 0) candidate else best
                 }
                 ?: throw IllegalStateException("No published native HTE release is available yet.")
@@ -332,16 +329,7 @@ class HteUpdateManager(private val context: Context) {
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
-    private fun compareVersions(left: String, right: String): Int {
-        fun parts(value: String) = Regex("\\d+").findAll(value.substringBefore('-')).map { it.value.toIntOrNull() ?: 0 }.toList()
-        val a = parts(left)
-        val b = parts(right)
-        for (index in 0 until maxOf(a.size, b.size)) {
-            val comparison = (a.getOrElse(index) { 0 }).compareTo(b.getOrElse(index) { 0 })
-            if (comparison != 0) return comparison
-        }
-        return 0
-    }
+
 
     companion object {
         private const val NATIVE_RELEASE_TAG_PREFIX = "native-v"
