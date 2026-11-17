@@ -45,7 +45,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-data class PlayerTrack(val id: String, val title: String, val artist: String, val artworkUrl: String?, val accent: Color = HteColors.Violet)
+data class PlayerTrack(val id: String, val title: String, val artist: String, val artworkUrl: String?, val accent: Color = HteColors.Gold)
 enum class HteRepeatMode { OFF, ALL, ONE }
 data class PlayerQueueItem(val id: String, val title: String, val artist: String)
 data class PlayerUiState(
