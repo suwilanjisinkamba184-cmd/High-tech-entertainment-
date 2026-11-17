@@ -8,6 +8,7 @@ import android.content.Context
 import android.app.Activity
 import android.widget.Toast
 import android.view.LayoutInflater
+import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -1325,7 +1326,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                             AndroidView(
                                 factory = { viewContext ->
                                     (LayoutInflater.from(viewContext)
-                                        .inflate(R.layout.hte_video_player, null, false) as PlayerView).apply {
+                                        .inflate(R.layout.hte_video_player, FrameLayout(viewContext), false) as PlayerView).apply {
                                         this.player = player
                                         keepScreenOn = true
                                     }
