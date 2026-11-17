@@ -60,12 +60,6 @@ fun HteSplashScreen(
     var elapsed by remember { mutableIntStateOf(0) }
     val latestElapsed by rememberUpdatedState(elapsed)
 
-    val hAlpha = remember { Animatable(0f) }
-    val hScale = remember { Animatable(1.6f) }
-    val tAlpha = remember { Animatable(0f) }
-    val tScale = remember { Animatable(1.6f) }
-    val eAlpha = remember { Animatable(0f) }
-    val eScale = remember { Animatable(1.6f) }
     val ringProgress = remember { Animatable(0f) }
     val innerLogoScale = remember { Animatable(0.75f) }
     val innerLogoAlpha = remember { Animatable(0f) }
@@ -127,18 +121,14 @@ fun HteSplashScreen(
     }
 
     // Choreography runs independently of the 15-second timer.
+    // Reveal one official logo only; the former H/T/E monogram overlay caused
+    // two marks to remain visible together throughout the intro.
     LaunchedEffect(Unit) {
-        launch { hAlpha.animateTo(1f, tween(350)); hScale.animateTo(1f, spring(dampingRatio = 0.65f, stiffness = 320f)) }
-        delay(280L)
-        launch { tAlpha.animateTo(1f, tween(350)); tScale.animateTo(1f, spring(dampingRatio = 0.65f, stiffness = 320f)) }
-        delay(280L)
-        launch { eAlpha.animateTo(1f, tween(350)); eScale.animateTo(1f, spring(dampingRatio = 0.65f, stiffness = 320f)) }
-        delay(450L)
-        ringProgress.animateTo(1f, tween(1100, easing = FastOutSlowInEasing))
+        launch { ringProgress.animateTo(1f, tween(1100, easing = FastOutSlowInEasing)) }
+        launch { innerLogoAlpha.animateTo(1f, tween(900)) }
+        launch { innerLogoScale.animateTo(1f, spring(dampingRatio = 0.72f, stiffness = 220f)) }
         launch { flashGlow.animateTo(1f, tween(250)); flashGlow.animateTo(0.25f, tween(900)) }
-        launch { innerLogoAlpha.animateTo(1f, tween(700)) }
-        launch { innerLogoScale.animateTo(1f, spring(dampingRatio = 0.7f, stiffness = 200f)) }
-        delay(350L)
+        delay(1100L)
         showSubtitle = true
         delay(200L)
         showTagline = true
@@ -155,6 +145,8 @@ fun HteSplashScreen(
     val infinite = rememberInfiniteTransition(label = "cosmic-ambient")
     val ambientAngle by infinite.animateFloat(0f, 360f,
         infiniteRepeatable(tween(18_000, easing = LinearEasing), RepeatMode.Restart), label = "orbital-rotation")
+    val logoRotation by infinite.animateFloat(0f, 360f,
+        infiniteRepeatable(tween(12_000, easing = LinearEasing), RepeatMode.Restart), label = "logo-rotation")
     val twinklePhase by infinite.animateFloat(0f, (2 * Math.PI).toFloat(),
         infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Restart), label = "star-twinkle")
 
@@ -211,15 +203,12 @@ fun HteSplashScreen(
                         }
                     }
                 }
-                Box(Modifier.size(170.dp).graphicsLayer { alpha = innerLogoAlpha.value; scaleX = innerLogoScale.value; scaleY = innerLogoScale.value }, contentAlignment = Alignment.Center) { logo() }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.graphicsLayer { alpha = (1f - innerLogoAlpha.value * 0.85f).coerceIn(0f, 1f) }
-                ) {
-                    MonogramLetter("H", hAlpha.value, hScale.value)
-                    MonogramLetter("T", tAlpha.value, tScale.value)
-                    MonogramLetter("E", eAlpha.value, eScale.value)
-                }
+                Box(Modifier.size(170.dp).graphicsLayer {
+                    alpha = innerLogoAlpha.value
+                    scaleX = innerLogoScale.value
+                    scaleY = innerLogoScale.value
+                    rotationZ = logoRotation
+                }, contentAlignment = Alignment.Center) { logo() }
             }
             Spacer(Modifier.height(20.dp))
             AnimatedVisibility(showSubtitle, enter = fadeIn(tween(700)) + slideInVertically(tween(700)) { it / 2 }) {
@@ -245,14 +234,3 @@ fun HteSplashScreen(
     }
 }
 
-@Composable
-private fun MonogramLetter(letter: String, alpha: Float, scale: Float) {
-    Text(
-        letter,
-        modifier = Modifier.graphicsLayer { this.alpha = alpha; scaleX = scale; scaleY = scale },
-        style = TextStyle(
-            brush = Brush.verticalGradient(listOf(Color.White, HTESilver, Color(0xFF8E96A4))),
-            fontSize = 42.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp
-        )
-    )
-}
