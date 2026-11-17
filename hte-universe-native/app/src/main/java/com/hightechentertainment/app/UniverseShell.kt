@@ -805,19 +805,6 @@ private fun DiscoverScreen(
         item {
             Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("THE HTE CATALOGUE", color = ShellGold, fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
-                    OutlinedTextField(
-                        value = query, onValueChange = { query = it; onQueryChanged(it) },
-                        modifier = Modifier.fillMaxWidth(), singleLine = true,
-                        placeholder = { Text("Search songs, artists or genres") },
-                        leadingIcon = { Icon(Icons.Outlined.Search, null, tint = ShellGold) },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = ShellGold, unfocusedBorderColor = Color.White.copy(alpha = .12f),
-                            focusedTextColor = Color.White, unfocusedTextColor = Color.White,
-                            cursorColor = ShellGold
-                        )
-                    )
                     Text("FILTER BY GENRE", color = ShellMuted, fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
                     androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                         items(genres, key = { it }) { genre ->
