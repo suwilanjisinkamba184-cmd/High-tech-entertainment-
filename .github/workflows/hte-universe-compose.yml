@@ -145,12 +145,12 @@ jobs:
           grep -F "Verified using v3 scheme (APK Signature Scheme v3): true" <<< "$VERIFY_OUTPUT"
           grep -F "Verified using v4 scheme (APK Signature Scheme v4): true" <<< "$VERIFY_OUTPUT"
           BADGING=$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK")
-          printf '%s\n' "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='46' versionName='4.1.2'"
+          printf '%s\n' "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='47' versionName='4.1.2'"
           sha256sum "$APK" | sed "s|$APK|HTE-Universe-4.1.2.apk|" | tee app/build/outputs/apk/release/SHA256SUMS.txt
       - name: Confirm production certificate continuity
         if: github.event_name == 'workflow_dispatch' && inputs.publish_release == true
         env:
-          PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/native-v4.0.9-build43/HTE-Universe-4.0.9.apk
+          PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/native-v4.1.2-build46/HTE-Universe-4.1.2.apk
         run: |
           set -euo pipefail
           SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
@@ -174,7 +174,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.publish_release == true
         uses: actions/upload-artifact@v7
         with:
-          name: hte-universe-production-4.1.2-build46
+          name: hte-universe-production-4.1.2-build47
           path: |
             release-assets/HTE-Universe-4.1.2.apk
             release-assets/HTE-Universe-4.1.2.apk.idsig
@@ -185,12 +185,12 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.publish_release == true
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: native-v4.1.2-build46
+          tag_name: native-v4.1.2-build47
           target_commitish: ${{ github.sha }}
-          name: HTE Universe 4.1.2 — Production build 45
+          name: HTE Universe 4.1.2 — Production build 47
           body: |
             ## HTE Universe 4.1.2
-            Signed production APK, build 45.
+            Signed production APK, build 47.
 
             - Built from the current main application source.
             - Production package: com.hightechentertainment.app.
@@ -207,14 +207,14 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.publish_release == true
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: native-v4.1.2-build46
+          RELEASE_TAG: native-v4.1.2-build47
         run: |
           set -euo pipefail
           gh release view "$RELEASE_TAG" --json tagName,isDraft,isPrerelease,assets > "$RUNNER_TEMP/release.json"
           python3 - "$RUNNER_TEMP/release.json" <<'PY'
           import json,sys
           d=json.load(open(sys.argv[1]))
-          assert d["tagName"] == "native-v4.1.2-build46"
+          assert d["tagName"] == "native-v4.1.2-build47"
           assert not d["isDraft"] and not d["isPrerelease"]
           names={a["name"] for a in d["assets"]}
           assert {"HTE-Universe-4.1.2.apk","HTE-Universe-4.1.2.apk.idsig","SHA256SUMS.txt"} <= names

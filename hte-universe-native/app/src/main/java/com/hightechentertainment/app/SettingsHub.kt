@@ -53,11 +53,12 @@ private val SettingsBackground = Color(0xFF0B0A0F)
 
 @androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
 @Composable
-fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadManager: OfflineDownloadManager, onSettingsChanged: () -> Unit = {}) {
+fun HteSettingsScreen(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadManager: OfflineDownloadManager, onSettingsChanged: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val updater = remember(context) { HteUpdateManager(context) }
     var notifications by remember { mutableStateOf(settingsStore.notificationsEnabled) }
+    var personalisedRecommendations by remember { mutableStateOf(settingsStore.personalisedRecommendations) }
     var autoplay by remember { mutableStateOf(settingsStore.autoplayNext) }
     var dataSaver by remember { mutableStateOf(settingsStore.dataSaver) }
     var backgroundPlayback by remember { mutableStateOf(settingsStore.backgroundPlayback) }
@@ -360,7 +361,11 @@ fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadMa
             item {
                 SettingsSection("PERSONALISATION & ACCESSIBILITY", "Make the app comfortable to use")
                 SettingsCard {
-                    SettingsInfoRow("Personalised recommendations", "Saved as a future discovery preference; personalised ranking is not yet connected to the catalogue.")
+                    SettingsSwitch("Personalised recommendations", "Use your favourites to surface similar genres on Home", personalisedRecommendations) {
+                        personalisedRecommendations = it
+                        settingsStore.personalisedRecommendations = it
+                        onSettingsChanged()
+                    }
                     SettingsDivider()
                     SettingsSwitch("Reduce motion", "Reduce decorative movement and transitions", reduceMotion) {
                         reduceMotion = it; settingsStore.reduceMotion = it; onSettingsChanged()
@@ -488,7 +493,7 @@ private fun SettingsSwitch(title: String, subtitle: String, checked: Boolean, on
             Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
             Text(subtitle, color = SettingsMuted, fontSize = 10.sp)
         }
-        Switch(checked = checked, onCheckedChange = onChanged, colors = SwitchDefaults.colors(checkedThumbColor = SettingsBackground, checkedTrackColor = Color(0xFFD7F36A)))
+        Switch(checked = checked, onCheckedChange = onChanged, colors = SwitchDefaults.colors(checkedThumbColor = SettingsBackground, checkedTrackColor = SettingsGold))
     }
 }
 
@@ -593,3 +598,8 @@ private fun friendlyUpdateError(error: Throwable): String {
         else -> rootCause.toHteUserMessage("The update could not be completed. Please retry.")
     }
 }
+
+@Composable
+fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadManager: OfflineDownloadManager, onSettingsChanged: () -> Unit = {}) =
+    HteSettingsScreen(onClose, settingsStore, downloadManager, onSettingsChanged)
+

@@ -47,11 +47,14 @@ import java.util.Locale
 
 data class PlayerTrack(val id: String, val title: String, val artist: String, val artworkUrl: String?, val accent: Color = HteColors.Violet)
 enum class HteRepeatMode { OFF, ALL, ONE }
+data class PlayerQueueItem(val id: String, val title: String, val artist: String)
 data class PlayerUiState(
     val track: PlayerTrack? = null, val isPlaying: Boolean = false, val isBuffering: Boolean = false,
     val positionMs: Long = 0L, val durationMs: Long = 0L, val shuffle: Boolean = false,
-    val repeat: HteRepeatMode = HteRepeatMode.OFF, 
+    val repeat: HteRepeatMode = HteRepeatMode.OFF,
     val playbackError: Boolean = false,
+    val queue: List<PlayerQueueItem> = emptyList(),
+    val currentQueueIndex: Int = -1,
 )
 interface PlayerController {
     val state: StateFlow<PlayerUiState>
@@ -62,6 +65,7 @@ interface PlayerController {
     fun retry()
     fun toggleShuffle()
     fun cycleRepeat()
+    fun playQueueItem(index: Int)
 }
 
 /** Main-thread adapter over the app-scoped Media3 controller. release() also stops its polling job. */
@@ -98,6 +102,12 @@ class Media3PlayerController(private val player: Player, scope: CoroutineScope) 
             playbackError = player.playerError != null,
             shuffle = player.shuffleModeEnabled,
             repeat = when (player.repeatMode) { Player.REPEAT_MODE_ONE -> HteRepeatMode.ONE; Player.REPEAT_MODE_ALL -> HteRepeatMode.ALL; else -> HteRepeatMode.OFF },
+            queue = (0 until player.mediaItemCount).map { index ->
+                val queuedItem = player.getMediaItemAt(index)
+                val queuedMetadata = queuedItem.mediaMetadata
+                PlayerQueueItem(queuedItem.mediaId.ifBlank { "queue-$index" }, queuedMetadata.title?.toString() ?: "Unknown title", queuedMetadata.artist?.toString() ?: "High-Tech Entertainment")
+            },
+            currentQueueIndex = player.currentMediaItemIndex,
         )
     }
     override fun togglePlay() { if (player.isPlaying) player.pause() else player.play() }
@@ -114,12 +124,15 @@ class Media3PlayerController(private val player: Player, scope: CoroutineScope) 
     override fun cycleRepeat() {
         player.repeatMode = when (player.repeatMode) { Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL; Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE; else -> Player.REPEAT_MODE_OFF }
     }
+    override fun playQueueItem(index: Int) {
+        if (index in 0 until player.mediaItemCount) { player.seekToDefaultPosition(index); player.play() }
+    }
 }
 
 private val MiniHeight = 68.dp
 
 @Composable
-fun PlayerHost(controller: PlayerController, expanded: Boolean, onExpandedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, collapsedBottomInset: Dp = 0.dp, immersive: Boolean = false, artwork: @Composable (String?, Modifier) -> Unit) {
+fun HteStudioPlayerScreen(controller: PlayerController, expanded: Boolean, onExpandedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, collapsedBottomInset: Dp = 0.dp, immersive: Boolean = false, artwork: @Composable (String?, Modifier) -> Unit) {
     val state by controller.state.collectAsState()
     val track = state.track ?: return
     val reduce = LocalHteReduceMotion.current
@@ -164,7 +177,7 @@ private fun MiniPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
                 }
             }
         }
-        LinearProgressIndicator(progress = { progress }, Modifier.fillMaxWidth().height(2.dp), color = HteColors.NeonLime, trackColor = Color.Transparent)
+        LinearProgressIndicator(progress = { progress }, Modifier.fillMaxWidth().height(2.dp), color = HteColors.Gold, trackColor = Color.Transparent)
     }
 }
 
@@ -174,6 +187,7 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
     val haptic = LocalHapticFeedback.current
     val scale by animateFloatAsState(if (state.isPlaying || reduce) 1f else .94f, if (reduce) snap() else spring(stiffness = Spring.StiffnessLow), label = "hte-art-scale")
     val progress = if (state.durationMs > 0) (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f) else 0f
+    var showQueue by remember(track.id) { mutableStateOf(false) }
     BoxWithConstraints(modifier.fillMaxSize()) {
         // Bound artwork by both available height and width so compact and wide screens stay balanced.
         val artworkMaxHeight = minOf(maxHeight * .26f, maxWidth * .68f)
@@ -251,6 +265,25 @@ private fun FullPlayer(state: PlayerUiState, track: PlayerTrack, controller: Pla
             IconButton(onClick = controller::next, modifier = Modifier.size(50.dp)) { Icon(Icons.Rounded.SkipNext, "Next", tint = HteColors.OnDark, modifier = Modifier.size(30.dp)) }
             IconButton(onClick = controller::cycleRepeat) { Icon(if (state.repeat == HteRepeatMode.ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, "Repeat " + state.repeat.name.lowercase(), tint = if (state.repeat == HteRepeatMode.OFF) HteColors.Muted else HteColors.Gold) }
         }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("UP NEXT", color = HteColors.Silver, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp, modifier = Modifier.weight(1f))
+            TextButton(onClick = { showQueue = !showQueue }) { Text(if (showQueue) "Hide queue" else "View queue · ${state.queue.size}", color = HteColors.Gold, fontSize = 11.sp) }
+        }
+        if (showQueue) {
+            if (state.queue.isEmpty()) Text("There are no tracks in the current queue.", color = HteColors.Muted, style = MaterialTheme.typography.bodySmall)
+            else Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                state.queue.forEachIndexed { index, queuedTrack ->
+                    val isCurrent = index == state.currentQueueIndex
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(if (isCurrent) HteColors.Gold.copy(alpha = .12f) else HteColors.Panel.copy(alpha = .72f)).clickable { controller.playQueueItem(index) }.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(queuedTrack.title, color = if (isCurrent) HteColors.Gold else HteColors.OnDark, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(queuedTrack.artist, color = HteColors.Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Text(if (isCurrent) "PLAYING" else "${index + 1}", color = if (isCurrent) HteColors.Gold else HteColors.Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
         Spacer(Modifier.height(8.dp))
         }
     }
@@ -260,3 +293,8 @@ private fun formatTime(ms: Long): String {
     val seconds = (ms / 1000).coerceAtLeast(0)
     return String.format(Locale.US, "%d:%02d", seconds / 60, seconds % 60)
 }
+
+@Composable
+fun PlayerHost(controller: PlayerController, expanded: Boolean, onExpandedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, collapsedBottomInset: Dp = 0.dp, immersive: Boolean = false, artwork: @Composable (String?, Modifier) -> Unit) =
+    HteStudioPlayerScreen(controller, expanded, onExpandedChange, modifier, collapsedBottomInset, immersive, artwork)
+
