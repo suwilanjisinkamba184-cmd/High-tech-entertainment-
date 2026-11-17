@@ -1364,15 +1364,34 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                                 modifier = Modifier.fillMaxSize()
                             )
                             if (!videoPlaying || isBuffering) {
+                                // Keep the video surface visually intentional before the first frame,
+                                // while paused, and during rebuffering instead of exposing an empty black canvas.
+                                video.thumbnailUrl?.takeIf(String::isNotBlank)?.let { posterUrl ->
+                                    AsyncImage(
+                                        model = posterUrl,
+                                        contentDescription = "Preview image for ${video.title}",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
                                 Box(
-                                    Modifier.size(66.dp).clip(CircleShape)
-                                        .background(ShellGold.copy(alpha = .94f))
-                                        .border(1.dp, Color.White.copy(alpha = .5f), CircleShape)
-                                        .clickable(enabled = !isBuffering) { if (player.isPlaying) player.pause() else player.play() },
+                                    Modifier.fillMaxSize().background(
+                                        Brush.verticalGradient(
+                                            listOf(Color.Black.copy(alpha = .10f), Color.Black.copy(alpha = .48f))
+                                        )
+                                    ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    if (isBuffering) CircularProgressIndicator(Modifier.size(28.dp), color = Color.Black, strokeWidth = 2.5.dp)
-                                    else Icon(Icons.Outlined.PlayArrow, "Play video", tint = Color.Black, modifier = Modifier.size(38.dp))
+                                    Box(
+                                        Modifier.size(66.dp).clip(CircleShape)
+                                            .background(ShellGold.copy(alpha = .94f))
+                                            .border(1.dp, Color.White.copy(alpha = .5f), CircleShape)
+                                            .clickable(enabled = !isBuffering) { if (player.isPlaying) player.pause() else player.play() },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (isBuffering) CircularProgressIndicator(Modifier.size(28.dp), color = Color.Black, strokeWidth = 2.5.dp)
+                                        else Icon(Icons.Outlined.PlayArrow, "Play video", tint = Color.Black, modifier = Modifier.size(38.dp))
+                                    }
                                 }
                             }
                         }
