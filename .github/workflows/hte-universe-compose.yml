@@ -110,6 +110,16 @@ jobs:
           retention-days: 14
 
       # Production signing and publishing are available only through an explicit manual dispatch.
+      # A manual dispatch can target any branch. Never let a feature branch publish a production APK.
+      - name: Require main branch for production publishing
+        if: env.PUBLISH_RELEASE == 'true'
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Production APKs may only be signed and published from refs/heads/main."
+            exit 1
+          fi
+          echo "Production publishing is pinned to main."
       - name: Validate production signing configuration
         if: env.PUBLISH_RELEASE == 'true'
         env:
