@@ -43,6 +43,13 @@ private val U26Silver = Color(0xFFC7CCD6)
 private val U26Muted = Color(0xFF89919D)
 private val U26Line = Color(0xFF33283A)
 
+/** Stable, case-insensitive ordering used by Home's opt-in favourite-genre recommendations. */
+internal fun rankGenreIndexesByPreference(genres: List<String?>, preferredGenreCounts: Map<String, Int>): List<Int> =
+    genres.indices.sortedWith(
+        compareByDescending<Int> { index -> preferredGenreCounts[genres[index]?.trim()?.lowercase().orEmpty()] ?: 0 }
+            .thenBy { index -> index }
+    )
+
 @Composable
 fun MusicHomeScreen(
     tracks: List<TrackDto>, artists: List<ArtistDto>, releases: List<ReleaseDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
