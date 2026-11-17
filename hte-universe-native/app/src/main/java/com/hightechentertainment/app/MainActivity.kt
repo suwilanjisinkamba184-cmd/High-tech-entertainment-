@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Surface
@@ -28,6 +29,9 @@ internal const val HTE_STARTUP_TAGLINE = "Music. Beats. Production. Beyond."
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Hand off the Android system launch window cleanly before Compose draws its
+        // single branded 15-second intro. This avoids stacked/duplicated splash marks.
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         if (!BuildConfig.DEBUG && !HteSecurityFirewall.verifyAppIntegrity(this)) {
             Log.e("HTESecurity", "Production application signature verification failed.")
