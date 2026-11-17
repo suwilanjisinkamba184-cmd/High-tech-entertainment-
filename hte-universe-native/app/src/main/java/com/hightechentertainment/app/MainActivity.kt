@@ -8,15 +8,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import io.github.jan.supabase.auth.handleDeeplinks
 import com.hightechentertainment.app.data.SupabaseClientProvider
 import com.hightechentertainment.app.media.HtePlaybackController
@@ -93,16 +90,6 @@ private fun HteUniverseApp() {
 
 @Composable
 private fun UniverseSplash(onFinished: () -> Unit) {
-    HteSplashScreen(
-        onSplashFinished = onFinished,
-        logo = {
-            Image(
-                painter = painterResource(R.drawable.ht_logo),
-                contentDescription = "High-Tech Entertainment official logo",
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-    )
+    HteSplashScreen(onSplashFinished = onFinished)
 }
 
