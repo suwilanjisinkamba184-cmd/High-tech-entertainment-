@@ -45,7 +45,11 @@ private val MemberPanel = Color(0xFF15111B)
 private val MemberMuted = Color(0xFF8B929D)
 
 @Composable
-fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
+fun MemberCenter(
+    configured: Boolean,
+    onSettingsChanged: () -> Unit,
+    onVoiceAssistant: () -> Unit = {}
+) {
     val context = LocalContext.current
     val settingsStore = remember(context) { AppSettingsStore(context) }
     var notificationsEnabled by remember { mutableStateOf(settingsStore.notificationsEnabled) }
@@ -110,6 +114,26 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
                             MemberMetric(notifications.size.toString(), "ALERTS", Modifier.weight(1f))
                         }
                     }
+                }
+            }
+        }
+        item {
+            MemberCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.GraphicEq, null, tint = MemberGold, modifier = Modifier.size(27.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("SYNAPSE Voice Assistant", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Use your voice to search music and control HTE Universe.", color = MemberMuted, fontSize = 11.sp)
+                    }
+                }
+                Button(
+                    onClick = onVoiceAssistant,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MemberGold, contentColor = Color.Black)
+                ) {
+                    Icon(Icons.Outlined.Mic, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Open Voice Assistant")
                 }
             }
         }
@@ -274,7 +298,11 @@ fun MemberCenter(configured: Boolean, onSettingsChanged: () -> Unit) {
                     onClose = { showSettings = false },
                     settingsStore = settingsStore,
                     downloadManager = com.hightechentertainment.app.media.OfflineDownloadManager(context),
-                    onSettingsChanged = { notificationsEnabled = settingsStore.notificationsEnabled; onSettingsChanged() }
+                    onSettingsChanged = { notificationsEnabled = settingsStore.notificationsEnabled; onSettingsChanged() },
+                    onVoiceAssistant = {
+                        showSettings = false
+                        onVoiceAssistant()
+                    }
                 )
             }
         }
