@@ -7,7 +7,5 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowActionModeOverlay">true</item>
         <item name="android:colorAccent">#D6B15E</item>
-        <item name="android:windowSplashScreenBackground">#08090B</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ht_logo</item>
     </style>
 </resources>

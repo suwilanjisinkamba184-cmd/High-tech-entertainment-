@@ -38,7 +38,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 private val FounderGold = Color(0xFFD6B15E)
-private val FounderPanel = Color(0xFF15111B)
+private val FounderPanel = Color(0xFF151515)
 private val FounderMuted = Color(0xFF8B929D)
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,6 +63,22 @@ fun FounderStudioScreen(onClose: () -> Unit) {
     var isUploading by remember { mutableStateOf(false) }
     var isGeneratingAd by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
+
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editingType by remember { mutableStateOf("") }
+    var editingId by remember { mutableStateOf("") }
+    var editTitle by remember { mutableStateOf("") }
+    var editFieldOne by remember { mutableStateOf("") }
+    var editFieldTwo by remember { mutableStateOf("") }
+
+    fun beginEdit(type: String, id: String, title: String, fieldOne: String, fieldTwo: String = "") {
+        editingType = type
+        editingId = id
+        editTitle = title
+        editFieldOne = fieldOne
+        editFieldTwo = fieldTwo
+        showEditDialog = true
+    }
 
     var trackTitle by remember { mutableStateOf("") }
     var trackArtist by remember { mutableStateOf("L Junior ZM") }
@@ -172,7 +188,7 @@ fun FounderStudioScreen(onClose: () -> Unit) {
 
     Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 12.dp)) {
         Card(colors = CardDefaults.cardColors(containerColor = FounderPanel), shape = RoundedCornerShape(22.dp)) {
-            Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF431744), FounderPanel, Color(0xFF0D1117)))).padding(16.dp)) {
+            Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF292316), FounderPanel, Color(0xFF0D0D0D)))).padding(16.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
@@ -270,6 +286,7 @@ fun FounderStudioScreen(onClose: () -> Unit) {
                 }
                 item { Text("YOUR MUSIC · ${tracks.size}", color = FounderGold, fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold) }
                 items(tracks, key = { it.id }) { track -> FounderContentRow(track.title, "${track.artist} · ${track.genre ?: "No genre"}", track.isPublished,
+                    onEdit = { beginEdit("track", track.id, track.title, track.artist, track.genre.orEmpty()) },
                     onTogglePublish = { publish -> scope.launch { runCatching { repository.setTrackPublished(track.id, publish); tracks = repository.getTracks() }.onFailure { status = it.toHteUserMessage("Could not update track publication. Please retry.") } } },
                     onDelete = { scope.launch { runCatching { repository.deleteTrack(track); tracks = repository.getTracks() }.onFailure { status = it.toHteUserMessage("Could not delete this track. Please retry.") } } }) }
                 if (tracks.isEmpty()) item { Text("No tracks have been uploaded yet.", color = FounderMuted, fontSize = 11.sp) }
@@ -304,6 +321,7 @@ fun FounderStudioScreen(onClose: () -> Unit) {
                 }
                 item { Text("YOUR VIDEOS · ${videos.size}", color = FounderGold, fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold) }
                 items(videos, key = { it.id }) { video -> FounderContentRow(video.title, video.artist ?: "High-Tech Entertainment", video.isPublished,
+                    onEdit = { beginEdit("video", video.id, video.title, video.artist.orEmpty(), video.description.orEmpty()) },
                     onTogglePublish = { publish -> scope.launch { runCatching { repository.setVideoPublished(video.id, publish); videos = repository.getVideos() }.onFailure { status = it.toHteUserMessage("Could not update video publication. Please retry.") } } },
                     onDelete = { scope.launch { runCatching { repository.deleteVideo(video); videos = repository.getVideos() }.onFailure { status = it.toHteUserMessage("Could not delete this video. Please retry.") } } }) }
                 if (videos.isEmpty()) item { Text("No videos have been uploaded yet.", color = FounderMuted, fontSize = 11.sp) }
@@ -332,6 +350,7 @@ fun FounderStudioScreen(onClose: () -> Unit) {
                 }
                 item { Text("ARTIST PROFILES · ${artists.size}", color = FounderGold, fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold) }
                 items(artists, key = { it.id }) { artist -> FounderContentRow(artist.name, artist.bio?.takeIf(String::isNotBlank) ?: "Artist profile", artist.isPublished,
+                    onEdit = { beginEdit("artist", artist.id, artist.name, artist.bio.orEmpty()) },
                     onTogglePublish = { publish -> scope.launch { runCatching { repository.setArtistPublished(artist.id, publish); artists = repository.getArtists() }.onFailure { status = it.toHteUserMessage("Could not update artist publication. Please retry.") } } },
                     onDelete = { scope.launch { runCatching { repository.deleteArtist(artist); artists = repository.getArtists() }.onFailure { status = it.toHteUserMessage("Could not delete this artist. Please retry.") } } }) }
                 if (artists.isEmpty()) item { Text("No artist profiles yet.", color = FounderMuted, fontSize = 11.sp) }
@@ -361,6 +380,7 @@ fun FounderStudioScreen(onClose: () -> Unit) {
                 }
                 item { Text("RELEASES · ${releases.size}", color = FounderGold, fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold) }
                 items(releases, key = { it.id }) { release -> FounderContentRow(release.title, release.releaseDate ?: "Release date not set", release.isPublished,
+                    onEdit = { beginEdit("release", release.id, release.title, release.releaseDate.orEmpty(), release.spotifyUrl.orEmpty()) },
                     onTogglePublish = { publish -> scope.launch { runCatching { repository.setReleasePublished(release.id, publish); releases = repository.getReleases() }.onFailure { status = it.toHteUserMessage("Could not update release publication. Please retry.") } } },
                     onDelete = { scope.launch { runCatching { repository.deleteRelease(release); releases = repository.getReleases() }.onFailure { status = it.toHteUserMessage("Could not delete this release. Please retry.") } } }) }
                 if (releases.isEmpty()) item { Text("No releases have been added yet.", color = FounderMuted, fontSize = 11.sp) }
@@ -492,6 +512,81 @@ fun FounderStudioScreen(onClose: () -> Unit) {
         }
         status?.let { Text(it, color = FounderGold, fontSize = 11.sp, modifier = Modifier.padding(top = 7.dp)) }
     }
+
+    if (showEditDialog) {
+        val firstLabel = when (editingType) {
+            "track" -> "Artist"
+            "video" -> "Artist / channel"
+            "artist" -> "Biography"
+            else -> "Release date (YYYY-MM-DD)"
+        }
+        val secondLabel = when (editingType) {
+            "track" -> "Genre"
+            "video" -> "Description"
+            else -> "Spotify URL (optional)"
+        }
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("Edit ${editingType.replaceFirstChar { it.uppercase() }}", color = Color.White) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    OutlinedTextField(
+                        value = editTitle,
+                        onValueChange = { editTitle = it },
+                        label = { Text(if (editingType == "artist") "Artist name" else if (editingType == "release") "Release title" else if (editingType == "video") "Video title" else "Track title") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = editFieldOne,
+                        onValueChange = { editFieldOne = it },
+                        label = { Text(firstLabel) },
+                        minLines = if (editingType == "artist") 3 else 1,
+                        singleLine = editingType != "artist"
+                    )
+                    if (editingType != "artist") {
+                        OutlinedTextField(
+                            value = editFieldTwo,
+                            onValueChange = { editFieldTwo = it },
+                            label = { Text(secondLabel) },
+                            minLines = if (editingType == "video") 3 else 1,
+                            singleLine = editingType != "video"
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = editTitle.isNotBlank(),
+                    onClick = {
+                        scope.launch {
+                            isUploading = true
+                            runCatching {
+                                when (editingType) {
+                                    "track" -> repository.updateTrack(editingId, editTitle, editFieldOne, editFieldTwo)
+                                    "video" -> repository.updateVideo(editingId, editTitle, editFieldOne, editFieldTwo)
+                                    "artist" -> repository.updateArtist(editingId, editTitle, editFieldOne)
+                                    "release" -> repository.updateRelease(editingId, editTitle, editFieldOne, editFieldTwo)
+                                }
+                            }.onSuccess {
+                                status = "Changes saved."
+                                showEditDialog = false
+                                refresh()
+                            }.onFailure {
+                                status = it.toHteUserMessage("Could not save these changes. Please retry.")
+                            }
+                            isUploading = false
+                        }
+                    }
+                ) { Text(if (isUploading) "Saving…" else "Save changes", color = FounderGold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) { Text("Cancel") }
+            },
+            containerColor = FounderPanel,
+            titleContentColor = Color.White,
+            textContentColor = Color.White
+        )
+    }
 }
 
 @Composable
@@ -554,13 +649,14 @@ private fun FounderCampaignCard(campaign: FounderMarketingCampaignDto) {
 }
 
 @Composable
-private fun FounderContentRow(title: String, subtitle: String, published: Boolean, onTogglePublish: (Boolean) -> Unit, onDelete: () -> Unit) {
+private fun FounderContentRow(title: String, subtitle: String, published: Boolean, onEdit: () -> Unit, onTogglePublish: (Boolean) -> Unit, onDelete: () -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = FounderPanel), shape = RoundedCornerShape(14.dp)) {
         Column(Modifier.fillMaxWidth().padding(12.dp)) {
             Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(subtitle, color = FounderMuted, fontSize = 11.sp)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(if (published) "Published" else "Draft", color = if (published) FounderGold else FounderMuted, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                IconButton(onClick = onEdit) { Icon(Icons.Outlined.Edit, "Edit content", tint = FounderGold) }
                 TextButton(onClick = { onTogglePublish(!published) }) { Text(if (published) "Unpublish" else "Publish", color = FounderGold) }
                 IconButton(onClick = onDelete) { Icon(Icons.Outlined.Delete, "Delete content", tint = FounderMuted) }
             }

@@ -269,6 +269,26 @@ class FounderStudioRepository {
         }
     }
 
+    suspend fun updateTrack(trackId: String, title: String, artist: String, genre: String) {
+        requireOwner()
+        require(title.isNotBlank()) { "Enter a track title." }
+        client.from("tracks").update({
+            set("title", title.trim())
+            set("artist", artist.trim())
+            set("genre", genre.trim())
+        }) { filter { eq("id", trackId) } }
+    }
+
+    suspend fun updateVideo(videoId: String, title: String, artist: String, description: String) {
+        requireOwner()
+        require(title.isNotBlank()) { "Enter a video title." }
+        client.from("videos").update({
+            set("title", title.trim())
+            set("artist", artist.trim())
+            set("description", description.trim())
+        }) { filter { eq("id", videoId) } }
+    }
+
     suspend fun deleteTrack(track: FounderTrackDto) {
         requireOwner()
         // Retain the database row whenever any Storage cleanup fails, so the owner can retry.
@@ -303,6 +323,17 @@ class FounderStudioRepository {
         client.from("artists").update({ set("is_published", published) }) { filter { eq("id", artistId) } }
     }
 
+    suspend fun updateArtist(artistId: String, name: String, bio: String) {
+        requireOwner()
+        require(name.isNotBlank()) { "Enter an artist name." }
+        val slug = name.trim().lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')
+        client.from("artists").update({
+            set("name", name.trim())
+            set("slug", slug)
+            set("bio", bio.trim())
+        }) { filter { eq("id", artistId) } }
+    }
+
     suspend fun deleteArtist(artist: FounderArtistDto) {
         requireOwner()
         storagePath(artist.imageUrl, "hte-artwork")?.let { deleteStorageObject("hte-artwork", it, "artist artwork") }
@@ -326,6 +357,18 @@ class FounderStudioRepository {
     suspend fun setReleasePublished(releaseId: String, published: Boolean) {
         requireOwner()
         client.from("releases").update({ set("is_published", published) }) { filter { eq("id", releaseId) } }
+    }
+
+    suspend fun updateRelease(releaseId: String, title: String, releaseDate: String, spotifyUrl: String) {
+        requireOwner()
+        require(title.isNotBlank()) { "Enter a release title." }
+        val slug = title.trim().lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')
+        client.from("releases").update({
+            set("title", title.trim())
+            set("slug", slug)
+            set("release_date", releaseDate.trim())
+            set("spotify_url", spotifyUrl.trim())
+        }) { filter { eq("id", releaseId) } }
     }
 
     suspend fun deleteRelease(release: FounderReleaseDto) {

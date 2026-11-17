@@ -17,9 +17,9 @@ import androidx.compose.ui.unit.sp
 
 object HteColors {
     val Obsidian = Color(0xFF090909)
-    val Panel = Color(0xFF15111B)
-    val PanelRaised = Color(0xFF211F29)
-    val Hairline = Color(0xFF33283A)
+    val Panel = Color(0xFF151515)
+    val PanelRaised = Color(0xFF202020)
+    val Hairline = Color(0xFF393939)
     val Gold = Color(0xFFE5C158)
     val Silver = Color(0xFFC4CAD2)
     val Muted = Color(0xFF8B929D)
@@ -57,8 +57,8 @@ val LocalHteReduceMotion = staticCompositionLocalOf { false }
 fun HteTheme(reduceMotion: Boolean = false, content: @Composable () -> Unit) {
     val colors = darkColorScheme(
         primary = HteColors.Gold, onPrimary = HteColors.Obsidian,
-        secondary = HteColors.Violet, onSecondary = HteColors.Obsidian,
-        tertiary = HteColors.NeonLime, onTertiary = HteColors.Obsidian,
+        secondary = HteColors.Gold, onSecondary = HteColors.Obsidian,
+        tertiary = HteColors.Silver, onTertiary = HteColors.Obsidian,
         background = HteColors.Obsidian, onBackground = HteColors.OnDark,
         surface = HteColors.Panel, onSurface = HteColors.OnDark,
         surfaceVariant = HteColors.PanelRaised, onSurfaceVariant = HteColors.Muted,

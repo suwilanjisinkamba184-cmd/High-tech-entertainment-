@@ -45,7 +45,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-data class PlayerTrack(val id: String, val title: String, val artist: String, val artworkUrl: String?, val accent: Color = HteColors.Violet)
+data class PlayerTrack(val id: String, val title: String, val artist: String, val artworkUrl: String?, val accent: Color = HteColors.Gold)
 enum class HteRepeatMode { OFF, ALL, ONE }
 data class PlayerQueueItem(val id: String, val title: String, val artist: String)
 data class PlayerUiState(
@@ -81,7 +81,9 @@ class Media3PlayerController(private val player: Player, scope: CoroutineScope) 
         pollJob = scope.launch {
             while (isActive) {
                 if (player.isPlaying || player.playbackState == Player.STATE_BUFFERING) _state.value = snapshot()
-                delay(250)
+                // Half-second position updates keep scrubbing responsive without needlessly
+                // waking/recomposing the UI four times per second on lower-memory phones.
+                delay(500)
             }
         }
     }

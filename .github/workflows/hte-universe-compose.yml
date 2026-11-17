@@ -18,7 +18,8 @@ permissions:
 
 concurrency:
   group: hte-universe-android-${{ github.ref }}
-  cancel-in-progress: false
+  # New PR commits supersede stale validation runs; production runs are never auto-cancelled.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   android-build:
@@ -30,7 +31,7 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
       # A marked main-branch commit publishes the signed release after all build checks pass.
-      PUBLISH_RELEASE: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_release == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[publish-hte-4.1.2-build48]')) }}
+      PUBLISH_RELEASE: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_release == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[publish-hte-4.1.2-build49]')) }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -55,13 +56,39 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.6.0'
+      # Supabase configuration is required by every build, including pull requests.
+      # Never silently skip this gate: the same BuildConfig values are consumed by
+      # SupabaseClientProvider in the installed application.
       - name: Validate Supabase runtime configuration
-        if: env.PUBLISH_RELEASE == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: |
           set -euo pipefail
-          test -n "$SUPABASE_URL"
-          test -n "$SUPABASE_PUBLISHABLE_KEY"
-          case "$SUPABASE_URL" in https://*) ;; *) exit 1 ;; esac
+          python3 - <<'PY'
+          import os, re, sys
+          from urllib.parse import urlparse
+
+          url = os.environ.get("SUPABASE_URL", "").strip()
+          key = os.environ.get("SUPABASE_PUBLISHABLE_KEY", "").strip()
+          if not url or not key:
+              sys.exit("Supabase runtime configuration is missing. Set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY repository Actions secrets.")
+          parsed = urlparse(url)
+          if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in ("", "/"):
+              sys.exit("SUPABASE_URL must be a clean HTTPS project URL.")
+          if not re.fullmatch(r"[a-z0-9-]+\.supabase\.co", parsed.hostname, re.I):
+              sys.exit("SUPABASE_URL host is not a valid Supabase project host.")
+          if len(key) < 30 or key.lower() in {"your-key", "your_supabase_key", "placeholder"} or "replace" in key.lower():
+              sys.exit("SUPABASE_PUBLISHABLE_KEY is empty, placeholder, or too short.")
+          if not (key.startswith("sb_publishable_") or key.startswith("eyJ")):
+              sys.exit("SUPABASE_PUBLISHABLE_KEY must be a Supabase publishable key or legacy anon JWT.")
+          print("Supabase runtime configuration validated (values redacted).")
+          PY
+          grep -Fq 'BuildConfig.SUPABASE_URL' app/src/main/java/com/hightechentertainment/app/data/SupabaseClientProvider.kt
+          grep -Fq 'BuildConfig.SUPABASE_PUBLISHABLE_KEY' app/src/main/java/com/hightechentertainment/app/data/SupabaseClientProvider.kt
+          grep -Fq 'buildConfigField("String", "SUPABASE_URL"' app/build.gradle.kts
+          grep -Fq 'buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY"' app/build.gradle.kts
+          echo "Supabase runtime BuildConfig wiring verified."
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest --console=plain
       - name: Run debug lint
@@ -147,12 +174,12 @@ jobs:
           grep -F "Verified using v3 scheme (APK Signature Scheme v3): true" <<< "$VERIFY_OUTPUT"
           grep -F "Verified using v4 scheme (APK Signature Scheme v4): true" <<< "$VERIFY_OUTPUT"
           BADGING=$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK")
-          printf '%s\n' "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='48' versionName='4.1.2'"
+          printf '%s\n' "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='49' versionName='4.1.2'"
           sha256sum "$APK" | sed "s|$APK|HTE-Universe-4.1.2.apk|" | tee app/build/outputs/apk/release/SHA256SUMS.txt
       - name: Confirm production certificate continuity
         if: env.PUBLISH_RELEASE == 'true'
         env:
-          PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/native-v4.1.2-build46/HTE-Universe-4.1.2.apk
+          PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/native-v4.1.2-build48/HTE-Universe-4.1.2.apk
         run: |
           set -euo pipefail
           SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
@@ -176,7 +203,7 @@ jobs:
         if: env.PUBLISH_RELEASE == 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: hte-universe-production-4.1.2-build48
+          name: hte-universe-production-4.1.2-build49
           path: |
             release-assets/HTE-Universe-4.1.2.apk
             release-assets/HTE-Universe-4.1.2.apk.idsig
@@ -187,12 +214,12 @@ jobs:
         if: env.PUBLISH_RELEASE == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: native-v4.1.2-build48
+          tag_name: native-v4.1.2-build49
           target_commitish: ${{ github.sha }}
-          name: HTE Universe 4.1.2 — Production build 48
+          name: HTE Universe 4.1.2 — Production build 49
           body: |
             ## HTE Universe 4.1.2
-            Signed production APK, build 48.
+            Signed production APK, build 49.
 
             - Built from the current main application source.
             - Production package: com.hightechentertainment.app.
@@ -209,14 +236,14 @@ jobs:
         if: env.PUBLISH_RELEASE == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: native-v4.1.2-build48
+          RELEASE_TAG: native-v4.1.2-build49
         run: |
           set -euo pipefail
           gh release view "$RELEASE_TAG" --json tagName,isDraft,isPrerelease,assets > "$RUNNER_TEMP/release.json"
           python3 - "$RUNNER_TEMP/release.json" <<'PY'
           import json,sys
           d=json.load(open(sys.argv[1]))
-          assert d["tagName"] == "native-v4.1.2-build48"
+          assert d["tagName"] == "native-v4.1.2-build49"
           assert not d["isDraft"] and not d["isPrerelease"]
           names={a["name"] for a in d["assets"]}
           assert {"HTE-Universe-4.1.2.apk","HTE-Universe-4.1.2.apk.idsig","SHA256SUMS.txt"} <= names

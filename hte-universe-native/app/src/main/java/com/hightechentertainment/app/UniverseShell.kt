@@ -236,8 +236,12 @@ fun UniverseShell() {
     var homeProfileAvatar by remember { mutableStateOf<String?>(null) }
     val configured = BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()
 
+    // Startup, ON_RESUME and periodic refreshes must not race shared UI state.
+    var catalogueRefreshJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+
     fun refreshCatalogue() {
-        scope.launch {
+        if (catalogueRefreshJob?.isActive == true) return
+        catalogueRefreshJob = scope.launch {
             if (!configured) {
                 catalogueError = "The catalogue is not connected in this build. A secure Supabase URL and publishable key are required."
                 return@launch
@@ -272,6 +276,7 @@ fun UniverseShell() {
                 catalogueError = "We couldn't load the catalogue. Check your connection and try again."
             } finally {
                 isLoading = false
+                catalogueRefreshJob = null
             }
         }
     }
@@ -1200,6 +1205,7 @@ private fun SectionHeading(title: String, action: String, onClick: () -> Unit) {
 private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
+    val lifecycleOwner = LocalLifecycleOwner.current
     val window = remember(activity) { activity?.window }
     val systemBars = remember(window) { window?.let { WindowInsetsControllerCompat(it, it.decorView) } }
     val previousOrientation = remember(activity) { activity?.requestedOrientation }
@@ -1245,6 +1251,15 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                 }
             }
     }
+    // Video is Activity-scoped, unlike background music: pause it when the app leaves foreground.
+    DisposableEffect(player, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP && player.isPlaying) player.pause()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     LaunchedEffect(player, quality) {
         val maxVideoSize = when (quality) {
             "LOW" -> 640 to 360
@@ -1349,15 +1364,34 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                                 modifier = Modifier.fillMaxSize()
                             )
                             if (!videoPlaying || isBuffering) {
+                                // Keep the video surface visually intentional before the first frame,
+                                // while paused, and during rebuffering instead of exposing an empty black canvas.
+                                video.thumbnailUrl?.takeIf(String::isNotBlank)?.let { posterUrl ->
+                                    AsyncImage(
+                                        model = posterUrl,
+                                        contentDescription = "Preview image for ${video.title}",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
                                 Box(
-                                    Modifier.size(66.dp).clip(CircleShape)
-                                        .background(ShellGold.copy(alpha = .94f))
-                                        .border(1.dp, Color.White.copy(alpha = .5f), CircleShape)
-                                        .clickable(enabled = !isBuffering) { if (player.isPlaying) player.pause() else player.play() },
+                                    Modifier.fillMaxSize().background(
+                                        Brush.verticalGradient(
+                                            listOf(Color.Black.copy(alpha = .10f), Color.Black.copy(alpha = .48f))
+                                        )
+                                    ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    if (isBuffering) CircularProgressIndicator(Modifier.size(28.dp), color = Color.Black, strokeWidth = 2.5.dp)
-                                    else Icon(Icons.Outlined.PlayArrow, "Play video", tint = Color.Black, modifier = Modifier.size(38.dp))
+                                    Box(
+                                        Modifier.size(66.dp).clip(CircleShape)
+                                            .background(ShellGold.copy(alpha = .94f))
+                                            .border(1.dp, Color.White.copy(alpha = .5f), CircleShape)
+                                            .clickable(enabled = !isBuffering) { if (player.isPlaying) player.pause() else player.play() },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (isBuffering) CircularProgressIndicator(Modifier.size(28.dp), color = Color.Black, strokeWidth = 2.5.dp)
+                                        else Icon(Icons.Outlined.PlayArrow, "Play video", tint = Color.Black, modifier = Modifier.size(38.dp))
+                                    }
                                 }
                             }
                         }

@@ -28,6 +28,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -35,13 +37,13 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 
 private val U26Black = Color(0xFF0B0A0F)
-private val U26Panel = Color(0xFF15111B)
-private val U26Raised = Color(0xFF21182A)
+private val U26Panel = Color(0xFF141414)
+private val U26Raised = Color(0xFF1E1C18)
 private val U26Gold = Color(0xFFE5C158)
 private val U26GoldLight = Color(0xFFF0DCA7)
 private val U26Silver = Color(0xFFC7CCD6)
 private val U26Muted = Color(0xFF89919D)
-private val U26Line = Color(0xFF33283A)
+private val U26Line = Color(0xFF3A3427)
 
 /** Stable, case-insensitive ordering used by Home's opt-in favourite-genre recommendations. */
 internal fun rankGenreIndexesByPreference(genres: List<String?>, preferredGenreCounts: Map<String, Int>): List<Int> =
@@ -93,7 +95,21 @@ fun MusicHomeScreen(
             verticalArrangement = Arrangement.spacedBy(23.dp)
         ) {
             item {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Brush.linearGradient(listOf(U26Raised, U26Panel, U26Black)))
+                        .border(1.dp, U26Gold.copy(alpha = .28f), RoundedCornerShape(20.dp))
+                        .padding(horizontal = 12.dp, vertical = 13.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.ht_logo),
+                        contentDescription = "High-Tech Entertainment official logo",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(38.dp)
+                    )
+                    Spacer(Modifier.width(9.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(
                             if (profileName.isNullOrBlank()) "WELCOME BACK" else "WELCOME BACK, ${profileName.trim().uppercase()}",
@@ -103,7 +119,7 @@ fun MusicHomeScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(U26Gold))
                             Spacer(Modifier.width(8.dp))
-                            Text("HIGH-TECH ENTERTAINMENT", color = U26Gold, fontSize = 9.sp, letterSpacing = 1.45.sp, fontWeight = FontWeight.Bold)
+                            Text("HIGH-TECH ENTERTAINMENT", color = U26Gold, fontSize = 8.sp, letterSpacing = 1.0.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         Text(
                             "Sound beyond limits.",
@@ -330,7 +346,7 @@ fun MusicHomeScreen(
             item {
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                        .background(Brush.horizontalGradient(listOf(Color(0xFF3B1745), U26Panel)))
+                        .background(Brush.horizontalGradient(listOf(Color(0xFF2A2418), U26Panel)))
                         .border(1.dp, U26Gold.copy(alpha = .24f), RoundedCornerShape(18.dp))
                         .clickable(onClick = onVoice).padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -372,7 +388,7 @@ private fun U26ArtistCard(artist: ArtistDto, wide: Boolean, onClick: () -> Unit)
                         contentScale = ContentScale.Crop
                     )
                 } else {
-                    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF57205D), U26Raised))), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF302817), U26Raised))), contentAlignment = Alignment.Center) {
                         Icon(Icons.Outlined.Person, null, tint = U26Gold, modifier = Modifier.size(42.dp))
                     }
                 }
@@ -430,7 +446,7 @@ private fun U26FeaturedRelease(track: TrackDto, onPlay: () -> Unit, wide: Boolea
             if (!track.coverUrl.isNullOrBlank()) {
                 AsyncImage(model = track.coverUrl, contentDescription = "Featured artwork for ${track.title}", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             } else {
-                Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF70266F), Color(0xFF1B1B1C), U26Black))))
+                Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF3A2E18), Color(0xFF1B1B1C), U26Black))))
                 Icon(Icons.Outlined.GraphicEq, null, tint = U26Gold.copy(alpha = .18f), modifier = Modifier.align(Alignment.Center).size(190.dp))
             }
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .08f), Color.Black.copy(alpha = .38f), Color.Black.copy(alpha = .94f)))))
@@ -463,7 +479,7 @@ private fun U26FeaturedRelease(track: TrackDto, onPlay: () -> Unit, wide: Boolea
 private fun U26EmptyFeature(isLoading: Boolean, onRefresh: () -> Unit) {
     Box(
         Modifier.fillMaxWidth().height(218.dp).clip(RoundedCornerShape(25.dp))
-            .background(Brush.linearGradient(listOf(Color(0xFF35123D), U26Panel, U26Black)))
+            .background(Brush.linearGradient(listOf(Color(0xFF211D14), U26Panel, U26Black)))
             .border(1.dp, U26Gold.copy(alpha = .22f), RoundedCornerShape(25.dp)),
         contentAlignment = Alignment.Center
     ) {
@@ -507,7 +523,7 @@ private fun U26ReleaseCard(
                 if (!track.coverUrl.isNullOrBlank()) {
                     AsyncImage(model = track.coverUrl, contentDescription = "Artwork for ${track.title}", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 } else {
-                    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF57205D), U26Raised))), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF302817), U26Raised))), contentAlignment = Alignment.Center) {
                         Icon(Icons.Outlined.Album, null, tint = U26Gold, modifier = Modifier.size(38.dp))
                     }
                 }
@@ -565,7 +581,7 @@ private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onD
     Column(Modifier.width(if (wide) 238.dp else 194.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Box(
             Modifier.fillMaxWidth().height(if (wide) 140.dp else 112.dp).clip(RoundedCornerShape(16.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFF2C1735), U26Raised, Color(0xFF101216))))
+                .background(Brush.linearGradient(listOf(Color(0xFF252117), U26Raised, Color(0xFF101216))))
                 .clickable(onClick = onPlay),
             contentAlignment = Alignment.Center
         ) {

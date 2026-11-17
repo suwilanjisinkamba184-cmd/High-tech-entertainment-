@@ -53,22 +53,19 @@ private data class HteStar(
 @Composable
 fun HteSplashScreen(
     onSplashFinished: () -> Unit,
-    logo: @Composable () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var elapsed by remember { mutableIntStateOf(0) }
     val latestElapsed by rememberUpdatedState(elapsed)
 
+    val ringProgress = remember { Animatable(0f) }
     val hAlpha = remember { Animatable(0f) }
     val hScale = remember { Animatable(1.6f) }
     val tAlpha = remember { Animatable(0f) }
     val tScale = remember { Animatable(1.6f) }
     val eAlpha = remember { Animatable(0f) }
     val eScale = remember { Animatable(1.6f) }
-    val ringProgress = remember { Animatable(0f) }
-    val innerLogoScale = remember { Animatable(0.75f) }
-    val innerLogoAlpha = remember { Animatable(0f) }
     val flashGlow = remember { Animatable(0f) }
 
     var showSubtitle by remember { mutableStateOf(false) }
@@ -81,7 +78,11 @@ fun HteSplashScreen(
         val enabled = runCatching { AppSettingsStore(context).startupSoundEnabled }.getOrDefault(true)
         val player = if (enabled) runCatching {
             MediaPlayer.create(context, R.raw.hte_universe_intro)?.apply {
-                setPlaybackParams(PlaybackParams().setSpeed(0.937f).setPitch(1.0f))
+                // Match the encoded intro duration to the 15-second visual timeline.
+                // If a device/codec rejects playback-rate control, normal-speed audio
+                // still plays and the splash remains usable.
+                val syncSpeed = (duration.coerceAtLeast(1).toFloat() / 15_000f).coerceIn(0.5f, 2.0f)
+                runCatching { setPlaybackParams(PlaybackParams().setSpeed(syncSpeed).setPitch(1.0f)) }
                 isLooping = false
             }
         }.getOrNull() else null
@@ -124,7 +125,8 @@ fun HteSplashScreen(
         if (elapsed >= 15) onSplashFinished()
     }
 
-    // Choreography runs independently of the 15-second timer.
+    // Keep the original H/T/E letter reveal and orbital ring. The black-backed PNG
+    // was the later overlay covering these animated letters, so it is not rendered.
     LaunchedEffect(Unit) {
         launch { hAlpha.animateTo(1f, tween(350)); hScale.animateTo(1f, spring(dampingRatio = 0.65f, stiffness = 320f)) }
         delay(280L)
@@ -134,8 +136,6 @@ fun HteSplashScreen(
         delay(450L)
         ringProgress.animateTo(1f, tween(1100, easing = FastOutSlowInEasing))
         launch { flashGlow.animateTo(1f, tween(250)); flashGlow.animateTo(0.25f, tween(900)) }
-        launch { innerLogoAlpha.animateTo(1f, tween(700)) }
-        launch { innerLogoScale.animateTo(1f, spring(dampingRatio = 0.7f, stiffness = 200f)) }
         delay(350L)
         showSubtitle = true
         delay(200L)
@@ -209,10 +209,9 @@ fun HteSplashScreen(
                         }
                     }
                 }
-                Box(Modifier.size(170.dp).graphicsLayer { alpha = innerLogoAlpha.value; scaleX = innerLogoScale.value; scaleY = innerLogoScale.value }, contentAlignment = Alignment.Center) { logo() }
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.graphicsLayer { alpha = (1f - innerLogoAlpha.value * 0.85f).coerceIn(0f, 1f) }
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     MonogramLetter("H", hAlpha.value, hScale.value)
                     MonogramLetter("T", tAlpha.value, tScale.value)
@@ -242,6 +241,7 @@ fun HteSplashScreen(
         }
     }
 }
+
 
 @Composable
 private fun MonogramLetter(letter: String, alpha: Float, scale: Float) {

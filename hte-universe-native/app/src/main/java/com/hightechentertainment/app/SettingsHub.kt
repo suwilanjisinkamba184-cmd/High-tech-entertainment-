@@ -48,7 +48,7 @@ import javax.net.ssl.SSLException
 private val SettingsGold = Color(0xFFE5C158)
 private val SettingsSilver = Color(0xFFC4CAD2)
 private val SettingsMuted = Color(0xFF8B929D)
-private val SettingsPanel = Color(0xFF15111B)
+private val SettingsPanel = Color(0xFF151515)
 private val SettingsBackground = Color(0xFF0B0A0F)
 
 @androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
@@ -469,7 +469,7 @@ fun HteSettingsScreen(onClose: () -> Unit, settingsStore: AppSettingsStore, down
 @Composable
 private fun SettingsHero() {
     Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = SettingsPanel)) {
-        Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF3A1742), SettingsPanel, Color(0xFF0D1015)))).padding(18.dp)) {
+        Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF3A2E18), SettingsPanel, Color(0xFF0D1015)))).padding(18.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("PERSONAL CONTROL SYSTEM", color = SettingsGold, fontSize = 9.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
                 Text("Your sound. Your universe.", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -528,8 +528,8 @@ private fun SettingsChips(options: List<String>, selected: String, onSelect: (St
                 onClick = { onSelect(option) },
                 label = { Text(label, fontSize = 10.sp, maxLines = 1) },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Color(0xFFD7F36A).copy(alpha = .16f),
-                    selectedLabelColor = Color(0xFFD7F36A)
+                    selectedContainerColor = SettingsGold.copy(alpha = .16f),
+                    selectedLabelColor = SettingsGold
                 )
             )
         }
