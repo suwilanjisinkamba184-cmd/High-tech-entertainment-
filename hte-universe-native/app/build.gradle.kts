@@ -35,7 +35,7 @@ extensions.configure<ApplicationExtension>("android") {
         applicationId = "com.hightechentertainment.app"
         minSdk = 25
         targetSdk = 37
-        versionCode = 49
+        versionCode = 50
         versionName = "4.1.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "SUPABASE_URL", "\"" + supabaseUrl.get() + "\"")
