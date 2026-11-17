@@ -8,6 +8,14 @@ The native Android app is a Kotlin/Jetpack Compose application using Media3 for 
 
 A successful build does not establish real-device correctness. No physical-device test was performed during this audit. The current workflow runs JVM unit tests and lint; it does not run an Android emulator/device instrumentation suite.
 
+## Additional UI and launch-screen corrections
+
+A focused review after the initial audit found the reported duplicate-logo issue in the Compose splash itself: the H/T/E monogram was drawn over the official HT logo during its fade-in and retained 15% opacity after the transition. This is now removed. The official logo is the only central mark and rotates smoothly inside the gold orbital ring.
+
+The Activity was also using Android 12+ system splash attributes on its post-launch theme without installing the AndroidX SplashScreen compatibility API. The app now has a dedicated starting theme, installs the compatibility API before `super.onCreate()`, and transitions into the Compose intro using the same official logo. This follows Android's migration guidance and is intended to prevent a stacked launch experience on Android 12+ while supporting older Android releases.
+
+The main Home header now uses the actual official HTE logo in a restrained black/gold gradient surface instead of relying only on a generic text mark. This is a focused UI polish, not a claim that every screen has completed its full visual redesign.
+
 ## Source fixes included in this audit branch
 
 1. **Catalogue refresh concurrency:** startup, activity resume and periodic refresh triggers could overlap while mutating one shared loading state. The app now keeps one catalogue refresh active at a time.
@@ -60,6 +68,9 @@ The Android repository intentionally requests artist rows without an `is_publish
 ## Research references
 
 - Android core app quality: https://developer.android.com/docs/quality-guidelines/core-app-quality
+- Android 12+ splash-screen migration: https://developer.android.com/develop/ui/views/launch/splash-screen/migrate
+- AndroidX SplashScreen API: https://developer.android.com/reference/androidx/core/splashscreen/SplashScreen
+- AndroidX Core release notes (SplashScreen 1.2.0): https://developer.android.com/jetpack/androidx/releases/core
 - Media3 background playback: https://developer.android.com/media/media3/session/background-playback
 - Media3 ExoPlayer lifecycle: https://developer.android.com/media/media3/exoplayer/hello-world
 - Compose performance guidance: https://developer.android.com/develop/ui/compose/performance
