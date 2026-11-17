@@ -1174,8 +1174,16 @@ private fun LibraryTile(icon: androidx.compose.ui.graphics.vector.ImageVector, t
 }
 
 @Composable
-private fun AccountScreen(configured: Boolean, onSettingsChanged: () -> Unit) {
-    MemberCenter(configured = configured, onSettingsChanged = onSettingsChanged)
+private fun AccountScreen(
+    configured: Boolean,
+    onSettingsChanged: () -> Unit,
+    onVoiceAssistant: () -> Unit
+) {
+    MemberCenter(
+        configured = configured,
+        onSettingsChanged = onSettingsChanged,
+        onVoiceAssistant = onVoiceAssistant
+    )
 }
 
 @Composable
