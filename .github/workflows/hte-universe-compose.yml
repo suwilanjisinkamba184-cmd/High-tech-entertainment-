@@ -89,6 +89,15 @@ jobs:
           grep -Fq 'buildConfigField("String", "SUPABASE_URL"' app/build.gradle.kts
           grep -Fq 'buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY"' app/build.gradle.kts
           echo "Supabase runtime BuildConfig wiring verified."
+          python3 - <<'PY'
+          import tomllib
+          from pathlib import Path
+          config = tomllib.loads(Path("../supabase/config.toml").read_text())
+          voice = config.get("functions", {}).get("elevenlabs-voice-token", {})
+          if voice.get("verify_jwt") is not True:
+              raise SystemExit("elevenlabs-voice-token must keep JWT verification enabled.")
+          print("Supabase config.toml parsed; voice-token JWT verification is enabled.")
+          PY
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest --console=plain
       - name: Run debug lint
