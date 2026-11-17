@@ -1,6 +1,6 @@
 # HTE Universe — Deep Application Audit
 **Audit date:** 17 November 2026  
-**Audited baseline:** `main` at `d0e6a457056ef128b977b2a30ac22d9052def3e2` (production build 48, version 4.1.2)
+**Audited baseline:** `main` at `d0e6a457056ef128b977b2a30ac22d9052def3e2` (production build 48, version 4.1.2). The fixes are prepared for build code 49 while retaining marketing version 4.1.2.
 
 ## Executive summary
 
@@ -17,7 +17,7 @@ A successful build does not establish real-device correctness. No physical-devic
 
 ## Verified architecture and controls
 
-- Package: `com.hightechentertainment.app`; version 4.1.2, build code 48.
+- Package: `com.hightechentertainment.app`; audited baseline version 4.1.2, build code 48. The audit patch increments only the Android build code to 49; the public version name remains 4.1.2.
 - Production APK signer continuity and runtime certificate pin are checked in CI.
 - Supabase client uses PKCE and an encrypted session manager; only the publishable key is embedded in the client.
 - Music uses a dedicated Media3 `MediaSessionService`, with the required foreground-service and media-playback permissions declared.
@@ -71,7 +71,7 @@ The Android repository intentionally requests artist rows without an `is_publish
 ## Verification status
 
 - Build 48 production workflow: **passed**.
-- Current audit branch: **source changes committed; awaiting PR CI**.
+- Current audit branch: **source changes committed; awaiting PR CI; intended production artifact is 4.1.2 build 49**.
 - Device-side playback, audio focus, notifications, Google sign-in, video rotation and offline tests: **not verified on physical hardware during this audit**.
 - Supabase leaked-password protection: **action required in dashboard**.
 - Database policy consolidation and search-path hardening: **not applied; pending migration-source reconciliation**.
