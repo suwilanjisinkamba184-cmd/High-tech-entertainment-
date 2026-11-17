@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -43,7 +44,7 @@ private val U26Muted = Color(0xFF89919D)
 private val U26Line = Color(0xFF33283A)
 
 @Composable
-fun Universe2026Home(
+fun MusicHomeScreen(
     tracks: List<TrackDto>, artists: List<ArtistDto>, releases: List<ReleaseDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
     playlistTracks: Map<String, List<TrackDto>>, profileName: String?, profileAvatarUrl: String?, isLoading: Boolean,
     onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit, onSettings: () -> Unit, onArtistClick: (ArtistDto) -> Unit,
@@ -59,8 +60,18 @@ fun Universe2026Home(
         "All" -> tracks
         else -> tracks.filter { it.genre.equals(selectedCategory, ignoreCase = true) }
     }
-    val featuredTracks = tracks.take(5)
     val favouriteTracks = tracks.filter { it.id in favouriteTrackIds }
+    val preferredGenreCounts = favouriteTracks.mapNotNull { it.genre?.trim()?.takeIf(String::isNotBlank) }
+        .groupingBy { it.lowercase() }.eachCount()
+    val recommendationsEnabled = AppSettingsStore(LocalContext.current).personalisedRecommendations
+    val usePersonalisedRecommendations = recommendationsEnabled && preferredGenreCounts.isNotEmpty()
+    val recommendationCandidates = if (usePersonalisedRecommendations) tracks.filterNot { it.id in favouriteTrackIds } else tracks
+    val recommendationOrder = rankGenreIndexesByPreference(recommendationCandidates.map { it.genre }, preferredGenreCounts)
+    val featuredTracks = if (usePersonalisedRecommendations) {
+        recommendationOrder.map(recommendationCandidates::get)
+            .filter { (preferredGenreCounts[it.genre?.trim()?.lowercase().orEmpty()] ?: 0) > 0 }
+            .take(5)
+    } else tracks.take(5)
 
     BoxWithConstraints(Modifier.fillMaxSize().background(U26Black)) {
         val wide = maxWidth >= 720.dp
@@ -198,7 +209,7 @@ fun Universe2026Home(
             item {
                 if (featuredTracks.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        U26SectionHeading("FEATURED ON HTE", "EXPLORE ALL", onExplore)
+                        U26SectionHeading(if (usePersonalisedRecommendations) "PICKED FOR YOU" else "FEATURED ON HTE", "EXPLORE ALL", onExplore)
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(featuredTracks, key = { it.id }) { track ->
                                 U26FeaturedRelease(
@@ -640,3 +651,18 @@ private fun U26EmptyState(message: String, loading: Boolean, onRefresh: () -> Un
         else TextButton(onClick = onRefresh) { Text("Retry", color = U26Gold) }
     }
 }
+
+@Composable
+fun Universe2026Home(
+    tracks: List<TrackDto>, artists: List<ArtistDto>, releases: List<ReleaseDto>, videos: List<VideoDto>, playlists: List<PlaylistDto>,
+    playlistTracks: Map<String, List<TrackDto>>, profileName: String?, profileAvatarUrl: String?, isLoading: Boolean,
+    onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit, onSettings: () -> Unit, onArtistClick: (ArtistDto) -> Unit,
+    onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
+    onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
+    favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
+) = MusicHomeScreen(
+    tracks, artists, releases, videos, playlists, playlistTracks, profileName, profileAvatarUrl, isLoading,
+    onExplore, onLibrary, onVideos, onVoice, onProfile, onSettings, onArtistClick,
+    onPlayTrack, onPlayPlaylist, onPlayVideo, onDownloadTrack, onDownloadVideo, favouriteTrackIds, onToggleFavourite, onRefresh
+)
+
