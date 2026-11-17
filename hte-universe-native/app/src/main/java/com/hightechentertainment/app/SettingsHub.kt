@@ -400,6 +400,14 @@ fun HteSettingsScreen(onClose: () -> Unit, settingsStore: AppSettingsStore, down
                         Icon(Icons.Outlined.DeleteForever, null); Spacer(Modifier.width(8.dp)); Text("Clear application data")
                     }
                     SettingsDivider()
+                    SettingsActionRow("Run device diagnostics", "Check installation integrity, Supabase configuration, network, storage, startup audio and media decoder support.") {
+                        runCatching {
+                            context.startActivity(Intent(context, HteDiagnosticsActivity::class.java))
+                        }.onFailure {
+                            statusMessage = "Device diagnostics could not be opened. Please restart the app and try again."
+                        }
+                    }
+                    SettingsDivider()
                     SettingsActionRow("Privacy Policy", "Read how HTE handles your account and device data.") {
                         openSettingsUrl(context, "https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/privacy-policy.html")
                     }
