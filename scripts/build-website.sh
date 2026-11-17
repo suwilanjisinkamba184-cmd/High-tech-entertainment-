@@ -59,7 +59,7 @@ done
 
 touch dist/.nojekyll
 
-for file in index.html app-download.html robots.txt sitemap.xml supabase-config.js account-deletion.html privacy-policy.html music-spotlight.html terms-of-service.html admin/index.html account/index.html assets/site.css assets/app.js assets/videos.js high-tech-logo.svg; do
+for file in index.html app-download.html robots.txt sitemap.xml supabase-config.js account-deletion.html privacy-policy.html music-spotlight.html terms-of-service.html admin/index.html account/index.html assets/site.css assets/app.js assets/videos.js assets/emil-interaction-polish.css high-tech-logo.svg; do
   # Original artwork must be present in the actual published output.
 
   test -s "dist/$file" || { echo "Missing required build output: $file" >&2; exit 1; }
