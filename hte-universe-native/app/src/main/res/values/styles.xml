@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <style name="Theme.HteUniverse.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#030806</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ht_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.HteUniverse</item>
+    </style>
+
     <style name="Theme.HteUniverse" parent="@android:style/Theme.Material.NoActionBar">
         <item name="android:windowBackground">#08090B</item>
         <item name="android:statusBarColor">#08090B</item>
