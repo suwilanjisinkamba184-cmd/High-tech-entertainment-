@@ -28,6 +28,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -93,7 +95,21 @@ fun MusicHomeScreen(
             verticalArrangement = Arrangement.spacedBy(23.dp)
         ) {
             item {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Brush.linearGradient(listOf(U26Raised, U26Panel, U26Black)))
+                        .border(1.dp, U26Gold.copy(alpha = .28f), RoundedCornerShape(20.dp))
+                        .padding(horizontal = 12.dp, vertical = 13.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.ht_logo),
+                        contentDescription = "High-Tech Entertainment official logo",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(38.dp)
+                    )
+                    Spacer(Modifier.width(9.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(
                             if (profileName.isNullOrBlank()) "WELCOME BACK" else "WELCOME BACK, ${profileName.trim().uppercase()}",
@@ -103,7 +119,7 @@ fun MusicHomeScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(U26Gold))
                             Spacer(Modifier.width(8.dp))
-                            Text("HIGH-TECH ENTERTAINMENT", color = U26Gold, fontSize = 9.sp, letterSpacing = 1.45.sp, fontWeight = FontWeight.Bold)
+                            Text("HIGH-TECH ENTERTAINMENT", color = U26Gold, fontSize = 8.sp, letterSpacing = 1.0.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         Text(
                             "Sound beyond limits.",
