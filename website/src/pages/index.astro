@@ -274,7 +274,7 @@ if(b&&n){b.addEventListener('click',function(){var o=n.classList.toggle('open');
 // YouTube preview and playback are handled once by assets/videos.js.
 var links=[].slice.call(document.querySelectorAll('.navlinks a[href^="#"]'));if('IntersectionObserver'in window){var so=new IntersectionObserver(function(a){a.forEach(function(e){if(e.isIntersecting){links.forEach(function(l){l.classList.toggle('active',l.getAttribute('href')==='#'+e.target.id)})}})},{rootMargin:'-45% 0px -50% 0px'});links.forEach(function(l){var t=document.querySelector(l.getAttribute('href'));if(t)so.observe(t)})}
 addEventListener('keydown',function(e){if(e.key==='Escape'&&n){n.classList.remove('open');b&&b.setAttribute('aria-expanded','false')}});
-addEventListener('pointermove',function(e){var c=e.target.closest&&e.target.closest('.cards>*,.service-card,.team-card,.step,.panel');if(c){var r=c.getBoundingClientRect();c.style.setProperty('--mx',(e.clientX-r.left)+'px');c.style.setProperty('--my',(e.clientY-r.top)+'px')}},{passive:true});var els=document.querySelectorAll('.reveal');if('IntersectionObserver'in window){var io=new IntersectionObserver(function(a){a.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12});els.forEach(function(e){io.observe(e)})}else{els.forEach(function(e){e.classList.add('in')})}})();
+document.querySelectorAll('.reveal').forEach(function(e){e.classList.add('in')})})();
 
   </script>
   <script is:inline src={`${base}assets/app.js?v=21`}></script>
