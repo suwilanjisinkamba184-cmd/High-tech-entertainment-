@@ -330,6 +330,7 @@ private fun startVoiceSession(
             val response = SupabaseClientProvider.client.functions.invoke("elevenlabs-voice-token")
             val token = voiceJson.decodeFromString<VoiceTokenResponse>(response.bodyAsText())
             check(token.token.isNotBlank()) { "The voice service did not return a conversation token." }
+            check(token.userId == user.id) { "The voice service returned a session for a different account. Please sign in again." }
 
             val clientTools = mapOf(
                 "control_playback" to object : ClientTool {
