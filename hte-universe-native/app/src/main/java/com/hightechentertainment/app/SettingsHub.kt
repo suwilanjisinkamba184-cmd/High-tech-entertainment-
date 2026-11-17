@@ -528,8 +528,8 @@ private fun SettingsChips(options: List<String>, selected: String, onSelect: (St
                 onClick = { onSelect(option) },
                 label = { Text(label, fontSize = 10.sp, maxLines = 1) },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Color(0xFFD7F36A).copy(alpha = .16f),
-                    selectedLabelColor = Color(0xFFD7F36A)
+                    selectedContainerColor = SettingsGold.copy(alpha = .16f),
+                    selectedLabelColor = SettingsGold
                 )
             )
         }
