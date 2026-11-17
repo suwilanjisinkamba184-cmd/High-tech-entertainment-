@@ -38,7 +38,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 private val FounderGold = Color(0xFFD6B15E)
-private val FounderPanel = Color(0xFF15111B)
+private val FounderPanel = Color(0xFF151515)
 private val FounderMuted = Color(0xFF8B929D)
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -172,7 +172,7 @@ fun FounderStudioScreen(onClose: () -> Unit) {
 
     Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 12.dp)) {
         Card(colors = CardDefaults.cardColors(containerColor = FounderPanel), shape = RoundedCornerShape(22.dp)) {
-            Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF431744), FounderPanel, Color(0xFF0D1117)))).padding(16.dp)) {
+            Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF292316), FounderPanel, Color(0xFF0D0D0D)))).padding(16.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
