@@ -343,6 +343,25 @@ def existing_video_ids(base_url: str, service_key: str) -> set[str]:
     return ids
 
 
+def curated_video_ids() -> set[str]:
+    """YouTube ids hardcoded in the site's curated featured list.
+
+    assets/videos.js ships a hand-picked `featured` array that is merged with the
+    Supabase rows at render time. Seeding the de-dupe set from it stops the bot
+    from inserting a second row for a video a human already curated.
+    """
+    path = ROOT / "assets" / "videos.js"
+    if not path.exists():
+        return set()
+    text = path.read_text(encoding="utf-8", errors="replace")
+    ids: set[str] = set()
+    for match in re.finditer(r"youtube\.com/watch\?v=([A-Za-z0-9_-]{11})", text):
+        ids.add(match.group(1))
+    for match in re.finditer(r"youtu\.be/([A-Za-z0-9_-]{11})", text):
+        ids.add(match.group(1))
+    return ids
+
+
 def supabase_insert(base_url: str, service_key: str, rows: list[dict]) -> list[dict]:
     if not rows:
         return []
@@ -408,12 +427,14 @@ def main() -> int:
     print(f"  lookback: {lookback_days}d   max posts: {max_posts}   publish: {publish}   dry-run: {args.dry_run}")
 
     # 1. What is already on the site?
-    known: set[str] = set()
+    known: set[str] = curated_video_ids()
+    if known:
+        print(f"  {len(known)} video(s) already curated in assets/videos.js")
     if service_key:
-        known = existing_video_ids(base_url, service_key)
-        print(f"  catalogue already holds {len(known)} YouTube video(s)")
+        known |= existing_video_ids(base_url, service_key)
+        print(f"  catalogue already holds {len(known)} YouTube video(s) in total")
     else:
-        print("  (dry run without Supabase key \u2014 cannot check for duplicates)")
+        print("  (dry run without Supabase key \u2014 cannot check catalogue duplicates)")
 
     # 2. Gather candidates.
     candidates: list[dict] = []
