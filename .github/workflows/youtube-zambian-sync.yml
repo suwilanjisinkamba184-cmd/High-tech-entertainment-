@@ -1,0 +1,71 @@
+name: Sync new Zambian music from YouTube
+
+# Pulls new Zambian releases from the YouTube Data API and inserts them into the
+# Supabase `videos` table, which the public site renders as embedded players.
+# No rebuild or redeploy is needed: the catalogue is read live from Supabase.
+
+on:
+  schedule:
+    # Every 6 hours. GitHub cron is UTC; Zambia is UTC+2.
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Report what would be posted without writing to Supabase"
+        type: boolean
+        default: false
+      limit:
+        description: "Maximum posts for this run (blank = config default)"
+        required: false
+        default: ""
+      draft:
+        description: "Insert as unpublished drafts for review"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hte-youtube-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the site repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check that the required secrets exist
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          missing=0
+          if [ -z "$YOUTUBE_API_KEY" ]; then
+            echo "::error::YOUTUBE_API_KEY is not set. Add it under Settings > Secrets and variables > Actions."
+            missing=1
+          fi
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::SUPABASE_SERVICE_ROLE_KEY is not set. Add it under Settings > Secrets and variables > Actions."
+            missing=1
+          fi
+          exit $missing
+
+      - name: Sync new Zambian releases
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          ARGS=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ "${{ inputs.draft }}" = "true" ]; then ARGS="$ARGS --draft"; fi
+          if [ -n "${{ inputs.limit }}" ]; then ARGS="$ARGS --limit ${{ inputs.limit }}"; fi
+          python scripts/youtube_zambian_sync.py $ARGS
