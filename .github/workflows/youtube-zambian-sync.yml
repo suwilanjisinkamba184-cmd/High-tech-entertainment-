@@ -63,6 +63,9 @@ jobs:
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Reuses the SUPABASE_URL secret the repo already has; the script also
+          # falls back to config/zambian-youtube.json if this is empty.
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         run: |
           ARGS=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
