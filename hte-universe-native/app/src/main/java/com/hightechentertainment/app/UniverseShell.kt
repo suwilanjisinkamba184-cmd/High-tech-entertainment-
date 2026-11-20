@@ -593,7 +593,8 @@ fun UniverseShell() {
                 UniverseTab.ACCOUNT -> AccountScreen(
                     configured = configured,
                     onSettingsChanged = { settingsRevision++ },
-                    onVoiceAssistant = { showVoiceAssistant = true }
+                    onVoiceAssistant = { showVoiceAssistant = true },
+                    onVideoSubmitted = { refreshCatalogue() }
                 )
             }
         }
@@ -1178,12 +1179,14 @@ private fun LibraryTile(icon: androidx.compose.ui.graphics.vector.ImageVector, t
 private fun AccountScreen(
     configured: Boolean,
     onSettingsChanged: () -> Unit,
-    onVoiceAssistant: () -> Unit
+    onVoiceAssistant: () -> Unit,
+    onVideoSubmitted: () -> Unit
 ) {
     MemberCenter(
         configured = configured,
         onSettingsChanged = onSettingsChanged,
-        onVoiceAssistant = onVoiceAssistant
+        onVoiceAssistant = onVoiceAssistant,
+        onVideoSubmitted = onVideoSubmitted
     )
 }
 
