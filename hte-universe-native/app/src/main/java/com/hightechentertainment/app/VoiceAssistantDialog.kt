@@ -88,6 +88,7 @@ fun VoiceAssistantDialog(
     onDownloadVideo: (VideoDto) -> Unit,
     onNavigate: (String) -> Unit,
     onSearch: (String) -> Unit,
+    onSearchVideos: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -102,6 +103,7 @@ fun VoiceAssistantDialog(
     val currentOnDownloadVideo by rememberUpdatedState(onDownloadVideo)
     val currentOnNavigate by rememberUpdatedState(onNavigate)
     val currentOnSearch by rememberUpdatedState(onSearch)
+    val currentOnSearchVideos by rememberUpdatedState(onSearchVideos)
     val settingsStore = remember(context) { AppSettingsStore(context) }
     var selectedVoiceId by remember(settingsStore) { mutableStateOf(settingsStore.voiceAssistantVoiceId) }
     var voiceMenuExpanded by remember { mutableStateOf(false) }
@@ -135,6 +137,7 @@ fun VoiceAssistantDialog(
         toolContext.onDownloadVideo = currentOnDownloadVideo
         toolContext.onNavigate = currentOnNavigate
         toolContext.onSearch = currentOnSearch
+        toolContext.onSearchVideos = currentOnSearchVideos
         toolContext.onUserTranscript = { value -> scope.launch { userTranscript = value } }
         toolContext.onAgentResponse = { value -> scope.launch { agentResponse = value } }
         toolContext.onError = { value -> scope.launch { errorMessage = value; status = "Error" } }
@@ -183,7 +186,7 @@ fun VoiceAssistantDialog(
                         Icon(Icons.Outlined.GraphicEq, null, tint = VoiceGold, modifier = Modifier.size(25.dp))
                         Spacer(Modifier.width(9.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("HTE AI Voice Assistant", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("HTE AI", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             Text(if (session == null) "HTE AI · standby" else if (muted) "Microphone muted" else "Connected · say Hey HTE", color = VoiceMuted, fontSize = 9.sp)
                         }
                         if (session != null) IconButton(onClick = { scope.launch { session?.toggleMute() } }) { Icon(if (muted) Icons.Outlined.MicOff else Icons.Outlined.Mic, if (muted) "Unmute Voice Companion" else "Mute Voice Companion", tint = if (muted) VoiceMuted else VoiceGold) }
@@ -367,6 +370,7 @@ private class VoiceToolContext {
     var onDownloadVideo: (VideoDto) -> Unit = {}
     var onNavigate: (String) -> Unit = {}
     var onSearch: (String) -> Unit = {}
+    var onSearchVideos: (String) -> Unit = {}
     var onUserTranscript: (String) -> Unit = {}
     var onAgentResponse: (String) -> Unit = {}
     var onError: (String) -> Unit = {}
@@ -432,7 +436,10 @@ private fun startVoiceSession(
                                 if (query.isBlank()) ClientToolResult.failure("Tell me the video title or artist you want to find.")
                                 else {
                                     val matches = toolContext.videos.filter { it.title.contains(query, true) || it.artist.orEmpty().contains(query, true) || it.description.orEmpty().contains(query, true) }
-                                    withContext(Dispatchers.Main.immediate) { toolContext.onNavigate("VIDEOS") }
+                                    withContext(Dispatchers.Main.immediate) {
+                                        toolContext.onNavigate("VIDEOS")
+                                        toolContext.onSearchVideos(query)
+                                    }
                                     val summary = if (matches.isEmpty()) "No published HTE videos match that search. Videos is now open."
                                         else "Found " + matches.size + " matching video(s): " + matches.take(4).joinToString { it.title + " by " + (it.artist ?: "High-Tech Entertainment") } + ". Videos is now open."
                                     ClientToolResult.success(summary)

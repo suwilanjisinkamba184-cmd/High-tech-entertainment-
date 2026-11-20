@@ -139,6 +139,7 @@ fun UniverseShell() {
     var showVoiceAssistant by remember { mutableStateOf(false) }
     var showSettingsHub by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var videoSearchQuery by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
@@ -634,7 +635,9 @@ fun UniverseShell() {
                     initialQuery = searchQuery, onQueryChanged = { searchQuery = it }, onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.VIDEOS -> VideosScreen(
-                    videos = videos, isLoading = isLoading, error = catalogueError,
+                    videos = videos, searchQuery = videoSearchQuery,
+                    onSearchQueryChange = { videoSearchQuery = it },
+                    isLoading = isLoading, error = catalogueError,
                     onPlay = { selectedVideo = it }, onDownload = { startDownload(it.downloadUrl, it.title, "video") }, onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.LIBRARY -> LibraryScreen(
@@ -846,6 +849,7 @@ fun UniverseShell() {
                 }
             },
             onSearch = { searchQuery = it; selectedTab = UniverseTab.DISCOVER },
+            onSearchVideos = { videoSearchQuery = it },
             onDismiss = { showVoiceAssistant = false }
         )
     }
@@ -1052,7 +1056,22 @@ private fun ArtistProfileDialog(
 }
 
 @Composable
-private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: String?, onPlay: (VideoDto) -> Unit, onDownload: (VideoDto) -> Unit, onRefresh: () -> Unit) {
+private fun VideosScreen(
+    videos: List<VideoDto>,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    isLoading: Boolean,
+    error: String?,
+    onPlay: (VideoDto) -> Unit,
+    onDownload: (VideoDto) -> Unit,
+    onRefresh: () -> Unit
+) {
+    val filteredVideos = videos.filter { video ->
+        searchQuery.isBlank() ||
+            video.title.contains(searchQuery.trim(), ignoreCase = true) ||
+            video.artist.orEmpty().contains(searchQuery.trim(), ignoreCase = true) ||
+            video.description.orEmpty().contains(searchQuery.trim(), ignoreCase = true)
+    }
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(ShellBackground),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
@@ -1064,6 +1083,29 @@ private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: Stri
                 Text("Watch the culture.", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.Bold)
                 Text("Music videos, performances and stories from the HTE universe.", color = ShellMuted, fontSize = 12.sp)
             }
+        }
+        item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = { Text("Search videos or artists") },
+                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = ShellGold) },
+                trailingIcon = {
+                    if (searchQuery.isNotBlank()) {
+                        IconButton(onClick = { onSearchQueryChange("") }) {
+                            Icon(Icons.Outlined.Close, contentDescription = "Clear video search")
+                        }
+                    }
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = ShellGold,
+                    unfocusedBorderColor = ShellMuted.copy(alpha = .45f),
+                    focusedLabelColor = ShellGold,
+                    cursorColor = ShellGold
+                )
+            )
         }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(20.dp)) {
@@ -1084,14 +1126,23 @@ private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: Stri
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("LATEST RELEASES", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Text("${videos.size} published videos", color = ShellMuted, fontSize = 11.sp)
+                    Text("${filteredVideos.size} matching videos", color = ShellMuted, fontSize = 11.sp)
                 }
                 TextButton(onClick = onRefresh, enabled = !isLoading) { Icon(Icons.Outlined.Refresh, null, tint = ShellGold); Text("Retry", color = ShellGold) }
             }
         }
         if (error != null) item { Text(error, color = ShellGold, fontSize = 12.sp) }
-        if (videos.isEmpty()) item { EmptyCatalogueState(if (isLoading) "Loading videos…" else "No published videos yet.", isLoading, onRefresh) }
-        else items(videos, key = { it.id }) { video -> VideoRow(video, { onPlay(video) }, if (!video.downloadUrl.isNullOrBlank()) ({ onDownload(video) }) else null) }
+        if (filteredVideos.isEmpty()) {
+            item {
+                EmptyCatalogueState(
+                    if (isLoading) "Loading videos…" else if (searchQuery.isBlank()) "No published videos yet." else "No videos match “$searchQuery”.",
+                    isLoading,
+                    onRefresh
+                )
+            }
+        } else items(filteredVideos, key = { it.id }) { video ->
+            VideoRow(video, { onPlay(video) }, if (!video.downloadUrl.isNullOrBlank()) ({ onDownload(video) }) else null)
+        }
     }
 }
 
