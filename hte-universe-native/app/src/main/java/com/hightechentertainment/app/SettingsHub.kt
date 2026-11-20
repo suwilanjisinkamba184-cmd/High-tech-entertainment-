@@ -436,7 +436,7 @@ fun HteSettingsScreen(
                         openSupportEmail(context, "HTE Universe app feedback")
                     }
                     SettingsDivider()
-                    SettingsInfoRow("AI & voice assistant", "Voice controls are available from the main navigation.")
+                    SettingsInfoRow("AI & voice assistant", "Open SYNAPSE Voice Assistant here in Settings or from your Account page.")
                     SettingsInfoRow("Artist & Founder tools", "Publishing permissions are controlled by your verified account role.")
                     Text("HTE Universe · The Pride of Africa", color = SettingsGold, fontSize = 10.sp, letterSpacing = 1.2.sp)
                 }
