@@ -1762,7 +1762,9 @@ fun SpotifyEmbedDialog(url: String, onDismiss: () -> Unit) {
                 IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close Spotify player", tint = Color.White) }
             }
             Box(Modifier.fillMaxWidth().weight(1f).padding(top = 12.dp).background(Color(0xFF111318), RoundedCornerShape(18.dp)), contentAlignment = Alignment.Center) {
-                if (embedUrl != null && !failed) {
+                if (loading && embedUrl == null) {
+                    CircularProgressIndicator(color = ShellGold, strokeWidth = 2.5.dp)
+                } else if (embedUrl != null && !failed) {
                     key(generation) {
                         AndroidView(
                             factory = { ctx -> WebView(ctx).apply {
