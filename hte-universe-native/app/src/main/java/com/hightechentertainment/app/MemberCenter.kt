@@ -184,7 +184,7 @@ fun MemberCenter(
                     Icon(Icons.Outlined.GraphicEq, null, tint = MemberGold, modifier = Modifier.size(27.dp))
                     Column(Modifier.weight(1f)) {
                         Text("SYNAPSE Voice Assistant", color = Color.White, fontWeight = FontWeight.Bold)
-                        Text("Use your voice to search music and control HTE Universe.", color = MemberMuted, fontSize = 11.sp)
+                        Text("Start a live voice session, then say ‘Hey HTE’ to play music, pause, find videos and request eligible downloads. Minimise the assistant while you browse.", color = MemberMuted, fontSize = 11.sp)
                     }
                 }
                 Button(
