@@ -523,7 +523,13 @@ private fun startVoiceSession(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            onFailure(error.toHteUserMessage("HTE AI Voice Assistant could not connect. Please try again."))
+            // Include both the transport/provider detail and the app's safe fallback
+            // so token-endpoint failures use the same actionable guidance as SDK errors.
+            val details = listOfNotNull(
+                error.message,
+                error.toHteUserMessage("HTE AI Voice Assistant could not connect. Please try again.")
+            ).joinToString(" ")
+            onFailure(voiceFailureMessage(details))
         }
     }
 }
