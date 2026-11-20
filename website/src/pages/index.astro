@@ -277,8 +277,8 @@ addEventListener('keydown',function(e){if(e.key==='Escape'&&n){n.classList.remov
 document.querySelectorAll('.reveal').forEach(function(e){e.classList.add('in')})})();
 
   </script>
-  <script is:inline src={`${base}assets/app.js?v=21`}></script>
-  <script is:inline src={`${base}assets/videos.js?v=7`}></script>
+  <script is:inline defer src={`${base}assets/app.js?v=21`}></script>
+  <script is:inline defer src={`${base}assets/videos.js?v=7`}></script>
   <script is:inline define:vars={{base}}>
     const authNext = new URLSearchParams(window.location.search).get('next');
     if (authNext === 'account' || authNext === 'admin') {
