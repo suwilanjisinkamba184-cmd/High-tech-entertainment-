@@ -3,11 +3,11 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 import rawSeo from '../../data/public-seo.json';
 type ArtistRecord = {id:string;name:string;bio?:string;image_url?:string};
 type ReleaseRecord = {id:string;title:string;release_date?:string;cover_url?:string;spotify_url?:string};
-const publicSeo = rawSeo as unknown as {artists:ArtistRecord[];releases:ReleaseRecord[]};
 const site='https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/';
 const base=import.meta.env.BASE_URL.endsWith('/')?import.meta.env.BASE_URL:`${import.meta.env.BASE_URL}/`;
 const slugify=(value:string)=>String(value||'artist').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,70)||'artist';
 export function getStaticPaths(){
+  const publicSeo = rawSeo as unknown as {artists:ArtistRecord[];releases:ReleaseRecord[]};
   return publicSeo.artists.filter(item=>item?.id&&item?.name&&/^[A-Za-z0-9_-]{1,80}$/.test(String(item.id))).map(artist=>({params:{id:String(artist.id),slug:slugify(artist.name)},props:{artist}}));
 }
 const {artist}=Astro.props;
