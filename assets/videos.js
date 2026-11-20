@@ -3,7 +3,7 @@ const el=document.getElementById('public-videos');if(!el)return;
 const cfg=window.HTE_SUPABASE_CONFIG||{};
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeHttps=value=>{try{const url=new URL(String(value||''));return url.protocol==='https:'&&!url.username&&!url.password?url.href:''}catch{return ''}};
-function videoPoster(value){const candidate=safeHttps(value);if(!candidate)return '';try{const host=new URL(candidate).hostname.toLowerCase();return /(^|\\.)youtube\\.com$|(^|\\.)youtu\\.be$/i.test(host)?'':candidate}catch{return ''}}
+function videoPoster(value){const candidate=safeHttps(value);if(!candidate)return '';try{const host=new URL(candidate).hostname.toLowerCase();return host==='youtube.com'||host.endsWith('.youtube.com')||host==='youtu.be'||host.endsWith('.youtu.be')?'':candidate}catch{return ''}}
 function videoEmbed(value){
  const safe=safeHttps(value);if(!safe)return '';
  try{const url=new URL(safe),host=url.hostname.replace(/^www\./,'').toLowerCase(),parts=url.pathname.split('/').filter(Boolean);
