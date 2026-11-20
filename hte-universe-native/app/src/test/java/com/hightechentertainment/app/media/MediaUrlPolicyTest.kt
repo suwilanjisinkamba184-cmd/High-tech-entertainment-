@@ -29,6 +29,18 @@ class MediaUrlPolicyTest {
         assertTrue(isSpotifySource("spotify", "https://open.spotify.com/track/1234567890123456789012"))
     }
 
+    @Test fun spotifyLinksResolveToOfficialInAppEmbedUrls() {
+        assertEquals(
+            "https://open.spotify.com/embed/track/1234567890123456789012?utm_source=generator&theme=0",
+            spotifyEmbedUrl("https://open.spotify.com/track/1234567890123456789012?si=abc")
+        )
+        assertEquals(
+            "https://open.spotify.com/embed/album/3txApnFqvkf1PbJPPGjXM9?utm_source=generator&theme=0",
+            spotifyEmbedUrl("https://open.spotify.com/embed/album/3txApnFqvkf1PbJPPGjXM9")
+        )
+        assertNull(spotifyEmbedUrl("https://example.com/not-spotify"))
+    }
+
     @Test fun youtubeLinksResolveTheirVideoIds() {
         val id = "YVbOceX0pHM"
         assertEquals(id, extractYouTubeVideoId("https://youtu.be/$id?si=share"))
