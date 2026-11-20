@@ -1661,7 +1661,7 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 
 
 @Composable
-private fun SpotifyEmbedDialog(url: String, onDismiss: () -> Unit) {
+fun SpotifyEmbedDialog(url: String, onDismiss: () -> Unit) {
     val embedUrl = remember(url) { com.hightechentertainment.app.media.spotifyEmbedUrl(url) }
     val lifecycleOwner = LocalLifecycleOwner.current
     val hostContext = LocalContext.current
