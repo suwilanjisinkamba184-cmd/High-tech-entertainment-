@@ -37,7 +37,6 @@ import com.hightechentertainment.app.data.ProfileDto
 import com.hightechentertainment.app.data.SupabaseClientProvider
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.functions.functions
-import io.github.jan.supabase.functions.invoke
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.coroutines.CancellationException
