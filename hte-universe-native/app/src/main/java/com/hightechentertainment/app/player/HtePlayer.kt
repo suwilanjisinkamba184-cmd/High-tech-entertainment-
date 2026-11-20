@@ -47,6 +47,9 @@ import java.util.Locale
 
 data class PlayerTrack(val id: String, val title: String, val artist: String, val artworkUrl: String?, val accent: Color = HteColors.Gold)
 enum class HteRepeatMode { OFF, ALL, ONE }
+
+internal fun shouldRestartEndedPlayback(playbackState: Int): Boolean = playbackState == Player.STATE_ENDED
+
 data class PlayerQueueItem(val id: String, val title: String, val artist: String)
 data class PlayerUiState(
     val track: PlayerTrack? = null, val isPlaying: Boolean = false, val isBuffering: Boolean = false,
@@ -112,12 +115,18 @@ class Media3PlayerController(private val player: Player, scope: CoroutineScope) 
             currentQueueIndex = player.currentMediaItemIndex,
         )
     }
-    override fun togglePlay() { if (player.isPlaying) player.pause() else player.play() }
+    override fun togglePlay() {
+        if (player.isPlaying) player.pause() else {
+            if (shouldRestartEndedPlayback(player.playbackState)) player.seekToDefaultPosition()
+            player.play()
+        }
+    }
     override fun next() { if (player.hasNextMediaItem()) player.seekToNextMediaItem() }
     override fun previous() { if (player.hasPreviousMediaItem()) player.seekToPreviousMediaItem() }
     override fun seekTo(positionMs: Long) { player.seekTo(positionMs.coerceAtLeast(0L)) }
     override fun retry() {
         if (player.currentMediaItem != null) {
+            if (shouldRestartEndedPlayback(player.playbackState)) player.seekToDefaultPosition()
             player.prepare()
             player.play()
         }
