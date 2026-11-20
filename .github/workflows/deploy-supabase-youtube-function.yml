@@ -6,7 +6,6 @@ on:
     paths:
       - "supabase/functions/sync-youtube-channel/**"
       - "supabase/config.toml"
-      - ".github/workflows/deploy-supabase-youtube-function.yml"
   workflow_dispatch:
 
 permissions:
@@ -23,4 +22,4 @@ jobs:
       - name: Deploy Edge Function without platform JWT gate (function validates project access token)
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: supabase functions deploy sync-youtube-channel --project-ref wqrxacjbsldbnoekbkbf --no-verify-jwt
+        run: supabase functions deploy sync-youtube-channel --project-ref wqrxacjbsldbnoekbkbf --no-verify-jwt --yes

@@ -23,4 +23,4 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           test -n "$SUPABASE_ACCESS_TOKEN"
-          supabase functions deploy submit-public-video --project-ref wqrxacjbsldbnoekbkbf --use-api
+          supabase functions deploy submit-public-video --project-ref wqrxacjbsldbnoekbkbf --use-api --yes
