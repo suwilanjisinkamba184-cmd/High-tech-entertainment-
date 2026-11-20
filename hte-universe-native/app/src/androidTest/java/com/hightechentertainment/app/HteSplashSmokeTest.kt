@@ -1,7 +1,7 @@
 package com.hightechentertainment.app
 
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -20,8 +20,12 @@ class HteSplashSmokeTest {
         // Wait for the final animated branding element so assertions are not
         // racing the splash's staged subtitle/tagline reveal.
         composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule.onAllNodesWithText(HTE_STARTUP_TAGLINE.uppercase())
-                .fetchSemanticsNodes().isNotEmpty()
+            composeRule.onAllNodesWithContentDescription("High-Tech Entertainment official logo")
+                .fetchSemanticsNodes().isNotEmpty() &&
+                composeRule.onAllNodesWithText("HTE UNIVERSE")
+                    .fetchSemanticsNodes().isNotEmpty() &&
+                composeRule.onAllNodesWithText(HTE_STARTUP_TAGLINE.uppercase())
+                    .fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithContentDescription("High-Tech Entertainment official logo").assertExists()
         composeRule.onNodeWithText("HTE UNIVERSE").assertExists()
