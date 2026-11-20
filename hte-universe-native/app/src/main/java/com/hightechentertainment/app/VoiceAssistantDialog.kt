@@ -30,6 +30,7 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.core.content.ContextCompat
 import com.hightechentertainment.app.data.SupabaseClientProvider
 import com.hightechentertainment.app.data.TrackDto
+import com.hightechentertainment.app.data.VideoDto
 import com.hightechentertainment.app.media.HtePlaybackController
 import io.elevenlabs.ClientTool
 import io.elevenlabs.ClientToolResult
@@ -81,7 +82,12 @@ internal fun voiceFailureMessage(details: String): String {
 fun VoiceAssistantDialog(
     tracks: List<TrackDto>,
     favouriteTracks: List<TrackDto>,
+    videos: List<VideoDto>,
     onPlayFavourites: (List<TrackDto>) -> Unit,
+    onPlayTrack: (TrackDto) -> Unit,
+    onDownloadTrack: (TrackDto) -> Unit,
+    onPlayVideo: (VideoDto) -> Unit,
+    onDownloadVideo: (VideoDto) -> Unit,
     onNavigate: (String) -> Unit,
     onSearch: (String) -> Unit,
     onDismiss: () -> Unit
@@ -90,7 +96,12 @@ fun VoiceAssistantDialog(
     val scope = rememberCoroutineScope()
     val currentTracks by rememberUpdatedState(tracks)
     val currentFavourites by rememberUpdatedState(favouriteTracks)
+    val currentVideos by rememberUpdatedState(videos)
     val currentOnPlayFavourites by rememberUpdatedState(onPlayFavourites)
+    val currentOnPlayTrack by rememberUpdatedState(onPlayTrack)
+    val currentOnDownloadTrack by rememberUpdatedState(onDownloadTrack)
+    val currentOnPlayVideo by rememberUpdatedState(onPlayVideo)
+    val currentOnDownloadVideo by rememberUpdatedState(onDownloadVideo)
     val currentOnNavigate by rememberUpdatedState(onNavigate)
     val currentOnSearch by rememberUpdatedState(onSearch)
     val settingsStore = remember(context) { AppSettingsStore(context) }
@@ -118,7 +129,12 @@ fun VoiceAssistantDialog(
     SideEffect {
         toolContext.tracks = currentTracks
         toolContext.favourites = currentFavourites
+        toolContext.videos = currentVideos
         toolContext.onPlayFavourites = currentOnPlayFavourites
+        toolContext.onPlayTrack = currentOnPlayTrack
+        toolContext.onDownloadTrack = currentOnDownloadTrack
+        toolContext.onPlayVideo = currentOnPlayVideo
+        toolContext.onDownloadVideo = currentOnDownloadVideo
         toolContext.onNavigate = currentOnNavigate
         toolContext.onSearch = currentOnSearch
         toolContext.onUserTranscript = { value -> scope.launch { userTranscript = value } }
@@ -324,10 +340,29 @@ fun VoiceAssistantDialog(
     @Suppress("UNUSED_VARIABLE") val activeMode = mode
 }
 
+private fun findVoiceTrack(tracks: List<TrackDto>, query: String): TrackDto? {
+    val term = query.trim()
+    if (term.isBlank()) return null
+    return tracks.firstOrNull { it.title.equals(term, ignoreCase = true) }
+        ?: tracks.firstOrNull { it.title.contains(term, ignoreCase = true) || it.artist.contains(term, ignoreCase = true) || it.genre.orEmpty().contains(term, ignoreCase = true) }
+}
+
+private fun findVoiceVideo(videos: List<VideoDto>, query: String): VideoDto? {
+    val term = query.trim()
+    if (term.isBlank()) return null
+    return videos.firstOrNull { it.title.equals(term, ignoreCase = true) }
+        ?: videos.firstOrNull { it.title.contains(term, ignoreCase = true) || it.artist.orEmpty().contains(term, ignoreCase = true) || it.description.orEmpty().contains(term, ignoreCase = true) }
+}
+
 private class VoiceToolContext {
     var tracks: List<TrackDto> = emptyList()
     var favourites: List<TrackDto> = emptyList()
+    var videos: List<VideoDto> = emptyList()
     var onPlayFavourites: (List<TrackDto>) -> Unit = {}
+    var onPlayTrack: (TrackDto) -> Unit = {}
+    var onDownloadTrack: (TrackDto) -> Unit = {}
+    var onPlayVideo: (VideoDto) -> Unit = {}
+    var onDownloadVideo: (VideoDto) -> Unit = {}
     var onNavigate: (String) -> Unit = {}
     var onSearch: (String) -> Unit = {}
     var onUserTranscript: (String) -> Unit = {}
@@ -358,22 +393,70 @@ private fun startVoiceSession(
                 "control_playback" to object : ClientTool {
                     override suspend fun execute(parameters: Map<String, Any>): ClientToolResult? {
                         val action = parameters["action"] as? String ?: return ClientToolResult.failure("Missing playback action.")
-                        return withContext(Dispatchers.Main.immediate) {
-                            if (action == "play_favourites") {
+                        val query = (parameters["query"] as? String)?.trim().orEmpty()
+                        return when (action) {
+                            "play_favourites" -> {
                                 val favourites = toolContext.favourites
                                 if (favourites.isEmpty()) ClientToolResult.failure("There are no saved favourites in the current library.")
                                 else {
-                                    toolContext.onPlayFavourites(favourites)
-                                    ClientToolResult.success("Started the saved favourites queue with ${favourites.size} tracks.")
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayFavourites(favourites) }
+                                    ClientToolResult.success("Selected the saved favourites queue with " + favourites.size + " tracks.")
                                 }
-                            } else if (HtePlaybackController.performAction(action)) {
-                                ClientToolResult.success("Playback action '$action' executed by HTE Universe.")
+                            }
+                            "play_music", "play_track" -> {
+                                val track = if (action == "play_music") toolContext.tracks.firstOrNull { !it.audioUrl.isNullOrBlank() || !it.sourceUrl.isNullOrBlank() }
+                                    else findVoiceTrack(toolContext.tracks, query)
+                                if (track == null) ClientToolResult.failure("I could not find a playable published HTE track for that request.")
+                                else {
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayTrack(track) }
+                                    ClientToolResult.success("Selected " + track.title + " by " + track.artist + " and handed it to the HTE player.")
+                                }
+                            }
+                            "download_track" -> {
+                                val track = findVoiceTrack(toolContext.tracks, query)
+                                if (track == null) ClientToolResult.failure("I could not find a published HTE track matching that request.")
+                                else if (!track.downloadAllowed || track.sourcePlatform.lowercase() in setOf("spotify", "youtube") || track.downloadBrandingStatus != "ready" || track.brandedAudioUrl.isNullOrBlank()) {
+                                    ClientToolResult.failure("An approved HTE-branded offline audio file is not available for that track yet.")
+                                } else {
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onDownloadTrack(track) }
+                                    ClientToolResult.success("Sent the approved HTE download request for " + track.title + ". Check Library for its progress.")
+                                }
+                            }
+                            "search_videos" -> {
+                                if (query.isBlank()) ClientToolResult.failure("Tell me the video title or artist you want to find.")
+                                else {
+                                    val matches = toolContext.videos.filter { it.title.contains(query, true) || it.artist.orEmpty().contains(query, true) || it.description.orEmpty().contains(query, true) }
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onNavigate("VIDEOS") }
+                                    val summary = if (matches.isEmpty()) "No published HTE videos match that search. Videos is now open."
+                                        else "Found " + matches.size + " matching video(s): " + matches.take(4).joinToString { it.title + " by " + (it.artist ?: "High-Tech Entertainment") } + ". Videos is now open."
+                                    ClientToolResult.success(summary)
+                                }
+                            }
+                            "play_video" -> {
+                                val video = findVoiceVideo(toolContext.videos, query)
+                                if (video == null) ClientToolResult.failure("I could not find a published HTE video matching that request.")
+                                else {
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayVideo(video) }
+                                    ClientToolResult.success("Opened " + video.title + " in the HTE video player.")
+                                }
+                            }
+                            "download_video" -> {
+                                val video = findVoiceVideo(toolContext.videos, query)
+                                if (video == null) ClientToolResult.failure("I could not find a published HTE video matching that request.")
+                                else if (video.downloadUrl.isNullOrBlank()) ClientToolResult.failure("An original downloadable video file is not available for that item.")
+                                else {
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onDownloadVideo(video) }
+                                    ClientToolResult.success("Sent the original video download request for " + video.title + ". Check Library for its progress.")
+                                }
+                            }
+                            else -> if (HtePlaybackController.performAction(action)) {
+                                ClientToolResult.success("Playback action '" + action + "' executed by HTE Universe.")
                             } else {
                                 ClientToolResult.failure(when (action) {
                                     "next" -> "There is no next track in the current playback queue."
                                     "previous" -> "There is no active track to return from."
                                     "pause", "resume", "stop" -> "There is no active track in the music player yet."
-                                    else -> "Unsupported playback action: $action"
+                                    else -> "Unsupported playback action: " + action
                                 })
                             }
                         }
