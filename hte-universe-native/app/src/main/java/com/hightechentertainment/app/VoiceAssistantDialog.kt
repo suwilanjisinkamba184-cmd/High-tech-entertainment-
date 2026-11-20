@@ -345,11 +345,10 @@ private fun findVoiceTrack(tracks: List<TrackDto>, query: String): TrackDto? {
 }
 
 private fun voicePlaybackConfirmation(track: TrackDto): String = when (track.sourcePlatform.lowercase()) {
-    "spotify" -> "Opened the official Spotify player for " + track.title + " by " + track.artist + ". Spotify controls playback access.
-    "youtube" -> "Opened the official music link for " + track.title + " by " + track.artist + ".
+    "spotify" -> "Opened the official Spotify player for " + track.title + " by " + track.artist + ". Spotify controls playback access."
+    "youtube" -> "Opened the official music link for " + track.title + " by " + track.artist + "."
     else -> "Sent " + track.title + " by " + track.artist + " to the HTE audio player."
 }
-
 private fun findVoiceVideo(videos: List<VideoDto>, query: String): VideoDto? {
     val term = query.trim()
     if (term.isBlank()) return null
