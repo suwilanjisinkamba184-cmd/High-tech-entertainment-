@@ -35,6 +35,8 @@ import com.hightechentertainment.app.data.MemberRepository
 import com.hightechentertainment.app.data.NotificationDto
 import com.hightechentertainment.app.data.ProfileDto
 import com.hightechentertainment.app.data.SupabaseClientProvider
+import com.hightechentertainment.app.media.YouTubeLinkClassifier
+import com.hightechentertainment.app.media.YouTubeSubmissionRoute
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.functions.functions
 import kotlinx.serialization.json.buildJsonObject
@@ -313,8 +315,14 @@ fun MemberCenter(
                                 captureAccountRequest {
                                     require(artistVideoUrl.isNotBlank()) { "Enter a public YouTube video URL." }
                                     require(artistVideoRightsConfirmed) { "Confirm that you own or are authorised to submit this video." }
+                                    val canonicalVideoUrl = when (val route = YouTubeLinkClassifier.classify(artistVideoUrl)) {
+                                        is YouTubeSubmissionRoute.SingleVideo -> route.canonicalWatchUrl
+                                        is YouTubeSubmissionRoute.Playlist -> throw IllegalArgumentException("Playlist links cannot be submitted as a single video. Paste an individual video link.")
+                                        is YouTubeSubmissionRoute.Channel -> throw IllegalArgumentException("Channel links cannot be submitted as a single video. Paste an individual video link.")
+                                        is YouTubeSubmissionRoute.Invalid -> throw IllegalArgumentException(route.userMessage)
+                                    }
                                     SupabaseClientProvider.client.functions.invoke("submit-public-video", body = buildJsonObject {
-                                        put("url", artistVideoUrl.trim())
+                                        put("url", canonicalVideoUrl)
                                         put("rights_confirmed", true)
                                     })
                                 }.onSuccess {

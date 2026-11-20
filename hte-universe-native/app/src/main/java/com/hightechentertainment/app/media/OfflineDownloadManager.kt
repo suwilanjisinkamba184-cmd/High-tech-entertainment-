@@ -9,7 +9,21 @@ import java.net.URI
 import java.net.URLConnection
 import java.security.MessageDigest
 
-data class OfflineDownloadRecord(val id: Long, val title: String, val mediaType: String, val status: String, val localUri: String? = null)
+data class OfflineDownloadRecord(
+    val id: Long,
+    val title: String,
+    val mediaType: String,
+    val status: String,
+    val localUri: String? = null,
+    val downloadedBytes: Long = 0L,
+    val totalBytes: Long = -1L,
+    val reason: Int? = null
+) {
+    val progressPercent: Int?
+        get() = totalBytes.takeIf { it > 0L }?.let {
+            ((downloadedBytes.toDouble() / it.toDouble()) * 100.0).toInt().coerceIn(0, 100)
+        }
+}
 
 internal fun isSecureMediaDownloadUrl(url: String): Boolean =
     runCatching { URI(url) }.getOrNull()?.let { uri ->
@@ -85,8 +99,14 @@ class OfflineDownloadManager(context: Context) {
             if (!it.moveToFirst()) return@mapNotNull OfflineDownloadRecord(id, title, mediaType, "Missing")
             val statusIndex = it.getColumnIndex(DownloadManager.COLUMN_STATUS)
             val uriIndex = it.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
+            val downloadedIndex = it.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+            val totalIndex = it.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+            val reasonIndex = it.getColumnIndex(DownloadManager.COLUMN_REASON)
             val statusCode = if (statusIndex >= 0) it.getInt(statusIndex) else DownloadManager.STATUS_FAILED
             val localUri = if (uriIndex >= 0) it.getString(uriIndex) else null
+            val downloadedBytes = if (downloadedIndex >= 0) it.getLong(downloadedIndex) else 0L
+            val totalBytes = if (totalIndex >= 0) it.getLong(totalIndex) else -1L
+            val reason = if (reasonIndex >= 0) it.getInt(reasonIndex) else null
             val status = when (statusCode) {
                 DownloadManager.STATUS_PENDING -> "Queued"
                 DownloadManager.STATUS_RUNNING -> "Downloading"
@@ -94,7 +114,7 @@ class OfflineDownloadManager(context: Context) {
                 DownloadManager.STATUS_SUCCESSFUL -> "Downloaded"
                 else -> "Failed"
             }
-            OfflineDownloadRecord(id, title, mediaType, status, localUri)
+            OfflineDownloadRecord(id, title, mediaType, status, localUri, downloadedBytes, totalBytes, reason)
         }
     }.sortedByDescending { it.id }
 
