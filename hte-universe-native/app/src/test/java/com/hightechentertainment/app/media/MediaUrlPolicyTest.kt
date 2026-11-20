@@ -21,6 +21,10 @@ class MediaUrlPolicyTest {
             "spotify:playlist:1234567890123456789012",
             spotifyAppUri("spotify:playlist:1234567890123456789012")
         )
+        assertEquals(
+            "spotify:album:3txApnFqvkf1PbJPPGjXM9",
+            spotifyAppUri("https://open.spotify.com/embed/album/3txApnFqvkf1PbJPPGjXM9")
+        )
         assertNull(spotifyAppUri("https://example.com/not-spotify"))
         assertTrue(isSpotifySource("spotify", "https://open.spotify.com/track/1234567890123456789012"))
     }
