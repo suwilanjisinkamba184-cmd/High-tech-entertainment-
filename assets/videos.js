@@ -66,9 +66,9 @@ async function load(){
  const curated=featured.filter(v=>{const id=videoEmbed(v.video_url).split('/embed/')[1]?.split('?')[0];return (!id||!ids.has(id))&&!ownKeys.has(key(v))});
  const cards=[...own.map(v=>videoCard(v)).filter(Boolean),...curated.map(v=>videoCard(v)).filter(Boolean)];
  el.innerHTML=cards.length?cards.join(''):'<div class="empty" role="status">New videos will appear here soon.</div>';
- if(sourceError)el.insertAdjacentHTML('beforeend','<p class="video-source-note">Showing selected YouTube releases while the HTE video catalogue reconnects.</p>');
+ if(sourceError)el.insertAdjacentHTML('beforeend','<p class="video-source-note" role="status">Showing selected YouTube releases while the HTE video catalogue reconnects. <button class="btn ghost" type="button" data-video-retry>Retry HTE videos</button></p>');
 }
-el.addEventListener('click',event=>{if(event.target.closest('[data-video-retry]')){function mountArtistSubmission(){
+function mountArtistSubmission(){
  const authDb=window.HTE_SUPABASE_CLIENT;
  if(!authDb)return;
  const panel=document.createElement('section');
@@ -108,7 +108,17 @@ el.addEventListener('click',event=>{if(event.target.closest('[data-video-retry]'
  window.addEventListener('pagehide',()=>{try{authListener?.data?.subscription?.unsubscribe()}catch{}},{once:true});
 }
 mountArtistSubmission();
-void load();return}const button=event.target.closest('[data-video-play]');if(!button)return;const source=safeHttps(button.dataset.embed);if(!source)return;const url=new URL(source);url.searchParams.set('autoplay','1');const frame=document.createElement('iframe');frame.className='video-embed';frame.title=button.dataset.title||'High-Tech Entertainment video';frame.src=url.href;frame.loading='eager';frame.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';button.replaceWith(frame)});let videoCatalogueChannel=null;
+el.addEventListener('click',event=>{
+ if(event.target.closest('[data-video-retry]')){void load();return}
+ const button=event.target.closest('[data-video-play]');if(!button)return;
+ const source=safeHttps(button.dataset.embed);if(!source)return;
+ const url=new URL(source);url.searchParams.set('autoplay','1');
+ const frame=document.createElement('iframe');frame.className='video-embed';
+ frame.title=button.dataset.title||'High-Tech Entertainment video';frame.src=url.href;
+ frame.loading='eager';frame.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+ frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';button.replaceWith(frame)
+});
+let videoCatalogueChannel=null;
 if(db){
  videoCatalogueChannel=db.channel('hte-public-video-sync')
   .on('postgres_changes',{event:'*',schema:'public',table:'videos'},()=>void load())

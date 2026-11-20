@@ -67,11 +67,11 @@ internal fun voiceFailureMessage(details: String): String {
     val normalized = details.lowercase()
     return when {
         listOf("timeout", "network", "connection", "offline", "unreachable").any(normalized::contains) ->
-            "Voice Companion could not connect. Check your internet connection and try again."
+            "HTE AI Voice Assistant could not connect. Check your internet connection and try again."
         listOf("sign in", "session expired", "401").any(normalized::contains) ->
-            "Your HTE session may have expired. Sign in again, then reopen Voice Companion."
+            "Your HTE session may have expired. Sign in again, then reopen HTE AI Voice Assistant."
         listOf("convai_write", "missing permission", "forbidden", "credentials", "api key", "not configured", "conversation token").any(normalized::contains) ->
-            "Voice Companion is not fully configured yet. The HTE project owner needs to correct the server-side voice API credentials and permissions."
+            "HTE AI Voice Assistant is not fully configured yet. The HTE project owner needs to correct the server-side voice API credentials and permissions."
         else -> "Voice Companion is temporarily unavailable. Please try again."
     }
 }
@@ -145,7 +145,7 @@ fun VoiceAssistantDialog(
             onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
             onSession = { active -> session = active; isConnecting = false },
             onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = voiceFailureMessage(error) }
-        ) else errorMessage = "Microphone permission is required for Voice Companion."
+        ) else errorMessage = "Microphone permission is required for HTE AI Voice Assistant."
     }
 
     fun connect() {
@@ -183,8 +183,8 @@ fun VoiceAssistantDialog(
                         Icon(Icons.Outlined.GraphicEq, null, tint = VoiceGold, modifier = Modifier.size(25.dp))
                         Spacer(Modifier.width(9.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("Synapse AI", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            Text(if (session == null) "Voice Companion · standby" else if (muted) "Microphone muted" else "Connected · say Hey HTE", color = VoiceMuted, fontSize = 9.sp)
+                            Text("HTE AI Voice Assistant", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(if (session == null) "HTE AI · standby" else if (muted) "Microphone muted" else "Connected · say Hey HTE", color = VoiceMuted, fontSize = 9.sp)
                         }
                         if (session != null) IconButton(onClick = { scope.launch { session?.toggleMute() } }) { Icon(if (muted) Icons.Outlined.MicOff else Icons.Outlined.Mic, if (muted) "Unmute Voice Companion" else "Mute Voice Companion", tint = if (muted) VoiceMuted else VoiceGold) }
                         IconButton(onClick = { minimized = false }) { Icon(Icons.Outlined.ExpandLess, "Expand Voice Companion", tint = VoiceGold) }
@@ -200,12 +200,12 @@ fun VoiceAssistantDialog(
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text("HTE UNIVERSE / NEURAL CO-PILOT", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
-                        Text("Synapse AI", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                        Text("Your voice-controlled HTE companion", color = VoiceMuted, fontSize = 11.sp)
+                        Text("HTE UNIVERSE / AI VOICE ASSISTANT", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
+                        Text("HTE AI Voice Assistant", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                        Text("Talk to HTE AI and control your HTE Universe experience", color = VoiceMuted, fontSize = 11.sp)
                     }
-                    IconButton(onClick = { minimized = true }) { Icon(Icons.Outlined.ExpandMore, "Minimize Synapse AI", tint = Color.White) }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "End Synapse AI", tint = Color.White) }
+                    IconButton(onClick = { minimized = true }) { Icon(Icons.Outlined.ExpandMore, "Minimize HTE AI Voice Assistant", tint = Color.White) }
+                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "End HTE AI Voice Assistant", tint = Color.White) }
                 }
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -234,7 +234,7 @@ fun VoiceAssistantDialog(
                             }
                         }
                     }
-                    Text("SYNAPSE / AUDIO CORE", color = VoiceMuted, fontSize = 8.sp, letterSpacing = 2.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp))
+                    Text("HTE AI / AUDIO CORE", color = VoiceMuted, fontSize = 8.sp, letterSpacing = 2.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp))
                 }
                 Text(status.replaceFirstChar { it.uppercase() } + if (session != null) " · ${mode.replaceFirstChar { it.uppercase() }}" else "", color = VoiceGold, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Text("Speak naturally to find music, control playback, search the catalogue and move around HTE Universe.", color = VoiceMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
@@ -284,7 +284,7 @@ fun VoiceAssistantDialog(
                 if (agentResponse.isNotBlank()) {
                     Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF211D16)), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Text("SYNAPSE / RESPONSE", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
+                            Text("HTE AI / RESPONSE", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
                             Text(agentResponse, color = Color.White, fontSize = 13.sp)
                         }
                     }
@@ -385,7 +385,7 @@ private fun startVoiceSession(
         onConnecting()
         try {
             val user = SupabaseClientProvider.client.auth.currentUserOrNull()
-                ?: error("Sign in to use the High-Tech Entertainment Voice Companion.")
+                ?: error("Sign in to use HTE AI Voice Assistant.")
             val response = SupabaseClientProvider.client.functions.invoke("elevenlabs-voice-token")
             val token = voiceJson.decodeFromString<VoiceTokenResponse>(response.bodyAsText())
             check(token.token.isNotBlank()) { "The voice service did not return a conversation token." }
@@ -516,7 +516,7 @@ private fun startVoiceSession(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            onFailure(error.toHteUserMessage("Voice Companion could not connect. Please try again."))
+            onFailure(error.toHteUserMessage("HTE AI Voice Assistant could not connect. Please try again."))
         }
     }
 }
