@@ -21,7 +21,7 @@
         android:theme="@style/Theme.HteUniverse"
         android:supportsRtl="true">
         <activity android:name=".HteDiagnosticsActivity" android:exported="false" android:label="HTE Diagnostics" />
-        <activity android:name=".MainActivity" android:exported="true" android:theme="@style/Theme.HteUniverse.Starting">
+        <activity android:name=".MainActivity" android:exported="true" android:theme="@style/Theme.HteUniverse.Starting" android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

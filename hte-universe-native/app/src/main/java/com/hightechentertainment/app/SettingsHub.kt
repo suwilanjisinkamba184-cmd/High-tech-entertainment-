@@ -53,7 +53,13 @@ private val SettingsBackground = Color(0xFF0B0A0F)
 
 @androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
 @Composable
-fun HteSettingsScreen(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadManager: OfflineDownloadManager, onSettingsChanged: () -> Unit = {}) {
+fun HteSettingsScreen(
+    onClose: () -> Unit,
+    settingsStore: AppSettingsStore,
+    downloadManager: OfflineDownloadManager,
+    onSettingsChanged: () -> Unit = {},
+    onVoiceAssistant: () -> Unit = {}
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val updater = remember(context) { HteUpdateManager(context) }
@@ -178,6 +184,15 @@ fun HteSettingsScreen(onClose: () -> Unit, settingsStore: AppSettingsStore, down
         ) {
             item {
                 SettingsHero()
+            }
+            item {
+                SettingsCard {
+                    SettingsActionRow(
+                        "SYNAPSE Voice Assistant",
+                        "Search music, navigate HTE Universe and control playback by voice.",
+                        onVoiceAssistant
+                    )
+                }
             }
             item {
                 SettingsSection("PLAYBACK & SOUND", "Tune the way HTE Universe sounds")
@@ -608,6 +623,11 @@ private fun friendlyUpdateError(error: Throwable): String {
 }
 
 @Composable
-fun SettingsHub(onClose: () -> Unit, settingsStore: AppSettingsStore, downloadManager: OfflineDownloadManager, onSettingsChanged: () -> Unit = {}) =
-    HteSettingsScreen(onClose, settingsStore, downloadManager, onSettingsChanged)
+fun SettingsHub(
+    onClose: () -> Unit,
+    settingsStore: AppSettingsStore,
+    downloadManager: OfflineDownloadManager,
+    onSettingsChanged: () -> Unit = {},
+    onVoiceAssistant: () -> Unit = {}
+) = HteSettingsScreen(onClose, settingsStore, downloadManager, onSettingsChanged, onVoiceAssistant)
 

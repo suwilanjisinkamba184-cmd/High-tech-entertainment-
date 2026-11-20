@@ -31,7 +31,7 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
       # A marked main-branch commit publishes the signed release after all build checks pass.
-      PUBLISH_RELEASE: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_release == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[publish-hte-4.1.2-build49]')) }}
+      PUBLISH_RELEASE: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_release == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[publish-hte-4.1.2-build50]')) }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -89,6 +89,15 @@ jobs:
           grep -Fq 'buildConfigField("String", "SUPABASE_URL"' app/build.gradle.kts
           grep -Fq 'buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY"' app/build.gradle.kts
           echo "Supabase runtime BuildConfig wiring verified."
+          python3 - <<'PY'
+          import tomllib
+          from pathlib import Path
+          config = tomllib.loads(Path("../supabase/config.toml").read_text())
+          voice = config.get("functions", {}).get("elevenlabs-voice-token", {})
+          if voice.get("verify_jwt") is not True:
+              raise SystemExit("elevenlabs-voice-token must keep JWT verification enabled.")
+          print("Supabase config.toml parsed; voice-token JWT verification is enabled.")
+          PY
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest --console=plain
       - name: Run debug lint
@@ -110,6 +119,16 @@ jobs:
           retention-days: 14
 
       # Production signing and publishing are available only through an explicit manual dispatch.
+      # A manual dispatch can target any branch. Never let a feature branch publish a production APK.
+      - name: Require main branch for production publishing
+        if: env.PUBLISH_RELEASE == 'true'
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Production APKs may only be signed and published from refs/heads/main."
+            exit 1
+          fi
+          echo "Production publishing is pinned to main."
       - name: Validate production signing configuration
         if: env.PUBLISH_RELEASE == 'true'
         env:
@@ -174,12 +193,12 @@ jobs:
           grep -F "Verified using v3 scheme (APK Signature Scheme v3): true" <<< "$VERIFY_OUTPUT"
           grep -F "Verified using v4 scheme (APK Signature Scheme v4): true" <<< "$VERIFY_OUTPUT"
           BADGING=$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK")
-          printf '%s\n' "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='49' versionName='4.1.2'"
+          printf '%s\n' "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='50' versionName='4.1.2'"
           sha256sum "$APK" | sed "s|$APK|HTE-Universe-4.1.2.apk|" | tee app/build/outputs/apk/release/SHA256SUMS.txt
       - name: Confirm production certificate continuity
         if: env.PUBLISH_RELEASE == 'true'
         env:
-          PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/native-v4.1.2-build48/HTE-Universe-4.1.2.apk
+          PREVIOUS_APK_URL: https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/download/native-v4.1.2-build49/HTE-Universe-4.1.2.apk
         run: |
           set -euo pipefail
           SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
@@ -203,7 +222,7 @@ jobs:
         if: env.PUBLISH_RELEASE == 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: hte-universe-production-4.1.2-build49
+          name: hte-universe-production-4.1.2-build50
           path: |
             release-assets/HTE-Universe-4.1.2.apk
             release-assets/HTE-Universe-4.1.2.apk.idsig
@@ -214,12 +233,12 @@ jobs:
         if: env.PUBLISH_RELEASE == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: native-v4.1.2-build49
+          tag_name: native-v4.1.2-build50
           target_commitish: ${{ github.sha }}
-          name: HTE Universe 4.1.2 — Production build 49
+          name: HTE Universe 4.1.2 — Production build 50
           body: |
             ## HTE Universe 4.1.2
-            Signed production APK, build 49.
+            Signed production APK, build 50.
 
             - Built from the current main application source.
             - Production package: com.hightechentertainment.app.
@@ -236,14 +255,14 @@ jobs:
         if: env.PUBLISH_RELEASE == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: native-v4.1.2-build49
+          RELEASE_TAG: native-v4.1.2-build50
         run: |
           set -euo pipefail
           gh release view "$RELEASE_TAG" --json tagName,isDraft,isPrerelease,assets > "$RUNNER_TEMP/release.json"
           python3 - "$RUNNER_TEMP/release.json" <<'PY'
           import json,sys
           d=json.load(open(sys.argv[1]))
-          assert d["tagName"] == "native-v4.1.2-build49"
+          assert d["tagName"] == "native-v4.1.2-build50"
           assert not d["isDraft"] and not d["isPrerelease"]
           names={a["name"] for a in d["assets"]}
           assert {"HTE-Universe-4.1.2.apk","HTE-Universe-4.1.2.apk.idsig","SHA256SUMS.txt"} <= names

@@ -28,8 +28,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.foundation.Image
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -94,85 +92,6 @@ fun MusicHomeScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(23.dp)
         ) {
-            item {
-                Row(
-                    Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Brush.linearGradient(listOf(U26Raised, U26Panel, U26Black)))
-                        .border(1.dp, U26Gold.copy(alpha = .28f), RoundedCornerShape(20.dp))
-                        .padding(horizontal = 12.dp, vertical = 13.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.ht_logo),
-                        contentDescription = "High-Tech Entertainment official logo",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(38.dp)
-                    )
-                    Spacer(Modifier.width(9.dp))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text(
-                            if (profileName.isNullOrBlank()) "WELCOME BACK" else "WELCOME BACK, ${profileName.trim().uppercase()}",
-                            color = U26Muted, fontSize = 9.sp, letterSpacing = 1.1.sp,
-                            fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(U26Gold))
-                            Spacer(Modifier.width(8.dp))
-                            Text("HIGH-TECH ENTERTAINMENT", color = U26Gold, fontSize = 8.sp, letterSpacing = 1.0.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                        Text(
-                            "Sound beyond limits.",
-                            color = Color.White,
-                            fontSize = if (wide) 32.sp else 27.sp,
-                            lineHeight = if (wide) 38.sp else 33.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = (-.7).sp
-                        )
-                        Text("Music. Beats. Production. Beyond.", color = U26Silver, fontSize = 12.sp)
-                    }
-                    Surface(
-                        onClick = onVoice,
-                        shape = RoundedCornerShape(17.dp),
-                        color = U26Gold.copy(alpha = .12f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, U26Gold.copy(alpha = .38f))
-                    ) {
-                        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Outlined.GraphicEq, "Open HTE voice assistant", tint = U26Gold, modifier = Modifier.size(24.dp))
-                        }
-                    }
-                    IconButton(onClick = onSettings, modifier = Modifier.size(44.dp)) {
-                        Icon(Icons.Outlined.Settings, "Open HTE settings", tint = U26Silver, modifier = Modifier.size(23.dp))
-                    }
-                    IconButton(onClick = onProfile, modifier = Modifier.size(44.dp)) {
-                        if (!profileAvatarUrl.isNullOrBlank()) {
-                            AsyncImage(
-                                model = profileAvatarUrl,
-                                contentDescription = "Open your HTE account",
-                                modifier = Modifier.size(36.dp).clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Icon(Icons.Outlined.AccountCircle, "Open your HTE account", tint = U26Silver, modifier = Modifier.size(27.dp))
-                        }
-                    }
-                }
-            }
-
-            item {
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp))
-                        .background(U26Panel).border(1.dp, U26Line, RoundedCornerShape(15.dp))
-                        .clickable(onClick = onExplore).padding(horizontal = 14.dp, vertical = 13.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Outlined.Search, null, tint = U26Gold, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(11.dp))
-                    Text("Search music, artists and genres", Modifier.weight(1f), color = U26Muted, fontSize = 12.sp)
-                    Icon(Icons.AutoMirrored.Outlined.ArrowForward, null, tint = U26Silver, modifier = Modifier.size(17.dp))
-                }
-            }
-
             if (artists.isNotEmpty()) item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     U26SectionHeading("MEET THE ARTISTS", "DISCOVER MUSIC", onExplore)
@@ -343,26 +262,6 @@ fun MusicHomeScreen(
                 }
             }
 
-            item {
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                        .background(Brush.horizontalGradient(listOf(Color(0xFF2A2418), U26Panel)))
-                        .border(1.dp, U26Gold.copy(alpha = .24f), RoundedCornerShape(18.dp))
-                        .clickable(onClick = onVoice).padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(U26Gold.copy(alpha = .13f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Outlined.Mic, null, tint = U26Gold, modifier = Modifier.size(23.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text("SYNAPSE AI", color = U26Gold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
-                        Text("Control your universe by voice", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Search, navigate and manage playback", color = U26Muted, fontSize = 10.sp)
-                    }
-                    Icon(Icons.AutoMirrored.Outlined.ArrowForward, null, tint = U26Gold)
-                }
-            }
         }
     }
 }

@@ -7,6 +7,8 @@ import android.content.ContextWrapper
 import android.content.Context
 import android.app.Activity
 import android.widget.Toast
+import android.view.LayoutInflater
+import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -55,7 +57,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
 import androidx.media3.ui.PlayerView
-import androidx.media3.ui.AspectRatioFrameLayout
 import io.github.jan.supabase.auth.auth
 import com.hightechentertainment.app.data.AuthRepository
 import com.hightechentertainment.app.data.ArtistDto
@@ -490,9 +491,13 @@ fun UniverseShell() {
                 Modifier.weight(1f).fillMaxHeight()
                     .padding(end = if (isWideLayout && playerHasTrack) playerPanelWidth + 8.dp else 0.dp)
             ) {
-            if (selectedTab != UniverseTab.HOME) {
-                UniverseTopBar(onNotifications = { selectedTab = UniverseTab.ACCOUNT }, onSearch = { selectedTab = UniverseTab.DISCOVER }, onVoice = { showVoiceAssistant = true }, onSettings = { showSettingsHub = true })
-            }
+            UniverseTopBar(
+                searchQuery = searchQuery,
+                onQueryChange = { query ->
+                    searchQuery = query
+                    selectedTab = UniverseTab.DISCOVER
+                }
+            )
             when (selectedTab) {
                 UniverseTab.HOME -> HomeScreen(
                     tracks = tracks, artists = artists, releases = releases, videos = videos, isLoading = isLoading,
@@ -553,7 +558,11 @@ fun UniverseShell() {
                         }
                     }
                 )
-                UniverseTab.ACCOUNT -> AccountScreen(configured = configured, onSettingsChanged = { settingsRevision++ })
+                UniverseTab.ACCOUNT -> AccountScreen(
+                    configured = configured,
+                    onSettingsChanged = { settingsRevision++ },
+                    onVoiceAssistant = { showVoiceAssistant = true }
+                )
             }
         }
         }
@@ -657,7 +666,11 @@ fun UniverseShell() {
                     onClose = { showSettingsHub = false },
                     settingsStore = settingsStore,
                     downloadManager = offlineManager,
-                    onSettingsChanged = { settingsRevision++ }
+                    onSettingsChanged = { settingsRevision++ },
+                    onVoiceAssistant = {
+                        showSettingsHub = false
+                        showVoiceAssistant = true
+                    }
                 )
             }
         }
@@ -706,66 +719,35 @@ fun UniverseShell() {
 }
 
 @Composable
-private fun UniverseTopBar(onNotifications: () -> Unit, onSearch: () -> Unit, onVoice: () -> Unit, onSettings: () -> Unit) {
+private fun UniverseTopBar(searchQuery: String, onQueryChange: (String) -> Unit) {
     Row(
         Modifier.fillMaxWidth().background(ShellBackground)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(9.dp)
+            .padding(horizontal = 16.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            Modifier.size(39.dp).background(
-                Brush.linearGradient(listOf(Color(0xFF5A4522), Color(0xFF17130D))),
-                RoundedCornerShape(13.dp)
-            ).border(1.dp, ShellGold.copy(alpha = .42f), RoundedCornerShape(13.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("HT", color = ShellGold, fontSize = 14.sp, fontWeight = FontWeight.Black, letterSpacing = -.5.sp)
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text("HIGH-TECH", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.ExtraBold)
-            Text("ENTERTAINMENT  /  UNIVERSE", color = ShellSilver, fontSize = 8.sp, letterSpacing = .8.sp)
-        }
-        Surface(
-            onClick = onSearch,
-            shape = RoundedCornerShape(12.dp),
-            color = ShellPanel,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .07f))
-        ) {
-            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.Search, "Search", tint = ShellSilver, modifier = Modifier.size(19.dp))
-            }
-        }
-        Surface(
-            onClick = onVoice,
-            shape = RoundedCornerShape(12.dp),
-            color = ShellGold.copy(alpha = .14f),
-            border = androidx.compose.foundation.BorderStroke(1.dp, ShellGold.copy(alpha = .35f))
-        ) {
-            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.GraphicEq, "Voice assistant", tint = ShellGold, modifier = Modifier.size(20.dp))
-            }
-        }
-        Surface(
-            onClick = onNotifications,
-            shape = RoundedCornerShape(12.dp),
-            color = ShellPanel,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .07f))
-        ) {
-            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.NotificationsNone, "Notifications", tint = ShellSilver, modifier = Modifier.size(19.dp))
-            }
-        }
-        Surface(
-            onClick = onSettings,
-            shape = RoundedCornerShape(12.dp),
-            color = ShellPanel,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .07f))
-        ) {
-            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.Settings, "Open settings", tint = ShellSilver, modifier = Modifier.size(19.dp))
-            }
-        }
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onQueryChange,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+            singleLine = true,
+            placeholder = { Text("Search music, artists or videos", color = ShellMuted, fontSize = 13.sp) },
+            leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = "Search", tint = ShellGold) },
+            trailingIcon = {
+                if (searchQuery.isNotBlank()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(Icons.Outlined.Close, contentDescription = "Clear search", tint = ShellSilver)
+                    }
+                }
+            },
+            shape = RoundedCornerShape(15.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = ShellGold,
+                unfocusedBorderColor = Color.White.copy(alpha = .12f),
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                cursorColor = ShellGold
+            )
+        )
     }
 }
 
@@ -823,19 +805,6 @@ private fun DiscoverScreen(
         item {
             Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("THE HTE CATALOGUE", color = ShellGold, fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
-                    OutlinedTextField(
-                        value = query, onValueChange = { query = it; onQueryChanged(it) },
-                        modifier = Modifier.fillMaxWidth(), singleLine = true,
-                        placeholder = { Text("Search songs, artists or genres") },
-                        leadingIcon = { Icon(Icons.Outlined.Search, null, tint = ShellGold) },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = ShellGold, unfocusedBorderColor = Color.White.copy(alpha = .12f),
-                            focusedTextColor = Color.White, unfocusedTextColor = Color.White,
-                            cursorColor = ShellGold
-                        )
-                    )
                     Text("FILTER BY GENRE", color = ShellMuted, fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
                     androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                         items(genres, key = { it }) { genre ->
@@ -1174,8 +1143,16 @@ private fun LibraryTile(icon: androidx.compose.ui.graphics.vector.ImageVector, t
 }
 
 @Composable
-private fun AccountScreen(configured: Boolean, onSettingsChanged: () -> Unit) {
-    MemberCenter(configured = configured, onSettingsChanged = onSettingsChanged)
+private fun AccountScreen(
+    configured: Boolean,
+    onSettingsChanged: () -> Unit,
+    onVoiceAssistant: () -> Unit
+) {
+    MemberCenter(
+        configured = configured,
+        onSettingsChanged = onSettingsChanged,
+        onVoiceAssistant = onVoiceAssistant
+    )
 }
 
 @Composable
@@ -1348,11 +1325,9 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                         Box(videoCanvasModifier.background(Color(0xFF050506)), contentAlignment = Alignment.Center) {
                             AndroidView(
                                 factory = { viewContext ->
-                                    PlayerView(viewContext).apply {
+                                    (LayoutInflater.from(viewContext)
+                                        .inflate(R.layout.hte_video_player, FrameLayout(viewContext), false) as PlayerView).apply {
                                         this.player = player
-                                        useController = false
-                                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                        setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
                                         keepScreenOn = true
                                     }
                                 },
