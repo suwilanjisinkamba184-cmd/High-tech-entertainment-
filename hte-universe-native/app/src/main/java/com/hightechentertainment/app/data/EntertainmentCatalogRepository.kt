@@ -20,7 +20,8 @@ data class ReleaseDto(
     val slug: String,
     @SerialName("cover_url") val coverUrl: String? = null,
     @SerialName("release_date") val releaseDate: String? = null,
-    val description: String? = null
+    val description: String? = null,
+    @SerialName("spotify_url") val spotifyUrl: String? = null
 )
 
 @Serializable
