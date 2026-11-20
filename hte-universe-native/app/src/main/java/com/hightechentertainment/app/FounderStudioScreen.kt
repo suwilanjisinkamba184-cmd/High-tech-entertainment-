@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hightechentertainment.app.data.FounderStudioRepository
+import com.hightechentertainment.app.data.DownloadBrandingSettingsDto
 import com.hightechentertainment.app.data.FounderTrackDto
 import com.hightechentertainment.app.data.FounderVideoDto
 import com.hightechentertainment.app.data.FounderArtistDto
@@ -85,6 +86,9 @@ fun FounderStudioScreen(onClose: () -> Unit) {
     var trackGenre by remember { mutableStateOf("") }
     var audioUri by remember { mutableStateOf<Uri?>(null) }
     var coverUri by remember { mutableStateOf<Uri?>(null) }
+    var rightsConfirmed by remember { mutableStateOf(false) }
+    var downloadBrandingSettings by remember { mutableStateOf<DownloadBrandingSettingsDto?>(null) }
+    var downloadJingleUri by remember { mutableStateOf<Uri?>(null) }
 
     var videoTitle by remember { mutableStateOf("") }
     var videoArtist by remember { mutableStateOf("High-Tech Entertainment") }
@@ -126,6 +130,7 @@ fun FounderStudioScreen(onClose: () -> Unit) {
                 videos = repository.getVideos()
                 artists = repository.getArtists()
                 releases = repository.getReleases()
+                downloadBrandingSettings = repository.getDownloadBrandingSettings()
             }.onFailure { status = it.toHteUserMessage("Founder catalogue could not be loaded. Please retry.") }
             isLoading = false
         }
@@ -176,10 +181,12 @@ fun FounderStudioScreen(onClose: () -> Unit) {
             5 -> loadInbox()
             6 -> loadAds()
             7 -> loadCampaigns()
+            8 -> scope.launch { runCatching { repository.getDownloadBrandingSettings() }.onSuccess { downloadBrandingSettings = it }.onFailure { status = it.toHteUserMessage("Download branding settings are unavailable. Please retry.") } }
         }
     }
 
     val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { audioUri = it; status = null }
+    val downloadJinglePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { downloadJingleUri = it; status = null }
     val coverPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { coverUri = it; status = null }
     val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { videoUri = it; status = null }
     val thumbnailPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { thumbnailUri = it; status = null }
@@ -264,6 +271,15 @@ fun FounderStudioScreen(onClose: () -> Unit) {
                 item { OutlinedButton(onClick = { audioPicker.launch("audio/*") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.AudioFile, null); Spacer(Modifier.width(8.dp)); Text(audioUri?.let { displayName(context, it) } ?: "Choose audio file") } }
                 item { OutlinedButton(onClick = { coverPicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.Image, null); Spacer(Modifier.width(8.dp)); Text(coverUri?.let { displayName(context, it) } ?: "Choose cover artwork (optional)") } }
                 item {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = rightsConfirmed, onCheckedChange = { rightsConfirmed = it })
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("I own or have distribution rights for this audio", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Only confirm for original or properly licensed HTE audio. Spotify and YouTube links are not downloadable.", color = FounderMuted, fontSize = 10.sp)
+                        }
+                    }
+                }
+                item {
                     Button(onClick = {
                         val uri = audioUri
                         if (trackTitle.isBlank() || uri == null) { status = "Enter a title and choose an audio file."; return@Button }
@@ -275,8 +291,8 @@ fun FounderStudioScreen(onClose: () -> Unit) {
                                     repository.uploadArtwork(context.contentResolver.openInputStream(selected) ?: error("Could not open cover artwork."), size, mime, displayName(context, selected))
                                 }
                                 val size = fileSize(context, uri); val mime = context.contentResolver.getType(uri) ?: "audio/mpeg"
-                                repository.uploadTrack(trackTitle, trackArtist, trackGenre, context.contentResolver.openInputStream(uri) ?: error("Could not open audio file."), size, mime, coverUrl)
-                            }.onSuccess { status = "Track uploaded as a draft. Publish it when ready."; trackTitle = ""; trackGenre = ""; audioUri = null; coverUri = null; refresh() }
+                                repository.uploadTrack(trackTitle, trackArtist, trackGenre, context.contentResolver.openInputStream(uri) ?: error("Could not open audio file."), size, mime, coverUrl, rightsConfirmed)
+                            }.onSuccess { status = "Track uploaded as a draft. Publish it when ready."; trackTitle = ""; trackGenre = ""; audioUri = null; coverUri = null; rightsConfirmed = false; refresh() }
                                 .onFailure { status = it.toHteUserMessage("Track upload failed. Check the file and try again.") }
                             isUploading = false
                         }
@@ -504,6 +520,38 @@ fun FounderStudioScreen(onClose: () -> Unit) {
                         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text("PUBLISHING SAFETY", color = FounderGold, fontSize = 10.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
                             Text("Social campaign publishing remains disabled until platform OAuth, granted scopes, media validation and an explicit approval workflow are verified.", color = Color.White, fontSize = 11.sp)
+                        }
+                    }
+                }
+                item {
+                    Card(colors = CardDefaults.cardColors(containerColor = FounderPanel), shape = RoundedCornerShape(16.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                            Text("HTE DOWNLOAD BRANDING IDENT", color = FounderGold, fontSize = 10.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
+                            Text(if (downloadBrandingSettings?.isActive == true) "Active HTE download ident is configured." else "No active HTE download ident is configured.", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Upload a short 2–5 second HTE audio logo. This ident is added to eligible original/licensed downloads and is separate from the app splash startup audio. Maximum 20 MB.", color = FounderMuted, fontSize = 10.sp)
+                            OutlinedButton(onClick = { downloadJinglePicker.launch("audio/*") }, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Outlined.AudioFile, null); Spacer(Modifier.width(8.dp))
+                                Text(downloadJingleUri?.let { displayName(context, it) } ?: "Choose HTE download ident")
+                            }
+                            Button(onClick = {
+                                val uri = downloadJingleUri
+                                if (uri == null) { status = "Choose an HTE download ident audio file first."; return@Button }
+                                scope.launch {
+                                    isUploading = true; status = null
+                                    runCatching {
+                                        val size = fileSize(context, uri)
+                                        val mime = context.contentResolver.getType(uri) ?: "audio/mpeg"
+                                        repository.uploadDownloadBrandingJingle(context.contentResolver.openInputStream(uri) ?: error("Could not open the selected ident."), size, mime, displayName(context, uri))
+                                    }.onSuccess {
+                                        downloadBrandingSettings = it
+                                        downloadJingleUri = null
+                                        status = "HTE download ident saved. Eligible original/licensed audio can now use the branded-download page."
+                                    }.onFailure { status = it.toHteUserMessage("Could not save the HTE download ident. Please retry.") }
+                                    isUploading = false
+                                }
+                            }, enabled = !isUploading && downloadJingleUri != null, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = FounderGold, contentColor = Color.Black)) {
+                                if (isUploading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else { Icon(Icons.Outlined.CloudUpload, null); Spacer(Modifier.width(8.dp)); Text("Save download ident") }
+                            }
                         }
                     }
                 }
