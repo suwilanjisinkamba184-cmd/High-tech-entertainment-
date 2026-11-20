@@ -1540,6 +1540,8 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
 private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: () -> Unit) {
     val lifecycleOwner = LocalLifecycleOwner.current
     var embeddedWebView by remember(video.id) { mutableStateOf<WebView?>(null) }
+    var webViewLoading by remember(video.id) { mutableStateOf(true) }
+    var webViewError by remember(video.id) { mutableStateOf(false) }
     DisposableEffect(lifecycleOwner, embeddedWebView) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
@@ -1560,41 +1562,85 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
                 }
                 IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close video", tint = Color.White) }
             }
-            AndroidView(
-                factory = { viewContext ->
-                    WebView(viewContext).apply {
-                        embeddedWebView = this
-                        settings.apply {
-                            javaScriptEnabled = true
-                            domStorageEnabled = true
-                            mediaPlaybackRequiresUserGesture = false
-                            loadsImagesAutomatically = true
-                            useWideViewPort = true
-                            loadWithOverviewMode = true
-                            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-                            setSupportMultipleWindows(false)
+            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                AndroidView(
+                    factory = { viewContext ->
+                        WebView(viewContext).apply {
+                            embeddedWebView = this
+                            settings.apply {
+                                javaScriptEnabled = true
+                                domStorageEnabled = true
+                                mediaPlaybackRequiresUserGesture = false
+                                loadsImagesAutomatically = true
+                                useWideViewPort = true
+                                loadWithOverviewMode = true
+                                mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                                setSupportMultipleWindows(false)
+                            }
+                            CookieManager.getInstance().setAcceptCookie(true)
+                            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                            setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                            webChromeClient = WebChromeClient()
+                            webViewClient = object : WebViewClient() {
+                                override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                                    webViewLoading = true
+                                    webViewError = false
+                                }
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    webViewLoading = false
+                                }
+                                override fun onReceivedError(
+                                    view: WebView?,
+                                    request: android.webkit.WebResourceRequest?,
+                                    error: android.webkit.WebResourceError?
+                                ) {
+                                    if (request?.isForMainFrame == true) {
+                                        webViewLoading = false
+                                        webViewError = true
+                                    }
+                                }
+                                override fun onRenderProcessGone(
+                                    view: WebView,
+                                    detail: android.webkit.RenderProcessGoneDetail
+                                ): Boolean {
+                                    webViewLoading = false
+                                    webViewError = true
+                                    return true
+                                }
+                            }
+                            setBackgroundColor(android.graphics.Color.BLACK)
+                            // Load the official YouTube privacy-enhanced embed directly. This avoids
+                            // an extra local HTML/iframe navigation layer inside Android WebView.
+                            loadUrl("https://www.youtube-nocookie.com/embed/$youtubeId?autoplay=1&playsinline=1&rel=0&controls=1")
                         }
-                        CookieManager.getInstance().setAcceptCookie(true)
-                        CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                        setLayerType(View.LAYER_TYPE_HARDWARE, null)
-                        webChromeClient = WebChromeClient()
-                        webViewClient = WebViewClient()
-                        setBackgroundColor(android.graphics.Color.BLACK)
-                        // Load the official YouTube privacy-enhanced embed directly. This avoids
-                        // an extra local HTML/iframe navigation layer inside Android WebView.
-                        loadUrl("https://www.youtube-nocookie.com/embed/$youtubeId?autoplay=1&playsinline=1&rel=0&controls=1")
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                    onRelease = {
+                        embeddedWebView = null
+                        it.stopLoading()
+                        it.onPause()
+                        it.loadUrl("about:blank")
+                        it.removeAllViews()
+                        it.destroy()
                     }
-                },
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                onRelease = {
-                    embeddedWebView = null
-                    it.stopLoading()
-                    it.onPause()
-                    it.loadUrl("about:blank")
-                    it.removeAllViews()
-                    it.destroy()
+                )
+                if (webViewLoading && !webViewError) {
+                    CircularProgressIndicator(color = ShellGold, strokeWidth = 2.5.dp)
                 }
-            )
+                if (webViewError) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("This YouTube video could not be loaded.", color = ShellSilver, fontSize = 12.sp)
+                        Button(
+                            onClick = {
+                                webViewError = false
+                                webViewLoading = true
+                                embeddedWebView?.reload()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = ShellGold, contentColor = Color.Black)
+                        ) { Text("Retry video", fontWeight = FontWeight.Bold) }
+                    }
+                }
+            }
             Text("Streaming from YouTube • Downloads are available only for HTE original files.", color = ShellMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 8.dp))
         }
     }
