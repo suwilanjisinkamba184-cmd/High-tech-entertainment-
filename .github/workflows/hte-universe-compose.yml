@@ -108,6 +108,18 @@ jobs:
           PY
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest --console=plain
+      - name: Compile Android instrumentation smoke tests
+        run: gradle --no-daemon :app:assembleDebugAndroidTest --console=plain
+      - name: Run Android instrumentation tests on API 35 emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        env:
+          ANDROID_I_WANT_MY_TCG: "yes"
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: cd hte-universe-native && gradle --no-daemon :app:connectedDebugAndroidTest --console=plain
       - name: Run debug lint
         run: gradle --no-daemon :app:lintDebug --console=plain
       - name: Run release lint
