@@ -1663,10 +1663,23 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 @Composable
 private fun SpotifyEmbedDialog(url: String, onDismiss: () -> Unit) {
     val embedUrl = remember(url) { com.hightechentertainment.app.media.spotifyEmbedUrl(url) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val hostContext = LocalContext.current
     var loading by remember(url) { mutableStateOf(true) }
     var failed by remember(url) { mutableStateOf(embedUrl == null) }
     var generation by remember(url) { mutableIntStateOf(0) }
     var webView by remember(url) { mutableStateOf<WebView?>(null) }
+    DisposableEffect(lifecycleOwner, webView) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> webView?.onPause()
+                Lifecycle.Event.ON_RESUME -> webView?.onResume()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxSize().background(Color(0xFF08090B)).padding(14.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -1711,7 +1724,7 @@ private fun SpotifyEmbedDialog(url: String, onDismiss: () -> Unit) {
                     Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("Spotify's embedded player could not be loaded for this link.", color = ShellSilver, fontSize = 12.sp)
                         TextButton(onClick = { failed = false; loading = true; generation += 1 }) { Text("Retry", color = ShellGold) }
-                        TextButton(onClick = { runCatching { val appUri = com.hightechentertainment.app.media.spotifyAppUri(url) ?: url; webView?.context?.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(appUri))) } }) { Text("Open Spotify app", color = ShellSilver) }
+                        TextButton(onClick = { runCatching { val appUri = com.hightechentertainment.app.media.spotifyAppUri(url) ?: url; hostContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(appUri))) } }) { Text("Open Spotify app", color = ShellSilver) }
                     }
                 }
             }
