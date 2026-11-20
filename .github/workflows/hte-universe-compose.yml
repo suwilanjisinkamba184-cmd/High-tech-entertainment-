@@ -206,7 +206,7 @@ jobs:
           echo "PASS: candidate matches the pinned trusted signing certificate SHA-256."
       - name: Upload signed production candidate for device testing
         if: env.BUILD_SIGNED_CANDIDATE == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hte-universe-4.3.0-build54-signed-production-candidate
           path: |
