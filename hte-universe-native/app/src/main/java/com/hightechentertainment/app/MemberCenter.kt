@@ -296,39 +296,41 @@ fun MemberCenter(
                     }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.AutoMirrored.Outlined.Logout, null); Spacer(Modifier.width(8.dp)); Text("Sign out") }
                 }
             }
-            item {
-                MemberCard {
-                    Text("INDEPENDENT ARTIST SUBMISSION", color = MemberGold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-                    Text("Submit your YouTube video", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text("Share a public video from your own channel. YouTube verifies the link, then HTE adds it to the same catalogue used by the website and Android app.", color = MemberMuted, fontSize = 12.sp)
-                    OutlinedTextField(value = artistVideoUrl, onValueChange = { artistVideoUrl = it; artistVideoStatus = null }, modifier = Modifier.fillMaxWidth(), label = { Text("Public YouTube video URL") }, placeholder = { Text("https://www.youtube.com/watch?v=...") }, singleLine = true, enabled = !artistVideoSubmitting)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = artistVideoRightsConfirmed, onCheckedChange = { artistVideoRightsConfirmed = it })
-                        Text("I own this video or have permission from the rights holder to submit and share it on HTE.", color = MemberMuted, fontSize = 11.sp)
-                    }
-                    Button(onClick = {
-                        scope.launch {
-                            artistVideoSubmitting = true; artistVideoStatus = null; artistVideoSuccess = false
-                            captureAccountRequest {
-                                require(artistVideoUrl.isNotBlank()) { "Enter a public YouTube video URL." }
-                                require(artistVideoRightsConfirmed) { "Confirm that you own or are authorised to submit this video." }
-                                SupabaseClientProvider.client.functions.invoke("submit-public-video", body = buildJsonObject {
-                                    put("url", artistVideoUrl.trim())
-                                    put("rights_confirmed", true)
-                                })
-                            }.onSuccess {
-                                artistVideoUrl = ""; artistVideoRightsConfirmed = false; artistVideoSuccess = true
-                                artistVideoStatus = "Your video has been added to the shared HTE catalogue. It will appear on the website and app."
-                                onVideoSubmitted()
-                            }.onFailure { artistVideoStatus = it.toHteUserMessage("Video submission failed. Check the YouTube link and try again.") }
-                            artistVideoSubmitting = false
+            if (role.equals("owner", true)) {
+                item {
+                    MemberCard {
+                        Text("FOUNDER VIDEO PUBLISHING", color = MemberGold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                        Text("Submit your YouTube video", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("Add a public YouTube video to the shared HTE catalogue. Only the verified founder account can publish it to the website and Android app.", color = MemberMuted, fontSize = 12.sp)
+                        OutlinedTextField(value = artistVideoUrl, onValueChange = { artistVideoUrl = it; artistVideoStatus = null }, modifier = Modifier.fillMaxWidth(), label = { Text("Public YouTube video URL") }, placeholder = { Text("https://www.youtube.com/watch?v=...") }, singleLine = true, enabled = !artistVideoSubmitting)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = artistVideoRightsConfirmed, onCheckedChange = { artistVideoRightsConfirmed = it })
+                            Text("I own this video or have permission from the rights holder to submit and share it on HTE.", color = MemberMuted, fontSize = 11.sp)
                         }
-                    }, enabled = !artistVideoSubmitting && artistVideoUrl.isNotBlank() && artistVideoRightsConfirmed, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MemberGold, contentColor = Color.Black)) {
-                        if (artistVideoSubmitting) CircularProgressIndicator(Modifier.size(17.dp), color = Color.Black, strokeWidth = 2.dp) else Icon(Icons.Outlined.VideoLibrary, null)
-                        Spacer(Modifier.width(8.dp)); Text(if (artistVideoSubmitting) "Verifying video…" else "Submit video to HTE")
+                        Button(onClick = {
+                            scope.launch {
+                                artistVideoSubmitting = true; artistVideoStatus = null; artistVideoSuccess = false
+                                captureAccountRequest {
+                                    require(artistVideoUrl.isNotBlank()) { "Enter a public YouTube video URL." }
+                                    require(artistVideoRightsConfirmed) { "Confirm that you own or are authorised to submit this video." }
+                                    SupabaseClientProvider.client.functions.invoke("submit-public-video", body = buildJsonObject {
+                                        put("url", artistVideoUrl.trim())
+                                        put("rights_confirmed", true)
+                                    })
+                                }.onSuccess {
+                                    artistVideoUrl = ""; artistVideoRightsConfirmed = false; artistVideoSuccess = true
+                                    artistVideoStatus = "Your video has been published to the shared HTE catalogue."
+                                    onVideoSubmitted()
+                                }.onFailure { artistVideoStatus = it.toHteUserMessage("Video submission failed. Check the YouTube link and try again.") }
+                                artistVideoSubmitting = false
+                            }
+                        }, enabled = !artistVideoSubmitting && artistVideoUrl.isNotBlank() && artistVideoRightsConfirmed, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MemberGold, contentColor = Color.Black)) {
+                            if (artistVideoSubmitting) CircularProgressIndicator(Modifier.size(17.dp), color = Color.Black, strokeWidth = 2.dp) else Icon(Icons.Outlined.VideoLibrary, null)
+                            Spacer(Modifier.width(8.dp)); Text(if (artistVideoSubmitting) "Verifying video…" else "Submit video to HTE")
+                        }
+                        artistVideoStatus?.let { Text(it, color = if (artistVideoSuccess) Color(0xFF8BCB9B) else MemberGold, fontSize = 11.sp) }
+                        Text("Only public YouTube videos can be submitted. HTE embeds the original video; it does not copy or re-upload YouTube media.", color = MemberMuted, fontSize = 10.sp)
                     }
-                    artistVideoStatus?.let { Text(it, color = if (artistVideoSuccess) Color(0xFF8BCB9B) else MemberGold, fontSize = 11.sp) }
-                    Text("Only public YouTube videos can be submitted. HTE embeds the original video; it does not copy or re-upload YouTube media.", color = MemberMuted, fontSize = 10.sp)
                 }
             }
             if (role.equals("owner", true)) {

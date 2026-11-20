@@ -74,13 +74,20 @@ el.addEventListener('click',event=>{if(event.target.closest('[data-video-retry]'
  panel.className='panel artist-video-submit';
  panel.style.marginTop='24px';
  panel.setAttribute('aria-labelledby','artist-video-submit-title');
- panel.innerHTML='<div class="eyebrow">FOR INDEPENDENT ARTISTS</div><h3 id="artist-video-submit-title">Submit your YouTube video.</h3><p>Share a public music video from your own channel. After YouTube verifies it, it is added to the shared HTE catalogue for the website and Android app.</p><div id="artist-video-signin" class="status">Sign in to your HTE account before submitting a video. <a href="account/">Sign in or create an account ↗</a></div><form id="artist-video-submit-form" hidden><div class="field"><label for="artist-video-url">Public YouTube video URL</label><input id="artist-video-url" name="url" type="url" inputmode="url" autocomplete="url" placeholder="https://www.youtube.com/watch?v=..." required maxlength="500"></div><label class="artist-video-rights" style="display:flex;gap:10px;align-items:flex-start;margin:14px 0"><input name="rights_confirmed" type="checkbox" required style="margin-top:4px"><span>I own this video or have permission from the rights holder to submit and share it on HTE.</span></label><button class="btn gold" type="submit">Submit video</button><div id="artist-video-submit-status" class="status" role="status" aria-live="polite"></div></form>';
+ panel.innerHTML='<div class="eyebrow">FOUNDER VIDEO PUBLISHING</div><h3 id="artist-video-submit-title">Add a YouTube video.</h3><p>Only the verified HTE founder account can add and publish YouTube videos to the shared website and Android catalogue.</p><div id="artist-video-signin" class="status">Sign in to your HTE account before submitting a video. <a href="account/">Sign in or create an account ↗</a></div><form id="artist-video-submit-form" hidden><div class="field"><label for="artist-video-url">Public YouTube video URL</label><input id="artist-video-url" name="url" type="url" inputmode="url" autocomplete="url" placeholder="https://www.youtube.com/watch?v=..." required maxlength="500"></div><label class="artist-video-rights" style="display:flex;gap:10px;align-items:flex-start;margin:14px 0"><input name="rights_confirmed" type="checkbox" required style="margin-top:4px"><span>I own this video or have permission from the rights holder to submit and share it on HTE.</span></label><button class="btn gold" type="submit">Submit video</button><div id="artist-video-submit-status" class="status" role="status" aria-live="polite"></div></form>';
  el.insertAdjacentElement('afterend',panel);
  const form=panel.querySelector('#artist-video-submit-form'),signin=panel.querySelector('#artist-video-signin'),status=panel.querySelector('#artist-video-submit-status');
  const say=(message,kind='')=>{status.textContent=message;status.className='status '+kind};
  async function updateAuth(){
-  try{const {data,error}=await authDb.auth.getSession();if(error)throw error;const signedIn=!!data?.session;form.hidden=!signedIn;signin.hidden=signedIn;}
-  catch(error){form.hidden=true;signin.hidden=false;signin.textContent='We could not check your sign-in session. Reload the page or sign in again from My Account.';console.warn('HTE artist submission session check failed',error)}
+  try{
+   const {data,error}=await authDb.auth.getSession();if(error)throw error;
+   if(!data?.session){form.hidden=true;signin.hidden=false;signin.innerHTML='Sign in to your HTE founder account before publishing a video. <a href="account/">Open My Account ↗</a>';return}
+   const {data:role,error:roleError}=await authDb.rpc('hte_my_role');if(roleError)throw roleError;
+   const owner=String(role||'').trim().toLowerCase()==='owner';
+   form.hidden=!owner;signin.hidden=owner;
+   if(!owner)signin.textContent='Publishing is restricted to the verified HTE founder account.';
+  }
+  catch(error){form.hidden=true;signin.hidden=false;signin.textContent='Founder permissions could not be verified. Reload the page or sign in again from My Account.';console.warn('HTE founder video publishing check failed',error)}
  }
  void updateAuth();
  const authListener=authDb.auth.onAuthStateChange(()=>{void updateAuth()});

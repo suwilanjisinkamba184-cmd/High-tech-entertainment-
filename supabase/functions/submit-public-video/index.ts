@@ -33,14 +33,26 @@ Deno.serve(async (req) => {
   const url = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const youtubeKey = Deno.env.get("YOUTUBE_API_KEY");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
   const authorization = req.headers.get("Authorization") || "";
   const token = authorization.replace(/^Bearer\s+/i, "");
-  if (!url || !serviceKey || !youtubeKey) return reply({ error: "Submission service is not configured" }, 503);
+  if (!url || !serviceKey || !youtubeKey || !anonKey) return reply({ error: "Submission service is not configured" }, 503);
   if (!token || token === authorization) return reply({ error: "Sign in before submitting a video" }, 401);
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
   const { data: authData, error: authError } = await admin.auth.getUser(token);
   if (authError || !authData.user) return reply({ error: "Your session is invalid. Please sign in again." }, 401);
+
+  // Publishing is founder-only. Verify the caller's role using their own JWT,
+  // never the service-role client, so auth.uid() resolves to the signed-in user.
+  const userClient = createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: authorization } },
+  });
+  const { data: role, error: roleError } = await userClient.rpc("hte_my_role");
+  if (roleError || String(role || "").trim().toLowerCase() !== "owner") {
+    return reply({ error: "Only the verified HTE founder account can publish videos." }, 403);
+  }
 
   let input: { url?: string; rights_confirmed?: boolean };
   try { input = await req.json(); } catch { return reply({ error: "Invalid JSON body" }, 400); }

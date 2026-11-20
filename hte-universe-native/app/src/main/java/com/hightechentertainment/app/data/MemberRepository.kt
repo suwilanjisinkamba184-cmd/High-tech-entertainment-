@@ -3,10 +3,12 @@ package com.hightechentertainment.app.data
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.storage.storage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlin.time.Duration.Companion.minutes
 
 @Serializable
 data class ProfileDto(
@@ -120,10 +122,20 @@ class MemberRepository {
         val googleName = metadataText("full_name", "name", "given_name")
 
         return when {
-            storedProfile != null -> storedProfile.copy(
-                displayName = storedProfile.displayName.ifBlank { googleName.orEmpty() },
-                avatarUrl = storedProfile.avatarUrl.ifBlank { googleAvatar.orEmpty() }
-            )
+            storedProfile != null -> {
+                val storedAvatar = storedProfile.avatarUrl.ifBlank { googleAvatar.orEmpty() }
+                val resolvedAvatar = when {
+                    storedAvatar.isBlank() -> ""
+                    storedAvatar.startsWith("https://", ignoreCase = true) -> storedAvatar
+                    else -> runCatching {
+                        client.storage["hte-avatars"].createSignedUrl(path = storedAvatar, expiresIn = 60.minutes)
+                    }.getOrDefault("")
+                }
+                storedProfile.copy(
+                    displayName = storedProfile.displayName.ifBlank { googleName.orEmpty() },
+                    avatarUrl = resolvedAvatar
+                )
+            }
             googleAvatar != null || googleName != null -> ProfileDto(
                 id = userId,
                 displayName = googleName.orEmpty(),
@@ -133,15 +145,22 @@ class MemberRepository {
         }
     }
 
-    suspend fun saveMyProfile(displayName: String, bio: String, phone: String, avatarUrl: String = "") {
+    suspend fun saveMyProfile(displayName: String, bio: String, phone: String, avatarUrl: String? = null) {
         val userId = requireUserId()
+        val storedAvatar = if (avatarUrl == null) {
+            client.from("profiles")
+                .select { filter { eq("id", userId) } }
+                .decodeList<ProfileDto>()
+                .firstOrNull()?.avatarUrl.orEmpty()
+                .ifBlank { getMyProfile()?.avatarUrl.orEmpty() }
+        } else avatarUrl.trim()
         client.from("profiles").upsert(
             ProfileDto(
                 id = userId,
                 displayName = displayName.trim(),
                 bio = bio.trim(),
                 phone = phone.trim(),
-                avatarUrl = avatarUrl.trim(),
+                avatarUrl = storedAvatar,
                 updatedAt = java.time.Instant.now().toString()
             )
         )
