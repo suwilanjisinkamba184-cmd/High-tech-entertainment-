@@ -786,6 +786,7 @@ fun UniverseShell() {
         VoiceAssistantDialog(
             tracks = tracks,
             favouriteTracks = tracks.filter { it.id in favouriteTrackIds },
+            videos = videos,
             onPlayFavourites = { favourites ->
                 favourites.firstOrNull()?.let { first ->
                     selectedTrack = first
@@ -793,6 +794,14 @@ fun UniverseShell() {
                     playerExpanded = true
                 }
             },
+            onPlayTrack = { track ->
+                selectedTrack = track
+                selectedTrackQueue = if (autoplayNext) tracks else listOf(track)
+                playerExpanded = true
+            },
+            onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
+            onPlayVideo = { video -> selectedTab = UniverseTab.VIDEOS; selectedVideo = video },
+            onDownloadVideo = { video -> startDownload(video.downloadUrl, video.title, "video") },
             onNavigate = { destination ->
                 selectedTab = when (destination) {
                     "HOME" -> UniverseTab.HOME
