@@ -14,7 +14,6 @@ async function fetchPublic(table, select) {
   const endpoint = new URL('/rest/v1/' + table, url);
   endpoint.search = new URLSearchParams({
     select,
-    is_published: 'eq.true',
     order: 'created_at.desc',
     limit: '100'
   }).toString();

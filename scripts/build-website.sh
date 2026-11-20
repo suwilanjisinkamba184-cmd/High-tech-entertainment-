@@ -10,7 +10,7 @@ mkdir -p website/public
 cp high-tech-logo.svg website/public/high-tech-logo.svg
 cp supabase-config.js website/public/supabase-config.js
 
-# Pre-render only published artist and release records for search-engine discovery.
+# Pre-render public artist profiles (including draft profiles) and published releases for search-engine discovery.
 node scripts/generate-public-seo-data.mjs
 
 npm --prefix website install --no-audit --no-fund
