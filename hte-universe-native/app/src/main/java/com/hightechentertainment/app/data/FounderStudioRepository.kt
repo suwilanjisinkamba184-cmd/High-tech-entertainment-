@@ -33,7 +33,17 @@ data class FounderTrackDto(
     @SerialName("audio_url") val audioUrl: String? = null,
     @SerialName("cover_url") val coverUrl: String? = null,
     @SerialName("is_published") val isPublished: Boolean = false,
-    @SerialName("created_at") val createdAt: String? = null
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("rights_status") val rightsStatus: String = "review_required",
+    @SerialName("download_allowed") val downloadAllowed: Boolean = false,
+    @SerialName("download_branding_status") val downloadBrandingStatus: String = "not_applicable"
+)
+
+@Serializable
+data class DownloadBrandingSettingsDto(
+    val id: Int = 1,
+    @SerialName("jingle_url") val jingleUrl: String,
+    @SerialName("is_active") val isActive: Boolean = true
 )
 
 @Serializable
@@ -55,7 +65,19 @@ private data class TrackInsertDto(
     val genre: String? = null,
     @SerialName("audio_url") val audioUrl: String,
     @SerialName("cover_url") val coverUrl: String? = null,
-    @SerialName("is_published") val isPublished: Boolean = false
+    @SerialName("is_published") val isPublished: Boolean = false,
+    @SerialName("source_platform") val sourcePlatform: String = "direct",
+    @SerialName("source_url") val sourceUrl: String? = null,
+    @SerialName("rights_status") val rightsStatus: String = "review_required",
+    @SerialName("download_allowed") val downloadAllowed: Boolean = false,
+    @SerialName("download_branding_status") val downloadBrandingStatus: String = "not_applicable"
+)
+
+@Serializable
+private data class DownloadBrandingSettingsInsertDto(
+    val id: Int = 1,
+    @SerialName("jingle_url") val jingleUrl: String,
+    @SerialName("is_active") val isActive: Boolean = true
 )
 
 @Serializable
@@ -205,6 +227,36 @@ class FounderStudioRepository {
         return uploadStream("hte-artwork", path, input, size, mimeType)
     }
 
+    suspend fun getDownloadBrandingSettings(): DownloadBrandingSettingsDto? {
+        requireOwner()
+        return client.from("hte_download_branding_settings").select {
+            filter { eq("id", 1) }
+        }.decodeList<DownloadBrandingSettingsDto>().firstOrNull()
+    }
+
+    suspend fun uploadDownloadBrandingJingle(
+        input: InputStream,
+        size: Long,
+        mimeType: String,
+        originalName: String
+    ): DownloadBrandingSettingsDto {
+        requireOwner()
+        require(mimeType.startsWith("audio/")) { "Choose an audio ident file." }
+        require(size in 1L..(20L * 1024L * 1024L)) { "The HTE download ident must be 20 MB or smaller." }
+        val extension = extensionFor(mimeType, originalName.substringAfterLast('.', "mp3"))
+        val path = "branding/jingles/" + UUID.randomUUID() + "." + safeName(extension)
+        val jingleUrl = uploadStream("hte-audio", path, input, size, mimeType)
+        try {
+            client.from("hte_download_branding_settings").upsert(
+                DownloadBrandingSettingsInsertDto(id = 1, jingleUrl = jingleUrl, isActive = true)
+            )
+        } catch (error: Throwable) {
+            runCatching { client.storage.from("hte-audio").delete(path) }
+            throw error
+        }
+        return DownloadBrandingSettingsDto(id = 1, jingleUrl = jingleUrl, isActive = true)
+    }
+
     suspend fun uploadTrack(
         title: String,
         artist: String,
@@ -212,7 +264,8 @@ class FounderStudioRepository {
         input: InputStream,
         size: Long,
         mimeType: String,
-        coverUrl: String? = null
+        coverUrl: String? = null,
+        rightsConfirmed: Boolean = false
     ) {
         requireOwner()
         require(title.isNotBlank()) { "Enter a track title." }
@@ -222,7 +275,13 @@ class FounderStudioRepository {
         val audioUrl = uploadStream("hte-audio", path, input, size, mimeType)
         try {
             client.from("tracks").insert(
-                TrackInsertDto(title.trim(), artist.trim().ifBlank { "High-Tech Entertainment" }, genre.trim().takeIf { it.isNotEmpty() }, audioUrl, coverUrl, false)
+                TrackInsertDto(
+                    title.trim(), artist.trim().ifBlank { "High-Tech Entertainment" }, genre.trim().takeIf { it.isNotEmpty() },
+                    audioUrl, coverUrl, false, "direct", null,
+                    if (rightsConfirmed) "owned_or_licensed" else "review_required",
+                    rightsConfirmed,
+                    if (rightsConfirmed) "pending" else "not_applicable"
+                )
             )
         } catch (error: Throwable) {
             runCatching { client.storage.from("hte-audio").delete(path) }

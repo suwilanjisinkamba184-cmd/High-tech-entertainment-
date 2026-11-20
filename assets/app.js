@@ -334,6 +334,7 @@ function subscribeCatalogueChanges(){
   hteCatalogueChannel=db.channel('hte-public-catalogue-sync')
     .on('postgres_changes',{event:'*',schema:'public',table:'tracks'},()=>loadCatalog())
     .on('postgres_changes',{event:'*',schema:'public',table:'artists'},()=>loadCatalog())
+    .on('postgres_changes',{event:'*',schema:'public',table:'releases'},()=>loadCatalog())
     .subscribe(status=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')console.warn('HTE live catalogue sync is temporarily unavailable; refresh will still work.')});
 }
 document.addEventListener('play',event=>{

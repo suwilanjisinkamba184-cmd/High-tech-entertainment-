@@ -3,6 +3,7 @@ const el=document.getElementById('public-videos');if(!el)return;
 const cfg=window.HTE_SUPABASE_CONFIG||{};
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeHttps=value=>{try{const url=new URL(String(value||''));return url.protocol==='https:'&&!url.username&&!url.password?url.href:''}catch{return ''}};
+function videoPoster(value){const candidate=safeHttps(value);if(!candidate)return '';try{const host=new URL(candidate).hostname.toLowerCase();return host==='youtube.com'||host.endsWith('.youtube.com')||host==='youtu.be'||host.endsWith('.youtu.be')?'':candidate}catch{return ''}}
 function videoEmbed(value){
  const safe=safeHttps(value);if(!safe)return '';
  try{const url=new URL(safe),host=url.hostname.replace(/^www\./,'').toLowerCase(),parts=url.pathname.split('/').filter(Boolean);
@@ -33,7 +34,7 @@ function videoCard(video){
   if(embed.includes('youtube-nocookie.com/embed/')){const match=embed.match(/\/embed\/([A-Za-z0-9_-]{11})/);if(match)poster='https://i.ytimg.com/vi/'+match[1]+'/hqdefault.jpg'}
   else{const candidate=safeHttps(video.thumbnail_url);if(candidate&&!/youtube|youtu\.be/i.test(new URL(candidate).hostname))poster=candidate}
   player='<button class="video-preview" type="button" data-video-play data-embed="'+esc(embed)+'" data-title="'+title+'" aria-label="Play '+title+'">'+(poster?'<img src="'+esc(poster)+'" alt="" loading="lazy">':'')+'<span class="video-preview-play" aria-hidden="true">▶</span><span class="sr-only">Play video</span></button>';
- }else if(direct){const poster=safeHttps(video.thumbnail_url);player='<video controls preload="none"'+(poster?' poster="'+esc(poster)+'"':'')+' src="'+esc(src)+'"></video>'}
+ }else if(direct){const poster=videoPoster(video.thumbnail_url);player='<video controls preload="none"'+(poster?' poster="'+esc(poster)+'"':'')+' src="'+esc(src)+'"></video>'}
  else{player='<a class="video-external" href="'+esc(src)+'" target="_blank" rel="noopener noreferrer">Watch video ↗</a>'}
  let download='';
  const original=safeHttps(video.download_url);
@@ -45,7 +46,7 @@ async function load(){
  let own=[],sourceError=false,timeoutId;
  if(db){
   try{
-   const request=db.from('videos').select('id,title,artist,description,video_url,thumbnail_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60);
+   const request=db.from('videos').select('id,title,artist,description,video_url,thumbnail_url,download_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60);
    const {data,error}=await Promise.race([
     request,
     new Promise((_,reject)=>{timeoutId=window.setTimeout(()=>reject(new Error('HTE video catalogue request timed out after 12 seconds.')),12000)})
@@ -65,9 +66,9 @@ async function load(){
  const curated=featured.filter(v=>{const id=videoEmbed(v.video_url).split('/embed/')[1]?.split('?')[0];return (!id||!ids.has(id))&&!ownKeys.has(key(v))});
  const cards=[...own.map(v=>videoCard(v)).filter(Boolean),...curated.map(v=>videoCard(v)).filter(Boolean)];
  el.innerHTML=cards.length?cards.join(''):'<div class="empty" role="status">New videos will appear here soon.</div>';
- if(sourceError)el.insertAdjacentHTML('beforeend','<p class="video-source-note">Showing selected YouTube releases while the HTE video catalogue reconnects.</p>');
+ if(sourceError)el.insertAdjacentHTML('beforeend','<p class="video-source-note" role="status">Showing selected YouTube releases while the HTE video catalogue reconnects. <button class="btn ghost" type="button" data-video-retry>Retry HTE videos</button></p>');
 }
-el.addEventListener('click',event=>{if(event.target.closest('[data-video-retry]')){function mountArtistSubmission(){
+function mountArtistSubmission(){
  const authDb=window.HTE_SUPABASE_CLIENT;
  if(!authDb)return;
  const panel=document.createElement('section');
@@ -107,5 +108,22 @@ el.addEventListener('click',event=>{if(event.target.closest('[data-video-retry]'
  window.addEventListener('pagehide',()=>{try{authListener?.data?.subscription?.unsubscribe()}catch{}},{once:true});
 }
 mountArtistSubmission();
-void load();return}const button=event.target.closest('[data-video-play]');if(!button)return;const source=safeHttps(button.dataset.embed);if(!source)return;const url=new URL(source);url.searchParams.set('autoplay','1');const frame=document.createElement('iframe');frame.className='video-embed';frame.title=button.dataset.title||'High-Tech Entertainment video';frame.src=url.href;frame.loading='eager';frame.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';button.replaceWith(frame)});void load();
+el.addEventListener('click',event=>{
+ if(event.target.closest('[data-video-retry]')){void load();return}
+ const button=event.target.closest('[data-video-play]');if(!button)return;
+ const source=safeHttps(button.dataset.embed);if(!source)return;
+ const url=new URL(source);url.searchParams.set('autoplay','1');
+ const frame=document.createElement('iframe');frame.className='video-embed';
+ frame.title=button.dataset.title||'High-Tech Entertainment video';frame.src=url.href;
+ frame.loading='eager';frame.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+ frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';button.replaceWith(frame)
+});
+let videoCatalogueChannel=null;
+if(db){
+ videoCatalogueChannel=db.channel('hte-public-video-sync')
+  .on('postgres_changes',{event:'*',schema:'public',table:'videos'},()=>void load())
+  .subscribe(status=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')console.warn('HTE live video sync is temporarily unavailable; refresh will still work.')});
+ window.addEventListener('pagehide',()=>{if(videoCatalogueChannel)db.removeChannel(videoCatalogueChannel)},{once:true});
+}
+void load();
 })();

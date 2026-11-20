@@ -2,6 +2,7 @@ package com.hightechentertainment.app.media
 
 import android.app.DownloadManager
 import android.content.Context
+import android.net.Uri
 import android.os.Environment
 import androidx.core.content.edit
 import androidx.core.net.toUri
@@ -9,7 +10,22 @@ import java.net.URI
 import java.net.URLConnection
 import java.security.MessageDigest
 
-data class OfflineDownloadRecord(val id: Long, val title: String, val mediaType: String, val status: String, val localUri: String? = null)
+data class OfflineDownloadRecord(
+    val id: Long,
+    val title: String,
+    val mediaType: String,
+    val status: String,
+    val localUri: String? = null,
+    val downloadedBytes: Long = 0L,
+    val totalBytes: Long = -1L,
+    val reason: Int? = null,
+    val sourceUrl: String? = null
+) {
+    val progressPercent: Int?
+        get() = totalBytes.takeIf { it > 0L }?.let {
+            ((downloadedBytes.toDouble() / it.toDouble()) * 100.0).toInt().coerceIn(0, 100)
+        }
+}
 
 internal fun isSecureMediaDownloadUrl(url: String): Boolean =
     runCatching { URI(url) }.getOrNull()?.let { uri ->
@@ -70,23 +86,31 @@ class OfflineDownloadManager(context: Context) {
         val resolvedMime = mimeType?.takeIf { it.isNotBlank() } ?: URLConnection.guessContentTypeFromName(fileName)
         if (!resolvedMime.isNullOrBlank()) request.setMimeType(resolvedMime)
         val id = manager.enqueue(request)
-        preferences.edit { putString(id.toString(), "$mediaType|$title") }
+        preferences.edit { putString(id.toString(), "$mediaType|${Uri.encode(title)}|${Uri.encode(url)}") }
         return id
     }
 
     fun getDownloads(): List<OfflineDownloadRecord> = preferences.all.mapNotNull { (key, value) ->
         val id = key.toLongOrNull() ?: return@mapNotNull null
         val metadata = value as? String ?: return@mapNotNull null
-        val parts = metadata.split('|', limit = 2)
+        val parts = metadata.split('|', limit = 3)
         val mediaType = parts.getOrNull(0) ?: "audio"
-        val title = parts.getOrNull(1) ?: "HTE download"
+        // Uri.decode is backward-compatible with metadata written by earlier app builds.
+        val title = Uri.decode(parts.getOrNull(1) ?: "HTE download")
+        val sourceUrl = parts.getOrNull(2)?.let { Uri.decode(it) }
         val cursor = manager.query(DownloadManager.Query().setFilterById(id)) ?: return@mapNotNull null
         cursor.use {
             if (!it.moveToFirst()) return@mapNotNull OfflineDownloadRecord(id, title, mediaType, "Missing")
             val statusIndex = it.getColumnIndex(DownloadManager.COLUMN_STATUS)
             val uriIndex = it.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
+            val downloadedIndex = it.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+            val totalIndex = it.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+            val reasonIndex = it.getColumnIndex(DownloadManager.COLUMN_REASON)
             val statusCode = if (statusIndex >= 0) it.getInt(statusIndex) else DownloadManager.STATUS_FAILED
             val localUri = if (uriIndex >= 0) it.getString(uriIndex) else null
+            val downloadedBytes = if (downloadedIndex >= 0) it.getLong(downloadedIndex) else 0L
+            val totalBytes = if (totalIndex >= 0) it.getLong(totalIndex) else -1L
+            val reason = if (reasonIndex >= 0) it.getInt(reasonIndex) else null
             val status = when (statusCode) {
                 DownloadManager.STATUS_PENDING -> "Queued"
                 DownloadManager.STATUS_RUNNING -> "Downloading"
@@ -94,7 +118,7 @@ class OfflineDownloadManager(context: Context) {
                 DownloadManager.STATUS_SUCCESSFUL -> "Downloaded"
                 else -> "Failed"
             }
-            OfflineDownloadRecord(id, title, mediaType, status, localUri)
+            OfflineDownloadRecord(id, title, mediaType, status, localUri, downloadedBytes, totalBytes, reason, sourceUrl)
         }
     }.sortedByDescending { it.id }
 

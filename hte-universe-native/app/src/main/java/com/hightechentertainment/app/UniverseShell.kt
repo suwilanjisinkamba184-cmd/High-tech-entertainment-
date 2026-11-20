@@ -68,6 +68,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
 import androidx.media3.ui.PlayerView
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.postgresChangeFlow
+import io.github.jan.supabase.realtime.channel
 import com.hightechentertainment.app.data.AuthRepository
 import com.hightechentertainment.app.data.ArtistDto
 import com.hightechentertainment.app.data.ReleaseDto
@@ -98,6 +101,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.TimeoutCancellationException
 
 private val ShellGold = Color(0xFFE5C158)
@@ -134,6 +139,7 @@ fun UniverseShell() {
     var showVoiceAssistant by remember { mutableStateOf(false) }
     var showSettingsHub by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var videoSearchQuery by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
@@ -322,6 +328,34 @@ fun UniverseShell() {
         refreshCatalogue()
         if (configured) runCatching { withContext(Dispatchers.IO) { audienceAnalytics.record("page_view") } }
     }
+
+    // Subscribe to all four public catalogue tables. The minute-based refresh below
+    // remains a recovery path if the device loses its Realtime websocket.
+    LaunchedEffect(configured) {
+        if (!configured) return@LaunchedEffect
+        val client = SupabaseClientProvider.client
+        val channel = client.channel("hte-universe-public-catalogue")
+        val changeFlows = listOf("tracks", "artists", "releases", "videos").map { tableName ->
+            channel.postgresChangeFlow<PostgresAction>(schema = "public") {
+                table = tableName
+            }
+        }
+        try {
+            coroutineScope {
+                changeFlows.forEach { flow ->
+                    launch { flow.collect { refreshCatalogue() } }
+                }
+                channel.subscribe(blockUntilSubscribed = true)
+                awaitCancellation()
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Throwable) {
+            // Existing lifecycle and periodic refreshes provide a safe fallback.
+        } finally {
+            runCatching { channel.unsubscribe() }
+        }
+    }
     DisposableEffect(lifecycleOwner, configured) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME && configured) refreshCatalogue()
@@ -345,6 +379,18 @@ fun UniverseShell() {
                 throw cancelled
             } catch (_: Throwable) {
                 Toast.makeText(context, "Your library could not be loaded. Please try again.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == UniverseTab.LIBRARY) {
+            while (true) {
+                delay(2_000)
+                if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) continue
+                val latest = withContext(Dispatchers.IO) { offlineManager.getDownloads() }
+                downloads = latest
+                if (latest.none { it.status == "Queued" || it.status == "Downloading" || it.status == "Paused" }) break
             }
         }
     }
@@ -435,20 +481,21 @@ fun UniverseShell() {
         trackId: String? = null,
         sourcePlatform: String = "direct",
         externalSourceUrl: String? = null,
-        downloadAllowed: Boolean = true
+        downloadAllowed: Boolean = true,
+        rightsStatus: String = "review_required"
     ) {
         scope.launch {
             try {
                 if (mediaType == "audio" && trackId != null) {
-                    if (!downloadAllowed) {
-                        Toast.makeText(context, "Downloads are not enabled for this track.", Toast.LENGTH_LONG).show()
+                    if (!downloadAllowed || rightsStatus !in setOf("owned_or_licensed", "legacy_existing")) {
+                        Toast.makeText(context, "Download rights have not been confirmed for this track.", Toast.LENGTH_LONG).show()
+                        return@launch
+                    }
+                    if (isExternalStreamingSource(sourcePlatform, externalSourceUrl)) {
+                        Toast.makeText(context, "This track links to an external streaming page. Spotify and YouTube audio cannot be downloaded through HTE.", Toast.LENGTH_LONG).show()
                         return@launch
                     }
                     if (url.isNullOrBlank()) {
-                        if (isExternalStreamingSource(sourcePlatform, externalSourceUrl)) {
-                            Toast.makeText(context, "This track links to an external streaming page. An HTE-branded offline audio file has not been supplied.", Toast.LENGTH_LONG).show()
-                            return@launch
-                        }
                         val downloadPage = "https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/download/?track=${Uri.encode(trackId)}"
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(downloadPage)))
                         Toast.makeText(context, "Opening HTE branded download for $title…", Toast.LENGTH_SHORT).show()
@@ -575,7 +622,7 @@ fun UniverseShell() {
                     profileName = homeProfileName, profileAvatarUrl = homeProfileAvatar,
                     onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true },
                     onPlayPlaylist = ::playPlaylist, onPlayVideo = { selectedVideo = it },
-                    onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
+                    onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed, track.rightsStatus) },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     onDownloadVideo = { startDownload(it.downloadUrl, it.title, "video") },
                     onRefresh = ::refreshCatalogue
@@ -583,12 +630,14 @@ fun UniverseShell() {
                 UniverseTab.DISCOVER -> DiscoverScreen(
                     tracks = tracks, artists = artists, isLoading = isLoading, error = catalogueError,
                     onArtistClick = { selectedArtist = it },
-                    onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onDownload = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
+                    onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onDownload = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed, track.rightsStatus) },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     initialQuery = searchQuery, onQueryChanged = { searchQuery = it }, onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.VIDEOS -> VideosScreen(
-                    videos = videos, isLoading = isLoading, error = catalogueError,
+                    videos = videos, searchQuery = videoSearchQuery,
+                    onSearchQueryChange = { videoSearchQuery = it },
+                    isLoading = isLoading, error = catalogueError,
                     onPlay = { selectedVideo = it }, onDownload = { startDownload(it.downloadUrl, it.title, "video") }, onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.LIBRARY -> LibraryScreen(
@@ -602,7 +651,7 @@ fun UniverseShell() {
                     onPlayRecent = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true },
                     onPlayFavourite = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks.filter { track -> track.id in favouriteTrackIds } else listOf(it); playerExpanded = true },
                     onToggleFavourite = ::toggleFavourite,
-                    onDownloadFavourite = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
+                    onDownloadFavourite = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed, track.rightsStatus) },
                     onRemoveDownload = { record ->
                         scope.launch {
                             try {
@@ -613,6 +662,14 @@ fun UniverseShell() {
                             } catch (_: Throwable) {
                                 Toast.makeText(context, "This download could not be removed. Please try again.", Toast.LENGTH_SHORT).show()
                             }
+                        }
+                    },
+                    onRetryDownload = { record ->
+                        val source = record.sourceUrl
+                        if (source.isNullOrBlank()) {
+                            Toast.makeText(context, "This older download has no saved retry link. Remove it and download the item again.", Toast.LENGTH_LONG).show()
+                        } else {
+                            startDownload(source, record.title, record.mediaType)
                         }
                     },
                     onPlayDownload = { record ->
@@ -755,7 +812,7 @@ fun UniverseShell() {
                 playerExpanded = true
                 selectedArtist = null
             },
-            onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
+            onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed, track.rightsStatus) },
             onToggleFavourite = ::toggleFavourite,
             onDismiss = { selectedArtist = null }
         )
@@ -766,6 +823,7 @@ fun UniverseShell() {
         VoiceAssistantDialog(
             tracks = tracks,
             favouriteTracks = tracks.filter { it.id in favouriteTrackIds },
+            videos = videos,
             onPlayFavourites = { favourites ->
                 favourites.firstOrNull()?.let { first ->
                     selectedTrack = first
@@ -773,6 +831,14 @@ fun UniverseShell() {
                     playerExpanded = true
                 }
             },
+            onPlayTrack = { track ->
+                selectedTrack = track
+                selectedTrackQueue = if (autoplayNext) tracks else listOf(track)
+                playerExpanded = true
+            },
+            onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed, track.rightsStatus) },
+            onPlayVideo = { video -> selectedTab = UniverseTab.VIDEOS; selectedVideo = video },
+            onDownloadVideo = { video -> startDownload(video.downloadUrl, video.title, "video") },
             onNavigate = { destination ->
                 selectedTab = when (destination) {
                     "HOME" -> UniverseTab.HOME
@@ -783,6 +849,7 @@ fun UniverseShell() {
                 }
             },
             onSearch = { searchQuery = it; selectedTab = UniverseTab.DISCOVER },
+            onSearchVideos = { videoSearchQuery = it },
             onDismiss = { showVoiceAssistant = false }
         )
     }
@@ -989,7 +1056,22 @@ private fun ArtistProfileDialog(
 }
 
 @Composable
-private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: String?, onPlay: (VideoDto) -> Unit, onDownload: (VideoDto) -> Unit, onRefresh: () -> Unit) {
+private fun VideosScreen(
+    videos: List<VideoDto>,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    isLoading: Boolean,
+    error: String?,
+    onPlay: (VideoDto) -> Unit,
+    onDownload: (VideoDto) -> Unit,
+    onRefresh: () -> Unit
+) {
+    val filteredVideos = videos.filter { video ->
+        searchQuery.isBlank() ||
+            video.title.contains(searchQuery.trim(), ignoreCase = true) ||
+            video.artist.orEmpty().contains(searchQuery.trim(), ignoreCase = true) ||
+            video.description.orEmpty().contains(searchQuery.trim(), ignoreCase = true)
+    }
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(ShellBackground),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
@@ -1001,6 +1083,29 @@ private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: Stri
                 Text("Watch the culture.", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.Bold)
                 Text("Music videos, performances and stories from the HTE universe.", color = ShellMuted, fontSize = 12.sp)
             }
+        }
+        item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = { Text("Search videos or artists") },
+                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = ShellGold) },
+                trailingIcon = {
+                    if (searchQuery.isNotBlank()) {
+                        IconButton(onClick = { onSearchQueryChange("") }) {
+                            Icon(Icons.Outlined.Close, contentDescription = "Clear video search")
+                        }
+                    }
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = ShellGold,
+                    unfocusedBorderColor = ShellMuted.copy(alpha = .45f),
+                    focusedLabelColor = ShellGold,
+                    cursorColor = ShellGold
+                )
+            )
         }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(20.dp)) {
@@ -1021,14 +1126,23 @@ private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: Stri
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("LATEST RELEASES", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Text("${videos.size} published videos", color = ShellMuted, fontSize = 11.sp)
+                    Text("${filteredVideos.size} matching videos", color = ShellMuted, fontSize = 11.sp)
                 }
                 TextButton(onClick = onRefresh, enabled = !isLoading) { Icon(Icons.Outlined.Refresh, null, tint = ShellGold); Text("Retry", color = ShellGold) }
             }
         }
         if (error != null) item { Text(error, color = ShellGold, fontSize = 12.sp) }
-        if (videos.isEmpty()) item { EmptyCatalogueState(if (isLoading) "Loading videos…" else "No published videos yet.", isLoading, onRefresh) }
-        else items(videos, key = { it.id }) { video -> VideoRow(video, { onPlay(video) }, if (!video.downloadUrl.isNullOrBlank()) ({ onDownload(video) }) else null) }
+        if (filteredVideos.isEmpty()) {
+            item {
+                EmptyCatalogueState(
+                    if (isLoading) "Loading videos…" else if (searchQuery.isBlank()) "No published videos yet." else "No videos match “$searchQuery”.",
+                    isLoading,
+                    onRefresh
+                )
+            }
+        } else items(filteredVideos, key = { it.id }) { video ->
+            VideoRow(video, { onPlay(video) }, if (!video.downloadUrl.isNullOrBlank()) ({ onDownload(video) }) else null)
+        }
     }
 }
 
@@ -1077,14 +1191,21 @@ private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit
                     modifier = Modifier.size(19.dp)
                 )
             }
-            IconButton(onClick = onDownload, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Outlined.Download, "Download ${track.title}", tint = ShellSilver, modifier = Modifier.size(19.dp))
+            if (track.downloadAllowed && track.rightsStatus in setOf("owned_or_licensed", "legacy_existing") && !isExternalStreamingSource(track.sourcePlatform, track.sourceUrl ?: track.audioUrl)) {
+                IconButton(onClick = onDownload, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.Outlined.Download, "Download ${track.title}", tint = ShellSilver, modifier = Modifier.size(19.dp))
+                }
             }
             IconButton(onClick = onPlay, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Outlined.PlayCircle, "Play ${track.title}", tint = ShellGold, modifier = Modifier.size(25.dp))
             }
         }
     }
+}
+
+private fun isYouTubeWatchUrl(value: String): Boolean {
+    val host = runCatching { Uri.parse(value).host.orEmpty().lowercase() }.getOrDefault("")
+    return host == "youtube.com" || host.endsWith(".youtube.com") || host == "youtu.be" || host.endsWith(".youtu.be")
 }
 
 @Composable
@@ -1094,7 +1215,7 @@ private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: (() -> Uni
             Box(Modifier.fillMaxWidth().height(164.dp).clip(RoundedCornerShape(13.dp)).background(
                 androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF392D1D), Color(0xFF171B22), Color(0xFF0D1117)))
             ), contentAlignment = Alignment.Center) {
-                if (!video.thumbnailUrl.isNullOrBlank()) {
+                if (!video.thumbnailUrl.isNullOrBlank() && !isYouTubeWatchUrl(video.thumbnailUrl)) {
                     AsyncImage(
                         model = video.thumbnailUrl,
                         contentDescription = "Thumbnail for ${video.title}",
@@ -1135,6 +1256,7 @@ private fun LibraryScreen(
     onToggleFavourite: (TrackDto) -> Unit,
     onDownloadFavourite: (TrackDto) -> Unit,
     onRemoveDownload: (OfflineDownloadRecord) -> Unit,
+    onRetryDownload: (OfflineDownloadRecord) -> Unit,
     onPlayDownload: (OfflineDownloadRecord) -> Unit
 ) {
     LazyColumn(contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
@@ -1200,9 +1322,24 @@ private fun LibraryScreen(
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(record.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("${record.mediaType.uppercase()} · ${record.status}", color = ShellMuted, fontSize = 10.sp)
+                        val progress = record.progressPercent
+                        Text(
+                            "${record.mediaType.uppercase()} · ${record.status}" +
+                                if (record.status == "Downloading" && progress != null) " · $progress%" else "",
+                            color = ShellMuted,
+                            fontSize = 10.sp
+                        )
+                        if (record.status == "Downloading" && progress != null) {
+                            LinearProgressIndicator(
+                                progress = progress / 100f,
+                                modifier = Modifier.fillMaxWidth(),
+                                color = ShellGold,
+                                trackColor = ShellMuted.copy(alpha = .22f)
+                            )
+                        }
                     }
                     if (record.status == "Downloaded" && !record.localUri.isNullOrBlank()) IconButton(onClick = { onPlayDownload(record) }) { Icon(Icons.Outlined.PlayArrow, "Play offline", tint = ShellGold) }
+                    if (record.status == "Failed" && !record.sourceUrl.isNullOrBlank()) IconButton(onClick = { onRetryDownload(record) }) { Icon(Icons.Outlined.Refresh, "Retry download", tint = ShellGold) }
                     IconButton(onClick = { onRemoveDownload(record) }) { Icon(Icons.Outlined.Delete, "Remove download", tint = ShellMuted) }
                 }
             }
@@ -1358,6 +1495,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                 playbackError = "Video playback failed. Check the connection or retry the stream."
                 videoPlaying = false
                 isBuffering = false
+                firstFrameRendered = false
             }
             override fun onRenderedFirstFrame() {
                 firstFrameRendered = true
@@ -1569,6 +1707,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                                 Text(message, color = ShellSilver, fontSize = 11.sp, modifier = Modifier.weight(1f))
                                 TextButton(onClick = {
                                     playbackError = null
+                                    firstFrameRendered = false
                                     if (player.playbackState == Player.STATE_ENDED) player.seekTo(0L)
                                     player.prepare()
                                     player.playWhenReady = true
@@ -1716,13 +1855,31 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 
 @Composable
 fun SpotifyEmbedDialog(url: String, onDismiss: () -> Unit) {
-    val embedUrl = remember(url) { com.hightechentertainment.app.media.spotifyEmbedUrl(url) }
+    val directEmbedUrl = remember(url) { com.hightechentertainment.app.media.spotifyEmbedUrl(url) }
+    var embedUrl by remember(url) { mutableStateOf(directEmbedUrl) }
     val lifecycleOwner = LocalLifecycleOwner.current
     val hostContext = LocalContext.current
-    var loading by remember(url) { mutableStateOf(true) }
-    var failed by remember(url) { mutableStateOf(embedUrl == null) }
+    var loading by remember(url) { mutableStateOf(directEmbedUrl == null) }
+    var failed by remember(url) { mutableStateOf(false) }
     var generation by remember(url) { mutableIntStateOf(0) }
+    var resolveAttempt by remember(url) { mutableIntStateOf(0) }
+    LaunchedEffect(url, directEmbedUrl, resolveAttempt) {
+        if (directEmbedUrl != null) {
+            embedUrl = directEmbedUrl
+            failed = false
+            loading = false
+        } else {
+            loading = true
+            failed = false
+            val resolved = com.hightechentertainment.app.media.resolveSpotifyEmbedUrl(url)
+            embedUrl = resolved
+            failed = resolved == null
+            loading = false
+        }
+    }
     var webView by remember(url) { mutableStateOf<WebView?>(null) }
+    // Snapshot delegated Compose state before entering AndroidView factory lambdas.
+    val embedUrlForRender = embedUrl
     DisposableEffect(lifecycleOwner, webView) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
@@ -1744,7 +1901,9 @@ fun SpotifyEmbedDialog(url: String, onDismiss: () -> Unit) {
                 IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close Spotify player", tint = Color.White) }
             }
             Box(Modifier.fillMaxWidth().weight(1f).padding(top = 12.dp).background(Color(0xFF111318), RoundedCornerShape(18.dp)), contentAlignment = Alignment.Center) {
-                if (embedUrl != null && !failed) {
+                if (loading && embedUrlForRender == null) {
+                    CircularProgressIndicator(color = ShellGold, strokeWidth = 2.5.dp)
+                } else if (embedUrlForRender != null && !failed) {
                     key(generation) {
                         AndroidView(
                             factory = { ctx -> WebView(ctx).apply {
@@ -1767,8 +1926,8 @@ fun SpotifyEmbedDialog(url: String, onDismiss: () -> Unit) {
                                     }
                                 }
                                 setBackgroundColor(android.graphics.Color.rgb(17,19,24))
-                                val playerHeight = if (embedUrl.contains("/track/")) "152px" else "352px"
-                                val html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><style>html,body{margin:0;padding:0;width:100%;height:100%;background:#111318;display:flex;align-items:center;justify-content:center}iframe{display:block;width:100%;min-width:280px;height:$playerHeight;border:0;border-radius:12px}</style></head><body><iframe title="Spotify player" src="$embedUrl" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe></body></html>"""
+                                val playerHeight = if (embedUrlForRender.contains("/track/")) "152px" else "352px"
+                                val html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><style>html,body{margin:0;padding:0;width:100%;height:100%;background:#111318;display:flex;align-items:center;justify-content:center}iframe{display:block;width:100%;min-width:280px;height:$playerHeight;border:0;border-radius:12px}</style></head><body><iframe title="Spotify player" src="$embedUrlForRender" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe></body></html>"""
                                 loadDataWithBaseURL("https://open.spotify.com", html, "text/html", "UTF-8", null)
                             } },
                             modifier = Modifier.fillMaxSize(),
@@ -1779,7 +1938,7 @@ fun SpotifyEmbedDialog(url: String, onDismiss: () -> Unit) {
                 } else {
                     Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("Spotify's embedded player could not be loaded for this link.", color = ShellSilver, fontSize = 12.sp)
-                        TextButton(onClick = { failed = false; loading = true; generation += 1 }) { Text("Retry", color = ShellGold) }
+                        TextButton(onClick = { failed = false; loading = true; generation += 1; resolveAttempt += 1 }) { Text("Retry", color = ShellGold) }
                         TextButton(onClick = { runCatching { val appUri = com.hightechentertainment.app.media.spotifyAppUri(url) ?: url; hostContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(appUri))) } }) { Text("Open Spotify app", color = ShellSilver) }
                     }
                 }

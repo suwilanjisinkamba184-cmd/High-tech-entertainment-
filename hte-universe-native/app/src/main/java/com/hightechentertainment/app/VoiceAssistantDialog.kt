@@ -25,11 +25,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import com.hightechentertainment.app.data.SupabaseClientProvider
 import com.hightechentertainment.app.data.TrackDto
+import com.hightechentertainment.app.data.VideoDto
 import com.hightechentertainment.app.media.HtePlaybackController
 import io.elevenlabs.ClientTool
 import io.elevenlabs.ClientToolResult
@@ -68,11 +67,11 @@ internal fun voiceFailureMessage(details: String): String {
     val normalized = details.lowercase()
     return when {
         listOf("timeout", "network", "connection", "offline", "unreachable").any(normalized::contains) ->
-            "Voice Companion could not connect. Check your internet connection and try again."
+            "HTE AI Voice Assistant could not connect. Check your internet connection and try again."
         listOf("sign in", "session expired", "401").any(normalized::contains) ->
-            "Your HTE session may have expired. Sign in again, then reopen Voice Companion."
+            "Your HTE session may have expired. Sign in again, then reopen HTE AI Voice Assistant."
         listOf("convai_write", "missing permission", "forbidden", "credentials", "api key", "not configured", "conversation token").any(normalized::contains) ->
-            "Voice Companion is not fully configured yet. The HTE project owner needs to correct the server-side voice API credentials and permissions."
+            "HTE AI Voice Assistant is not fully configured yet. The HTE project owner needs to correct the server-side voice API credentials and permissions."
         else -> "Voice Companion is temporarily unavailable. Please try again."
     }
 }
@@ -81,18 +80,30 @@ internal fun voiceFailureMessage(details: String): String {
 fun VoiceAssistantDialog(
     tracks: List<TrackDto>,
     favouriteTracks: List<TrackDto>,
+    videos: List<VideoDto>,
     onPlayFavourites: (List<TrackDto>) -> Unit,
+    onPlayTrack: (TrackDto) -> Unit,
+    onDownloadTrack: (TrackDto) -> Unit,
+    onPlayVideo: (VideoDto) -> Unit,
+    onDownloadVideo: (VideoDto) -> Unit,
     onNavigate: (String) -> Unit,
     onSearch: (String) -> Unit,
+    onSearchVideos: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val currentTracks by rememberUpdatedState(tracks)
     val currentFavourites by rememberUpdatedState(favouriteTracks)
+    val currentVideos by rememberUpdatedState(videos)
     val currentOnPlayFavourites by rememberUpdatedState(onPlayFavourites)
+    val currentOnPlayTrack by rememberUpdatedState(onPlayTrack)
+    val currentOnDownloadTrack by rememberUpdatedState(onDownloadTrack)
+    val currentOnPlayVideo by rememberUpdatedState(onPlayVideo)
+    val currentOnDownloadVideo by rememberUpdatedState(onDownloadVideo)
     val currentOnNavigate by rememberUpdatedState(onNavigate)
     val currentOnSearch by rememberUpdatedState(onSearch)
+    val currentOnSearchVideos by rememberUpdatedState(onSearchVideos)
     val settingsStore = remember(context) { AppSettingsStore(context) }
     var selectedVoiceId by remember(settingsStore) { mutableStateOf(settingsStore.voiceAssistantVoiceId) }
     var voiceMenuExpanded by remember { mutableStateOf(false) }
@@ -113,13 +124,20 @@ fun VoiceAssistantDialog(
     var userTranscript by remember { mutableStateOf("") }
     var agentResponse by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var minimized by remember { mutableStateOf(false) }
 
     SideEffect {
         toolContext.tracks = currentTracks
         toolContext.favourites = currentFavourites
+        toolContext.videos = currentVideos
         toolContext.onPlayFavourites = currentOnPlayFavourites
+        toolContext.onPlayTrack = currentOnPlayTrack
+        toolContext.onDownloadTrack = currentOnDownloadTrack
+        toolContext.onPlayVideo = currentOnPlayVideo
+        toolContext.onDownloadVideo = currentOnDownloadVideo
         toolContext.onNavigate = currentOnNavigate
         toolContext.onSearch = currentOnSearch
+        toolContext.onSearchVideos = currentOnSearchVideos
         toolContext.onUserTranscript = { value -> scope.launch { userTranscript = value } }
         toolContext.onAgentResponse = { value -> scope.launch { agentResponse = value } }
         toolContext.onError = { value -> scope.launch { errorMessage = value; status = "Error" } }
@@ -130,7 +148,7 @@ fun VoiceAssistantDialog(
             onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
             onSession = { active -> session = active; isConnecting = false },
             onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = voiceFailureMessage(error) }
-        ) else errorMessage = "Microphone permission is required for Voice Companion."
+        ) else errorMessage = "Microphone permission is required for HTE AI Voice Assistant."
     }
 
     fun connect() {
@@ -161,20 +179,36 @@ fun VoiceAssistantDialog(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxSize(), color = Color(0xFF08090B)) {
-            Column(
+    Box(Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.BottomEnd) {
+            if (minimized) {
+                Surface(Modifier.fillMaxWidth().widthIn(max = 320.dp), color = VoicePanel, shape = RoundedCornerShape(22.dp), shadowElevation = 18.dp) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.GraphicEq, null, tint = VoiceGold, modifier = Modifier.size(25.dp))
+                        Spacer(Modifier.width(9.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("HTE AI", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(if (session == null) "HTE AI · standby" else if (muted) "Microphone muted" else "Connected · say Hey HTE", color = VoiceMuted, fontSize = 9.sp)
+                        }
+                        if (session != null) IconButton(onClick = { scope.launch { session?.toggleMute() } }) { Icon(if (muted) Icons.Outlined.MicOff else Icons.Outlined.Mic, if (muted) "Unmute Voice Companion" else "Mute Voice Companion", tint = if (muted) VoiceMuted else VoiceGold) }
+                        IconButton(onClick = { minimized = false }) { Icon(Icons.Outlined.ExpandLess, "Expand Voice Companion", tint = VoiceGold) }
+                        IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "End Voice Companion", tint = VoiceMuted) }
+                    }
+                }
+            } else {
+                Surface(Modifier.fillMaxWidth(.96f).widthIn(max = 440.dp).fillMaxHeight(.88f), color = Color(0xFF08090B), shape = RoundedCornerShape(26.dp), shadowElevation = 24.dp) {
+                    Column(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp, vertical = 18.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text("HTE UNIVERSE / NEURAL CO-PILOT", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
-                        Text("Synapse AI", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                        Text("Your voice-controlled HTE companion", color = VoiceMuted, fontSize = 11.sp)
+                        Text("HTE UNIVERSE / AI VOICE ASSISTANT", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
+                        Text("HTE AI Voice Assistant", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                        Text("Talk to HTE AI and control your HTE Universe experience", color = VoiceMuted, fontSize = 11.sp)
                     }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close Synapse AI", tint = Color.White) }
+                    IconButton(onClick = { minimized = true }) { Icon(Icons.Outlined.ExpandMore, "Minimize HTE AI Voice Assistant", tint = Color.White) }
+                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "End HTE AI Voice Assistant", tint = Color.White) }
                 }
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -203,10 +237,11 @@ fun VoiceAssistantDialog(
                             }
                         }
                     }
-                    Text("SYNAPSE / AUDIO CORE", color = VoiceMuted, fontSize = 8.sp, letterSpacing = 2.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp))
+                    Text("HTE AI / AUDIO CORE", color = VoiceMuted, fontSize = 8.sp, letterSpacing = 2.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp))
                 }
                 Text(status.replaceFirstChar { it.uppercase() } + if (session != null) " · ${mode.replaceFirstChar { it.uppercase() }}" else "", color = VoiceGold, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Text("Speak naturally to find music, control playback, search the catalogue and move around HTE Universe.", color = VoiceMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
+                Text("Say ‘Hey HTE’ while the voice link is connected. Minimise this panel and continue using the app.", color = VoiceGold.copy(alpha = .88f), fontSize = 10.sp, textAlign = TextAlign.Center)
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text("ASSISTANT VOICE", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
                     Box {
@@ -252,7 +287,7 @@ fun VoiceAssistantDialog(
                 if (agentResponse.isNotBlank()) {
                     Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF211D16)), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Text("SYNAPSE / RESPONSE", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
+                            Text("HTE AI / RESPONSE", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
                             Text(agentResponse, color = Color.White, fontSize = 13.sp)
                         }
                     }
@@ -296,20 +331,46 @@ fun VoiceAssistantDialog(
                     }
                 }
                 Text("The ElevenLabs API key remains server-side. Sign in to HTE Universe before starting a private voice session.", color = VoiceMuted, fontSize = 9.sp, textAlign = TextAlign.Center)
+                    }
+                }
             }
         }
-    }
 
     // Keep the callbacks current for the registered SDK client tools.
     @Suppress("UNUSED_VARIABLE") val activeMode = mode
 }
 
+private fun findVoiceTrack(tracks: List<TrackDto>, query: String): TrackDto? {
+    val term = query.trim()
+    if (term.isBlank()) return null
+    return tracks.firstOrNull { it.title.equals(term, ignoreCase = true) }
+        ?: tracks.firstOrNull { it.title.contains(term, ignoreCase = true) || it.artist.contains(term, ignoreCase = true) || it.genre.orEmpty().contains(term, ignoreCase = true) }
+}
+
+private fun voicePlaybackConfirmation(track: TrackDto): String = when (track.sourcePlatform.lowercase()) {
+    "spotify" -> "Opened the official Spotify player for " + track.title + " by " + track.artist + ". Spotify controls playback access."
+    "youtube" -> "Opened the official music link for " + track.title + " by " + track.artist + "."
+    else -> "Sent " + track.title + " by " + track.artist + " to the HTE audio player."
+}
+private fun findVoiceVideo(videos: List<VideoDto>, query: String): VideoDto? {
+    val term = query.trim()
+    if (term.isBlank()) return null
+    return videos.firstOrNull { it.title.equals(term, ignoreCase = true) }
+        ?: videos.firstOrNull { it.title.contains(term, ignoreCase = true) || it.artist.orEmpty().contains(term, ignoreCase = true) || it.description.orEmpty().contains(term, ignoreCase = true) }
+}
+
 private class VoiceToolContext {
     var tracks: List<TrackDto> = emptyList()
     var favourites: List<TrackDto> = emptyList()
+    var videos: List<VideoDto> = emptyList()
     var onPlayFavourites: (List<TrackDto>) -> Unit = {}
+    var onPlayTrack: (TrackDto) -> Unit = {}
+    var onDownloadTrack: (TrackDto) -> Unit = {}
+    var onPlayVideo: (VideoDto) -> Unit = {}
+    var onDownloadVideo: (VideoDto) -> Unit = {}
     var onNavigate: (String) -> Unit = {}
     var onSearch: (String) -> Unit = {}
+    var onSearchVideos: (String) -> Unit = {}
     var onUserTranscript: (String) -> Unit = {}
     var onAgentResponse: (String) -> Unit = {}
     var onError: (String) -> Unit = {}
@@ -328,7 +389,7 @@ private fun startVoiceSession(
         onConnecting()
         try {
             val user = SupabaseClientProvider.client.auth.currentUserOrNull()
-                ?: error("Sign in to use the High-Tech Entertainment Voice Companion.")
+                ?: error("Sign in to use HTE AI Voice Assistant.")
             val response = SupabaseClientProvider.client.functions.invoke("elevenlabs-voice-token")
             val token = voiceJson.decodeFromString<VoiceTokenResponse>(response.bodyAsText())
             check(token.token.isNotBlank()) { "The voice service did not return a conversation token." }
@@ -338,22 +399,77 @@ private fun startVoiceSession(
                 "control_playback" to object : ClientTool {
                     override suspend fun execute(parameters: Map<String, Any>): ClientToolResult? {
                         val action = parameters["action"] as? String ?: return ClientToolResult.failure("Missing playback action.")
-                        return withContext(Dispatchers.Main.immediate) {
-                            if (action == "play_favourites") {
+                        val query = (parameters["query"] as? String)?.trim().orEmpty()
+                        return when (action) {
+                            "play_favourites" -> {
                                 val favourites = toolContext.favourites
                                 if (favourites.isEmpty()) ClientToolResult.failure("There are no saved favourites in the current library.")
                                 else {
-                                    toolContext.onPlayFavourites(favourites)
-                                    ClientToolResult.success("Started the saved favourites queue with ${favourites.size} tracks.")
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayFavourites(favourites) }
+                                    ClientToolResult.success("Selected the saved favourites queue with " + favourites.size + " tracks.")
                                 }
-                            } else if (HtePlaybackController.performAction(action)) {
-                                ClientToolResult.success("Playback action '$action' executed by HTE Universe.")
+                            }
+                            "play_music", "play_track" -> {
+                                val track = if (action == "play_music") toolContext.tracks.firstOrNull { !it.audioUrl.isNullOrBlank() || !it.sourceUrl.isNullOrBlank() }
+                                    else findVoiceTrack(toolContext.tracks, query)
+                                if (track == null) ClientToolResult.failure("I could not find a playable published HTE track for that request.")
+                                else {
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayTrack(track) }
+                                    ClientToolResult.success(voicePlaybackConfirmation(track))
+                                }
+                            }
+                            "download_track" -> {
+                                val track = findVoiceTrack(toolContext.tracks, query)
+                                if (track == null) ClientToolResult.failure("I could not find a published HTE track matching that request.")
+                                else if (!track.downloadAllowed || track.rightsStatus !in setOf("owned_or_licensed", "legacy_existing") || track.sourcePlatform.lowercase() in setOf("spotify", "youtube", "external") || !track.sourceUrl.isNullOrBlank()) {
+                                    ClientToolResult.failure("This track is not an eligible HTE-owned or licensed download. Spotify and YouTube links must stay on their original platforms.")
+                                } else {
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onDownloadTrack(track) }
+                                    if (track.brandedAudioUrl.isNullOrBlank() || track.downloadBrandingStatus != "ready") {
+                                        ClientToolResult.success("Opened the HTE-branded download page for " + track.title + ". Complete the download in your browser; it is not saved to the in-app Library yet.")
+                                    } else {
+                                        ClientToolResult.success("Sent the approved HTE download for " + track.title + " to the in-app Download Manager. Check Library for progress.")
+                                    }
+                                }
+                            }
+                            "search_videos" -> {
+                                if (query.isBlank()) ClientToolResult.failure("Tell me the video title or artist you want to find.")
+                                else {
+                                    val matches = toolContext.videos.filter { it.title.contains(query, true) || it.artist.orEmpty().contains(query, true) || it.description.orEmpty().contains(query, true) }
+                                    withContext(Dispatchers.Main.immediate) {
+                                        toolContext.onNavigate("VIDEOS")
+                                        toolContext.onSearchVideos(query)
+                                    }
+                                    val summary = if (matches.isEmpty()) "No published HTE videos match that search. Videos is now open."
+                                        else "Found " + matches.size + " matching video(s): " + matches.take(4).joinToString { it.title + " by " + (it.artist ?: "High-Tech Entertainment") } + ". Videos is now open."
+                                    ClientToolResult.success(summary)
+                                }
+                            }
+                            "play_video" -> {
+                                val video = findVoiceVideo(toolContext.videos, query)
+                                if (video == null) ClientToolResult.failure("I could not find a published HTE video matching that request.")
+                                else {
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayVideo(video) }
+                                    ClientToolResult.success("Opened " + video.title + " in the HTE video player.")
+                                }
+                            }
+                            "download_video" -> {
+                                val video = findVoiceVideo(toolContext.videos, query)
+                                if (video == null) ClientToolResult.failure("I could not find a published HTE video matching that request.")
+                                else if (video.downloadUrl.isNullOrBlank()) ClientToolResult.failure("An original downloadable video file is not available for that item.")
+                                else {
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onDownloadVideo(video) }
+                                    ClientToolResult.success("Sent the original video download request for " + video.title + ". Check Library for its progress.")
+                                }
+                            }
+                            else -> if (HtePlaybackController.performAction(action)) {
+                                ClientToolResult.success("Playback action '" + action + "' executed by HTE Universe.")
                             } else {
                                 ClientToolResult.failure(when (action) {
                                     "next" -> "There is no next track in the current playback queue."
                                     "previous" -> "There is no active track to return from."
                                     "pause", "resume", "stop" -> "There is no active track in the music player yet."
-                                    else -> "Unsupported playback action: $action"
+                                    else -> "Unsupported playback action: " + action
                                 })
                             }
                         }
@@ -407,7 +523,7 @@ private fun startVoiceSession(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            onFailure(error.toHteUserMessage("Voice Companion could not connect. Please try again."))
+            onFailure(error.toHteUserMessage("HTE AI Voice Assistant could not connect. Please try again."))
         }
     }
 }
