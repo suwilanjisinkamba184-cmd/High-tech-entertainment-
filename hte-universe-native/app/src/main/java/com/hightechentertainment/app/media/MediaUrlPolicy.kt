@@ -36,6 +36,14 @@ internal fun spotifyAppUri(url: String?): String? {
     return "spotify:$type:$id"
 }
 
+/** Builds Spotify's official embedded-player URL for supported canonical Spotify content links. */
+internal fun spotifyEmbedUrl(url: String?): String? {
+    val appUri = spotifyAppUri(url) ?: return null
+    val parts = appUri.split(':')
+    if (parts.size != 3 || parts[0] != "spotify") return null
+    return "https://open.spotify.com/embed/${parts[1]}/${parts[2]}?utm_source=generator&theme=0"
+}
+
 /** Extracts a canonical YouTube video ID from watch, short, shorts, live, and embed links. */
 internal fun extractYouTubeVideoId(raw: String?): String? {
     val uri = parseMediaUri(raw) ?: return null
