@@ -126,7 +126,7 @@ function Spotify({url,title}:{url:string;title:string}) {
   if (!embed) return safe ? <a className="text-link" href={safe} target="_blank" rel="noopener noreferrer">Open on Spotify ↗</a> : <p className="muted small">Spotify link unavailable.</p>;
   const height = embed.includes('/track/') ? 152 : 352;
   const openUrl = safe ? safe.replace('/embed/','/') : '';
-  return <div className="hte-spotify-shell"><iframe title={'Listen to ' + title + ' on Spotify'} src={embed} width="100%" height={height} loading="lazy" allow="encrypted-media; clipboard-write; fullscreen; picture-in-picture" /><a className="text-link spotify-open-link" href={openUrl || safe} target="_blank" rel="noopener noreferrer">Open in Spotify ↗</a></div>;
+  return <div className="hte-spotify-shell"><iframe title={'Listen to ' + title + ' on Spotify'} src={embed} width="100%" height={height} loading="lazy" allow="autoplay; encrypted-media; clipboard-write; fullscreen; picture-in-picture" /><a className="text-link spotify-open-link" href={openUrl || safe} target="_blank" rel="noopener noreferrer">Open in Spotify ↗</a></div>;
 }
 
 function videoPoster(value?:string|null) {
