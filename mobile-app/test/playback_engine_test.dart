@@ -1,0 +1,127 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:high_tech_entertainment/playback_engine.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('HtePlayback factory always returns the shared service', () {
+    expect(identical(HtePlayback.instance, HtePlayback()), isTrue);
+    expect(identical(HtePlayback(), HtePlayback()), isTrue);
+    expect(identical(HtePlayback.instance.player, HtePlayback().player), isTrue);
+  });
+
+  test('uses an advert interval of eight completed songs', () {
+    expect(HtePlayback.advertInterval, 8);
+  });
+
+  group('Completed track advert scheduling', () {
+    test('triggers only after eight completed tracks, then starts a new cycle', () {
+      final counter = CompletedTrackAdCounter();
+
+      for (var track = 1; track < 8; track++) {
+        expect(
+          counter.recordCompletion(interval: 8, enabled: true),
+          isFalse,
+          reason: 'Track $track must not trigger an advert',
+        );
+      }
+
+      expect(counter.completedTracks, 7);
+      expect(counter.recordCompletion(interval: 8, enabled: true), isTrue);
+      // A due advert remains due until playback confirms it has completed.
+      expect(counter.completedTracks, 8);
+      expect(counter.recordCompletion(interval: 8, enabled: true), isTrue);
+      counter.reset();
+      expect(counter.completedTracks, 0);
+      for (var track = 1; track < 8; track++) {
+        expect(counter.recordCompletion(interval: 8, enabled: true), isFalse);
+      }
+      expect(counter.recordCompletion(interval: 8, enabled: true), isTrue);
+    });
+
+    test('manual track selection does not reset completed-track count', () {
+      final counter = CompletedTrackAdCounter();
+      for (var track = 0; track < 5; track++) {
+        expect(counter.recordCompletion(interval: 8, enabled: true), isFalse);
+      }
+
+      // Selecting another track is intentionally not a counter operation.
+      expect(counter.completedTracks, 5);
+      for (var track = 0; track < 2; track++) {
+        expect(counter.recordCompletion(interval: 8, enabled: true), isFalse);
+      }
+      expect(counter.recordCompletion(interval: 8, enabled: true), isTrue);
+      expect(counter.completedTracks, 8);
+    });
+
+    test('disabled ads do not accumulate hidden completions', () {
+      final counter = CompletedTrackAdCounter();
+      for (var track = 0; track < 10; track++) {
+        expect(counter.recordCompletion(interval: 8, enabled: false), isFalse);
+      }
+      expect(counter.completedTracks, 0);
+      for (var track = 0; track < 7; track++) {
+        expect(counter.recordCompletion(interval: 8, enabled: true), isFalse);
+      }
+      expect(counter.recordCompletion(interval: 8, enabled: true), isTrue);
+    });
+
+    test('invalid intervals never trigger adverts', () {
+      final counter = CompletedTrackAdCounter();
+      expect(counter.recordCompletion(interval: 0, enabled: true), isFalse);
+      expect(counter.recordCompletion(interval: -1, enabled: true), isFalse);
+      expect(counter.completedTracks, 0);
+    });
+  });
+
+  group('Direct audio URL validation', () {
+    test('accepts a public Supabase MP3 URL', () {
+      final uri = HtePlayback.directAudioUri(
+        'https://project.supabase.co/storage/v1/object/public/hte-audio/song.mp3',
+      );
+      expect(uri, isNotNull);
+      expect(uri!.path, endsWith('.mp3'));
+    });
+
+    test('rejects Spotify embed URLs for native audio playback', () {
+      expect(
+        HtePlayback.directAudioUri(
+          'https://open.spotify.com/embed/track/3t9ly5CXTe0oWrIIXQ6jF8',
+        ),
+        isNull,
+      );
+    });
+
+    test('rejects malformed and non-web URLs', () {
+      expect(HtePlayback.directAudioUri(''), isNull);
+      expect(HtePlayback.directAudioUri('spotify:track:abc123'), isNull);
+      expect(HtePlayback.directAudioUri('file:///music/song.mp3'), isNull);
+    });
+  });
+
+  group('Scheduled audio advert selection', () {
+    final now = DateTime.utc(2026, 11, 7, 10);
+    test('selects the highest-priority published active advert', () {
+      final selected = selectActiveAudioAd([
+        {'id': 'low', 'audio_url': 'https://cdn.example.com/low.mp3', 'is_published': true, 'priority': 1},
+        {'id': 'high', 'audio_url': 'https://cdn.example.com/high.mp3', 'is_published': true, 'priority': 5},
+      ], now: now);
+      expect(selected?['id'], 'high');
+    });
+    test('ignores drafts and adverts outside their schedule', () {
+      final selected = selectActiveAudioAd([
+        {'id': 'draft', 'audio_url': 'https://cdn.example.com/draft.mp3', 'is_published': false},
+        {'id': 'future', 'audio_url': 'https://cdn.example.com/future.mp3', 'is_published': true, 'starts_at': '2026-11-07T11:00:00Z'},
+        {'id': 'expired', 'audio_url': 'https://cdn.example.com/expired.mp3', 'is_published': true, 'ends_at': '2026-11-07T09:59:59Z'},
+      ], now: now);
+      expect(selected, isNull);
+    });
+    test('rejects Spotify pages as direct audio adverts', () {
+      final selected = selectActiveAudioAd([
+        {'id': 'spotify', 'audio_url': 'https://open.spotify.com/track/abc123', 'is_published': true},
+      ], now: now);
+      expect(selected, isNull);
+    });
+  });
+
+}
