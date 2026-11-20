@@ -110,18 +110,6 @@ jobs:
         run: gradle --no-daemon :app:testDebugUnitTest --console=plain
       - name: Compile Android instrumentation smoke tests
         run: gradle --no-daemon :app:assembleDebugAndroidTest --console=plain
-      - name: Enable KVM for the Android emulator
-        run: |
-          set -euo pipefail
-          if [[ -e /dev/kvm ]]; then
-            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-            sudo udevadm control --reload-rules
-            sudo udevadm trigger --name-match=kvm
-            test -r /dev/kvm && test -w /dev/kvm
-          else
-            echo 'KVM device is unavailable on this runner.'
-            exit 1
-          fi
       - name: Run Android instrumentation tests on API 35 emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
