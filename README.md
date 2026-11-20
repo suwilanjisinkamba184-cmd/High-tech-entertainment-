@@ -4,7 +4,7 @@
 
 [![OpenRepos](https://img.shields.io/endpoint?url=https://openrepos.org/status/high-tech-entertainment.openrepos.org.json&style=flat-square)](https://high-tech-entertainment.openrepos.org/)
 
-High-Tech Entertainment is a focused music and artist platform for discovering releases, featured music, viewing artists and videos, and contacting or booking the team. The project includes a public website, a founder administration area, and a native Flutter application.
+High-Tech Entertainment is a focused music and artist platform for discovering releases, featured music, viewing artists and videos, and contacting or booking the team. The project includes a public website, a founder administration area, a shared member account, and a native Android application.
 
 ## Production addresses
 
@@ -21,7 +21,8 @@ GitHub Pages is the official and canonical public website host. The `.github/wor
 | Public website | `website/` | Astro + React + TypeScript + Tailwind public music experience |
 | Founder Studio | `admin/` | Administrative tools for managing platform content and enquiries |
 | Account pages | `account/` | User account and profile experience |
-| Flutter application | `mobile-app/` | Android and Windows application source |
+| Native Android application | `hte-universe-native/` | Kotlin, Jetpack Compose, AndroidX Media3 and Supabase Kotlin client |
+| Legacy Flutter source | `mobile-app/` | Retained as historical source only; no longer built or released |
 | Supabase setup | Root SQL files and `database/` | Database schema, policies and migrations |
 | GitHub skills | `.github/skills/` | Design and engineering guidance for supported coding agents |
 
@@ -30,13 +31,14 @@ GitHub Pages is the official and canonical public website host. The `.github/wor
 - Public streaming catalogue with title/artist/genre search and genre filtering.
 - Device playlist and favourites for guests; authenticated favourites and the personal playlist sync through Supabase.
 - Listening activity is recorded to the signed-in user’s private listening history.
+- The account page and Android member library read shared favourites, playlists, recent listening history, booking requests and notifications from Supabase.
 - Founder Studio includes track metadata editing and live counts for unpublished tracks, videos and enquiries.
 - Track edits, publishing and uploads remain protected by Supabase Row Level Security; no service-role key is shipped to the browser.
 
 ## Technology
 
 - HTML, CSS and browser JavaScript for the website.
-- Flutter and Dart for the native application.
+- Kotlin, Jetpack Compose, AndroidX Media3 and Android platform services for the native application.
 - Supabase Auth, PostgreSQL, Row Level Security (RLS), and Storage.
 - GitHub Actions and GitHub Pages for website publishing, validation and application builds/releases.
 
@@ -64,9 +66,6 @@ Add the production GitHub Pages routes used by the application to the allowed re
 https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/
 https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/admin/
 https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account/
-https://high-tech-entertainment-16g.pages.dev/
-https://high-tech-entertainment-16g.pages.dev/admin/
-https://high-tech-entertainment-16g.pages.dev/account/
 ```
 
 Add any additional callback URLs only when they are actually used by the website or mobile authentication flow. Do not use localhost as the production Site URL.
@@ -79,6 +78,7 @@ Database setup and migration files currently include:
 - `supabase-admin-policies.sql` — founder/admin access policies.
 - `SUPABASE-REDESIGN-MIGRATION.sql` — profile and avatar-related migration.
 - `database/changes/` — subsequent database changes.
+- `supabase/migrations/20261120_member_booking_history.sql` — members can read only their own authenticated booking requests.
 
 The website upload code expects these exact Supabase Storage bucket IDs:
 
@@ -90,34 +90,29 @@ The website upload code expects these exact Supabase Storage bucket IDs:
 
 Bucket **IDs** are not necessarily the same as their display names. Verify bucket IDs, size limits, MIME restrictions and policies in Supabase Dashboard → Storage before enabling uploads. Do not make private profile images public merely to make them display.
 
-## Flutter application
+## Native Android application
 
-Flutter source code is in `mobile-app/`.
+The production Android application is the Kotlin/Jetpack Compose project in `hte-universe-native/`.
 
-The GitHub Actions workflow `.github/workflows/mobile-build.yml` builds:
+- **Application ID:** `com.hightechentertainment.app`
+- **Minimum Android version:** Android 8.0 (API 26)
+- **Production build workflow:** `.github/workflows/hte-universe-compose.yml`
+- **Official install source:** [Latest GitHub Release](https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest)
 
-- Android release APK.
-- Android App Bundle (AAB).
-- Windows desktop ZIP package.
+The production build uses the existing Android signing identity. The GitHub Actions secrets required for signed candidates and production releases are `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and `ANDROID_STORE_PASSWORD`. Every build also requires `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` so the installed app receives its runtime Supabase configuration.
 
-The Android job requires all four repository Actions secrets before it can run:
-
-- `ANDROID_KEYSTORE_BASE64`
-- `ANDROID_KEY_ALIAS`
-- `ANDROID_STORE_PASSWORD`
-- `ANDROID_KEY_PASSWORD`
-
-Follow [Android release signing setup](mobile-app/ANDROID-RELEASE-SIGNING.md) to configure them. The workflow **fails when any required signing secret is missing**; it does not produce a debug-signed fallback build. Keep the keystore and all passwords private.
-
-The planned Android application ID is `com.hightechentertainment.app`. Verify the generated package/application ID before registering the app in Google Play Console.
+The legacy Flutter source in `mobile-app/` is retained for historical reference only. Its old build, OTA and Appetize workflows have been retired; it is not the production Android application. The current native workflow does not publish debug APKs or long-lived Actions APK artifacts. The signed production APK, SHA-256 manifest and signing-certificate fingerprint are distributed through the GitHub Release.
 
 ## GitHub Actions
 
 - `.github/workflows/publish-github-pages.yml` — assembles and publishes the official public website to GitHub Pages on every push to `main`.
 - `.github/workflows/deploy-pages.yml` — validation only: checks required website files, JavaScript syntax, package JSON and sitemap XML.
-- `.github/workflows/mobile-build.yml` — builds Android and Windows application packages and publishes releases when its required conditions and secrets are satisfied.
+- `.github/workflows/hte-universe-compose.yml` — tests, signs and publishes the native Android application when the explicit production-release condition is met.
+- `.github/workflows/deploy-remaining-edge-functions.yml` — deploys booking and ElevenLabs Edge Functions with the official GitHub Pages CORS origin.
+- `.github/workflows/deploy-artist-video-submission.yml` — deploys the founder-authorized YouTube video submission function.
+- `.github/workflows/deploy-supabase-youtube-function.yml` — deploys the YouTube channel synchronization function.
 
-Open the repository's **Actions** tab to inspect workflow runs and download available artifacts. A successful validation run does not, by itself, prove that the live website, Supabase authentication, uploads or media playback work.
+Open the repository's **Actions** tab to inspect workflow runs. The official installable APK is published through GitHub Releases; Actions artifacts are not the application distribution channel. A successful validation run does not, by itself, prove that the live website, Supabase authentication, uploads or media playback work.
 
 ## Design and coding-agent guidance
 
@@ -169,7 +164,6 @@ Before calling a release production-ready, verify each item in the actual enviro
 - [ ] Audio and video playback work in supported desktop and mobile browsers.
 - [ ] Booking, contact and support forms deliver submissions to the intended destination.
 - [ ] Android APK installs and runs on a physical device; background playback and authentication are tested.
-- [ ] Windows package extracts and launches on a supported Windows machine.
 - [ ] Release signing and update compatibility are verified before distributing an Android update.
 
 ## Support and maintenance
@@ -185,4 +179,4 @@ Keep this README aligned with the actual GitHub Pages deployment, routes, Supaba
 - Developer / founder: **Simon Suwilanji Sinkamba**
 - Developer email: **suwilanjisinkamba184@gmail.com**
 
-The Android app's private Founder Studio includes an on-device developer diagnostics view. Flutter framework and uncaught platform errors are retained locally (up to 100 entries); the founder can review and explicitly export a redacted report. Diagnostic reports are not uploaded automatically.
+The Android app's private Founder Studio includes an on-device developer diagnostics view. Native Android, Compose and uncaught platform errors are retained locally (up to 100 entries); the founder can review and explicitly export a redacted report. Diagnostic reports are not uploaded automatically.
