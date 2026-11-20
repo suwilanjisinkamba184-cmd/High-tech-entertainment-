@@ -1542,6 +1542,7 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
     var embeddedWebView by remember(video.id) { mutableStateOf<WebView?>(null) }
     var webViewLoading by remember(video.id) { mutableStateOf(true) }
     var webViewError by remember(video.id) { mutableStateOf(false) }
+    var webViewGeneration by remember(video.id) { mutableIntStateOf(0) }
     DisposableEffect(lifecycleOwner, embeddedWebView) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
@@ -1563,7 +1564,8 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
                 IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close video", tint = Color.White) }
             }
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                AndroidView(
+                key(webViewGeneration) {
+                    AndroidView(
                     factory = { viewContext ->
                         WebView(viewContext).apply {
                             embeddedWebView = this
@@ -1603,6 +1605,8 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
                                     view: WebView,
                                     detail: android.webkit.RenderProcessGoneDetail
                                 ): Boolean {
+                                    embeddedWebView = null
+                                    runCatching { view.destroy() }
                                     webViewLoading = false
                                     webViewError = true
                                     return true
@@ -1617,13 +1621,14 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
                     modifier = Modifier.fillMaxSize(),
                     onRelease = {
                         embeddedWebView = null
-                        it.stopLoading()
-                        it.onPause()
-                        it.loadUrl("about:blank")
-                        it.removeAllViews()
-                        it.destroy()
+                        runCatching { it.stopLoading() }
+                        runCatching { it.onPause() }
+                        runCatching { it.loadUrl("about:blank") }
+                        runCatching { it.removeAllViews() }
+                        runCatching { it.destroy() }
                     }
-                )
+                    )
+                }
                 if (webViewLoading && !webViewError) {
                     CircularProgressIndicator(color = ShellGold, strokeWidth = 2.5.dp)
                 }
@@ -1634,7 +1639,7 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
                             onClick = {
                                 webViewError = false
                                 webViewLoading = true
-                                embeddedWebView?.reload()
+                                webViewGeneration += 1
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = ShellGold, contentColor = Color.Black)
                         ) { Text("Retry video", fontWeight = FontWeight.Bold) }
