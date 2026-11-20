@@ -1,5 +1,9 @@
 package com.hightechentertainment.app
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import com.hightechentertainment.app.data.TrackDto
 import com.hightechentertainment.app.data.ArtistDto
 import com.hightechentertainment.app.data.ReleaseDto
@@ -33,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.hightechentertainment.app.media.spotifyAppUri
 
 private val U26Black = Color(0xFF0B0A0F)
 private val U26Panel = Color(0xFF141414)
@@ -303,6 +308,7 @@ private fun U26ArtistCard(artist: ArtistDto, wide: Boolean, onClick: () -> Unit)
 
 @Composable
 private fun U26ProjectCard(release: ReleaseDto, wide: Boolean) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier.width(if (wide) 230.dp else 192.dp),
         shape = RoundedCornerShape(18.dp),
@@ -329,6 +335,24 @@ private fun U26ProjectCard(release: ReleaseDto, wide: Boolean) {
             Text(release.releaseDate ?: "Official HTE release", color = U26Gold, fontSize = 9.sp)
             if (!release.description.isNullOrBlank()) {
                 Text(release.description, color = U26Muted, fontSize = 9.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            release.spotifyUrl?.takeIf(String::isNotBlank)?.let { spotifyUrl ->
+                TextButton(
+                    onClick = {
+                        try {
+                            val target = spotifyAppUri(spotifyUrl) ?: spotifyUrl
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target)))
+                        } catch (_: ActivityNotFoundException) {
+                            Toast.makeText(context, "Spotify is not installed. Install the Spotify app to listen to this release.", Toast.LENGTH_LONG).show()
+                        } catch (_: Throwable) {
+                            Toast.makeText(context, "This Spotify link could not be opened. Please try again.", Toast.LENGTH_LONG).show()
+                        }
+                    },
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                ) {
+                    Icon(Icons.Outlined.PlayArrow, contentDescription = null, tint = U26Gold, modifier = Modifier.size(16.dp))
+                    Text("LISTEN ON SPOTIFY", color = U26Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
