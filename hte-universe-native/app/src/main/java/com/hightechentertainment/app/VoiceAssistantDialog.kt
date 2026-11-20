@@ -417,11 +417,15 @@ private fun startVoiceSession(
                             "download_track" -> {
                                 val track = findVoiceTrack(toolContext.tracks, query)
                                 if (track == null) ClientToolResult.failure("I could not find a published HTE track matching that request.")
-                                else if (!track.downloadAllowed || track.sourcePlatform.lowercase() in setOf("spotify", "youtube") || track.downloadBrandingStatus != "ready" || track.brandedAudioUrl.isNullOrBlank()) {
-                                    ClientToolResult.failure("An approved HTE-branded offline audio file is not available for that track yet.")
+                                else if (!track.downloadAllowed || track.rightsStatus !in setOf("owned_or_licensed", "legacy_existing") || track.sourcePlatform.lowercase() in setOf("spotify", "youtube", "external") || !track.sourceUrl.isNullOrBlank()) {
+                                    ClientToolResult.failure("This track is not an eligible HTE-owned or licensed download. Spotify and YouTube links must stay on their original platforms.")
                                 } else {
                                     withContext(Dispatchers.Main.immediate) { toolContext.onDownloadTrack(track) }
-                                    ClientToolResult.success("Sent the approved HTE download request for " + track.title + ". Check Library for its progress.")
+                                    if (track.brandedAudioUrl.isNullOrBlank() || track.downloadBrandingStatus != "ready") {
+                                        ClientToolResult.success("Opened the HTE-branded download page for " + track.title + ". Complete the download in your browser; it is not saved to the in-app Library yet.")
+                                    } else {
+                                        ClientToolResult.success("Sent the approved HTE download for " + track.title + " to the in-app Download Manager. Check Library for progress.")
+                                    }
                                 }
                             }
                             "search_videos" -> {
