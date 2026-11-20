@@ -107,5 +107,12 @@ el.addEventListener('click',event=>{if(event.target.closest('[data-video-retry]'
  window.addEventListener('pagehide',()=>{try{authListener?.data?.subscription?.unsubscribe()}catch{}},{once:true});
 }
 mountArtistSubmission();
-void load();return}const button=event.target.closest('[data-video-play]');if(!button)return;const source=safeHttps(button.dataset.embed);if(!source)return;const url=new URL(source);url.searchParams.set('autoplay','1');const frame=document.createElement('iframe');frame.className='video-embed';frame.title=button.dataset.title||'High-Tech Entertainment video';frame.src=url.href;frame.loading='eager';frame.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';button.replaceWith(frame)});void load();
+void load();return}const button=event.target.closest('[data-video-play]');if(!button)return;const source=safeHttps(button.dataset.embed);if(!source)return;const url=new URL(source);url.searchParams.set('autoplay','1');const frame=document.createElement('iframe');frame.className='video-embed';frame.title=button.dataset.title||'High-Tech Entertainment video';frame.src=url.href;frame.loading='eager';frame.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';button.replaceWith(frame)});let videoCatalogueChannel=null;
+if(db){
+ videoCatalogueChannel=db.channel('hte-public-video-sync')
+  .on('postgres_changes',{event:'*',schema:'public',table:'videos'},()=>void load())
+  .subscribe(status=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')console.warn('HTE live video sync is temporarily unavailable; refresh will still work.')});
+ window.addEventListener('pagehide',()=>{if(videoCatalogueChannel)db.removeChannel(videoCatalogueChannel)},{once:true});
+}
+void load();
 })();
