@@ -18,7 +18,7 @@ internal fun isSpotifySource(sourcePlatform: String?, url: String?): Boolean {
 
 /**
  * Converts canonical Spotify links into the official Spotify app URI.
- * The Android app remote/deep-link route delegates playback to Spotify; HTE never extracts or
+ * The Android deep-link route delegates playback to Spotify; HTE never extracts or
  * proxies Spotify audio. Returns null when the link cannot safely be converted.
  */
 internal fun spotifyAppUri(url: String?): String? {
