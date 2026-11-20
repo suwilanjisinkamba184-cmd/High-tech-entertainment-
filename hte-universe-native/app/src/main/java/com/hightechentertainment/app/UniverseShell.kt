@@ -68,6 +68,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
 import androidx.media3.ui.PlayerView
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.postgresChangeFlow
 import com.hightechentertainment.app.data.AuthRepository
 import com.hightechentertainment.app.data.ArtistDto
 import com.hightechentertainment.app.data.ReleaseDto
@@ -98,6 +100,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.TimeoutCancellationException
 
 private val ShellGold = Color(0xFFE5C158)
@@ -321,6 +325,34 @@ fun UniverseShell() {
     LaunchedEffect(configured) {
         refreshCatalogue()
         if (configured) runCatching { withContext(Dispatchers.IO) { audienceAnalytics.record("page_view") } }
+    }
+
+    // Subscribe to all four public catalogue tables. The minute-based refresh below
+    // remains a recovery path if the device loses its Realtime websocket.
+    LaunchedEffect(configured) {
+        if (!configured) return@LaunchedEffect
+        val client = SupabaseClientProvider.client
+        val channel = client.channel("hte-universe-public-catalogue")
+        val changeFlows = listOf("tracks", "artists", "releases", "videos").map { tableName ->
+            channel.postgresChangeFlow<PostgresAction>(schema = "public") {
+                table = tableName
+            }
+        }
+        try {
+            coroutineScope {
+                changeFlows.forEach { flow ->
+                    launch { flow.collect { refreshCatalogue() } }
+                }
+                channel.subscribe(blockUntilSubscribed = true)
+                awaitCancellation()
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Throwable) {
+            // Existing lifecycle and periodic refreshes provide a safe fallback.
+        } finally {
+            runCatching { channel.unsubscribe() }
+        }
     }
     DisposableEffect(lifecycleOwner, configured) {
         val observer = LifecycleEventObserver { _, event ->
