@@ -184,8 +184,9 @@ fun VoiceAssistantDialog(
                         Spacer(Modifier.width(9.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text("Synapse AI", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            Text(if (session != null) "Connected · say Hey HTE" else "Voice Companion · standby", color = VoiceMuted, fontSize = 9.sp)
+                            Text(if (session == null) "Voice Companion · standby" else if (muted) "Microphone muted" else "Connected · say Hey HTE", color = VoiceMuted, fontSize = 9.sp)
                         }
+                        if (session != null) IconButton(onClick = { scope.launch { session?.toggleMute() } }) { Icon(if (muted) Icons.Outlined.MicOff else Icons.Outlined.Mic, if (muted) "Unmute Voice Companion" else "Mute Voice Companion", tint = if (muted) VoiceMuted else VoiceGold) }
                         IconButton(onClick = { minimized = false }) { Icon(Icons.Outlined.ExpandLess, "Expand Voice Companion", tint = VoiceGold) }
                         IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "End Voice Companion", tint = VoiceMuted) }
                     }
