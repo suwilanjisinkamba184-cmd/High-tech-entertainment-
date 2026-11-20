@@ -75,7 +75,7 @@ function renderPublic(){
  let timeoutId;
  try{
   const results=await Promise.race([
-   Promise.allSettled(targets.map(target=>rows(target[0],target[2]))),
+   Promise.allSettled(targets.map(target=>rows(target[0],target[2],target[0]!=='artists'))),
    new Promise((_,reject)=>{timeoutId=window.setTimeout(()=>reject(new Error('The music catalogue request timed out after 12 seconds.')),12000)})
   ]);
   const values={tracks,artists,releases};let failed=[];
