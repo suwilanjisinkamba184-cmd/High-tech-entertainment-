@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.core.net.toUri
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import coil.compose.AsyncImage
@@ -37,6 +38,7 @@ import com.hightechentertainment.app.player.Media3PlayerController
 import com.hightechentertainment.app.player.PlayerHost
 import com.hightechentertainment.app.player.PlayerUiState
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,6 +48,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.window.DialogProperties
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -722,7 +725,7 @@ fun UniverseShell() {
 private fun UniverseTopBar(searchQuery: String, onQueryChange: (String) -> Unit) {
     Row(
         Modifier.fillMaxWidth().background(ShellBackground)
-            .padding(horizontal = 16.dp, vertical = 5.dp),
+            .padding(horizontal = 12.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         OutlinedTextField(
@@ -1183,32 +1186,8 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
     val lifecycleOwner = LocalLifecycleOwner.current
-    val window = remember(activity) { activity?.window }
-    val systemBars = remember(window) { window?.let { WindowInsetsControllerCompat(it, it.decorView) } }
     val previousOrientation = remember(activity) { activity?.requestedOrientation }
     var immersiveVideo by remember(video.id) { mutableStateOf(false) }
-
-    val toggleImmersive = {
-        val enteringImmersive = !immersiveVideo
-        immersiveVideo = enteringImmersive
-        if (enteringImmersive) {
-            systemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            systemBars?.hide(WindowInsetsCompat.Type.systemBars())
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        } else {
-            systemBars?.show(WindowInsetsCompat.Type.systemBars())
-            systemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
-            activity?.requestedOrientation = previousOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        }
-    }
-    BackHandler(enabled = immersiveVideo) { toggleImmersive() }
-    DisposableEffect(activity, systemBars) {
-        onDispose {
-            systemBars?.show(WindowInsetsCompat.Type.systemBars())
-            systemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
-            if (previousOrientation != null) activity?.requestedOrientation = previousOrientation
-        }
-    }
 
     val validUrl = remember(video.videoUrl) {
         runCatching {
@@ -1252,11 +1231,22 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     var playbackError by remember { mutableStateOf<String?>(null) }
     var isBuffering by remember { mutableStateOf(false) }
     var videoPlaying by remember { mutableStateOf(false) }
+    var firstFrameRendered by remember(video.id) { mutableStateOf(false) }
     var videoPosition by remember { mutableLongStateOf(0L) }
     var videoDuration by remember { mutableLongStateOf(0L) }
     var isSeeking by remember { mutableStateOf(false) }
     var seekFraction by remember { mutableStateOf(0f) }
     val isSeekingNow by rememberUpdatedState(isSeeking)
+
+    fun toggleVideoPlayback() {
+        if (player.isPlaying) {
+            player.pause()
+        } else {
+            if (player.playerError != null) player.prepare()
+            if (player.playbackState == Player.STATE_ENDED) player.seekTo(0L)
+            player.play()
+        }
+    }
 
     LaunchedEffect(player) {
         while (true) {
@@ -1273,6 +1263,9 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                 videoPlaying = false
                 isBuffering = false
             }
+            override fun onRenderedFirstFrame() {
+                firstFrameRendered = true
+            }
             override fun onPlaybackStateChanged(playbackState: Int) {
                 isBuffering = playbackState == Player.STATE_BUFFERING
                 if (playbackState == Player.STATE_READY) playbackError = null
@@ -1286,6 +1279,43 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        // Compose Dialog owns a separate Window. Fullscreen must control that window,
+        // not the Activity window behind it, otherwise status/navigation bars can remain
+        // visible over the video or the dialog can be measured inside the old safe area.
+        val dialogView = LocalView.current
+        val dialogWindow = remember(dialogView) {
+            (dialogView.parent as? DialogWindowProvider)?.window
+        }
+        val window = dialogWindow ?: activity?.window
+        val systemBars = remember(window) { window?.let { WindowInsetsControllerCompat(it, it.decorView) } }
+
+        DisposableEffect(dialogWindow, systemBars) {
+            dialogWindow?.let { WindowCompat.setDecorFitsSystemWindows(it, false) }
+            onDispose {
+                systemBars?.show(WindowInsetsCompat.Type.systemBars())
+                systemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+                dialogWindow?.let { WindowCompat.setDecorFitsSystemWindows(it, true) }
+                if (previousOrientation != null) {
+                    activity?.requestedOrientation = previousOrientation
+                }
+            }
+        }
+
+        val toggleImmersive: () -> Unit = {
+            val enteringImmersive = !immersiveVideo
+            immersiveVideo = enteringImmersive
+            if (enteringImmersive) {
+                systemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                systemBars?.hide(WindowInsetsCompat.Type.systemBars())
+                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            } else {
+                systemBars?.show(WindowInsetsCompat.Type.systemBars())
+                systemBars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+                activity?.requestedOrientation = previousOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+        }
+        BackHandler(enabled = immersiveVideo) { toggleImmersive() }
+
         Surface(Modifier.fillMaxSize(), color = Color.Black) {
             BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
                 // Capture BoxWithConstraints values before entering ColumnScope to avoid receiver ambiguity.
@@ -1341,13 +1371,15 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                             if (!videoPlaying || isBuffering) {
                                 // Keep the video surface visually intentional before the first frame,
                                 // while paused, and during rebuffering instead of exposing an empty black canvas.
-                                video.thumbnailUrl?.takeIf(String::isNotBlank)?.let { posterUrl ->
-                                    AsyncImage(
-                                        model = posterUrl,
-                                        contentDescription = "Preview image for ${video.title}",
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
+                                if (!firstFrameRendered) {
+                                    video.thumbnailUrl?.takeIf(String::isNotBlank)?.let { posterUrl ->
+                                        AsyncImage(
+                                            model = posterUrl,
+                                            contentDescription = "Preview image for ${video.title}",
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
                                 }
                                 Box(
                                     Modifier.fillMaxSize().background(
@@ -1361,7 +1393,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                                         Modifier.size(66.dp).clip(CircleShape)
                                             .background(ShellGold.copy(alpha = .94f))
                                             .border(1.dp, Color.White.copy(alpha = .5f), CircleShape)
-                                            .clickable(enabled = !isBuffering) { if (player.isPlaying) player.pause() else player.play() },
+                                            .clickable(enabled = !isBuffering, onClick = ::toggleVideoPlayback),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         if (isBuffering) CircularProgressIndicator(Modifier.size(28.dp), color = Color.Black, strokeWidth = 2.5.dp)
@@ -1406,7 +1438,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
                                 ) { Text("−10s", color = ShellSilver) }
                                 Button(
-                                    onClick = { if (player.isPlaying) player.pause() else player.play() },
+                                    onClick = ::toggleVideoPlayback,
                                     colors = ButtonDefaults.buttonColors(containerColor = ShellGold, contentColor = Color.Black),
                                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                                 ) { Text(if (videoPlaying) "Pause" else "Play", fontWeight = FontWeight.Bold) }
@@ -1434,6 +1466,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                                 Text(message, color = ShellSilver, fontSize = 11.sp, modifier = Modifier.weight(1f))
                                 TextButton(onClick = {
                                     playbackError = null
+                                    if (player.playbackState == Player.STATE_ENDED) player.seekTo(0L)
                                     player.prepare()
                                     player.playWhenReady = true
                                 }) { Text("Retry", color = ShellGold) }
