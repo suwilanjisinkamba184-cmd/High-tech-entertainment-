@@ -1614,9 +1614,15 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
                                 }
                             }
                             setBackgroundColor(android.graphics.Color.BLACK)
-                            // Load the official YouTube privacy-enhanced embed directly. This avoids
-                            // an extra local HTML/iframe navigation layer inside Android WebView.
-                            loadUrl("https://www.youtube-nocookie.com/embed/$youtubeId?autoplay=1&playsinline=1&rel=0&controls=1")
+                            // YouTube requires an HTTP Referer (or equivalent app identity) for
+                            // embedded players in app WebViews. Loading a wrapper with a stable HTTPS
+                            // base URL supplies that identity; a direct loadUrl(embedUrl) can trigger
+                            // YouTube error 153 and leave a black/empty player surface.
+                            val appOrigin = "https://com.hightechentertainment.app"
+                            val embed = "https://www.youtube-nocookie.com/embed/$youtubeId?autoplay=1&playsinline=1&rel=0&controls=1&origin=$appOrigin"
+                            val safeTitle = video.title.replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;").replace(">", "&gt;")
+                            val html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><meta name="referrer" content="strict-origin-when-cross-origin"><style>html,body{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden}iframe{display:block;width:100%;height:100%;border:0}</style></head><body><iframe src="$embed" title="$safeTitle" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></body></html>"""
+                            loadDataWithBaseURL("$appOrigin/", html, "text/html", "UTF-8", null)
                         }
                     },
                     modifier = Modifier.fillMaxSize(),
