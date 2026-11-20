@@ -198,25 +198,6 @@ jobs:
           test "$NEW_CERT" = "$TRUSTED_CERT_SHA256"
           test "$RUNTIME_CERT_SHA256" = "$TRUSTED_CERT_SHA256"
           echo "PASS: candidate matches the pinned trusted signing certificate SHA-256."
-      - name: Prepare signed production candidate
-        if: env.BUILD_SIGNED_CANDIDATE == 'true'
-        run: |
-          set -euo pipefail
-          mkdir -p ../release-candidate
-          cp app/build/outputs/apk/release/app-release.apk ../release-candidate/HTE-Universe-4.2.0.apk
-          cp app/build/outputs/apk/release/app-release.apk.idsig ../release-candidate/HTE-Universe-4.2.0.apk.idsig
-          cp app/build/outputs/apk/release/SHA256SUMS.txt ../release-candidate/SHA256SUMS.txt
-      - name: Upload signed production candidate APK
-        if: env.BUILD_SIGNED_CANDIDATE == 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: hte-universe-production-candidate-4.2.0-build52
-          path: |
-            release-candidate/HTE-Universe-4.2.0.apk
-            release-candidate/HTE-Universe-4.2.0.apk.idsig
-            release-candidate/SHA256SUMS.txt
-          if-no-files-found: error
-          retention-days: 14
       - name: Prepare production release assets
         if: env.PUBLISH_RELEASE == 'true'
         run: |
@@ -225,17 +206,6 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk ../release-assets/HTE-Universe-4.2.0.apk
           cp app/build/outputs/apk/release/app-release.apk.idsig ../release-assets/HTE-Universe-4.2.0.apk.idsig
           cp app/build/outputs/apk/release/SHA256SUMS.txt ../release-assets/SHA256SUMS.txt
-      - name: Upload verified production APK artifact
-        if: env.PUBLISH_RELEASE == 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: hte-universe-production-4.2.0-build52
-          path: |
-            release-assets/HTE-Universe-4.2.0.apk
-            release-assets/HTE-Universe-4.2.0.apk.idsig
-            release-assets/SHA256SUMS.txt
-          if-no-files-found: error
-          retention-days: 90
       - name: Publish HTE Universe 4.2.0
         if: env.PUBLISH_RELEASE == 'true'
         uses: softprops/action-gh-release@v2
