@@ -344,6 +344,12 @@ private fun findVoiceTrack(tracks: List<TrackDto>, query: String): TrackDto? {
         ?: tracks.firstOrNull { it.title.contains(term, ignoreCase = true) || it.artist.contains(term, ignoreCase = true) || it.genre.orEmpty().contains(term, ignoreCase = true) }
 }
 
+private fun voicePlaybackConfirmation(track: TrackDto): String = when (track.sourcePlatform.lowercase()) {
+    "spotify" -> "Opened the official Spotify player for " + track.title + " by " + track.artist + ". Spotify controls playback access.
+    "youtube" -> "Opened the official music link for " + track.title + " by " + track.artist + ".
+    else -> "Sent " + track.title + " by " + track.artist + " to the HTE audio player."
+}
+
 private fun findVoiceVideo(videos: List<VideoDto>, query: String): VideoDto? {
     val term = query.trim()
     if (term.isBlank()) return null
@@ -406,7 +412,7 @@ private fun startVoiceSession(
                                 if (track == null) ClientToolResult.failure("I could not find a playable published HTE track for that request.")
                                 else {
                                     withContext(Dispatchers.Main.immediate) { toolContext.onPlayTrack(track) }
-                                    ClientToolResult.success("Selected " + track.title + " by " + track.artist + " and handed it to the HTE player.")
+                                    ClientToolResult.success(voicePlaybackConfirmation(track))
                                 }
                             }
                             "download_track" -> {
