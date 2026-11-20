@@ -288,7 +288,9 @@ fun MemberCenter(
                 }
             }
         }
-        if (statusMessage != null) item { Text(statusMessage!!, color = MemberGold, fontSize = 12.sp) }
+        statusMessage?.let { message ->
+            item { Text(message, color = MemberGold, fontSize = 12.sp) }
+        }
     }
 
     if (showSettings) {
