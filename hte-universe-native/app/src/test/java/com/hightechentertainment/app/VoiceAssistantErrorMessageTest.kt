@@ -17,4 +17,10 @@ class VoiceAssistantErrorMessageTest {
     @Test fun expiredSessionAsksUserToSignInAgain() {
         assertTrue(voiceFailureMessage("401 session expired").contains("Sign in again"))
     }
+
+    @Test fun providerPermissionFailuresExplainTheCorrectOwnerAction() {
+        val message = voiceFailureMessage("403 forbidden")
+        assertTrue(message.contains("agent permissions"))
+        assertTrue(message.contains("server-side API credentials"))
+    }
 }
