@@ -45,15 +45,15 @@ rm -f dist/assets/booking-confirmation.aac
 test ! -e dist/assets/booking-confirmation.aac || { echo "Source AAC must not be published" >&2; exit 1; }
 
 cp app-download.html robots.txt sitemap.xml account-deletion.html privacy-policy.html high-tech-logo.svg music-spotlight.html dist/
-node scripts/generate-public-sitemap.mjs
 
-for file in terms-of-service.html; do
-  if [ ! -s "$file" ]; then
-    echo "Required source page is missing: $file" >&2
-    exit 1
-  fi
-  install -D -m 0644 "$file" "dist/$file"
-done
+# Publish Terms before generating the sitemap so it is included automatically.
+if [ ! -s terms-of-service.html ]; then
+  echo "Required source page is missing: terms-of-service.html" >&2
+  exit 1
+fi
+install -D -m 0644 terms-of-service.html dist/terms-of-service.html
+
+node scripts/generate-public-sitemap.mjs
 
 for file in google31fdb4754075f7bd.html googled2aa97c2eb951371.html; do
   if [ -s "$file" ]; then cp "$file" dist/; fi
@@ -124,6 +124,9 @@ expected_urls = set()
 for page in root.rglob("*.html"):
     relative = page.relative_to(root).as_posix()
     if relative == "404.html" or relative.startswith(("admin/", "account/")):
+        continue
+    # Google Search Console verification tokens are required for ownership checks, not search landing pages.
+    if re.fullmatch(r"google[0-9a-f]{16,}\.html", relative, flags=re.I):
         continue
     source = page.read_text(encoding="utf-8")
     robots_tag = re.search(r'<meta\b(?=[^>]*\bname=["\']robots["\'])[^>]*>', source, flags=re.I)
