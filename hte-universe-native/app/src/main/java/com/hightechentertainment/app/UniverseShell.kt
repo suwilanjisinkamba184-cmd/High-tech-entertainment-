@@ -596,6 +596,9 @@ fun UniverseShell() {
                     downloads = downloads,
                     favouriteTracks = tracks.filter { it.id in favouriteTrackIds },
                     recentlyPlayedTracks = recentlyPlayedTrackIds.mapNotNull { id -> tracks.firstOrNull { it.id == id } },
+                    playlists = playlists,
+                    playlistTracks = playlistTracks,
+                    onPlayPlaylist = ::playPlaylist,
                     onPlayRecent = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true },
                     onPlayFavourite = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks.filter { track -> track.id in favouriteTrackIds } else listOf(it); playerExpanded = true },
                     onToggleFavourite = ::toggleFavourite,
@@ -1124,6 +1127,9 @@ private fun LibraryScreen(
     downloads: List<OfflineDownloadRecord>,
     favouriteTracks: List<TrackDto>,
     recentlyPlayedTracks: List<TrackDto>,
+    playlists: List<PlaylistDto>,
+    playlistTracks: Map<String, List<TrackDto>>,
+    onPlayPlaylist: (PlaylistDto) -> Unit,
     onPlayRecent: (TrackDto) -> Unit,
     onPlayFavourite: (TrackDto) -> Unit,
     onToggleFavourite: (TrackDto) -> Unit,
@@ -1147,6 +1153,26 @@ private fun LibraryScreen(
                     LibraryMetric("${downloads.count { it.status == "Downloaded" }}", "OFFLINE", Modifier.weight(1f))
                     Box(Modifier.width(1.dp).height(38.dp).background(Color.White.copy(alpha = .1f)))
                     LibraryMetric("${downloads.size}", "IN QUEUE", Modifier.weight(1f))
+                }
+            }
+        }
+        item { Text("YOUR PLAYLISTS", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold) }
+        if (playlists.isEmpty()) item {
+            LibraryEmptyCard("No playlists yet", "Create a playlist from your HTE member account. Your playlists stay synced with the website.", onSignIn, "Open account")
+        } else items(playlists, key = { "playlist-${it.id}" }) { playlist ->
+            Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(16.dp)) {
+                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(42.dp).background(ShellGold.copy(alpha = .12f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Outlined.QueueMusic, null, tint = ShellGold)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(playlist.name, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${playlistTracks[playlist.id].orEmpty().size} available tracks", color = ShellMuted, fontSize = 10.sp)
+                    }
+                    IconButton(onClick = { onPlayPlaylist(playlist) }) {
+                        Icon(Icons.Outlined.PlayCircle, "Play ${playlist.name}", tint = ShellGold)
+                    }
                 }
             }
         }
