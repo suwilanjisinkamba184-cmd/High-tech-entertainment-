@@ -464,7 +464,7 @@ def main() -> int:
         official_channel = resolve_channel(official_channel_value, api_key)
         if official_channel:
             print(f"  OFFICIAL HTE channel {official_channel['title']} ({official_channel_value})")
-            add(playlist_candidates(official_channel["uploads"], api_key, max(1, max_posts),
+            add(playlist_candidates(official_channel["uploads"], api_key, 50,
                                     channel_id=official_channel["id"], hte_official=True))
     else:
         print("  official HTE channel not configured; set GitHub Actions variable HTE_YOUTUBE_CHANNEL_ID")
