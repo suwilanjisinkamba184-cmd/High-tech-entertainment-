@@ -108,6 +108,8 @@ jobs:
           PY
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest --console=plain
+      - name: Compile Android instrumentation smoke tests
+        run: gradle --no-daemon :app:assembleDebugAndroidTest --console=plain
       - name: Run debug lint
         run: gradle --no-daemon :app:lintDebug --console=plain
       - name: Run release lint
