@@ -100,6 +100,25 @@ if missing_homepage:
     raise SystemExit("Published homepage is missing Astro UI markers: " + ", ".join(missing_homepage))
 
 ET.parse(root / "sitemap.xml")
+from urllib.parse import urlsplit, unquote
+site_base = "https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/"
+for node in ET.parse(root / "sitemap.xml").getroot():
+    if node.tag.rsplit("}", 1)[-1] != "url":
+        continue
+    loc = next((child.text for child in node if child.tag.rsplit("}", 1)[-1] == "loc"), None)
+    if not loc or not loc.startswith(site_base):
+        raise SystemExit(f"Invalid or off-site sitemap URL: {loc}")
+    path = unquote(urlsplit(loc).path)
+    prefix = "/High-tech-entertainment-/"
+    if not path.startswith(prefix):
+        raise SystemExit(f"Sitemap URL is outside the GitHub Pages base path: {loc}")
+    relative = path[len(prefix):]
+    target = root / relative if relative else root / "index.html"
+    if target.is_dir():
+        target = target / "index.html"
+    if not target.is_file():
+        raise SystemExit(f"Sitemap URL has no generated HTML page: {loc} -> {target}")
+print("Every sitemap URL resolves to a generated HTML page.")
 missing = []
 for page in root.rglob("*.html"):
     source = page.read_text(encoding="utf-8")
