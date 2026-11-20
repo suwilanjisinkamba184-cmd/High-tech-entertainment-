@@ -3,8 +3,14 @@ name: HTE Universe — production Android build and release
 on:
   push:
     branches: [main]
+    paths:
+      - "hte-universe-native/**"
+      - "supabase/config.toml"
   pull_request:
     branches: [main]
+    paths:
+      - "hte-universe-native/**"
+      - "supabase/config.toml"
   workflow_dispatch:
     inputs:
       publish_release:
