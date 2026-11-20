@@ -10,6 +10,9 @@ mkdir -p website/public
 cp high-tech-logo.svg website/public/high-tech-logo.svg
 cp supabase-config.js website/public/supabase-config.js
 
+# Pre-render only published artist and release records for search-engine discovery.
+node scripts/generate-public-seo-data.mjs
+
 npm --prefix website install --no-audit --no-fund
 npm --prefix website run check
 npm --prefix website run build
@@ -44,6 +47,7 @@ rm -f dist/assets/booking-confirmation.aac
 test ! -e dist/assets/booking-confirmation.aac || { echo "Source AAC must not be published" >&2; exit 1; }
 
 cp app-download.html robots.txt sitemap.xml account-deletion.html privacy-policy.html high-tech-logo.svg music-spotlight.html dist/
+node scripts/generate-public-sitemap.mjs
 
 for file in terms-of-service.html; do
   if [ ! -s "$file" ]; then
@@ -63,6 +67,9 @@ for file in index.html app-download.html robots.txt sitemap.xml supabase-config.
   # Original artwork must be present in the actual published output.
 
   test -s "dist/$file" || { echo "Missing required build output: $file" >&2; exit 1; }
+done
+for file in services/index.html services/music-production/index.html services/mixing-mastering/index.html services/artist-promotion/index.html services/software-development/index.html journal/index.html journal/prepare-for-a-recording-session/index.html journal/from-beat-to-release/index.html; do
+  test -s "dist/$file" || { echo "Missing published SEO service page: $file" >&2; exit 1; }
 done
 if [ ! -s dist/assets/booking-confirmation.mp3 ] && [ "${CF_PAGES:-0}" != "1" ]; then
   echo "Missing production booking-confirmation MP3." >&2

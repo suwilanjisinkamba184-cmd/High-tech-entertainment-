@@ -1,0 +1,12 @@
+---
+import ServiceLanding from '../../components/ServiceLanding.astro';
+const title='Website & Software Development Services';
+const description='Discuss website development, software projects and digital product experiences with High-Tech Entertainment, based in Kitwe, Zambia.';
+const canonical='https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/services/software-development/';
+const sections=[
+{heading:'Websites built around the work',body:'A useful website should make its purpose clear, work well on phones and help visitors take the next step. Start with the audience, the content and the business outcome.',points:['Business and portfolio websites','Responsive layouts and accessible navigation','Search-friendly page structure and content']},
+{heading:'Digital products and integrations',body:'For more involved projects, define the users, workflows, data needs and integrations before choosing the technical approach. Scope and delivery are agreed project by project.',points:['Interactive web applications','API and platform integrations','Content management and workflow improvements']},
+{heading:'Performance and ongoing improvement',body:'Performance, security, accessibility and maintainability should be considered from the beginning. Share your existing site or project brief to discuss a practical improvement plan.'}
+];
+---
+<ServiceLanding title={title} description={description} canonical={canonical} eyebrow="SOFTWARE · WEB · DIGITAL PRODUCTS" intro="High-Tech Entertainment also works across software development and digital experiences. Discuss a website, an application or an existing product that needs a clearer, faster and more reliable experience." sections={sections}/>

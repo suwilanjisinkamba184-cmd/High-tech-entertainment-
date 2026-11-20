@@ -30,6 +30,24 @@ jobs:
           grep -q 'hero-photo' website/src/pages/index.astro
           python -c "import xml.etree.ElementTree as ET; ET.parse('website/public/images/brand/high-tech-hero.svg')"
           test -s website/src/components/PublicCatalogue.tsx
+          test -s website/src/components/ServiceLanding.astro
+          test -s website/src/data/public-seo.json
+          test -s website/src/pages/services/index.astro
+          test -s website/src/pages/services/music-production.astro
+          test -s website/src/pages/services/mixing-mastering.astro
+          test -s website/src/pages/services/artist-promotion.astro
+          test -s website/src/pages/services/software-development.astro
+          test -s website/src/pages/journal/index.astro
+          test -s website/src/pages/journal/prepare-for-a-recording-session.astro
+          test -s website/src/pages/journal/from-beat-to-release.astro
+          test -s website/src/pages/artists/'[id]-[slug].astro'
+          test -s website/src/pages/releases/'[id]-[slug].astro'
+          test -s scripts/generate-public-seo-data.mjs
+          test -s scripts/generate-public-sitemap.mjs
+          grep -q 'canonical = ' website/src/layouts/SiteLayout.astro
+          grep -q 'twitter:image' website/src/layouts/SiteLayout.astro
+          grep -q 'generate-public-seo-data.mjs' scripts/build-website.sh
+          grep -q 'generate-public-sitemap.mjs' scripts/build-website.sh
           test -s supabase-config.js
           test -s robots.txt
           test -s sitemap.xml
@@ -102,6 +120,11 @@ jobs:
       - name: Check legacy JavaScript syntax
         run: find assets admin account -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
       - name: Validate sitemap XML
-        run: python -c "import xml.etree.ElementTree as ET; ET.parse('sitemap.xml'); print('Sitemap XML is valid')"
+        run: |
+          python -c "import xml.etree.ElementTree as ET; ET.parse('sitemap.xml'); print('Sitemap XML is valid')"
+          node --check scripts/generate-public-seo-data.mjs
+          node --check scripts/generate-public-sitemap.mjs
+          grep -q '/services/music-production/' sitemap.xml
+          grep -q '/journal/prepare-for-a-recording-session/' sitemap.xml
       - name: Build Astro + React website and validate shared routes
         run: bash scripts/build-website.sh

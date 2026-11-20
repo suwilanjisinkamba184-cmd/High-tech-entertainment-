@@ -1,0 +1,55 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+interface ServiceSection {
+  heading: string;
+  body: string;
+  points?: string[];
+}
+interface Props {
+  title: string;
+  description: string;
+  canonical: string;
+  eyebrow: string;
+  intro: string;
+  sections: ServiceSection[];
+}
+const { title, description, canonical, eyebrow, intro, sections } = Astro.props;
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const schema = {
+  '@context':'https://schema.org',
+  '@type':'Service',
+  name:title,
+  description,
+  serviceType:title,
+  provider:{'@type':'Organization',name:'High-Tech Entertainment',url:'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/'},
+  areaServed:[{'@type':'City',name:'Kitwe'},{'@type':'Country',name:'Zambia'},{'@type':'Place',name:'Worldwide'}],
+  url:canonical
+};
+---
+<SiteLayout title={title + ' | High-Tech Entertainment Zambia'} description={description} canonical={canonical}>
+  <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+  <main class="service-page">
+    <header class="service-header">
+      <a class="brand" href={base}><img src={base + 'high-tech-logo.svg'} alt="" width="42" height="42" /> HIGH-TECH ENTERTAINMENT</a>
+      <nav aria-label="Main navigation"><a href={base}>Home</a><a href={base + 'services/'}>Services</a><a href={base + '#music'}>Music</a><a href={base + '#booking'}>Book a session</a></nav>
+    </header>
+    <section class="service-hero">
+      <p class="eyebrow">{eyebrow}</p>
+      <h1>{title}</h1>
+      <p class="intro">{intro}</p>
+      <div class="actions"><a class="button gold" href={base + '#booking'}>Discuss your project <span aria-hidden="true">↗</span></a><a class="button outline" href="https://wa.me/260766739286" target="_blank" rel="noopener noreferrer">WhatsApp HTE</a></div>
+      <p class="location">Based in Kitwe, Zambia · Working with artists and clients worldwide</p>
+    </section>
+    <section class="service-content">
+      {sections.map((section,index)=><article class="content-card">
+        <span class="number">{String(index+1).padStart(2,'0')}</span>
+        <div><h2>{section.heading}</h2><p>{section.body}</p>{section.points?.length && <ul>{section.points.map(point=><li>{point}</li>)}</ul>}</div>
+      </article>)}
+    </section>
+    <section class="service-cta"><p class="eyebrow">LET'S BUILD SOMETHING</p><h2>Tell us what you're working on.</h2><p>Share your goals, timeline and the service you need. The team will review your enquiry and follow up with the next steps.</p><a class="button gold" href={base + '#booking'}>Start a booking enquiry ↗</a></section>
+    <footer><span>© {new Date().getFullYear()} High-Tech Entertainment</span><a href={base + 'privacy-policy.html'}>Privacy</a><a href={base + 'terms-of-service.html'}>Terms</a></footer>
+  </main>
+</SiteLayout>
+<style>
+.service-page{min-height:100vh;background:#090909;color:#f7f5ef;font-family:Inter,system-ui,sans-serif}.service-header{height:76px;padding:0 clamp(20px,6vw,84px);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #c5a45a30;background:#090909}.brand{display:flex;align-items:center;gap:12px;font-size:.72rem;letter-spacing:.15em;font-weight:800}.brand img{object-fit:contain}.service-header nav{display:flex;gap:clamp(12px,2vw,28px);font-size:.78rem;color:#bdb8aa}.service-header a:hover,footer a:hover{color:#d8b969}.service-hero{padding:clamp(76px,11vw,150px) clamp(22px,12vw,180px) 82px;background:radial-gradient(ellipse at 85% 20%,#c5a45a24,transparent 45%),linear-gradient(130deg,#111,#090909 70%);border-bottom:1px solid #c5a45a2b}.eyebrow{color:#d0ad62;font-size:.7rem;font-weight:800;letter-spacing:.2em}.service-hero h1{max-width:900px;margin:22px 0;font-size:clamp(2.7rem,7vw,6rem);line-height:.98;letter-spacing:-.06em}.intro{max-width:760px;color:#c2bfb6;font-size:clamp(1.05rem,2vw,1.28rem);line-height:1.8}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}.button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 22px;font-size:.76rem;font-weight:800;letter-spacing:.04em}.gold{background:linear-gradient(110deg,#c5a45a,#d7d8d9);color:#111}.outline{border:1px solid #c5a45a80;color:#f7f5ef}.location{margin-top:34px;color:#89877f;font-size:.72rem;letter-spacing:.06em}.service-content{max-width:1050px;margin:auto;padding:45px 22px}.content-card{display:grid;grid-template-columns:70px 1fr;gap:18px;padding:32px 0;border-bottom:1px solid #ffffff17}.number{color:#c5a45a;font-weight:800;letter-spacing:.15em}.content-card h2,.service-cta h2{font-size:clamp(1.45rem,3vw,2.2rem);letter-spacing:-.04em;margin:0 0 12px}.content-card p,.content-card li,.service-cta>p:not(.eyebrow){color:#aaa79f;line-height:1.8}.content-card ul{padding-left:20px}.content-card li{margin:7px 0}.service-cta{margin:20px auto 70px;max-width:1000px;padding:clamp(28px,6vw,64px);border:1px solid #c5a45a55;background:linear-gradient(130deg,#1b1914,#101113)}.service-cta h2{margin-top:18px}.service-cta .button{margin-top:16px}footer{border-top:1px solid #ffffff18;padding:24px clamp(22px,6vw,84px);display:flex;gap:24px;color:#89877f;font-size:.75rem}footer span{margin-right:auto}@media(max-width:650px){.service-header{height:auto;min-height:72px;align-items:flex-start;padding-top:15px;padding-bottom:15px;gap:16px;flex-direction:column}.service-header nav{flex-wrap:wrap}.content-card{grid-template-columns:36px 1fr;gap:10px}.service-hero{padding-top:70px}.service-cta{margin-inline:16px}footer{flex-wrap:wrap}}
+</style>
