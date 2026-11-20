@@ -121,7 +121,7 @@ fun HteSplashScreen(
         if (elapsed >= 15) onSplashFinished()
     }
 
-    // Reveal the official HTE logo inside the animated orbital ring.
+    // Keep the supplied brand artwork intact; the ring is a separate animated layer.
     LaunchedEffect(Unit) {
         ringProgress.animateTo(1f, tween(1100, easing = FastOutSlowInEasing))
         launch { flashGlow.animateTo(1f, tween(250)); flashGlow.animateTo(0.25f, tween(900)) }
