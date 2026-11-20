@@ -1736,7 +1736,21 @@ fun SpotifyEmbedDialog(url: String, onDismiss: () -> Unit) {
                     }
                 }
             }
-            Text("Official Spotify embed. Playback availability and full-track access are controlled by Spotify and your account.", color = ShellMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 10.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                TextButton(onClick = {
+                    runCatching {
+                        val appUri = com.hightechentertainment.app.media.spotifyAppUri(url) ?: url
+                        hostContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(appUri)))
+                    }.onFailure {
+                        Toast.makeText(hostContext, "Spotify could not be opened. Please check the link and try again.", Toast.LENGTH_LONG).show()
+                    }
+                }) {
+                    Icon(Icons.Outlined.OpenInNew, contentDescription = null, tint = ShellGold, modifier = Modifier.size(15.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Open in Spotify app", color = ShellGold, fontSize = 11.sp)
+                }
+            }
+            Text("Official Spotify embed. Playback availability and full-track access are controlled by Spotify and your account.", color = ShellMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
         }
     }
 }
