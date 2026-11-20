@@ -118,7 +118,32 @@ for node in ET.parse(root / "sitemap.xml").getroot():
         target = target / "index.html"
     if not target.is_file():
         raise SystemExit(f"Sitemap URL has no generated HTML page: {loc} -> {target}")
-print("Every sitemap URL resolves to a generated HTML page.")
+    sitemap_urls.add(loc)
+expected_urls = set()
+for page in root.rglob("*.html"):
+    relative = page.relative_to(root).as_posix()
+    if relative == "404.html" or relative.startswith(("admin/", "account/")):
+        continue
+    source = page.read_text(encoding="utf-8")
+    robots_tag = re.search(r'<meta\b(?=[^>]*\bname=["\']robots["\'])[^>]*>', source, flags=re.I)
+    if robots_tag and re.search(r"\bnoindex\b", robots_tag.group(0), flags=re.I):
+        continue
+    canonical_tag = re.search(r'<link\b(?=[^>]*\brel=["\']canonical["\'])[^>]*>', source, flags=re.I)
+    canonical_match = re.search(r'href=["\']([^"\']+)["\']', canonical_tag.group(0), flags=re.I) if canonical_tag else None
+    if canonical_match:
+        expected = canonical_match.group(1)
+    elif relative == "index.html":
+        expected = site_base
+    elif relative.endswith("/index.html"):
+        expected = site_base + relative[:-len("index.html")]
+    else:
+        expected = site_base + relative
+    if expected.startswith(site_base):
+        expected_urls.add(expected)
+missing_urls = sorted(expected_urls - sitemap_urls)
+if missing_urls:
+    raise SystemExit("Indexable public pages missing from sitemap: " + ", ".join(missing_urls))
+print(f"Sitemap is valid, every URL resolves, and all {len(expected_urls)} indexable public pages are included.")
 missing = []
 for page in root.rglob("*.html"):
     source = page.read_text(encoding="utf-8")
