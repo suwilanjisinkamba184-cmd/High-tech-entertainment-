@@ -25,8 +25,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import androidx.core.content.ContextCompat
 import com.hightechentertainment.app.data.SupabaseClientProvider
 import com.hightechentertainment.app.data.TrackDto
@@ -178,8 +176,7 @@ fun VoiceAssistantDialog(
         }
     }
 
-    Popup(alignment = Alignment.BottomEnd, properties = PopupProperties(focusable = false)) {
-        Box(Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.BottomEnd) {
+    Box(Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.BottomEnd) {
             if (minimized) {
                 Surface(Modifier.fillMaxWidth().widthIn(max = 320.dp), color = VoicePanel, shape = RoundedCornerShape(22.dp), shadowElevation = 18.dp) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -334,7 +331,6 @@ fun VoiceAssistantDialog(
                 }
             }
         }
-    }
 
     // Keep the callbacks current for the registered SDK client tools.
     @Suppress("UNUSED_VARIABLE") val activeMode = mode
