@@ -68,6 +68,9 @@ for file in index.html app-download.html robots.txt sitemap.xml supabase-config.
 
   test -s "dist/$file" || { echo "Missing required build output: $file" >&2; exit 1; }
 done
+for file in services/index.html services/music-production/index.html services/mixing-mastering/index.html services/artist-promotion/index.html services/software-development/index.html; do
+  test -s "dist/$file" || { echo "Missing published SEO service page: $file" >&2; exit 1; }
+done
 if [ ! -s dist/assets/booking-confirmation.mp3 ] && [ "${CF_PAGES:-0}" != "1" ]; then
   echo "Missing production booking-confirmation MP3." >&2
   exit 1
