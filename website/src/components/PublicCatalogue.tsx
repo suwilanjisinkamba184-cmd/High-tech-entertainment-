@@ -266,7 +266,7 @@ export default function PublicCatalogue() {
       setErrors([]);
       const requests = await Promise.allSettled([
         withTimeout(db.from('tracks').select('id,title,artist,genre,audio_url,source_url,source_platform,rights_status,download_allowed,branded_audio_url,download_branding_status,cover_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),12000),
-        withTimeout(db.from('artists').select('id,name,bio,image_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),12000),
+        withTimeout(db.from('artists').select('id,name,bio,image_url,created_at').order('created_at',{ascending:false}).limit(60),12000),
         withTimeout(db.from('releases').select('id,title,release_date,cover_url,spotify_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),12000),
         withTimeout(db.from('videos').select('id,title,artist,description,video_url,thumbnail_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(40),12000)
       ]);
