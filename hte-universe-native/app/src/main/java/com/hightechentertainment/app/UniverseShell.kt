@@ -1116,6 +1116,11 @@ private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit
     }
 }
 
+private fun isYouTubeWatchUrl(value: String): Boolean {
+    val host = runCatching { Uri.parse(value).host.orEmpty().lowercase() }.getOrDefault("")
+    return host == "youtube.com" || host.endsWith(".youtube.com") || host == "youtu.be" || host.endsWith(".youtu.be")
+}
+
 @Composable
 private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: (() -> Unit)?) {
     Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
@@ -1123,7 +1128,7 @@ private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: (() -> Uni
             Box(Modifier.fillMaxWidth().height(164.dp).clip(RoundedCornerShape(13.dp)).background(
                 androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF392D1D), Color(0xFF171B22), Color(0xFF0D1117)))
             ), contentAlignment = Alignment.Center) {
-                if (!video.thumbnailUrl.isNullOrBlank()) {
+                if (!video.thumbnailUrl.isNullOrBlank() && !isYouTubeWatchUrl(video.thumbnailUrl)) {
                     AsyncImage(
                         model = video.thumbnailUrl,
                         contentDescription = "Thumbnail for ${video.title}",
