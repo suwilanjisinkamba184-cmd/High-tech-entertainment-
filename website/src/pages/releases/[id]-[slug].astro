@@ -17,7 +17,7 @@ const description='Discover '+release.title+' on HTE Universe, the official musi
 const spotify=typeof release.spotify_url==='string'&&/^https:\/\/open\.spotify\.com\/(album|track|playlist)\/[A-Za-z0-9]+/.test(release.spotify_url)?release.spotify_url:'';
 const schema={'@context':'https://schema.org','@type':'MusicAlbum','name':release.title,'image':image,'datePublished':release.release_date||undefined,'url':canonical};
 ---
-<SiteLayout title={release.title+' | HTE Universe Release'} description={description} canonical={canonical} image={image}>
+<SiteLayout title={release.title+' | HTE Universe Release'} description={description} canonical={canonical} image={image} imageAlt={release.title + " cover artwork"}>
   <script type="application/ld+json" set:html={JSON.stringify(schema)} />
   <main class="release"><header><a href={base}>← HTE Universe</a><a href={base+'#releases'}>All releases</a></header><section class="hero"><img src={image} alt={release.title+' cover artwork'} loading="eager" /><div><p class="eyebrow">OFFICIAL HTE RELEASE</p><h1>{release.title}</h1><p>{release.release_date?'Release date: '+release.release_date:'Official release from High-Tech Entertainment.'}</p>{spotify?<a class="button" href={spotify} target="_blank" rel="noopener noreferrer">Listen on Spotify ↗</a>:<a class="button" href={base+'#music'}>Explore music catalogue ↗</a>}</div></section><section class="more"><h2>More from HTE Universe</h2><p>Explore more music, artist profiles and visual releases from High-Tech Entertainment.</p><a href={base+'#music'}>Browse music catalogue ↗</a></section><footer>© {new Date().getFullYear()} High-Tech Entertainment · <a href={base+'privacy-policy.html'}>Privacy</a></footer></main>
 </SiteLayout>
