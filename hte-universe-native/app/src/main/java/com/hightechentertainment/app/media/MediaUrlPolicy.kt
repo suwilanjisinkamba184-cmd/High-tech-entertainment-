@@ -88,9 +88,3 @@ internal fun isPlayableVideoUrl(url: String?): Boolean {
     }
 }
 
-/** Public downloads must use a secure HTTPS URL with a valid host. */
-internal fun isSecureMediaDownloadUrl(url: String?): Boolean {
-    val uri = parseMediaUri(url) ?: return false
-    return uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrBlank() &&
-        uri.userInfo == null
-}
