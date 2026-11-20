@@ -16,7 +16,7 @@ const image=typeof artist.image_url==='string'&&artist.image_url.startsWith('htt
 const description=String(artist.bio||('Discover '+artist.name+' on HTE Universe. Explore music, releases and official updates from High-Tech Entertainment.')).replace(/\s+/g,' ').slice(0,300);
 const schema={'@context':'https://schema.org','@type':'MusicGroup','name':artist.name,'description':description,'image':image,'url':canonical};
 ---
-<SiteLayout title={artist.name+' | HTE Universe Artist'} description={description} canonical={canonical} image={image}>
+<SiteLayout title={artist.name+' | HTE Universe Artist'} description={description} canonical={canonical} image={image} imageAlt={artist.name + " artist portrait"}>
   <script type="application/ld+json" set:html={JSON.stringify(schema)} />
   <main class="profile"><header><a href={base}>← HTE Universe</a><a href={base+'#artists'}>All artists</a></header><section class="hero"><img src={image} alt={artist.name+' artist profile'} loading="eager" /><div><p class="eyebrow">HTE UNIVERSE · ARTIST PROFILE</p><h1>{artist.name}</h1><p>{description}</p><a class="button" href={base+'#music'}>Explore HTE music ↗</a></div></section><section class="more"><h2>Discover the music</h2><p>Explore the public HTE catalogue for music, videos and releases. New public updates appear as they are published by High-Tech Entertainment.</p><a href={base+'#music'}>Open music catalogue ↗</a></section><footer>© {new Date().getFullYear()} High-Tech Entertainment · <a href={base+'privacy-policy.html'}>Privacy</a></footer></main>
 </SiteLayout>
