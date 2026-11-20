@@ -29,7 +29,7 @@ class YouTubeLinkClassifierTest {
     }
 
     @Test fun rejectsInvalidIdsAndUntrustedHosts() {
-        assertTrue(YouTubeLinkClassifier.classify("https://youtu.be/not-a-video") is YouTubeSubmissionRoute.Invalid)
+        assertTrue(YouTubeLinkClassifier.classify("https://youtu.be/not-a-vide") is YouTubeSubmissionRoute.Invalid)
         assertTrue(YouTubeLinkClassifier.classify("https://youtube.com.evil.example/watch?v=YVbOceX0pHM") is YouTubeSubmissionRoute.Invalid)
         assertTrue(YouTubeLinkClassifier.classify("http://youtube.com/watch?v=YVbOceX0pHM") is YouTubeSubmissionRoute.Invalid)
         assertTrue(YouTubeLinkClassifier.classify("not a URL") is YouTubeSubmissionRoute.Invalid)
