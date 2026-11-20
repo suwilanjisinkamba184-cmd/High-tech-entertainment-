@@ -1,14 +1,14 @@
 ---
 import SiteLayout from '../../layouts/SiteLayout.astro';
 import rawSeo from '../../data/public-seo.json';
+import { slugify } from '../../lib/slugify';
 type ArtistRecord = {id:string;name:string;bio?:string;image_url?:string};
 type ReleaseRecord = {id:string;title:string;release_date?:string;cover_url?:string;spotify_url?:string};
 const site='https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/';
 const base=import.meta.env.BASE_URL.endsWith('/')?import.meta.env.BASE_URL:`${import.meta.env.BASE_URL}/`;
-const slugify=(value:string)=>String(value||'release').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,70)||'release';
 export function getStaticPaths(){
   const publicSeo = rawSeo as unknown as {artists:ArtistRecord[];releases:ReleaseRecord[]};
-  return publicSeo.releases.filter(item=>item?.id&&item?.title&&/^[A-Za-z0-9_-]{1,80}$/.test(String(item.id))).map(release=>({params:{id:String(release.id),slug:slugify(release.title)},props:{release}}));
+  return publicSeo.releases.filter(item=>item?.id&&item?.title&&/^[A-Za-z0-9_-]{1,80}$/.test(String(item.id))).map(release=>({params:{id:String(release.id),slug:slugify(release.title, 'release')},props:{release}}));
 }
 const {release}=Astro.props;
 const canonical=site+'releases/'+encodeURIComponent(String(release.id))+'-'+slugify(release.title)+'/';
