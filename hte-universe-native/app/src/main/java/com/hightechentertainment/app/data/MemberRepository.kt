@@ -94,6 +94,14 @@ private data class MemberBookingMessageDto(
 )
 
 @Serializable
+private data class ListeningHistoryDto(
+    val id: String,
+    @SerialName("track_id") val trackId: String,
+    @SerialName("played_at") val playedAt: String,
+    val completed: Boolean = false
+)
+
+@Serializable
 private data class ListeningHistoryInsertDto(
     @SerialName("user_id") val userId: String,
     @SerialName("track_id") val trackId: String,
@@ -283,6 +291,17 @@ class MemberRepository {
     suspend fun recordListening(trackId: String, completed: Boolean = false) {
         val userId = requireUserId()
         client.from("listening_history").insert(ListeningHistoryInsertDto(userId, trackId, completed))
+    }
+
+    suspend fun getMyListeningTrackIds(): List<String> {
+        val userId = requireUserId()
+        return client.from("listening_history")
+            .select { filter { eq("user_id", userId) } }
+            .decodeList<ListeningHistoryDto>()
+            .sortedByDescending { it.playedAt }
+            .distinctBy { it.trackId }
+            .take(20)
+            .map { it.trackId }
     }
 
     /** Broadcast and member-specific visibility is enforced by the live RLS policy. */

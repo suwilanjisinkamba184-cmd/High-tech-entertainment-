@@ -206,7 +206,10 @@ fun UniverseShell() {
                 } else {
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                 }
-                scope.launch { runCatching { withContext(Dispatchers.IO) { audienceAnalytics.record("track_play", selected.id) } } }
+                scope.launch {
+            runCatching { withContext(Dispatchers.IO) { MemberRepository().recordListening(selected.id) } }
+            runCatching { withContext(Dispatchers.IO) { audienceAnalytics.record("track_play", selected.id) } }
+        }
             } catch (error: ActivityNotFoundException) {
                 val message = if (isSpotifySource(selected.sourcePlatform, url)) {
                     "Spotify is not installed. Install the Spotify app to play this track."
@@ -263,6 +266,7 @@ fun UniverseShell() {
     val autoplayNext = remember(settingsRevision) { settingsStore.autoplayNext }
     var downloads by remember { mutableStateOf<List<OfflineDownloadRecord>>(emptyList()) }
     var favouriteTrackIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var recentlyPlayedTrackIds by remember { mutableStateOf<List<String>>(emptyList()) }
     var playlists by remember { mutableStateOf<List<PlaylistDto>>(emptyList()) }
     var playlistTracks by remember { mutableStateOf<Map<String, List<TrackDto>>>(emptyMap()) }
     var homeProfileName by remember { mutableStateOf<String?>(null) }
@@ -348,12 +352,17 @@ fun UniverseShell() {
     LaunchedEffect(configured, selectedTab) {
         if (configured && (selectedTab == UniverseTab.LIBRARY || selectedTab == UniverseTab.HOME)) {
             try {
-                favouriteTrackIds = withContext(Dispatchers.IO) { MemberRepository().getFavouriteTrackIds() }
+                val repository = MemberRepository()
+                favouriteTrackIds = withContext(Dispatchers.IO) { repository.getFavouriteTrackIds() }
+                if (selectedTab == UniverseTab.LIBRARY) {
+                    recentlyPlayedTrackIds = withContext(Dispatchers.IO) { repository.getMyListeningTrackIds() }
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Throwable) {
                 favouriteTrackIds = emptySet()
                 if (selectedTab == UniverseTab.LIBRARY) {
+                    recentlyPlayedTrackIds = emptyList()
                     Toast.makeText(context, "Your favourites could not be refreshed. Please try again.", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -586,6 +595,8 @@ fun UniverseShell() {
                     onSignIn = { selectedTab = UniverseTab.ACCOUNT },
                     downloads = downloads,
                     favouriteTracks = tracks.filter { it.id in favouriteTrackIds },
+                    recentlyPlayedTracks = recentlyPlayedTrackIds.mapNotNull { id -> tracks.firstOrNull { it.id == id } },
+                    onPlayRecent = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true },
                     onPlayFavourite = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks.filter { track -> track.id in favouriteTrackIds } else listOf(it); playerExpanded = true },
                     onToggleFavourite = ::toggleFavourite,
                     onDownloadFavourite = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
@@ -1112,6 +1123,8 @@ private fun LibraryScreen(
     onSignIn: () -> Unit,
     downloads: List<OfflineDownloadRecord>,
     favouriteTracks: List<TrackDto>,
+    recentlyPlayedTracks: List<TrackDto>,
+    onPlayRecent: (TrackDto) -> Unit,
     onPlayFavourite: (TrackDto) -> Unit,
     onToggleFavourite: (TrackDto) -> Unit,
     onDownloadFavourite: (TrackDto) -> Unit,
@@ -1136,6 +1149,12 @@ private fun LibraryScreen(
                     LibraryMetric("${downloads.size}", "IN QUEUE", Modifier.weight(1f))
                 }
             }
+        }
+        item { Text("RECENTLY PLAYED", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold) }
+        if (recentlyPlayedTracks.isEmpty()) item {
+            LibraryEmptyCard("No listening history yet", "Play a published track while signed in and it will appear here and on the HTE website account page.", onSignIn, "Open account")
+        } else items(recentlyPlayedTracks, key = { "recent-${it.id}" }) { track ->
+            TrackRow(track, { onPlayRecent(track) }, { onDownloadFavourite(track) }, favouriteTracks.any { it.id == track.id }, { onToggleFavourite(track) })
         }
         item { Text("FAVOURITES", color = ShellGold, fontSize = 10.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold) }
         if (favouriteTracks.isEmpty()) item {
