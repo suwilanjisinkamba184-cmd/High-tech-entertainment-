@@ -73,6 +73,9 @@ import com.hightechentertainment.app.data.TrackDto
 import com.hightechentertainment.app.data.TrackRepository
 import com.hightechentertainment.app.data.VideoDto
 import com.hightechentertainment.app.media.HtePlaybackController
+import com.hightechentertainment.app.media.isExternalStreamingSource
+import com.hightechentertainment.app.media.isPlayableInAppAudioUrl
+import com.hightechentertainment.app.media.isPlayableVideoUrl
 import com.hightechentertainment.app.media.OfflineDownloadManager
 import com.hightechentertainment.app.media.OfflineDownloadRecord
 import com.hightechentertainment.app.ui.design.HteIcons
@@ -180,9 +183,7 @@ fun UniverseShell() {
     LaunchedEffect(mediaController, selectedTrack?.id, selectedTrackQueue) {
         val selected = selectedTrack ?: return@LaunchedEffect
         val sourceUrl = selected.sourceUrl?.takeIf(String::isNotBlank) ?: selected.audioUrl
-        val sourceHost = sourceUrl?.let { runCatching { Uri.parse(it).host.orEmpty().lowercase() }.getOrDefault("") }.orEmpty()
-        val externalPlatform = selected.sourcePlatform.lowercase() in setOf("youtube", "spotify") ||
-            sourceHost == "youtu.be" || (sourceHost == "youtube.com" || sourceHost.endsWith(".youtube.com")) || (sourceHost == "spotify.com" || sourceHost.endsWith(".spotify.com"))
+        val externalPlatform = isExternalStreamingSource(selected.sourcePlatform, sourceUrl)
         if (externalPlatform) {
             try {
                 val url = sourceUrl?.takeIf(String::isNotBlank) ?: error("This external track has no source link.")
@@ -201,8 +202,11 @@ fun UniverseShell() {
             if (queue.any { it.id == selected.id }) queue else listOf(selected) + queue
         }
         val items = candidates.mapNotNull { candidate ->
-            val uri = candidate.audioUrl?.takeIf(String::isNotBlank)?.toUri() ?: return@mapNotNull null
-            if (uri.scheme !in listOf("http", "https", "file", "content")) return@mapNotNull null
+            val candidateSource = candidate.sourceUrl?.takeIf(String::isNotBlank) ?: candidate.audioUrl
+            if (isExternalStreamingSource(candidate.sourcePlatform, candidateSource)) return@mapNotNull null
+            val audioUrl = candidate.audioUrl?.takeIf { isPlayableInAppAudioUrl(it, candidate.sourcePlatform) }
+                ?: return@mapNotNull null
+            val uri = audioUrl.toUri()
             MediaItem.Builder()
                 .setMediaId(candidate.id)
                 .setUri(uri)
@@ -362,7 +366,11 @@ fun UniverseShell() {
 
     fun playPlaylist(playlist: PlaylistDto) {
         val queue = playlistTracks[playlist.id].orEmpty()
-            .filter { !it.audioUrl.isNullOrBlank() }
+            .filter { candidate ->
+                val source = candidate.sourceUrl?.takeIf(String::isNotBlank) ?: candidate.audioUrl
+                !isExternalStreamingSource(candidate.sourcePlatform, source) &&
+                    isPlayableInAppAudioUrl(candidate.audioUrl, candidate.sourcePlatform)
+            }
         if (queue.isEmpty()) {
             Toast.makeText(context, "This playlist has no playable published tracks yet.", Toast.LENGTH_SHORT).show()
             return
@@ -386,17 +394,35 @@ fun UniverseShell() {
         }
     }
 
-    fun startDownload(url: String?, title: String, mediaType: String, trackId: String? = null) {
+    fun startDownload(
+        url: String?,
+        title: String,
+        mediaType: String,
+        trackId: String? = null,
+        sourcePlatform: String = "direct",
+        externalSourceUrl: String? = null,
+        downloadAllowed: Boolean = true
+    ) {
         scope.launch {
             try {
                 if (mediaType == "audio" && trackId != null) {
-                    val downloadPage = "https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/download/?track=${Uri.encode(trackId)}"
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(downloadPage)))
-                    Toast.makeText(context, "Opening HTE branded download for $title…", Toast.LENGTH_SHORT).show()
-                    return@launch
+                    if (!downloadAllowed) {
+                        Toast.makeText(context, "Downloads are not enabled for this track.", Toast.LENGTH_LONG).show()
+                        return@launch
+                    }
+                    if (url.isNullOrBlank()) {
+                        if (isExternalStreamingSource(sourcePlatform, externalSourceUrl)) {
+                            Toast.makeText(context, "This track links to an external streaming page. An HTE-branded offline audio file has not been supplied.", Toast.LENGTH_LONG).show()
+                            return@launch
+                        }
+                        val downloadPage = "https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/download/?track=${Uri.encode(trackId)}"
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(downloadPage)))
+                        Toast.makeText(context, "Opening HTE branded download for $title…", Toast.LENGTH_SHORT).show()
+                        return@launch
+                    }
                 }
                 if (url.isNullOrBlank()) error(
-                    if (mediaType == "audio") "The HTE-branded download is not ready yet, or this external source is not downloadable."
+                    if (mediaType == "audio") "The HTE-branded download is not ready yet."
                     else "This item has no download URL yet."
                 )
                 withContext(Dispatchers.IO) { offlineManager.enqueue(url, title, mediaType, allowMetered = allowsMeteredMediaDownloads(settingsStore.networkPolicy, settingsStore.dataSaver)) }
@@ -515,7 +541,7 @@ fun UniverseShell() {
                     profileName = homeProfileName, profileAvatarUrl = homeProfileAvatar,
                     onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true },
                     onPlayPlaylist = ::playPlaylist, onPlayVideo = { selectedVideo = it },
-                    onDownloadTrack = { startDownload(if (it.downloadAllowed && it.downloadBrandingStatus == "ready") it.brandedAudioUrl else null, it.title, "audio", it.id) },
+                    onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     onDownloadVideo = { startDownload(it.videoUrl, it.title, "video") },
                     onRefresh = ::refreshCatalogue
@@ -523,7 +549,7 @@ fun UniverseShell() {
                 UniverseTab.DISCOVER -> DiscoverScreen(
                     tracks = tracks, artists = artists, isLoading = isLoading, error = catalogueError,
                     onArtistClick = { selectedArtist = it },
-                    onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onDownload = { startDownload(if (it.downloadAllowed && it.downloadBrandingStatus == "ready") it.brandedAudioUrl else null, it.title, "audio", it.id) },
+                    onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onDownload = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     initialQuery = searchQuery, onQueryChanged = { searchQuery = it }, onRefresh = ::refreshCatalogue
                 )
@@ -537,7 +563,7 @@ fun UniverseShell() {
                     favouriteTracks = tracks.filter { it.id in favouriteTrackIds },
                     onPlayFavourite = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks.filter { track -> track.id in favouriteTrackIds } else listOf(it); playerExpanded = true },
                     onToggleFavourite = ::toggleFavourite,
-                    onDownloadFavourite = { startDownload(if (it.downloadAllowed && it.downloadBrandingStatus == "ready") it.brandedAudioUrl else null, it.title, "audio", it.id) },
+                    onDownloadFavourite = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
                     onRemoveDownload = { record ->
                         scope.launch {
                             try {
@@ -689,7 +715,7 @@ fun UniverseShell() {
                 playerExpanded = true
                 selectedArtist = null
             },
-            onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id) },
+            onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
             onToggleFavourite = ::toggleFavourite,
             onDismiss = { selectedArtist = null }
         )
@@ -1189,13 +1215,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     val previousOrientation = remember(activity) { activity?.requestedOrientation }
     var immersiveVideo by remember(video.id) { mutableStateOf(false) }
 
-    val validUrl = remember(video.videoUrl) {
-        runCatching {
-            val value = video.videoUrl.trim()
-            val uri = Uri.parse(value)
-            !uri.isOpaque && uri.scheme?.lowercase() in setOf("https", "http", "content", "file") && value.isNotBlank()
-        }.getOrDefault(false)
-    }
+    val validUrl = remember(video.videoUrl) { isPlayableVideoUrl(video.videoUrl) }
     val player = remember(video.id, video.videoUrl) {
         ExoPlayer.Builder(context)
             .setAudioAttributes(AudioAttributes.DEFAULT, true)
