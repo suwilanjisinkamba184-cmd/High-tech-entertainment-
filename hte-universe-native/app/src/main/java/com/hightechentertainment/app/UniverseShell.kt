@@ -447,20 +447,21 @@ fun UniverseShell() {
         trackId: String? = null,
         sourcePlatform: String = "direct",
         externalSourceUrl: String? = null,
-        downloadAllowed: Boolean = true
+        downloadAllowed: Boolean = true,
+        rightsStatus: String = "review_required"
     ) {
         scope.launch {
             try {
                 if (mediaType == "audio" && trackId != null) {
-                    if (!downloadAllowed) {
-                        Toast.makeText(context, "Downloads are not enabled for this track.", Toast.LENGTH_LONG).show()
+                    if (!downloadAllowed || rightsStatus !in setOf("owned_or_licensed", "legacy_existing")) {
+                        Toast.makeText(context, "Download rights have not been confirmed for this track.", Toast.LENGTH_LONG).show()
+                        return@launch
+                    }
+                    if (isExternalStreamingSource(sourcePlatform, externalSourceUrl)) {
+                        Toast.makeText(context, "This track links to an external streaming page. Spotify and YouTube audio cannot be downloaded through HTE.", Toast.LENGTH_LONG).show()
                         return@launch
                     }
                     if (url.isNullOrBlank()) {
-                        if (isExternalStreamingSource(sourcePlatform, externalSourceUrl)) {
-                            Toast.makeText(context, "This track links to an external streaming page. An HTE-branded offline audio file has not been supplied.", Toast.LENGTH_LONG).show()
-                            return@launch
-                        }
                         val downloadPage = "https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/download/?track=${Uri.encode(trackId)}"
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(downloadPage)))
                         Toast.makeText(context, "Opening HTE branded download for $title…", Toast.LENGTH_SHORT).show()
@@ -587,7 +588,7 @@ fun UniverseShell() {
                     profileName = homeProfileName, profileAvatarUrl = homeProfileAvatar,
                     onPlayTrack = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true },
                     onPlayPlaylist = ::playPlaylist, onPlayVideo = { selectedVideo = it },
-                    onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
+                    onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed, track.rightsStatus) },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     onDownloadVideo = { startDownload(it.downloadUrl, it.title, "video") },
                     onRefresh = ::refreshCatalogue
@@ -595,7 +596,7 @@ fun UniverseShell() {
                 UniverseTab.DISCOVER -> DiscoverScreen(
                     tracks = tracks, artists = artists, isLoading = isLoading, error = catalogueError,
                     onArtistClick = { selectedArtist = it },
-                    onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onDownload = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
+                    onPlay = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true }, onDownload = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed, track.rightsStatus) },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     initialQuery = searchQuery, onQueryChanged = { searchQuery = it }, onRefresh = ::refreshCatalogue
                 )
@@ -614,7 +615,7 @@ fun UniverseShell() {
                     onPlayRecent = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks else listOf(it); playerExpanded = true },
                     onPlayFavourite = { selectedTrack = it; selectedTrackQueue = if (autoplayNext) tracks.filter { track -> track.id in favouriteTrackIds } else listOf(it); playerExpanded = true },
                     onToggleFavourite = ::toggleFavourite,
-                    onDownloadFavourite = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
+                    onDownloadFavourite = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed, track.rightsStatus) },
                     onRemoveDownload = { record ->
                         scope.launch {
                             try {
@@ -775,7 +776,7 @@ fun UniverseShell() {
                 playerExpanded = true
                 selectedArtist = null
             },
-            onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
+            onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed, track.rightsStatus) },
             onToggleFavourite = ::toggleFavourite,
             onDismiss = { selectedArtist = null }
         )
@@ -799,7 +800,7 @@ fun UniverseShell() {
                 selectedTrackQueue = if (autoplayNext) tracks else listOf(track)
                 playerExpanded = true
             },
-            onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
+            onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed, track.rightsStatus) },
             onPlayVideo = { video -> selectedTab = UniverseTab.VIDEOS; selectedVideo = video },
             onDownloadVideo = { video -> startDownload(video.downloadUrl, video.title, "video") },
             onNavigate = { destination ->
@@ -1106,8 +1107,10 @@ private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit
                     modifier = Modifier.size(19.dp)
                 )
             }
-            IconButton(onClick = onDownload, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Outlined.Download, "Download ${track.title}", tint = ShellSilver, modifier = Modifier.size(19.dp))
+            if (track.downloadAllowed && track.rightsStatus in setOf("owned_or_licensed", "legacy_existing") && !isExternalStreamingSource(track.sourcePlatform, track.sourceUrl ?: track.audioUrl)) {
+                IconButton(onClick = onDownload, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.Outlined.Download, "Download ${track.title}", tint = ShellSilver, modifier = Modifier.size(19.dp))
+                }
             }
             IconButton(onClick = onPlay, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Outlined.PlayCircle, "Play ${track.title}", tint = ShellGold, modifier = Modifier.size(25.dp))
