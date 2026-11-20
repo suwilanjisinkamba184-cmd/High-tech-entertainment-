@@ -1,0 +1,23 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import publicSeo from '../../data/public-seo.json';
+const site='https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/';
+const base=import.meta.env.BASE_URL.endsWith('/')?import.meta.env.BASE_URL:`${import.meta.env.BASE_URL}/`;
+const slugify=(value)=>String(value||'release').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,70)||'release';
+export function getStaticPaths(){
+  return publicSeo.releases.filter(item=>item?.id&&item?.title&&/^[A-Za-z0-9_-]{1,80}$/.test(String(item.id))).map(release=>({params:{id:String(release.id),slug:slugify(release.title)},props:{release}}));
+}
+const {release}=Astro.props;
+const canonical=site+'releases/'+encodeURIComponent(String(release.id))+'-'+slugify(release.title)+'/';
+const image=typeof release.cover_url==='string'&&release.cover_url.startsWith('https://')?release.cover_url:site+'images/brand/high-tech-hero.svg';
+const description='Discover '+release.title+' on HTE Universe, the official music platform of High-Tech Entertainment.';
+const spotify=typeof release.spotify_url==='string'&&/^https:\/\/open\.spotify\.com\/(album|track|playlist)\/[A-Za-z0-9]+/.test(release.spotify_url)?release.spotify_url:'';
+const schema={'@context':'https://schema.org','@type':'MusicAlbum','name':release.title,'image':image,'datePublished':release.release_date||undefined,'url':canonical};
+---
+<SiteLayout title={release.title+' | HTE Universe Release'} description={description} canonical={canonical} image={image}>
+  <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+  <main class="release"><header><a href={base}>← HTE Universe</a><a href={base+'#releases'}>All releases</a></header><section class="hero"><img src={image} alt={release.title+' cover artwork'} loading="eager" /><div><p class="eyebrow">OFFICIAL HTE RELEASE</p><h1>{release.title}</h1><p>{release.release_date?'Release date: '+release.release_date:'Official release from High-Tech Entertainment.'}</p>{spotify?<a class="button" href={spotify} target="_blank" rel="noopener noreferrer">Listen on Spotify ↗</a>:<a class="button" href={base+'#music'}>Explore music catalogue ↗</a>}</div></section><section class="more"><h2>More from HTE Universe</h2><p>Explore more music, artist profiles and visual releases from High-Tech Entertainment.</p><a href={base+'#music'}>Browse music catalogue ↗</a></section><footer>© {new Date().getFullYear()} High-Tech Entertainment · <a href={base+'privacy-policy.html'}>Privacy</a></footer></main>
+</SiteLayout>
+<style>
+.release{min-height:100vh;background:#090909;color:#f8f6ef;padding:0 clamp(20px,7vw,100px);font-family:Inter,system-ui,sans-serif}.release header{height:76px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #c5a45a38;color:#d4b56f;font-size:.8rem}.hero{display:grid;grid-template-columns:minmax(220px,380px) 1fr;gap:clamp(28px,6vw,80px);align-items:center;padding:clamp(50px,9vw,110px) 0}.hero img{width:100%;aspect-ratio:1;object-fit:cover;border:1px solid #c5a45a70;background:#171717}.eyebrow{color:#d4b56f;font-size:.68rem;letter-spacing:.18em;font-weight:800}.hero h1{font-size:clamp(2.8rem,7vw,6rem);letter-spacing:-.06em;margin:16px 0}.hero p:not(.eyebrow){color:#aaa79f;line-height:1.8}.button{display:inline-flex;margin-top:18px;padding:14px 20px;background:linear-gradient(110deg,#c5a45a,#cfd0d1);color:#111;font-weight:800;font-size:.78rem}.more{max-width:800px;border-top:1px solid #ffffff1b;padding:35px 0 70px}.more p{color:#aaa79f;line-height:1.8}.more a{color:#d4b56f;font-weight:700}footer{border-top:1px solid #ffffff1b;padding:24px 0;color:#888;font-size:.75rem}footer a{color:#d4b56f}@media(max-width:680px){.hero{grid-template-columns:1fr}.hero img{max-width:280px}}
+</style>
