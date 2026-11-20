@@ -70,6 +70,7 @@ import androidx.media3.ui.PlayerView
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.realtime.PostgresAction
 import io.github.jan.supabase.realtime.postgresChangeFlow
+import io.github.jan.supabase.realtime.channel
 import com.hightechentertainment.app.data.AuthRepository
 import com.hightechentertainment.app.data.ArtistDto
 import com.hightechentertainment.app.data.ReleaseDto
