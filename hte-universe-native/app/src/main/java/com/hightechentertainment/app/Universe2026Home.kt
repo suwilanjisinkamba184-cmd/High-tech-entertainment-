@@ -308,7 +308,7 @@ private fun U26ArtistCard(artist: ArtistDto, wide: Boolean, onClick: () -> Unit)
 
 @Composable
 private fun U26ProjectCard(release: ReleaseDto, wide: Boolean) {
-    val context = LocalContext.current
+    var selectedSpotifyUrl by remember(release.id) { mutableStateOf<String?>(null) }
     Card(
         modifier = Modifier.width(if (wide) 230.dp else 192.dp),
         shape = RoundedCornerShape(18.dp),
@@ -338,22 +338,14 @@ private fun U26ProjectCard(release: ReleaseDto, wide: Boolean) {
             }
             release.spotifyUrl?.takeIf(String::isNotBlank)?.let { spotifyUrl ->
                 TextButton(
-                    onClick = {
-                        try {
-                            val target = spotifyAppUri(spotifyUrl) ?: spotifyUrl
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target)))
-                        } catch (_: ActivityNotFoundException) {
-                            Toast.makeText(context, "Spotify is not installed. Install the Spotify app to listen to this release.", Toast.LENGTH_LONG).show()
-                        } catch (_: Throwable) {
-                            Toast.makeText(context, "This Spotify link could not be opened. Please try again.", Toast.LENGTH_LONG).show()
-                        }
-                    },
+                    onClick = { selectedSpotifyUrl = spotifyUrl },
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                 ) {
                     Icon(Icons.Outlined.PlayArrow, contentDescription = null, tint = U26Gold, modifier = Modifier.size(16.dp))
-                    Text("LISTEN ON SPOTIFY", color = U26Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text("PLAY IN HTE", color = U26Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
             }
+            selectedSpotifyUrl?.let { url -> SpotifyEmbedDialog(url = url, onDismiss = { selectedSpotifyUrl = null }) }
         }
     }
 }
