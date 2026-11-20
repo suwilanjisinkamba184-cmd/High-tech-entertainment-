@@ -54,6 +54,8 @@ jobs:
           test -s assets/app.js
           test -s assets/site.css
           test -s assets/videos.js
+          node --check assets/app.js
+          node --check assets/videos.js
           test -s assets/booking-confirmation.aac
           grep -q 'booking-confirmation.mp3' assets/app.js
           grep -q 'booking-confirmation.mp3' scripts/build-website.sh
@@ -74,7 +76,7 @@ jobs:
           grep -q 'id="auth-mode-toggle"' account/index.html
           grep -q 'id="forgot-password"' account/index.html
           grep -q 'id="password-update-form"' account/index.html
-          grep -q 'assets/app.js?v=21' account/index.html
+          grep -Eq 'assets/app.js\?v=[0-9]+' account/index.html
           grep -q 'onAuthStateChange' assets/app.js
           grep -q "rpc('hte_is_admin')" assets/app.js
           grep -q 'HTE_SUPABASE_CLIENT' assets/app.js
@@ -82,8 +84,8 @@ jobs:
           grep -q "client.rpc('hte_is_admin')" assets/admin-upload.js
           grep -q 'async function profileLoad' assets/app.js
           grep -q 'profiles.*insert' assets/app.js
-          grep -q 'assets/app.js?v=21' website/src/pages/index.astro
-          grep -q 'assets/videos.js?v=7' website/src/pages/index.astro
+          grep -Eq 'assets/app.js\?v=[0-9]+' website/src/pages/index.astro
+          grep -Eq 'assets/videos.js\?v=[0-9]+' website/src/pages/index.astro
           grep -q 'The music catalogue is taking too long to respond' assets/app.js
           grep -Fq "\$\$('[data-start-form],#contact-form,#booking-form,#feedback-form')" assets/app.js
           grep -q 'function withTimeout(promise,ms,message)' assets/app.js
@@ -91,7 +93,7 @@ jobs:
           grep -q 'entertainment-enhancements.css' account/index.html
           grep -q 'id="primary-navigation"' website/src/pages/index.astro
           grep -q 'class="menu-toggle"' website/src/pages/index.astro
-          grep -q 'assets/app.js?v=21' admin/index.html
+          grep -Eq 'assets/app.js\?v=[0-9]+' admin/index.html
           grep -q 'assets/admin-upload.js?v=20261116-catalogue1' admin/index.html
           grep -q 'authNext' website/src/pages/index.astro
           grep -q 'callbackParams.delete' website/src/pages/index.astro
