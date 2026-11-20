@@ -66,6 +66,7 @@ jobs:
           # Reuses the SUPABASE_URL secret the repo already has; the script also
           # falls back to config/zambian-youtube.json if this is empty.
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          HTE_YOUTUBE_CHANNEL_ID: ${{ vars.HTE_YOUTUBE_CHANNEL_ID }}
         run: |
           ARGS=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi

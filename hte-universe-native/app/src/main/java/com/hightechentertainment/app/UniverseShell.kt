@@ -9,6 +9,9 @@ import android.app.Activity
 import android.widget.Toast
 import android.view.LayoutInflater
 import android.widget.FrameLayout
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.webkit.WebChromeClient
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -543,7 +546,7 @@ fun UniverseShell() {
                     onPlayPlaylist = ::playPlaylist, onPlayVideo = { selectedVideo = it },
                     onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
-                    onDownloadVideo = { startDownload(it.videoUrl, it.title, "video") },
+                    onDownloadVideo = { startDownload(it.downloadUrl, it.title, "video") },
                     onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.DISCOVER -> DiscoverScreen(
@@ -555,7 +558,7 @@ fun UniverseShell() {
                 )
                 UniverseTab.VIDEOS -> VideosScreen(
                     videos = videos, isLoading = isLoading, error = catalogueError,
-                    onPlay = { selectedVideo = it }, onDownload = { startDownload(it.videoUrl, it.title, "video") }, onRefresh = ::refreshCatalogue
+                    onPlay = { selectedVideo = it }, onDownload = { startDownload(it.downloadUrl, it.title, "video") }, onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.LIBRARY -> LibraryScreen(
                     onSignIn = { selectedTab = UniverseTab.ACCOUNT },
@@ -987,7 +990,7 @@ private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: Stri
         }
         if (error != null) item { Text(error, color = ShellGold, fontSize = 12.sp) }
         if (videos.isEmpty()) item { EmptyCatalogueState(if (isLoading) "Loading videos…" else "No published videos yet.", isLoading, onRefresh) }
-        else items(videos, key = { it.id }) { video -> VideoRow(video, { onPlay(video) }, { onDownload(video) }) }
+        else items(videos, key = { it.id }) { video -> VideoRow(video, { onPlay(video) }, if (!video.downloadUrl.isNullOrBlank()) ({ onDownload(video) }) else null) }
     }
 }
 
@@ -1047,7 +1050,7 @@ private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit
 }
 
 @Composable
-private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: () -> Unit) {
+private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: (() -> Unit)?) {
     Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.fillMaxWidth().height(164.dp).clip(RoundedCornerShape(13.dp)).background(
@@ -1073,7 +1076,7 @@ private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: () -> Unit
                     Text(video.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 11.sp)
                 }
-                IconButton(onClick = onDownload) { Icon(Icons.Outlined.Download, "Download ${video.title}", tint = ShellSilver) }
+                if (onDownload != null) IconButton(onClick = onDownload) { Icon(Icons.Outlined.Download, "Download original ${video.title}", tint = ShellSilver) }
                 IconButton(onClick = onPlay) { Icon(Icons.Outlined.PlayCircle, "Play ${video.title}", tint = ShellGold, modifier = Modifier.size(28.dp)) }
             }
         }
@@ -1214,6 +1217,12 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     val lifecycleOwner = LocalLifecycleOwner.current
     val previousOrientation = remember(activity) { activity?.requestedOrientation }
     var immersiveVideo by remember(video.id) { mutableStateOf(false) }
+
+    val youtubeId = remember(video.videoUrl, video.youtubeId) { video.youtubeId?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) } ?: extractYouTubeVideoId(video.videoUrl) }
+    if (youtubeId != null) {
+        YouTubeVideoDialog(video, youtubeId, onDismiss)
+        return
+    }
 
     val validUrl = remember(video.videoUrl) { isPlayableVideoUrl(video.videoUrl) }
     val player = remember(video.id, video.videoUrl) {
@@ -1497,6 +1506,52 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
             }
         }
     }
+}
+
+@Composable
+private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(Modifier.fillMaxSize().background(Color(0xFF050506)).padding(12.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 10.sp)
+                }
+                IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close video", tint = Color.White) }
+            }
+            AndroidView(
+                factory = { context ->
+                    WebView(context).apply {
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        settings.mediaPlaybackRequiresUserGesture = false
+                        webChromeClient = WebChromeClient()
+                        webViewClient = WebViewClient()
+                        setBackgroundColor(android.graphics.Color.BLACK)
+                        val safeTitle = video.title.replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;").replace(">", "&gt;")
+                        val html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><style>html,body{margin:0;background:#000;width:100%;height:100%;overflow:hidden}iframe{border:0;width:100%;height:100%}</style></head><body><iframe src="https://www.youtube-nocookie.com/embed/$youtubeId?autoplay=1&playsinline=1&rel=0" title="$safeTitle" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></body></html>"""
+                        loadDataWithBaseURL("https://www.youtube-nocookie.com", html, "text/html", "UTF-8", null)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                onRelease = { it.stopLoading(); it.loadUrl("about:blank"); it.destroy() }
+            )
+            Text("Streaming from YouTube • Downloads are available only for HTE original files.", color = ShellMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 8.dp))
+        }
+    }
+}
+
+private fun extractYouTubeVideoId(raw: String): String? {
+    val uri = runCatching { Uri.parse(raw) }.getOrNull() ?: return null
+    val host = uri.host?.lowercase()?.removePrefix("www.") ?: return null
+    val parts = uri.pathSegments
+    val id = when (host) {
+        "youtu.be" -> parts.firstOrNull()
+        "youtube.com", "m.youtube.com", "music.youtube.com", "youtube-nocookie.com" ->
+            uri.getQueryParameter("v") ?: if (parts.firstOrNull() in listOf("embed", "shorts", "live")) parts.getOrNull(1) else null
+        else -> null
+    }
+    return id?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) }
 }
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {

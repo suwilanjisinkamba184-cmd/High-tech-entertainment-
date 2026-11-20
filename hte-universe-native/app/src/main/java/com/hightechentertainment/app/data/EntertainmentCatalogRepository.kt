@@ -30,7 +30,10 @@ data class VideoDto(
     val description: String? = null,
     val artist: String? = null,
     @SerialName("video_url") val videoUrl: String,
-    @SerialName("thumbnail_url") val thumbnailUrl: String? = null
+    @SerialName("thumbnail_url") val thumbnailUrl: String? = null,
+    @SerialName("youtube_id") val youtubeId: String? = null,
+    @SerialName("source_platform") val sourcePlatform: String? = null,
+    @SerialName("download_url") val downloadUrl: String? = null
 )
 
 /** Published catalogue queries only. Supabase RLS remains the source of truth for access. */

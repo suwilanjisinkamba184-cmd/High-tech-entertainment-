@@ -36,7 +36,7 @@ function videoCard(video){
  }
  else if(direct){const poster=safeHttps(video.thumbnail_url);player='<video controls preload="none"'+(poster?' poster="'+esc(poster)+'"':'')+' src="'+esc(src)+'"></video>'}
  else{player='<a class="video-external" href="'+esc(src)+'" target="_blank" rel="noopener noreferrer">Watch video ↗</a>'}
- return '<article class="video-card'+(video.featured?' is-featured':'')+'">'+(video.featured?'<span class="video-card-kicker">Featured Zambian release</span>':'')+player+'<h3>'+title+'</h3><p>'+artist+description+'</p></article>';
+ return '<article class="video-card'+(video.featured?' is-featured':'')+'">'+(video.featured?'<span class="video-card-kicker">Featured Zambian release</span>':'')+player+'<h3>'+title+'</h3><p>'+artist+description+'</p>'+(downloadAllowed?'<a class=\"btn ghost video-download-original\" href=\"'+esc(download)+'\" download rel=\"noopener noreferrer\">Download original ↓</a>':'')+'</article>';
 }
 async function load(){
  el.innerHTML='<div class="empty" role="status">Loading official videos…</div>';

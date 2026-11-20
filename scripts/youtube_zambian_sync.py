@@ -197,7 +197,8 @@ def resolve_channel(handle_or_id: str, api_key: str) -> dict | None:
     }
 
 
-def playlist_candidates(playlist_id: str, api_key: str, max_results: int) -> list[dict]:
+def playlist_candidates(playlist_id: str, api_key: str, max_results: int,
+                        channel_id: str | None = None, hte_official: bool = False) -> list[dict]:
     """Newest uploads from a channel's uploads playlist (1 quota unit per call)."""
     payload = yt_get(
         "playlistItems",
@@ -218,6 +219,8 @@ def playlist_candidates(playlist_id: str, api_key: str, max_results: int) -> lis
                 "published": snippet.get("publishedAt") or snippet.get("videoPublishedAt") or "",
                 "description": snippet.get("description", ""),
                 "origin": "channel",
+                "channel_id": channel_id or snippet.get("channelId") or "",
+                "hte_official": hte_official,
             }
         )
     return results
@@ -255,6 +258,8 @@ def search_candidates(query: str, api_key: str, published_after: str,
                 "published": snippet.get("publishedAt", ""),
                 "description": snippet.get("description", ""),
                 "origin": "search",
+                "channel_id": snippet.get("channelId") or "",
+                "hte_official": False,
             }
         )
     return results
@@ -454,6 +459,16 @@ def main() -> int:
         print(f"  channel {channel['title']} ({handle})")
         add(playlist_candidates(channel["uploads"], api_key, int(config.get("per_channel_results", 10))))
 
+    official_channel_value = os.environ.get("HTE_YOUTUBE_CHANNEL_ID", "").strip()
+    if official_channel_value:
+        official_channel = resolve_channel(official_channel_value, api_key)
+        if official_channel:
+            print(f"  OFFICIAL HTE channel {official_channel['title']} ({official_channel_value})")
+            add(playlist_candidates(official_channel["uploads"], api_key, max(1, max_posts),
+                                    channel_id=official_channel["id"], hte_official=True))
+    else:
+        print("  official HTE channel not configured; set GitHub Actions variable HTE_YOUTUBE_CHANNEL_ID")
+
     for query in config.get("queries", []):
         print(f"  search  {query!r}")
         add(search_candidates(query, api_key, published_after, int(config.get("per_query_results", 10)), region))
@@ -469,14 +484,14 @@ def main() -> int:
     accepted: list[dict] = []
     for candidate in fresh:
         title_lower = candidate["title"].lower()
-        if any(word in title_lower for word in TITLE_BLOCKLIST):
+        if not candidate.get("hte_official") and any(word in title_lower for word in TITLE_BLOCKLIST):
             print(f"    skip (not a release): {candidate['title'][:70]}")
             continue
         seconds = durations.get(candidate["id"], 0)
-        if seconds and seconds < min_seconds:
+        if not candidate.get("hte_official") and seconds and seconds < min_seconds:
             print(f"    skip (too short, {seconds}s): {candidate['title'][:70]}")
             continue
-        if seconds and seconds > max_seconds:
+        if not candidate.get("hte_official") and seconds and seconds > max_seconds:
             print(f"    skip (too long, {seconds}s): {candidate['title'][:70]}")
             continue
         accepted.append(candidate)
@@ -503,9 +518,14 @@ def main() -> int:
             {
                 "title": clean_title(candidate["title"]),
                 "artist": clean_artist(candidate.get("channel", "")),
-                "description": build_description(candidate, published),
+                "description": (candidate.get("description") or build_description(candidate, published))[:2000],
                 "video_url": f"https://www.youtube.com/watch?v={video_id}",
                 "thumbnail_url": f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg",
+                "youtube_id": video_id,
+                "youtube_channel_id": candidate.get("channel_id") or None,
+                "source_platform": "youtube",
+                "download_url": None,
+                "published_at": candidate.get("published") or None,
                 "is_published": publish,
             }
         )

@@ -135,3 +135,8 @@ the **Founder Studio \u2192 Videos** tab, which already has Publish/Delete butto
 column with a unique index. The script does not need it (it de-duplicates by
 normalising existing URLs), but it makes double-posting impossible even if two
 runs overlap. Run it in the Supabase SQL editor if you want that guarantee.
+
+
+## HTE official channel synchronization
+
+The same scheduled workflow also imports every new upload from the official HTE YouTube channel. Set the GitHub repository Actions variable `HTE_YOUTUBE_CHANNEL_ID` to the channel's `UC...` ID or exact `@handle` (Settings → Secrets and variables → Actions → Variables). This is a public channel identifier, not a secret. Official-channel uploads bypass the Zambian music discovery duration/title filters, are de-duplicated by `youtube_id`, and are written to the shared `videos` table. YouTube-only records have no `download_url`; only HTE-hosted original files can be downloaded.

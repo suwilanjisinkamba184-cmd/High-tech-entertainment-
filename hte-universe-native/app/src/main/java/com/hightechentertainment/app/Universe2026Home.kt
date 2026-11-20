@@ -241,7 +241,7 @@ fun MusicHomeScreen(
                 } else {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(top = 10.dp)) {
                         items(videos.take(8), key = { it.id }) { video ->
-                            U26VideoCard(video, wide, onPlay = { onPlayVideo(video) }, onDownload = { onDownloadVideo(video) })
+                            U26VideoCard(video, wide, onPlay = { onPlayVideo(video) }, onDownload = if (!video.downloadUrl.isNullOrBlank()) ({ onDownloadVideo(video) }) else null)
                         }
                     }
                 }
@@ -476,7 +476,7 @@ private fun U26TrendingRow(index: Int, track: TrackDto, onPlay: () -> Unit, onDo
 }
 
 @Composable
-private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onDownload: () -> Unit) {
+private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onDownload: (() -> Unit)?) {
     Column(Modifier.width(if (wide) 238.dp else 194.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Box(
             Modifier.fillMaxWidth().height(if (wide) 140.dp else 112.dp).clip(RoundedCornerShape(16.dp))
@@ -508,9 +508,9 @@ private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onD
                 Text("WATCH", color = U26Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.width(8.dp))
-            TextButton(onClick = onDownload, contentPadding = PaddingValues(horizontal = 0.dp)) {
+            if (onDownload != null) TextButton(onClick = onDownload, contentPadding = PaddingValues(horizontal = 0.dp)) {
                 Icon(Icons.Outlined.Download, null, tint = U26Silver, modifier = Modifier.size(15.dp))
-                Text("SAVE", color = U26Silver, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("SAVE ORIGINAL", color = U26Silver, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
