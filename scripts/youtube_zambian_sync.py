@@ -334,11 +334,14 @@ def existing_video_ids(base_url: str, service_key: str) -> set[str]:
     offset = 0
     page = 1000
     while True:
-        url = f"{base_url}/rest/v1/videos?select=id,video_url&limit={page}&offset={offset}"
+        url = f"{base_url}/rest/v1/videos?select=youtube_id,video_url&limit={page}&offset={offset}"
         rows = http_json(url, headers=supabase_headers(service_key))
         if not isinstance(rows, list):
             raise RuntimeError(f"Unexpected Supabase response: {str(rows)[:300]}")
         for row in rows:
+            canonical = str(row.get("youtube_id") or "").strip()
+            if re.fullmatch(r"[A-Za-z0-9_-]{11}", canonical):
+                ids.add(canonical)
             found = youtube_id(row.get("video_url"))
             if found:
                 ids.add(found)
