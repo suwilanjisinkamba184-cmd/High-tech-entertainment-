@@ -64,13 +64,15 @@ private data class VoiceTokenResponse(
     @SerialName("user_id") val userId: String
 )
 
-private fun voiceFailureMessage(details: String): String {
+internal fun voiceFailureMessage(details: String): String {
     val normalized = details.lowercase()
     return when {
         listOf("timeout", "network", "connection", "offline", "unreachable").any(normalized::contains) ->
             "Voice Companion could not connect. Check your internet connection and try again."
-        listOf("convai_write", "missing permission", "unauthorized", "forbidden").any(normalized::contains) ->
-            "Voice Companion is not fully available yet. Please try again later or contact HTE support."
+        listOf("sign in", "session expired", "401").any(normalized::contains) ->
+            "Your HTE session may have expired. Sign in again, then reopen Voice Companion."
+        listOf("convai_write", "missing permission", "forbidden", "credentials", "api key", "not configured", "conversation token").any(normalized::contains) ->
+            "Voice Companion is not fully configured yet. The HTE project owner needs to correct the server-side voice API credentials and permissions."
         else -> "Voice Companion is temporarily unavailable. Please try again."
     }
 }
