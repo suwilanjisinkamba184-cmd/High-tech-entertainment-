@@ -1,0 +1,15 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+const base=import.meta.env.BASE_URL.endsWith('/')?import.meta.env.BASE_URL:`${import.meta.env.BASE_URL}/`;
+const canonical='https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/journal/';
+const articles=[
+{title:'How to prepare for your first recording session',description:'A practical checklist for artists: prepare your lyrics, references, files and session goals before entering the studio.',href:'prepare-for-a-recording-session/',category:'STUDIO GUIDE'},
+{title:'From beat to release: a practical music workflow',description:'Understand the stages of music production, recording, mixing, mastering and preparing a release for listeners.',href:'from-beat-to-release/',category:'MUSIC PRODUCTION'}
+];
+---
+<SiteLayout title="HTE Journal | Music Production Guides & Artist Resources" description="Practical music production guides, studio preparation advice and artist resources from High-Tech Entertainment in Kitwe, Zambia." canonical={canonical}>
+<main class="journal"><header><a href={base}>← HTE Universe</a><span>HIGH-TECH ENTERTAINMENT JOURNAL</span></header><section class="intro"><p>KNOWLEDGE · CREATIVITY · PROCESS</p><h1>Ideas behind the sound.</h1><p>Practical guides for artists, creators and teams working on music and digital projects. New resources will be added as the HTE Journal grows.</p></section><section class="articles">{articles.map((article,index)=><a class="article" href={base+'journal/'+article.href}><span>{String(index+1).padStart(2,'0')} · {article.category}</span><h2>{article.title}</h2><p>{article.description}</p><b>Read guide ↗</b></a>)}</section><footer><a href={base+'services/'}>Explore HTE services</a><a href={base+'#booking'}>Contact the team</a></footer></main>
+</SiteLayout>
+<style>
+.journal{min-height:100vh;background:#090909;color:#f8f6ef;padding:0 clamp(20px,7vw,100px);font-family:Inter,system-ui,sans-serif}.journal header{height:76px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #c5a45a38;color:#d4b56f;font-size:.78rem}.journal header span{color:#888;font-size:.64rem;letter-spacing:.15em}.intro{max-width:850px;padding:90px 0 55px}.intro>p:first-child,.article span{color:#d4b56f;font-size:.68rem;font-weight:800;letter-spacing:.17em}.intro h1{font-size:clamp(2.8rem,7vw,6rem);letter-spacing:-.06em;line-height:1;margin:20px 0}.intro>p:last-child,.article p{color:#aaa79f;line-height:1.8}.articles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.article{display:block;padding:32px;border:1px solid #ffffff1b;background:linear-gradient(145deg,#191a1b,#101010)}.article:hover{border-color:#c5a45a}.article h2{font-size:clamp(1.5rem,3vw,2.2rem);line-height:1.15;margin:20px 0 12px}.article b{display:inline-block;color:#d4b56f;margin-top:16px;font-size:.78rem}footer{display:flex;gap:25px;padding:35px 0;margin-top:40px;border-top:1px solid #ffffff1a;color:#d4b56f;font-size:.78rem}@media(max-width:650px){.articles{grid-template-columns:1fr}.journal header{align-items:flex-start;flex-direction:column;justify-content:center;gap:5px}}
+</style>
