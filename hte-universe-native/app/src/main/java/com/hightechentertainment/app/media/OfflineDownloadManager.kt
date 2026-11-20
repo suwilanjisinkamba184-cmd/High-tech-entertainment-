@@ -49,9 +49,10 @@ class OfflineDownloadManager(context: Context) {
     private val preferences = appContext.getSharedPreferences("hte_universe_offline_downloads", Context.MODE_PRIVATE)
 
     fun enqueue(url: String, title: String, mediaType: String, allowMetered: Boolean = true, mimeType: String? = null): Long {
-        val uri = url.toUri()
-        require(uri.scheme == "https" || uri.scheme == "http") { "This media item does not have a valid download URL." }
-        val fileName = buildOfflineDownloadFileName(title, url, mediaType, mimeType)
+        val normalizedUrl = url.trim()
+        require(isSecureMediaDownloadUrl(normalizedUrl)) { "Only secure HTTPS media downloads are supported." }
+        val uri = normalizedUrl.toUri()
+        val fileName = buildOfflineDownloadFileName(title, normalizedUrl, mediaType, mimeType)
         val isVideo = mediaType.equals("video", true) || mediaType.startsWith("video/", true)
         val folder = if (isVideo) Environment.DIRECTORY_MOVIES else Environment.DIRECTORY_MUSIC
         val request = DownloadManager.Request(uri)
