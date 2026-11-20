@@ -6,12 +6,16 @@ import android.content.pm.ActivityInfo
 import android.content.ContextWrapper
 import android.content.Context
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.widget.Toast
 import android.view.LayoutInflater
 import android.widget.FrameLayout
+import android.webkit.CookieManager
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebChromeClient
+import android.view.View
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -76,7 +80,10 @@ import com.hightechentertainment.app.data.TrackDto
 import com.hightechentertainment.app.data.TrackRepository
 import com.hightechentertainment.app.data.VideoDto
 import com.hightechentertainment.app.media.HtePlaybackController
+import com.hightechentertainment.app.media.extractYouTubeVideoId
 import com.hightechentertainment.app.media.isExternalStreamingSource
+import com.hightechentertainment.app.media.isSpotifySource
+import com.hightechentertainment.app.media.spotifyAppUri
 import com.hightechentertainment.app.media.isPlayableInAppAudioUrl
 import com.hightechentertainment.app.media.isPlayableVideoUrl
 import com.hightechentertainment.app.media.OfflineDownloadManager
@@ -188,10 +195,25 @@ fun UniverseShell() {
         val sourceUrl = selected.sourceUrl?.takeIf(String::isNotBlank) ?: selected.audioUrl
         val externalPlatform = isExternalStreamingSource(selected.sourcePlatform, sourceUrl)
         if (externalPlatform) {
+            val url = sourceUrl?.takeIf(String::isNotBlank)
             try {
-                val url = sourceUrl?.takeIf(String::isNotBlank) ?: error("This external track has no source link.")
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                if (url == null) error("This external track has no source link.")
+                if (isSpotifySource(selected.sourcePlatform, url)) {
+                    // Spotify's Android SDK delegates playback to the official Spotify app.
+                    // Do not attempt to extract Spotify audio or embed an unsupported native stream.
+                    val appUri = spotifyAppUri(url)
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(appUri ?: url)))
+                } else {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                }
                 scope.launch { runCatching { withContext(Dispatchers.IO) { audienceAnalytics.record("track_play", selected.id) } } }
+            } catch (error: ActivityNotFoundException) {
+                val message = if (isSpotifySource(selected.sourcePlatform, url)) {
+                    "Spotify is not installed. Install the Spotify app to play this track."
+                } else {
+                    "This music app is not installed. Check the link and try again."
+                }
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             } catch (_: Throwable) {
                 Toast.makeText(context, "This external music link could not be opened. Check the link and try again.", Toast.LENGTH_LONG).show()
             } finally {
@@ -1228,16 +1250,12 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     }
 
     val validUrl = remember(video.videoUrl) { isPlayableVideoUrl(video.videoUrl) }
+    // Register the Media3 listener before preparing the stream so the initial buffering,
+    // first-frame and decoder errors cannot be missed on fast connections.
     val player = remember(video.id, video.videoUrl) {
         ExoPlayer.Builder(context)
             .setAudioAttributes(AudioAttributes.DEFAULT, true)
-            .build().apply {
-                if (validUrl) {
-                    setMediaItem(MediaItem.fromUri(video.videoUrl.trim()))
-                    prepare()
-                    playWhenReady = true
-                }
-            }
+            .build()
     }
     // Video is Activity-scoped, unlike background music: pause it when the app leaves foreground.
     DisposableEffect(player, lifecycleOwner) {
@@ -1307,6 +1325,13 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
         onDispose {
             player.removeListener(listener)
             player.release()
+        }
+    }
+    LaunchedEffect(player, validUrl, video.videoUrl) {
+        if (validUrl) {
+            player.setMediaItem(MediaItem.fromUri(video.videoUrl.trim()))
+            player.prepare()
+            player.playWhenReady = true
         }
     }
 
@@ -1513,6 +1538,19 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
 
 @Composable
 private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: () -> Unit) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var embeddedWebView by remember(video.id) { mutableStateOf<WebView?>(null) }
+    DisposableEffect(lifecycleOwner, embeddedWebView) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> embeddedWebView?.onPause()
+                Lifecycle.Event.ON_RESUME -> embeddedWebView?.onResume()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxSize().background(Color(0xFF050506)).padding(12.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -1523,38 +1561,43 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
                 IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close video", tint = Color.White) }
             }
             AndroidView(
-                factory = { context ->
-                    WebView(context).apply {
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        settings.mediaPlaybackRequiresUserGesture = false
+                factory = { viewContext ->
+                    WebView(viewContext).apply {
+                        embeddedWebView = this
+                        settings.apply {
+                            javaScriptEnabled = true
+                            domStorageEnabled = true
+                            mediaPlaybackRequiresUserGesture = false
+                            loadsImagesAutomatically = true
+                            useWideViewPort = true
+                            loadWithOverviewMode = true
+                            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                            setSupportMultipleWindows(false)
+                        }
+                        CookieManager.getInstance().setAcceptCookie(true)
+                        CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                        setLayerType(View.LAYER_TYPE_HARDWARE, null)
                         webChromeClient = WebChromeClient()
                         webViewClient = WebViewClient()
                         setBackgroundColor(android.graphics.Color.BLACK)
-                        val safeTitle = video.title.replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;").replace(">", "&gt;")
-                        val html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><style>html,body{margin:0;background:#000;width:100%;height:100%;overflow:hidden}iframe{border:0;width:100%;height:100%}</style></head><body><iframe src="https://www.youtube-nocookie.com/embed/$youtubeId?autoplay=1&playsinline=1&rel=0" title="$safeTitle" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></body></html>"""
-                        loadDataWithBaseURL("https://www.youtube-nocookie.com", html, "text/html", "UTF-8", null)
+                        // Load the official YouTube privacy-enhanced embed directly. This avoids
+                        // an extra local HTML/iframe navigation layer inside Android WebView.
+                        loadUrl("https://www.youtube-nocookie.com/embed/$youtubeId?autoplay=1&playsinline=1&rel=0&controls=1")
                     }
                 },
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                onRelease = { it.stopLoading(); it.loadUrl("about:blank"); it.destroy() }
+                onRelease = {
+                    embeddedWebView = null
+                    it.stopLoading()
+                    it.onPause()
+                    it.loadUrl("about:blank")
+                    it.removeAllViews()
+                    it.destroy()
+                }
             )
             Text("Streaming from YouTube • Downloads are available only for HTE original files.", color = ShellMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 8.dp))
         }
     }
-}
-
-private fun extractYouTubeVideoId(raw: String): String? {
-    val uri = runCatching { Uri.parse(raw) }.getOrNull() ?: return null
-    val host = uri.host?.lowercase()?.removePrefix("www.") ?: return null
-    val parts = uri.pathSegments
-    val id = when (host) {
-        "youtu.be" -> parts.firstOrNull()
-        "youtube.com", "m.youtube.com", "music.youtube.com", "youtube-nocookie.com" ->
-            uri.getQueryParameter("v") ?: if (parts.firstOrNull() in listOf("embed", "shorts", "live")) parts.getOrNull(1) else null
-        else -> null
-    }
-    return id?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) }
 }
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
