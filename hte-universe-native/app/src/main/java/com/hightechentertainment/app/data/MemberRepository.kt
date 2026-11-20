@@ -75,13 +75,22 @@ private data class FavoriteInsertDto(
 )
 
 @Serializable
-private data class BookingInsertDto(
-    @SerialName("user_id") val userId: String,
+private data class BookingRequestParams(
+    @SerialName("p_name") val name: String,
+    @SerialName("p_email") val email: String,
+    @SerialName("p_subject") val subject: String,
+    @SerialName("p_message") val message: String
+)
+
+@Serializable
+private data class MemberBookingMessageDto(
+    val id: String,
+    @SerialName("user_id") val userId: String? = null,
     val name: String,
     val email: String,
-    @SerialName("booking_type") val bookingType: String,
-    @SerialName("requested_date") val requestedDate: String? = null,
-    val message: String = ""
+    val subject: String = "",
+    val message: String = "",
+    @SerialName("created_at") val createdAt: String? = null
 )
 
 @Serializable
@@ -168,9 +177,35 @@ class MemberRepository {
 
     suspend fun getMyBookings(): List<BookingDto> {
         val userId = requireUserId()
-        return client.from("bookings")
+        val legacyBookings = client.from("bookings")
             .select { filter { eq("user_id", userId) } }
             .decodeList<BookingDto>()
+        val memberMessages = client.from("contact_messages")
+            .select { filter { eq("user_id", userId) } }
+            .decodeList<MemberBookingMessageDto>()
+            .filter { it.subject.startsWith("Booking request", ignoreCase = true) }
+            .map { message ->
+                val service = message.subject.substringAfter("Booking request").trim()
+                    .trimStart('—', '-')
+                    .ifBlank { "Service request" }
+                val requestedDate = Regex("(?m)^Preferred date:\s*(.+)$")
+                    .find(message.message)?.groupValues?.getOrNull(1)?.trim()
+                    ?.takeUnless { it.isBlank() || it.equals("Flexible", ignoreCase = true) }
+                BookingDto(
+                    id = message.id,
+                    userId = message.userId ?: userId,
+                    name = message.name,
+                    email = message.email,
+                    bookingType = service,
+                    requestedDate = requestedDate,
+                    message = message.message,
+                    status = "pending",
+                    createdAt = message.createdAt
+                )
+            }
+        return (legacyBookings + memberMessages)
+            .distinctBy { it.id }
+            .sortedByDescending { it.createdAt.orEmpty() }
     }
 
     suspend fun submitBooking(
@@ -180,13 +215,28 @@ class MemberRepository {
         requestedDate: String?,
         message: String
     ) {
-        val userId = requireUserId()
+        requireUserId()
         require(name.isNotBlank()) { "Enter your name." }
         require(email.isNotBlank()) { "Enter your email address." }
         require(bookingType.isNotBlank()) { "Choose a booking type." }
-        client.from("bookings").insert(
-            BookingInsertDto(userId, name.trim(), email.trim(), bookingType, requestedDate, message.trim())
-        )
+        val bookingMessage = listOf(
+            "Service: ${bookingType.trim()}",
+            "Preferred date: ${requestedDate?.takeIf(String::isNotBlank) ?: "Flexible"}",
+            "Preferred time: Flexible",
+            "Phone / WhatsApp: Not provided",
+            "",
+            "Project details:",
+            message.trim()
+        ).joinToString("\n")
+        client.postgrest.rpc(
+            "submit_booking_request",
+            BookingRequestParams(
+                name = name.trim(),
+                email = email.trim(),
+                subject = "Booking request — ${bookingType.trim()}",
+                message = bookingMessage
+            )
+        ).decodeAs<String>()
     }
 
     suspend fun getMyPlaylists(): List<PlaylistDto> {
