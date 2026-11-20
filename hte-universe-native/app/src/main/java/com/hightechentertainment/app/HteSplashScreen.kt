@@ -9,6 +9,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Image
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -22,6 +23,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -60,12 +63,6 @@ fun HteSplashScreen(
     val latestElapsed by rememberUpdatedState(elapsed)
 
     val ringProgress = remember { Animatable(0f) }
-    val hAlpha = remember { Animatable(0f) }
-    val hScale = remember { Animatable(1.6f) }
-    val tAlpha = remember { Animatable(0f) }
-    val tScale = remember { Animatable(1.6f) }
-    val eAlpha = remember { Animatable(0f) }
-    val eScale = remember { Animatable(1.6f) }
     val flashGlow = remember { Animatable(0f) }
 
     var showSubtitle by remember { mutableStateOf(false) }
@@ -125,15 +122,8 @@ fun HteSplashScreen(
         if (elapsed >= 15) onSplashFinished()
     }
 
-    // Keep the original H/T/E letter reveal and orbital ring. The black-backed PNG
-    // was the later overlay covering these animated letters, so it is not rendered.
+    // Reveal the official HTE logo inside the animated orbital ring.
     LaunchedEffect(Unit) {
-        launch { hAlpha.animateTo(1f, tween(350)); hScale.animateTo(1f, spring(dampingRatio = 0.65f, stiffness = 320f)) }
-        delay(280L)
-        launch { tAlpha.animateTo(1f, tween(350)); tScale.animateTo(1f, spring(dampingRatio = 0.65f, stiffness = 320f)) }
-        delay(280L)
-        launch { eAlpha.animateTo(1f, tween(350)); eScale.animateTo(1f, spring(dampingRatio = 0.65f, stiffness = 320f)) }
-        delay(450L)
         ringProgress.animateTo(1f, tween(1100, easing = FastOutSlowInEasing))
         launch { flashGlow.animateTo(1f, tween(250)); flashGlow.animateTo(0.25f, tween(900)) }
         delay(350L)
@@ -209,14 +199,12 @@ fun HteSplashScreen(
                         }
                     }
                 }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    MonogramLetter("H", hAlpha.value, hScale.value)
-                    MonogramLetter("T", tAlpha.value, tScale.value)
-                    MonogramLetter("E", eAlpha.value, eScale.value)
-                }
+                Image(
+                    painter = painterResource(id = R.drawable.ht_logo),
+                    contentDescription = "High-Tech Entertainment official logo",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(142.dp)
+                )
             }
             Spacer(Modifier.height(20.dp))
             AnimatedVisibility(showSubtitle, enter = fadeIn(tween(700)) + slideInVertically(tween(700)) { it / 2 }) {
@@ -224,7 +212,7 @@ fun HteSplashScreen(
             }
             Spacer(Modifier.height(8.dp))
             AnimatedVisibility(showTagline, enter = fadeIn(tween(700)) + slideInVertically(tween(700)) { it / 2 }) {
-                Text("MUSIC. TECHNOLOGY. BEYOND.", color = HTESilver, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 2.5.sp)
+                Text(HTE_STARTUP_TAGLINE.uppercase(), color = HTESilver, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 2.5.sp)
             }
             Spacer(Modifier.height(24.dp))
             AnimatedVisibility(showFooter, enter = fadeIn(tween(800))) {
@@ -242,15 +230,3 @@ fun HteSplashScreen(
     }
 }
 
-
-@Composable
-private fun MonogramLetter(letter: String, alpha: Float, scale: Float) {
-    Text(
-        letter,
-        modifier = Modifier.graphicsLayer { this.alpha = alpha; scaleX = scale; scaleY = scale },
-        style = TextStyle(
-            brush = Brush.verticalGradient(listOf(Color.White, HTESilver, Color(0xFF8E96A4))),
-            fontSize = 42.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp
-        )
-    )
-}
