@@ -38,8 +38,3 @@ internal fun isPlayableVideoUrl(url: String?): Boolean {
     }
 }
 
-/** DownloadManager must never be given a cleartext or hostless network URL. */
-internal fun isSecureMediaDownloadUrl(url: String?): Boolean {
-    val uri = parseMediaUri(url) ?: return false
-    return uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrBlank()
-}
