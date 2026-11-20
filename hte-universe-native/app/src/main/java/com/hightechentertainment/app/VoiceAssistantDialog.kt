@@ -25,8 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.core.content.ContextCompat
 import com.hightechentertainment.app.data.SupabaseClientProvider
 import com.hightechentertainment.app.data.TrackDto
@@ -113,6 +113,7 @@ fun VoiceAssistantDialog(
     var userTranscript by remember { mutableStateOf("") }
     var agentResponse by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var minimized by remember { mutableStateOf(false) }
 
     SideEffect {
         toolContext.tracks = currentTracks
@@ -161,9 +162,24 @@ fun VoiceAssistantDialog(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxSize(), color = Color(0xFF08090B)) {
-            Column(
+    Popup(alignment = Alignment.BottomEnd, properties = PopupProperties(focusable = false)) {
+        Box(Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.BottomEnd) {
+            if (minimized) {
+                Surface(Modifier.fillMaxWidth().widthIn(max = 320.dp), color = VoicePanel, shape = RoundedCornerShape(22.dp), shadowElevation = 18.dp) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.GraphicEq, null, tint = VoiceGold, modifier = Modifier.size(25.dp))
+                        Spacer(Modifier.width(9.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("Synapse AI", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(if (session != null) "Connected · say Hey HTE" else "Voice Companion · standby", color = VoiceMuted, fontSize = 9.sp)
+                        }
+                        IconButton(onClick = { minimized = false }) { Icon(Icons.Outlined.ExpandLess, "Expand Voice Companion", tint = VoiceGold) }
+                        IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "End Voice Companion", tint = VoiceMuted) }
+                    }
+                }
+            } else {
+                Surface(Modifier.fillMaxWidth(.96f).widthIn(max = 440.dp).fillMaxHeight(.88f), color = Color(0xFF08090B), shape = RoundedCornerShape(26.dp), shadowElevation = 24.dp) {
+                    Column(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp, vertical = 18.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -174,7 +190,8 @@ fun VoiceAssistantDialog(
                         Text("Synapse AI", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                         Text("Your voice-controlled HTE companion", color = VoiceMuted, fontSize = 11.sp)
                     }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close Synapse AI", tint = Color.White) }
+                    IconButton(onClick = { minimized = true }) { Icon(Icons.Outlined.ExpandMore, "Minimize Synapse AI", tint = Color.White) }
+                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "End Synapse AI", tint = Color.White) }
                 }
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -207,6 +224,7 @@ fun VoiceAssistantDialog(
                 }
                 Text(status.replaceFirstChar { it.uppercase() } + if (session != null) " · ${mode.replaceFirstChar { it.uppercase() }}" else "", color = VoiceGold, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Text("Speak naturally to find music, control playback, search the catalogue and move around HTE Universe.", color = VoiceMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
+                Text("Say ‘Hey HTE’ while the voice link is connected. Minimise this panel and continue using the app.", color = VoiceGold.copy(alpha = .88f), fontSize = 10.sp, textAlign = TextAlign.Center)
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text("ASSISTANT VOICE", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
                     Box {
@@ -296,6 +314,8 @@ fun VoiceAssistantDialog(
                     }
                 }
                 Text("The ElevenLabs API key remains server-side. Sign in to HTE Universe before starting a private voice session.", color = VoiceMuted, fontSize = 9.sp, textAlign = TextAlign.Center)
+                    }
+                }
             }
         }
     }
