@@ -30,6 +30,8 @@ function isIndexable(html) {
 
 for (const file of await walk(dist)) {
   const path = relative(dist, file).split(sep).join('/');
+  // Google Search Console HTML verification tokens must remain published, but are not landing pages.
+  if (/^google[0-9a-f]{16,}\.html$/i.test(path)) continue;
   if (path === '404.html' || path.startsWith('admin/') || path.startsWith('account/')) continue;
   const html = await readFile(file, 'utf8');
   if (!isIndexable(html)) continue;
