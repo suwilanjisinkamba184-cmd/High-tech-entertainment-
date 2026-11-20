@@ -3,6 +3,8 @@ package com.hightechentertainment.app
 import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
@@ -20,8 +22,8 @@ class HteSplashSmokeTest {
             composeRule.onAllNodesWithContentDescription("High-Tech Entertainment official logo")
                 .fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onAllNodesWithContentDescription("High-Tech Entertainment official logo").assertExists()
-        composeRule.onAllNodesWithText("HTE UNIVERSE").assertExists()
-        composeRule.onAllNodesWithText(HTE_STARTUP_TAGLINE.uppercase()).assertExists()
+        composeRule.onNodeWithContentDescription("High-Tech Entertainment official logo").assertExists()
+        composeRule.onNodeWithText("HTE UNIVERSE").assertExists()
+        composeRule.onNodeWithText(HTE_STARTUP_TAGLINE.uppercase()).assertExists()
     }
 }
