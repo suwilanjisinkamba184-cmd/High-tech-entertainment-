@@ -28,8 +28,11 @@ jobs:
       run:
         working-directory: hte-universe-native
     env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+      # These are public client-side values (the publishable key is safe for app/browser clients).
+      # Prefer repository secrets/variables when configured; fall back to the same public
+      # project configuration already shipped in supabase-config.js so fork PR checks work.
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL || 'https://wqrxacjbsldbnoekbkbf.supabase.co' }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY || vars.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_hB_aRh-dnicpRQq3wiRtWg_JTdhmMda' }}
       # A marked main-branch commit publishes the signed release after all build checks pass.
       PUBLISH_RELEASE: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_release == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[publish-hte-4.1.2-build50]')) }}
     steps:
@@ -60,9 +63,6 @@ jobs:
       # Never silently skip this gate: the same BuildConfig values are consumed by
       # SupabaseClientProvider in the installed application.
       - name: Validate Supabase runtime configuration
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
