@@ -627,6 +627,14 @@ fun UniverseShell() {
                             }
                         }
                     },
+                    onRetryDownload = { record ->
+                        val source = record.sourceUrl
+                        if (source.isNullOrBlank()) {
+                            Toast.makeText(context, "This older download has no saved retry link. Remove it and download the item again.", Toast.LENGTH_LONG).show()
+                        } else {
+                            startDownload(source, record.title, record.mediaType)
+                        }
+                    },
                     onPlayDownload = { record ->
                         if (record.localUri.isNullOrBlank()) Toast.makeText(context, "This download is not ready yet.", Toast.LENGTH_SHORT).show()
                         else if (record.mediaType == "video") selectedVideo = VideoDto(record.id.toString(), record.title, videoUrl = record.localUri)
@@ -1147,6 +1155,7 @@ private fun LibraryScreen(
     onToggleFavourite: (TrackDto) -> Unit,
     onDownloadFavourite: (TrackDto) -> Unit,
     onRemoveDownload: (OfflineDownloadRecord) -> Unit,
+    onRetryDownload: (OfflineDownloadRecord) -> Unit,
     onPlayDownload: (OfflineDownloadRecord) -> Unit
 ) {
     LazyColumn(contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
@@ -1229,6 +1238,7 @@ private fun LibraryScreen(
                         }
                     }
                     if (record.status == "Downloaded" && !record.localUri.isNullOrBlank()) IconButton(onClick = { onPlayDownload(record) }) { Icon(Icons.Outlined.PlayArrow, "Play offline", tint = ShellGold) }
+                    if (record.status == "Failed" && !record.sourceUrl.isNullOrBlank()) IconButton(onClick = { onRetryDownload(record) }) { Icon(Icons.Outlined.Refresh, "Retry download", tint = ShellGold) }
                     IconButton(onClick = { onRemoveDownload(record) }) { Icon(Icons.Outlined.Delete, "Remove download", tint = ShellMuted) }
                 }
             }
