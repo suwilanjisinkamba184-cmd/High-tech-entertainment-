@@ -6,7 +6,9 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.storage.storage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.put
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.time.Duration.Companion.minutes
 
@@ -72,14 +74,6 @@ data class FavoriteDto(
 private data class FavoriteInsertDto(
     @SerialName("user_id") val userId: String,
     @SerialName("track_id") val trackId: String
-)
-
-@Serializable
-private data class BookingRequestParams(
-    @SerialName("p_name") val name: String,
-    @SerialName("p_email") val email: String,
-    @SerialName("p_subject") val subject: String,
-    @SerialName("p_message") val message: String
 )
 
 @Serializable
@@ -196,7 +190,7 @@ class MemberRepository {
                 val service = message.subject.substringAfter("Booking request").trim()
                     .trimStart('—', '-')
                     .ifBlank { "Service request" }
-                val requestedDate = Regex("(?m)^Preferred date:\s*(.+)$")
+                val requestedDate = Regex("""(?m)^Preferred date:\s*(.+)$""")
                     .find(message.message)?.groupValues?.getOrNull(1)?.trim()
                     ?.takeUnless { it.isBlank() || it.equals("Flexible", ignoreCase = true) }
                 BookingDto(
@@ -236,15 +230,12 @@ class MemberRepository {
             "Project details:",
             message.trim()
         ).joinToString("\n")
-        client.postgrest.rpc(
-            "submit_booking_request",
-            BookingRequestParams(
-                name = name.trim(),
-                email = email.trim(),
-                subject = "Booking request — ${bookingType.trim()}",
-                message = bookingMessage
-            )
-        ).decodeAs<String>()
+        client.postgrest.rpc("submit_booking_request", buildJsonObject {
+            put("p_name", name.trim())
+            put("p_email", email.trim())
+            put("p_subject", "Booking request — ${bookingType.trim()}")
+            put("p_message", bookingMessage)
+        })
     }
 
     suspend fun getMyPlaylists(): List<PlaylistDto> {
