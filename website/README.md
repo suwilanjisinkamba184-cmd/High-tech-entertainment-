@@ -10,10 +10,7 @@ The public homepage is built from **Astro**, not the legacy root `index.html`.
 - Member account UI: `account/index.html` and `assets/account-experience.css`
 - Account, authentication and Founder Studio behavior: `assets/app.js`
 
-The GitHub Pages workflow runs `scripts/build-website.sh` and publishes `dist/`. Changes made only to the legacy root `index.html` do not control the deployed homepage. The build now checks for Astro homepage markers so this mismatch fails CI instead of silently publishing the wrong UI.
-
-GitHub Pages remains the canonical production host. Cloudflare is used only for root-path preview builds.
-
+GitHub Pages is the only production host. Its workflow runs `scripts/build-website.sh` and publishes `dist/`. Changes made only to the legacy root `index.html` do not control the deployed homepage. The build checks for Astro homepage markers so this mismatch fails CI instead of silently publishing the wrong UI.
 
 ## Search discovery and public content
 
