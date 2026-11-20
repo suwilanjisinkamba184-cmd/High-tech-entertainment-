@@ -1,0 +1,12 @@
+---
+import ServiceLanding from '../../components/ServiceLanding.astro';
+const title='Music Mixing & Mastering Services in Zambia';
+const description='High-Tech Entertainment offers mixing and mastering project enquiries for artists seeking clear, balanced and release-ready music in Zambia.';
+const canonical='https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/services/mixing-mastering/';
+const sections=[
+{heading:'Mixing that serves the song',body:'Mixing brings the recorded elements together into a coherent balance. The right approach depends on the arrangement, source recordings and intended listening experience.',points:['Vocal and instrumental balance','Clarity, space and dynamics','Review notes and revision expectations agreed before work begins']},
+{heading:'Mastering and release preparation',body:'Mastering is the final audio preparation stage. It considers overall tonal balance, loudness, dynamics and the requirements of the intended distribution format.',points:['Final stereo file preparation','Listening checks across different playback systems','Export format and delivery requirements discussed per project']},
+{heading:'What to send with your enquiry',body:'Share a reference track, the current mix or a short description of your project. Tell us whether you need mixing, mastering or both. Do not send private access credentials or account passwords.'}
+];
+---
+<ServiceLanding title={title} description={description} canonical={canonical} eyebrow="AUDIO ENGINEERING · ZAMBIA" intro="Give your music a considered final sound. HTE works with artists to discuss mixing and mastering needs, understand the source material and agree on a delivery workflow before production begins." sections={sections}/>
