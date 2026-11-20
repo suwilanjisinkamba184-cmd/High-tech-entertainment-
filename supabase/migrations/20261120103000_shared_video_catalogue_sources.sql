@@ -13,7 +13,8 @@ update public.videos set source_platform = case when youtube_id is not null then
 update public.videos set download_url = video_url
 where download_url is null and video_url like 'https://wqrxacjbsldbnoekbkbf.supabase.co/storage/v1/object/public/hte-video/%';
 
-create unique index if not exists videos_youtube_id_key on public.videos (youtube_id) where youtube_id is not null;
+drop index if exists public.videos_youtube_id_key;
+create unique index if not exists videos_youtube_id_key on public.videos (youtube_id);
 create index if not exists videos_published_created_at_idx on public.videos (is_published, created_at desc);
 comment on column public.videos.download_url is 'Optional HTE-hosted original file URL. NULL for YouTube-only videos.';
 comment on column public.videos.youtube_id is 'Canonical YouTube video ID used for idempotent channel synchronization.';
