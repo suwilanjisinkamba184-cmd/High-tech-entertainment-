@@ -102,6 +102,7 @@ if missing_homepage:
 ET.parse(root / "sitemap.xml")
 from urllib.parse import urlsplit, unquote
 site_base = "https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/"
+sitemap_urls = set()
 for node in ET.parse(root / "sitemap.xml").getroot():
     if node.tag.rsplit("}", 1)[-1] != "url":
         continue
