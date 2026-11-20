@@ -11,7 +11,8 @@ class VoiceAssistantErrorMessageTest {
     @Test fun missingElevenLabsPermissionExplainsOwnerConfiguration() {
         val message = voiceFailureMessage("missing convai_write permission")
         assertTrue(message.contains("project owner"))
-        assertTrue(message.contains("credentials and permissions"))
+        assertTrue(message.contains("agent permissions"))
+        assertTrue(message.contains("server-side API credentials"))
     }
 
     @Test fun expiredSessionAsksUserToSignInAgain() {
