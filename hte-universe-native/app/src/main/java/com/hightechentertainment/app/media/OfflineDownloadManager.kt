@@ -5,10 +5,16 @@ import android.content.Context
 import android.os.Environment
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import java.net.URI
 import java.net.URLConnection
 import java.security.MessageDigest
 
 data class OfflineDownloadRecord(val id: Long, val title: String, val mediaType: String, val status: String, val localUri: String? = null)
+
+internal fun isSecureMediaDownloadUrl(url: String): Boolean =
+    runCatching { URI(url) }.getOrNull()?.let { uri ->
+        uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrBlank() && uri.userInfo == null
+    } ?: false
 
 internal fun resolveMediaFileExtension(url: String, mediaType: String, mimeType: String? = null): String {
     val mimeExtension = when (mimeType?.substringBefore(';')?.trim()?.lowercase()) {
@@ -49,8 +55,8 @@ class OfflineDownloadManager(context: Context) {
     private val preferences = appContext.getSharedPreferences("hte_universe_offline_downloads", Context.MODE_PRIVATE)
 
     fun enqueue(url: String, title: String, mediaType: String, allowMetered: Boolean = true, mimeType: String? = null): Long {
+        require(isSecureMediaDownloadUrl(url)) { "Downloads require a valid secure HTTPS media URL." }
         val uri = url.toUri()
-        require(uri.scheme == "https" || uri.scheme == "http") { "This media item does not have a valid download URL." }
         val fileName = buildOfflineDownloadFileName(title, url, mediaType, mimeType)
         val isVideo = mediaType.equals("video", true) || mediaType.startsWith("video/", true)
         val folder = if (isVideo) Environment.DIRECTORY_MOVIES else Environment.DIRECTORY_MUSIC

@@ -36,6 +36,7 @@ import com.hightechentertainment.app.data.NotificationDto
 import com.hightechentertainment.app.data.ProfileDto
 import com.hightechentertainment.app.data.SupabaseClientProvider
 import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -43,6 +44,14 @@ import java.time.LocalDate
 private val MemberGold = Color(0xFFD6B15E)
 private val MemberPanel = Color(0xFF15111B)
 private val MemberMuted = Color(0xFF8B929D)
+
+private suspend fun <T> captureAccountRequest(request: suspend () -> T): Result<T> = try {
+    Result.success(request())
+} catch (cancelled: CancellationException) {
+    throw cancelled
+} catch (error: Exception) {
+    Result.failure(error)
+}
 
 @Composable
 fun MemberCenter(
@@ -65,6 +74,9 @@ fun MemberCenter(
     var bookings by remember { mutableStateOf<List<BookingDto>>(emptyList()) }
     var notifications by remember { mutableStateOf<List<NotificationDto>>(emptyList()) }
     var role by remember { mutableStateOf("member") }
+    var accountDataLoading by remember { mutableStateOf(false) }
+    var accountDataError by remember { mutableStateOf<String?>(null) }
+    var accountRefreshKey by remember { mutableIntStateOf(0) }
     var showProfileEditor by remember { mutableStateOf(false) }
     var showBookingForm by remember { mutableStateOf(false) }
     var isWorking by remember { mutableStateOf(false) }
@@ -77,19 +89,36 @@ fun MemberCenter(
         }
     }
 
-    LaunchedEffect(auth, isSignedIn) {
+    LaunchedEffect(auth, isSignedIn, accountRefreshKey) {
         if (auth != null && isSignedIn) {
-            val repo = MemberRepository()
-            profile = runCatching { repo.getMyProfile() }.getOrNull()
-            bookings = runCatching { repo.getMyBookings() }.getOrDefault(emptyList())
-            notifications = runCatching { repo.getNotifications() }.getOrDefault(emptyList())
-            role = runCatching { repo.getCurrentRole() }.getOrDefault("member")
-            email = auth.currentUserOrNull()?.email.orEmpty()
+            accountDataLoading = true
+            accountDataError = null
+            try {
+                val repo = MemberRepository()
+                val profileResult = captureAccountRequest { repo.getMyProfile() }
+                val bookingsResult = captureAccountRequest { repo.getMyBookings() }
+                val notificationsResult = captureAccountRequest { repo.getNotifications() }
+                val roleResult = captureAccountRequest { repo.getCurrentRole() }
+                profileResult.onSuccess { profile = it }
+                bookingsResult.onSuccess { bookings = it }
+                notificationsResult.onSuccess { notifications = it }
+                roleResult.onSuccess { role = it }
+                val firstFailure = listOf(profileResult, bookingsResult, notificationsResult, roleResult)
+                    .firstNotNullOfOrNull { it.exceptionOrNull() }
+                accountDataError = firstFailure?.toHteUserMessage(
+                    "Some account information could not be loaded. Please try again."
+                )?.let { "Some account information could not be loaded. $it" }
+                email = auth.currentUserOrNull()?.email.orEmpty()
+            } finally {
+                accountDataLoading = false
+            }
         } else if (!isSignedIn) {
             profile = null
             bookings = emptyList()
             notifications = emptyList()
             role = "member"
+            accountDataError = null
+            accountDataLoading = false
         }
     }
 
@@ -113,6 +142,27 @@ fun MemberCenter(
                             MemberMetric(bookings.size.toString(), "BOOKINGS", Modifier.weight(1f))
                             MemberMetric(notifications.size.toString(), "ALERTS", Modifier.weight(1f))
                         }
+                    }
+                }
+            }
+        }
+        if (accountDataLoading) {
+            item {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    CircularProgressIndicator(Modifier.size(18.dp), color = MemberGold, strokeWidth = 2.dp)
+                    Text("Syncing your account…", color = MemberMuted, fontSize = 12.sp)
+                }
+            }
+        }
+        accountDataError?.let { message ->
+            item {
+                MemberCard {
+                    Text("ACCOUNT SYNC NEEDS ATTENTION", color = MemberGold, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(message, color = MemberMuted, fontSize = 12.sp)
+                    OutlinedButton(onClick = { accountRefreshKey++ }, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Outlined.Refresh, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Retry account sync")
                     }
                 }
             }
@@ -155,7 +205,7 @@ fun MemberCenter(
                         scope.launch {
                             isWorking = true
                             statusMessage = null
-                            runCatching { if (createAccount) AuthRepository().signUp(email, password) else AuthRepository().signIn(email, password) }
+                            captureAccountRequest { if (createAccount) AuthRepository().signUp(email, password) else AuthRepository().signIn(email, password) }
                                 .onSuccess {
                                     isSignedIn = auth.currentUserOrNull() != null
                                     statusMessage = if (createAccount && !isSignedIn) "Account created. Check your email if confirmation is required." else "Authentication request completed."
@@ -169,7 +219,7 @@ fun MemberCenter(
                     OutlinedButton(onClick = {
                         scope.launch {
                             isWorking = true
-                            runCatching { AuthRepository().signInWithGoogle(context) }
+                            captureAccountRequest { AuthRepository().signInWithGoogle(context) }
                                 .onSuccess { native ->
                                     isSignedIn = auth.currentUserOrNull() != null
                                     statusMessage = if (native && isSignedIn) "Google sign-in successful. Welcome to HTE Universe." else if (native) "Google verification completed. Loading your HTE account…" else "Continue in the Google sign-in tab. HTE Universe will reopen automatically when sign-in completes."
@@ -230,7 +280,7 @@ fun MemberCenter(
                     }
                     OutlinedButton(onClick = {
                         scope.launch {
-                            runCatching { AuthRepository().signOut() }
+                            captureAccountRequest { AuthRepository().signOut() }
                                 .onSuccess { isSignedIn = false; statusMessage = "You have signed out." }
                                 .onFailure { statusMessage = "Sign-out failed. Please try again." }
                         }
@@ -249,9 +299,9 @@ fun MemberCenter(
                 }
             }
             item { Text("BOOKING HISTORY", color = MemberGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
-            if (bookings.isEmpty()) {
+            if (bookings.isEmpty() && accountDataError == null && !accountDataLoading) {
                 item { Text("Your booking requests will appear here.", color = MemberMuted, fontSize = 12.sp) }
-            } else {
+            } else if (bookings.isNotEmpty()) {
                 items(bookings, key = { it.id }) { booking ->
                     MemberCard {
                         Text(booking.bookingType, color = Color.White, fontWeight = FontWeight.SemiBold)
@@ -263,9 +313,9 @@ fun MemberCenter(
             item { Text("NOTIFICATIONS", color = MemberGold, fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold) }
             if (!notificationsEnabled) {
                 item { Text("In-app notifications are disabled in settings.", color = MemberMuted, fontSize = 12.sp) }
-            } else if (notifications.isEmpty()) {
+            } else if (notifications.isEmpty() && accountDataError == null && !accountDataLoading) {
                 item { Text("No account notifications yet.", color = MemberMuted, fontSize = 12.sp) }
-            } else {
+            } else if (notifications.isNotEmpty()) {
                 items(notifications, key = { it.id }) { notification ->
                     MemberCard {
                         Text(notification.title, color = Color.White, fontWeight = FontWeight.SemiBold)
@@ -288,7 +338,7 @@ fun MemberCenter(
                 }
             }
         }
-        if (statusMessage != null) item { Text(statusMessage!!, color = MemberGold, fontSize = 12.sp) }
+        statusMessage?.let { message -> item { Text(message, color = MemberGold, fontSize = 12.sp) } }
     }
 
     if (showSettings) {
@@ -312,10 +362,19 @@ fun MemberCenter(
         ProfileEditorDialog(profile = profile, onDismiss = { showProfileEditor = false }, onSave = { name, bio, phone ->
             scope.launch {
                 isWorking = true
-                runCatching { MemberRepository().saveMyProfile(name, bio, phone) }
-                    .onSuccess { profile = MemberRepository().getMyProfile(); statusMessage = "Profile saved."; showProfileEditor = false }
-                    .onFailure { statusMessage = it.toHteUserMessage("Your profile could not be saved. Please retry.") }
-                isWorking = false
+                try {
+                    captureAccountRequest { MemberRepository().saveMyProfile(name, bio, phone) }
+                        .onSuccess {
+                            statusMessage = "Profile saved."
+                            showProfileEditor = false
+                            captureAccountRequest { MemberRepository().getMyProfile() }
+                                .onSuccess { profile = it }
+                                .onFailure { accountDataError = it.toHteUserMessage("Your profile was saved, but the refreshed details could not be loaded.") }
+                        }
+                        .onFailure { statusMessage = it.toHteUserMessage("Your profile could not be saved. Please retry.") }
+                } finally {
+                    isWorking = false
+                }
             }
         }, isWorking = isWorking)
     }
@@ -328,15 +387,26 @@ fun MemberCenter(
             onSubmit = { name, requestEmail, type, date, message ->
                 scope.launch {
                     isWorking = true
-                    runCatching { MemberRepository().submitBooking(name, requestEmail, type, date, message) }
-                        .onSuccess {
-                            bookings = MemberRepository().getMyBookings()
-                            statusMessage = "Your booking request has been submitted."
-                            if (settingsStore.notificationsEnabled) AppNotificationHelper.show(context, "Booking request received", "Your HTE booking request has been submitted.")
-                            showBookingForm = false
-                        }
-                        .onFailure { statusMessage = it.toHteUserMessage("Your booking request could not be sent. Please retry.") }
-                    isWorking = false
+                    try {
+                        captureAccountRequest { MemberRepository().submitBooking(name, requestEmail, type, date, message) }
+                            .onSuccess {
+                                statusMessage = "Your booking request has been submitted."
+                                showBookingForm = false
+                                if (settingsStore.notificationsEnabled) {
+                                    AppNotificationHelper.show(context, "Booking request received", "Your HTE booking request has been submitted.")
+                                }
+                                captureAccountRequest { MemberRepository().getMyBookings() }
+                                    .onSuccess { bookings = it }
+                                    .onFailure {
+                                        accountDataError = it.toHteUserMessage(
+                                            "Your booking was submitted, but booking history could not be refreshed. Tap Retry account sync."
+                                        )
+                                    }
+                            }
+                            .onFailure { statusMessage = it.toHteUserMessage("Your booking request could not be sent. Please retry.") }
+                    } finally {
+                        isWorking = false
+                    }
                 }
             }, isWorking = isWorking
         )
