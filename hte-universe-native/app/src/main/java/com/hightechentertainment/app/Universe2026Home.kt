@@ -1,5 +1,9 @@
 package com.hightechentertainment.app
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import com.hightechentertainment.app.data.TrackDto
 import com.hightechentertainment.app.data.ArtistDto
 import com.hightechentertainment.app.data.ReleaseDto
@@ -33,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.hightechentertainment.app.media.spotifyAppUri
 
 private val U26Black = Color(0xFF0B0A0F)
 private val U26Panel = Color(0xFF141414)
@@ -241,7 +246,7 @@ fun MusicHomeScreen(
                 } else {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(top = 10.dp)) {
                         items(videos.take(8), key = { it.id }) { video ->
-                            U26VideoCard(video, wide, onPlay = { onPlayVideo(video) }, onDownload = { onDownloadVideo(video) })
+                            U26VideoCard(video, wide, onPlay = { onPlayVideo(video) }, onDownload = if (!video.downloadUrl.isNullOrBlank()) ({ onDownloadVideo(video) }) else null)
                         }
                     }
                 }
@@ -303,6 +308,7 @@ private fun U26ArtistCard(artist: ArtistDto, wide: Boolean, onClick: () -> Unit)
 
 @Composable
 private fun U26ProjectCard(release: ReleaseDto, wide: Boolean) {
+    var selectedSpotifyUrl by remember(release.id) { mutableStateOf<String?>(null) }
     Card(
         modifier = Modifier.width(if (wide) 230.dp else 192.dp),
         shape = RoundedCornerShape(18.dp),
@@ -330,6 +336,16 @@ private fun U26ProjectCard(release: ReleaseDto, wide: Boolean) {
             if (!release.description.isNullOrBlank()) {
                 Text(release.description, color = U26Muted, fontSize = 9.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
+            release.spotifyUrl?.takeIf(String::isNotBlank)?.let { spotifyUrl ->
+                TextButton(
+                    onClick = { selectedSpotifyUrl = spotifyUrl },
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                ) {
+                    Icon(Icons.Outlined.PlayArrow, contentDescription = null, tint = U26Gold, modifier = Modifier.size(16.dp))
+                    Text("PLAY IN HTE", color = U26Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            selectedSpotifyUrl?.let { url -> SpotifyEmbedDialog(url = url, onDismiss = { selectedSpotifyUrl = null }) }
         }
     }
 }
@@ -476,7 +492,7 @@ private fun U26TrendingRow(index: Int, track: TrackDto, onPlay: () -> Unit, onDo
 }
 
 @Composable
-private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onDownload: () -> Unit) {
+private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onDownload: (() -> Unit)?) {
     Column(Modifier.width(if (wide) 238.dp else 194.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Box(
             Modifier.fillMaxWidth().height(if (wide) 140.dp else 112.dp).clip(RoundedCornerShape(16.dp))
@@ -508,9 +524,9 @@ private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onD
                 Text("WATCH", color = U26Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.width(8.dp))
-            TextButton(onClick = onDownload, contentPadding = PaddingValues(horizontal = 0.dp)) {
+            if (onDownload != null) TextButton(onClick = onDownload, contentPadding = PaddingValues(horizontal = 0.dp)) {
                 Icon(Icons.Outlined.Download, null, tint = U26Silver, modifier = Modifier.size(15.dp))
-                Text("SAVE", color = U26Silver, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("SAVE ORIGINAL", color = U26Silver, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

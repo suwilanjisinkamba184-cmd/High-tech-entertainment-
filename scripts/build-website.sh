@@ -25,9 +25,7 @@ cp -R assets admin account dist/
 # Convert the repository's source AAC into the normalized MP3 served by the website.
 test -s assets/booking-confirmation.aac || { echo "Missing source booking-confirmation.aac" >&2; exit 1; }
 if ! command -v ffmpeg >/dev/null 2>&1; then
-  if [ "${CF_PAGES:-0}" = "1" ]; then
-    echo "Cloudflare preview: skipping optional booking-confirmation MP3 transcode because ffmpeg is unavailable."
-  elif command -v sudo >/dev/null 2>&1; then
+  if command -v sudo >/dev/null 2>&1; then
     sudo apt-get update
     sudo apt-get install -y ffmpeg
   elif [ "$(id -u)" -eq 0 ] && command -v apt-get >/dev/null 2>&1; then
@@ -71,7 +69,7 @@ done
 for file in services/index.html services/music-production/index.html services/mixing-mastering/index.html services/artist-promotion/index.html services/software-development/index.html journal/index.html journal/prepare-for-a-recording-session/index.html journal/from-beat-to-release/index.html; do
   test -s "dist/$file" || { echo "Missing published SEO service page: $file" >&2; exit 1; }
 done
-if [ ! -s dist/assets/booking-confirmation.mp3 ] && [ "${CF_PAGES:-0}" != "1" ]; then
+if [ ! -s dist/assets/booking-confirmation.mp3 ]; then
   echo "Missing production booking-confirmation MP3." >&2
   exit 1
 fi

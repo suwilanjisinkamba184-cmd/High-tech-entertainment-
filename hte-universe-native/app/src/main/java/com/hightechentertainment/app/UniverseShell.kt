@@ -6,9 +6,16 @@ import android.content.pm.ActivityInfo
 import android.content.ContextWrapper
 import android.content.Context
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.widget.Toast
 import android.view.LayoutInflater
 import android.widget.FrameLayout
+import android.webkit.CookieManager
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.webkit.WebChromeClient
+import android.view.View
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -73,7 +80,10 @@ import com.hightechentertainment.app.data.TrackDto
 import com.hightechentertainment.app.data.TrackRepository
 import com.hightechentertainment.app.data.VideoDto
 import com.hightechentertainment.app.media.HtePlaybackController
+import com.hightechentertainment.app.media.extractYouTubeVideoId
 import com.hightechentertainment.app.media.isExternalStreamingSource
+import com.hightechentertainment.app.media.isSpotifySource
+import com.hightechentertainment.app.media.spotifyAppUri
 import com.hightechentertainment.app.media.isPlayableInAppAudioUrl
 import com.hightechentertainment.app.media.isPlayableVideoUrl
 import com.hightechentertainment.app.media.OfflineDownloadManager
@@ -119,6 +129,7 @@ fun UniverseShell() {
     var selectedTrack by remember { mutableStateOf<TrackDto?>(null) }
     var selectedTrackQueue by remember { mutableStateOf<List<TrackDto>?>(null) }
     var selectedVideo by remember { mutableStateOf<VideoDto?>(null) }
+    var selectedSpotifyUrl by remember { mutableStateOf<String?>(null) }
     var selectedArtist by remember { mutableStateOf<ArtistDto?>(null) }
     var showVoiceAssistant by remember { mutableStateOf(false) }
     var showSettingsHub by remember { mutableStateOf(false) }
@@ -185,10 +196,24 @@ fun UniverseShell() {
         val sourceUrl = selected.sourceUrl?.takeIf(String::isNotBlank) ?: selected.audioUrl
         val externalPlatform = isExternalStreamingSource(selected.sourcePlatform, sourceUrl)
         if (externalPlatform) {
+            val url = sourceUrl?.takeIf(String::isNotBlank)
             try {
-                val url = sourceUrl?.takeIf(String::isNotBlank) ?: error("This external track has no source link.")
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                if (url == null) error("This external track has no source link.")
+                if (isSpotifySource(selected.sourcePlatform, url)) {
+                    // Use Spotify's official embedded player inside HTE. Spotify controls
+                    // entitlement and playback; HTE never extracts or proxies audio.
+                    selectedSpotifyUrl = url
+                } else {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                }
                 scope.launch { runCatching { withContext(Dispatchers.IO) { audienceAnalytics.record("track_play", selected.id) } } }
+            } catch (error: ActivityNotFoundException) {
+                val message = if (isSpotifySource(selected.sourcePlatform, url)) {
+                    "Spotify is not installed. Install the Spotify app to play this track."
+                } else {
+                    "This music app is not installed. Check the link and try again."
+                }
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             } catch (_: Throwable) {
                 Toast.makeText(context, "This external music link could not be opened. Check the link and try again.", Toast.LENGTH_LONG).show()
             } finally {
@@ -543,7 +568,7 @@ fun UniverseShell() {
                     onPlayPlaylist = ::playPlaylist, onPlayVideo = { selectedVideo = it },
                     onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed) },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
-                    onDownloadVideo = { startDownload(it.videoUrl, it.title, "video") },
+                    onDownloadVideo = { startDownload(it.downloadUrl, it.title, "video") },
                     onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.DISCOVER -> DiscoverScreen(
@@ -555,7 +580,7 @@ fun UniverseShell() {
                 )
                 UniverseTab.VIDEOS -> VideosScreen(
                     videos = videos, isLoading = isLoading, error = catalogueError,
-                    onPlay = { selectedVideo = it }, onDownload = { startDownload(it.videoUrl, it.title, "video") }, onRefresh = ::refreshCatalogue
+                    onPlay = { selectedVideo = it }, onDownload = { startDownload(it.downloadUrl, it.title, "video") }, onRefresh = ::refreshCatalogue
                 )
                 UniverseTab.LIBRARY -> LibraryScreen(
                     onSignIn = { selectedTab = UniverseTab.ACCOUNT },
@@ -590,7 +615,8 @@ fun UniverseShell() {
                 UniverseTab.ACCOUNT -> AccountScreen(
                     configured = configured,
                     onSettingsChanged = { settingsRevision++ },
-                    onVoiceAssistant = { showVoiceAssistant = true }
+                    onVoiceAssistant = { showVoiceAssistant = true },
+                    onVideoSubmitted = { refreshCatalogue() }
                 )
             }
         }
@@ -721,6 +747,7 @@ fun UniverseShell() {
         )
     }
     selectedVideo?.let { VideoPlayerDialog(video = it, quality = videoQuality, onDismiss = { selectedVideo = null }) }
+    selectedSpotifyUrl?.let { url -> SpotifyEmbedDialog(url = url, onDismiss = { selectedSpotifyUrl = null }) }
     if (showVoiceAssistant) {
         VoiceAssistantDialog(
             tracks = tracks,
@@ -987,7 +1014,7 @@ private fun VideosScreen(videos: List<VideoDto>, isLoading: Boolean, error: Stri
         }
         if (error != null) item { Text(error, color = ShellGold, fontSize = 12.sp) }
         if (videos.isEmpty()) item { EmptyCatalogueState(if (isLoading) "Loading videos…" else "No published videos yet.", isLoading, onRefresh) }
-        else items(videos, key = { it.id }) { video -> VideoRow(video, { onPlay(video) }, { onDownload(video) }) }
+        else items(videos, key = { it.id }) { video -> VideoRow(video, { onPlay(video) }, if (!video.downloadUrl.isNullOrBlank()) ({ onDownload(video) }) else null) }
     }
 }
 
@@ -1047,7 +1074,7 @@ private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit
 }
 
 @Composable
-private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: () -> Unit) {
+private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: (() -> Unit)?) {
     Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.fillMaxWidth().height(164.dp).clip(RoundedCornerShape(13.dp)).background(
@@ -1073,7 +1100,7 @@ private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: () -> Unit
                     Text(video.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 11.sp)
                 }
-                IconButton(onClick = onDownload) { Icon(Icons.Outlined.Download, "Download ${video.title}", tint = ShellSilver) }
+                if (onDownload != null) IconButton(onClick = onDownload) { Icon(Icons.Outlined.Download, "Download original ${video.title}", tint = ShellSilver) }
                 IconButton(onClick = onPlay) { Icon(Icons.Outlined.PlayCircle, "Play ${video.title}", tint = ShellGold, modifier = Modifier.size(28.dp)) }
             }
         }
@@ -1175,12 +1202,14 @@ private fun LibraryTile(icon: androidx.compose.ui.graphics.vector.ImageVector, t
 private fun AccountScreen(
     configured: Boolean,
     onSettingsChanged: () -> Unit,
-    onVoiceAssistant: () -> Unit
+    onVoiceAssistant: () -> Unit,
+    onVideoSubmitted: () -> Unit
 ) {
     MemberCenter(
         configured = configured,
         onSettingsChanged = onSettingsChanged,
-        onVoiceAssistant = onVoiceAssistant
+        onVoiceAssistant = onVoiceAssistant,
+        onVideoSubmitted = onVideoSubmitted
     )
 }
 
@@ -1215,17 +1244,19 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     val previousOrientation = remember(activity) { activity?.requestedOrientation }
     var immersiveVideo by remember(video.id) { mutableStateOf(false) }
 
+    val youtubeId = remember(video.videoUrl, video.youtubeId) { video.youtubeId?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) } ?: extractYouTubeVideoId(video.videoUrl) }
+    if (youtubeId != null) {
+        YouTubeVideoDialog(video, youtubeId, onDismiss)
+        return
+    }
+
     val validUrl = remember(video.videoUrl) { isPlayableVideoUrl(video.videoUrl) }
+    // Register the Media3 listener before preparing the stream so the initial buffering,
+    // first-frame and decoder errors cannot be missed on fast connections.
     val player = remember(video.id, video.videoUrl) {
         ExoPlayer.Builder(context)
             .setAudioAttributes(AudioAttributes.DEFAULT, true)
-            .build().apply {
-                if (validUrl) {
-                    setMediaItem(MediaItem.fromUri(video.videoUrl.trim()))
-                    prepare()
-                    playWhenReady = true
-                }
-            }
+            .build()
     }
     // Video is Activity-scoped, unlike background music: pause it when the app leaves foreground.
     DisposableEffect(player, lifecycleOwner) {
@@ -1295,6 +1326,13 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
         onDispose {
             player.removeListener(listener)
             player.release()
+        }
+    }
+    LaunchedEffect(player, validUrl, video.videoUrl) {
+        if (validUrl) {
+            player.setMediaItem(MediaItem.fromUri(video.videoUrl.trim()))
+            player.prepare()
+            player.playWhenReady = true
         }
     }
 
@@ -1499,10 +1537,225 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     }
 }
 
+@Composable
+private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: () -> Unit) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var embeddedWebView by remember(video.id) { mutableStateOf<WebView?>(null) }
+    var webViewLoading by remember(video.id) { mutableStateOf(true) }
+    var webViewError by remember(video.id) { mutableStateOf(false) }
+    var webViewGeneration by remember(video.id) { mutableIntStateOf(0) }
+    DisposableEffect(lifecycleOwner, embeddedWebView) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> embeddedWebView?.onPause()
+                Lifecycle.Event.ON_RESUME -> embeddedWebView?.onResume()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(Modifier.fillMaxSize().background(Color(0xFF050506)).padding(12.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 10.sp)
+                }
+                IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close video", tint = Color.White) }
+            }
+            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                key(webViewGeneration) {
+                    AndroidView(
+                    factory = { viewContext ->
+                        WebView(viewContext).apply {
+                            embeddedWebView = this
+                            settings.apply {
+                                javaScriptEnabled = true
+                                domStorageEnabled = true
+                                mediaPlaybackRequiresUserGesture = false
+                                loadsImagesAutomatically = true
+                                useWideViewPort = true
+                                loadWithOverviewMode = true
+                                mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                                setSupportMultipleWindows(false)
+                            }
+                            CookieManager.getInstance().setAcceptCookie(true)
+                            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                            setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                            webChromeClient = WebChromeClient()
+                            webViewClient = object : WebViewClient() {
+                                override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                                    webViewLoading = true
+                                    webViewError = false
+                                }
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    webViewLoading = false
+                                }
+                                override fun onReceivedError(
+                                    view: WebView?,
+                                    request: android.webkit.WebResourceRequest?,
+                                    error: android.webkit.WebResourceError?
+                                ) {
+                                    if (request?.isForMainFrame == true) {
+                                        webViewLoading = false
+                                        webViewError = true
+                                    }
+                                }
+                                override fun onRenderProcessGone(
+                                    view: WebView,
+                                    detail: android.webkit.RenderProcessGoneDetail
+                                ): Boolean {
+                                    embeddedWebView = null
+                                    runCatching { view.destroy() }
+                                    webViewLoading = false
+                                    webViewError = true
+                                    return true
+                                }
+                            }
+                            setBackgroundColor(android.graphics.Color.BLACK)
+                            // YouTube requires an HTTP Referer (or equivalent app identity) for
+                            // embedded players in app WebViews. Loading a wrapper with a stable HTTPS
+                            // base URL supplies that identity; a direct loadUrl(embedUrl) can trigger
+                            // YouTube error 153 and leave a black/empty player surface.
+                            // Use the real, publicly reachable HTE origin as WebView identity.
+                            // A made-up package-name host is not a valid HTTP referrer for YouTube.
+                            val appOrigin = "https://suwilanjisinkamba184-cmd.github.io"
+                            val appBaseUrl = "$appOrigin/High-tech-entertainment-/"
+                            val embed = "https://www.youtube-nocookie.com/embed/$youtubeId?autoplay=1&playsinline=1&rel=0&controls=1&enablejsapi=1&origin=$appOrigin"
+                            val safeTitle = video.title.replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;").replace(">", "&gt;")
+                            val html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><meta name="referrer" content="strict-origin-when-cross-origin"><style>html,body{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden}iframe{display:block;width:100%;height:100%;border:0}</style></head><body><iframe src="$embed" title="$safeTitle" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></body></html>"""
+                            loadDataWithBaseURL(appBaseUrl, html, "text/html", "UTF-8", null)
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                    onRelease = {
+                        embeddedWebView = null
+                        runCatching { it.stopLoading() }
+                        runCatching { it.onPause() }
+                        runCatching { it.loadUrl("about:blank") }
+                        runCatching { it.removeAllViews() }
+                        runCatching { it.destroy() }
+                    }
+                    )
+                }
+                if (webViewLoading && !webViewError) {
+                    CircularProgressIndicator(color = ShellGold, strokeWidth = 2.5.dp)
+                }
+                if (webViewError) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("This YouTube video could not be loaded.", color = ShellSilver, fontSize = 12.sp)
+                        Button(
+                            onClick = {
+                                webViewError = false
+                                webViewLoading = true
+                                webViewGeneration += 1
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = ShellGold, contentColor = Color.Black)
+                        ) { Text("Retry video", fontWeight = FontWeight.Bold) }
+                    }
+                }
+            }
+            Text("Streaming from YouTube • Downloads are available only for HTE original files.", color = ShellMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 8.dp))
+        }
+    }
+}
+
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
+}
+
+
+
+@Composable
+fun SpotifyEmbedDialog(url: String, onDismiss: () -> Unit) {
+    val embedUrl = remember(url) { com.hightechentertainment.app.media.spotifyEmbedUrl(url) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val hostContext = LocalContext.current
+    var loading by remember(url) { mutableStateOf(true) }
+    var failed by remember(url) { mutableStateOf(embedUrl == null) }
+    var generation by remember(url) { mutableIntStateOf(0) }
+    var webView by remember(url) { mutableStateOf<WebView?>(null) }
+    DisposableEffect(lifecycleOwner, webView) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> webView?.onPause()
+                Lifecycle.Event.ON_RESUME -> webView?.onResume()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(Modifier.fillMaxSize().background(Color(0xFF08090B)).padding(14.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("SPOTIFY PLAYER", color = ShellGold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                    Text("Listen inside HTE Universe", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
+                IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close Spotify player", tint = Color.White) }
+            }
+            Box(Modifier.fillMaxWidth().weight(1f).padding(top = 12.dp).background(Color(0xFF111318), RoundedCornerShape(18.dp)), contentAlignment = Alignment.Center) {
+                if (embedUrl != null && !failed) {
+                    key(generation) {
+                        AndroidView(
+                            factory = { ctx -> WebView(ctx).apply {
+                                webView = this
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                settings.mediaPlaybackRequiresUserGesture = true
+                                settings.loadsImagesAutomatically = true
+                                settings.useWideViewPort = true
+                                settings.loadWithOverviewMode = true
+                                settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                                CookieManager.getInstance().setAcceptCookie(true)
+                                CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                                webChromeClient = WebChromeClient()
+                                webViewClient = object : WebViewClient() {
+                                    override fun onPageStarted(view: WebView?, page: String?, favicon: android.graphics.Bitmap?) { loading = true; failed = false }
+                                    override fun onPageFinished(view: WebView?, page: String?) { loading = false }
+                                    override fun onReceivedError(view: WebView?, request: android.webkit.WebResourceRequest?, error: android.webkit.WebResourceError?) {
+                                        if (request?.isForMainFrame == true) { loading = false; failed = true }
+                                    }
+                                }
+                                setBackgroundColor(android.graphics.Color.rgb(17,19,24))
+                                val playerHeight = if (embedUrl.contains("/track/")) "152px" else "352px"
+                                val html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><style>html,body{margin:0;padding:0;width:100%;height:100%;background:#111318;display:flex;align-items:center;justify-content:center}iframe{display:block;width:100%;min-width:280px;height:$playerHeight;border:0;border-radius:12px}</style></head><body><iframe title="Spotify player" src="$embedUrl" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe></body></html>"""
+                                loadDataWithBaseURL("https://open.spotify.com", html, "text/html", "UTF-8", null)
+                            } },
+                            modifier = Modifier.fillMaxSize(),
+                            onRelease = { view -> webView = null; runCatching { view.stopLoading() }; runCatching { view.loadUrl("about:blank") }; runCatching { view.destroy() } }
+                        )
+                    }
+                    if (loading) CircularProgressIndicator(color = ShellGold, strokeWidth = 2.5.dp)
+                } else {
+                    Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Spotify's embedded player could not be loaded for this link.", color = ShellSilver, fontSize = 12.sp)
+                        TextButton(onClick = { failed = false; loading = true; generation += 1 }) { Text("Retry", color = ShellGold) }
+                        TextButton(onClick = { runCatching { val appUri = com.hightechentertainment.app.media.spotifyAppUri(url) ?: url; hostContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(appUri))) } }) { Text("Open Spotify app", color = ShellSilver) }
+                    }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                TextButton(onClick = {
+                    runCatching {
+                        val appUri = com.hightechentertainment.app.media.spotifyAppUri(url) ?: url
+                        hostContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(appUri)))
+                    }.onFailure {
+                        Toast.makeText(hostContext, "Spotify could not be opened. Please check the link and try again.", Toast.LENGTH_LONG).show()
+                    }
+                }) {
+                    Icon(Icons.Outlined.OpenInNew, contentDescription = null, tint = ShellGold, modifier = Modifier.size(15.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Open in Spotify app", color = ShellGold, fontSize = 11.sp)
+                }
+            }
+            Text("Official Spotify embed. Playback availability and full-track access are controlled by Spotify and your account.", color = ShellMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
+        }
+    }
 }
 
 private fun formatVideoTime(milliseconds: Long): String {

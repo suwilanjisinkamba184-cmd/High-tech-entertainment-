@@ -42,7 +42,7 @@ The phone Studio now follows the web console navigation: Overview, Music catalog
 - Unit tests passed on commit `09e92ce`, which includes the nine-module Founder Studio and the three new regression tests for generic error redaction, nested network failures and permission failures. Lint/debug identity verification on the final workflow head is still required.
 - The latest application/workflow changes are committed on PR #129. The final PR-head run must pass unit tests, lint, debug APK assembly and package/version identity verification before merge.
 - Pull-request verification no longer decodes production signing secrets or uploads signed production APKs. PR runs build an unsigned/debug APK and retain it for 3 days; production signing and 90-day signed-artifact retention are limited to explicit `native-v*` release tags.
-- A Cloudflare Pages preview check is separate from the Android build and is not evidence of Android correctness.
+- Third-party website preview checks are separate from the Android build and are not evidence of Android correctness.
 - **Physical-device acceptance has not been completed.** The itel A50 / Android 14 Go still needs testing for gesture and three-button navigation, system-bar reveal/restore, mini-player docking, Google avatar persistence, video orientation, audio background playback, settings behavior, offline recovery, memory and battery.
 
 ## Release and compatibility safeguards

@@ -33,10 +33,12 @@ function videoCard(video){
   if(embed.includes('youtube-nocookie.com/embed/')){const match=embed.match(/\/embed\/([A-Za-z0-9_-]{11})/);if(match)poster='https://i.ytimg.com/vi/'+match[1]+'/hqdefault.jpg'}
   else{const candidate=safeHttps(video.thumbnail_url);if(candidate&&!/youtube|youtu\.be/i.test(new URL(candidate).hostname))poster=candidate}
   player='<button class="video-preview" type="button" data-video-play data-embed="'+esc(embed)+'" data-title="'+title+'" aria-label="Play '+title+'">'+(poster?'<img src="'+esc(poster)+'" alt="" loading="lazy">':'')+'<span class="video-preview-play" aria-hidden="true">▶</span><span class="sr-only">Play video</span></button>';
- }
- else if(direct){const poster=safeHttps(video.thumbnail_url);player='<video controls preload="none"'+(poster?' poster="'+esc(poster)+'"':'')+' src="'+esc(src)+'"></video>'}
+ }else if(direct){const poster=safeHttps(video.thumbnail_url);player='<video controls preload="none"'+(poster?' poster="'+esc(poster)+'"':'')+' src="'+esc(src)+'"></video>'}
  else{player='<a class="video-external" href="'+esc(src)+'" target="_blank" rel="noopener noreferrer">Watch video ↗</a>'}
- return '<article class="video-card'+(video.featured?' is-featured':'')+'">'+(video.featured?'<span class="video-card-kicker">Featured Zambian release</span>':'')+player+'<h3>'+title+'</h3><p>'+artist+description+'</p></article>';
+ let download='';
+ const original=safeHttps(video.download_url);
+ if(original&&cfg.url){try{const origin=new URL(cfg.url).origin,downloadUrl=new URL(original);if(downloadUrl.origin===origin&&downloadUrl.pathname.includes('/storage/v1/object/public/hte-video/'))download='<a class="btn ghost video-download-original" href="'+esc(original)+'" download rel="noopener noreferrer">Download original ↓</a>'}catch{}}
+ return '<article class="video-card'+(video.featured?' is-featured':'')+'">'+(video.featured?'<span class="video-card-kicker">Featured Zambian release</span>':'')+player+'<h3>'+title+'</h3><p>'+artist+description+'</p>'+download+'</article>';
 }
 async function load(){
  el.innerHTML='<div class="empty" role="status">Loading official videos…</div>';
@@ -65,5 +67,38 @@ async function load(){
  el.innerHTML=cards.length?cards.join(''):'<div class="empty" role="status">New videos will appear here soon.</div>';
  if(sourceError)el.insertAdjacentHTML('beforeend','<p class="video-source-note">Showing selected YouTube releases while the HTE video catalogue reconnects.</p>');
 }
-el.addEventListener('click',event=>{if(event.target.closest('[data-video-retry]')){void load();return}const button=event.target.closest('[data-video-play]');if(!button)return;const source=safeHttps(button.dataset.embed);if(!source)return;const url=new URL(source);url.searchParams.set('autoplay','1');const frame=document.createElement('iframe');frame.className='video-embed';frame.title=button.dataset.title||'High-Tech Entertainment video';frame.src=url.href;frame.loading='eager';frame.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';button.replaceWith(frame)});void load();
+el.addEventListener('click',event=>{if(event.target.closest('[data-video-retry]')){function mountArtistSubmission(){
+ const authDb=window.HTE_SUPABASE_CLIENT;
+ if(!authDb)return;
+ const panel=document.createElement('section');
+ panel.className='panel artist-video-submit';
+ panel.style.marginTop='24px';
+ panel.setAttribute('aria-labelledby','artist-video-submit-title');
+ panel.innerHTML='<div class="eyebrow">FOR INDEPENDENT ARTISTS</div><h3 id="artist-video-submit-title">Submit your YouTube video.</h3><p>Share a public music video from your own channel. After YouTube verifies it, it is added to the shared HTE catalogue for the website and Android app.</p><div id="artist-video-signin" class="status">Sign in to your HTE account before submitting a video. <a href="account/">Sign in or create an account ↗</a></div><form id="artist-video-submit-form" hidden><div class="field"><label for="artist-video-url">Public YouTube video URL</label><input id="artist-video-url" name="url" type="url" inputmode="url" autocomplete="url" placeholder="https://www.youtube.com/watch?v=..." required maxlength="500"></div><label class="artist-video-rights" style="display:flex;gap:10px;align-items:flex-start;margin:14px 0"><input name="rights_confirmed" type="checkbox" required style="margin-top:4px"><span>I own this video or have permission from the rights holder to submit and share it on HTE.</span></label><button class="btn gold" type="submit">Submit video</button><div id="artist-video-submit-status" class="status" role="status" aria-live="polite"></div></form>';
+ el.insertAdjacentElement('afterend',panel);
+ const form=panel.querySelector('#artist-video-submit-form'),signin=panel.querySelector('#artist-video-signin'),status=panel.querySelector('#artist-video-submit-status');
+ const say=(message,kind='')=>{status.textContent=message;status.className='status '+kind};
+ async function updateAuth(){
+  try{const {data,error}=await authDb.auth.getSession();if(error)throw error;const signedIn=!!data?.session;form.hidden=!signedIn;signin.hidden=signedIn;}
+  catch(error){form.hidden=true;signin.hidden=false;signin.textContent='We could not check your sign-in session. Reload the page or sign in again from My Account.';console.warn('HTE artist submission session check failed',error)}
+ }
+ void updateAuth();
+ const authListener=authDb.auth.onAuthStateChange(()=>{void updateAuth()});
+ form.addEventListener('submit',async event=>{
+  event.preventDefault();const button=form.querySelector('[type="submit"]');
+  if(!form.elements.rights_confirmed.checked){say('Please confirm that you own this video or have permission to submit it.','error');return}
+  button.disabled=true;say('Checking your session and verifying the YouTube video…');
+  try{
+   const {data:sessionData,error:sessionError}=await authDb.auth.getSession();if(sessionError)throw sessionError;
+   if(!sessionData?.session)throw new Error('Please sign in to your HTE account before submitting a video.');
+   const {data,error}=await authDb.functions.invoke('submit-public-video',{body:{url:String(form.elements.url.value||'').trim(),rights_confirmed:true}});
+   if(error)throw error;if(!data?.success)throw new Error(data?.error||'The video could not be added. Please try again.');
+   form.reset();say(data.message||'Your video is now listed in the shared HTE catalogue.','success');await load();
+  }catch(error){console.error('HTE artist video submission failed',error);say(error?.message||'Video submission failed. Check your connection and try again.','error')}
+  finally{button.disabled=false}
+ });
+ window.addEventListener('pagehide',()=>{try{authListener?.data?.subscription?.unsubscribe()}catch{}},{once:true});
+}
+mountArtistSubmission();
+void load();return}const button=event.target.closest('[data-video-play]');if(!button)return;const source=safeHttps(button.dataset.embed);if(!source)return;const url=new URL(source);url.searchParams.set('autoplay','1');const frame=document.createElement('iframe');frame.className='video-embed';frame.title=button.dataset.title||'High-Tech Entertainment video';frame.src=url.href;frame.loading='eager';frame.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';button.replaceWith(frame)});void load();
 })();
