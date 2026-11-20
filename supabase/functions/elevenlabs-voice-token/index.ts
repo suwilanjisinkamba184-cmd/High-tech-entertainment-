@@ -4,7 +4,6 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const AGENT_ID = "agent_2601m6tt0dszfqaa7ec4jefe96ww";
 const ALLOWED_ORIGINS = new Set([
   "https://suwilanjisinkamba184-cmd.github.io",
-  "https://high-tech-entertainment.suwilanjisinkamba184.workers.dev",
 ]);
 const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",

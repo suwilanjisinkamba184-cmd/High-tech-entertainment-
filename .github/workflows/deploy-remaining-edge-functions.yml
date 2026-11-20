@@ -1,0 +1,34 @@
+name: Deploy Supabase functions with GitHub Pages CORS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/booking-notification/**"
+      - "supabase/functions/public-booking-request/**"
+      - "supabase/functions/elevenlabs-ad-studio/**"
+      - "supabase/functions/elevenlabs-voice-token/**"
+      - ".github/workflows/deploy-remaining-edge-functions.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Deploy Edge Functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          supabase functions deploy booking-notification --project-ref wqrxacjbsldbnoekbkbf --use-api --no-verify-jwt --yes
+          supabase functions deploy public-booking-request --project-ref wqrxacjbsldbnoekbkbf --use-api --no-verify-jwt --yes
+          supabase functions deploy elevenlabs-ad-studio --project-ref wqrxacjbsldbnoekbkbf --use-api --yes
+          supabase functions deploy elevenlabs-voice-token --project-ref wqrxacjbsldbnoekbkbf --use-api --yes

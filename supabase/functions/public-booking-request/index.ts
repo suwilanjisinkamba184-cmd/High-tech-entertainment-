@@ -1,26 +1,21 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const allowedOrigins = new Set([
-  "https://high-tech-entertainment.suwilanjisinkamba184.workers.dev",
-  "https://suwilanjisinkamba184-cmd.github.io",
-  "https://website-redesign-mainline-20.high-tech-entertainment.pages.dev",
-]);
+const OFFICIAL_ORIGIN = "https://suwilanjisinkamba184-cmd.github.io";
+const allowedOrigins = new Set([OFFICIAL_ORIGIN]);
 function isAllowedOrigin(origin: string): boolean {
-  return allowedOrigins.has(origin) ||
-    origin === "https://high-tech-entertainment.pages.dev" ||
-    /^https:\/\/[a-z0-9-]+\.high-tech-entertainment\.pages\.dev$/.test(origin);
+  return allowedOrigins.has(origin);
 }
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://high-tech-entertainment.suwilanjisinkamba184.workers.dev",
+  "Access-Control-Allow-Origin": OFFICIAL_ORIGIN,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Vary": "Origin",
 };
 
 function response(body: unknown, status = 200, origin = "") {
-  const allowedOrigin = isAllowedOrigin(origin) ? origin : "https://high-tech-entertainment.suwilanjisinkamba184.workers.dev";
+  const allowedOrigin = isAllowedOrigin(origin) ? origin : OFFICIAL_ORIGIN;
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, "Access-Control-Allow-Origin": allowedOrigin, "Content-Type": "application/json", "Cache-Control": "no-store" },
