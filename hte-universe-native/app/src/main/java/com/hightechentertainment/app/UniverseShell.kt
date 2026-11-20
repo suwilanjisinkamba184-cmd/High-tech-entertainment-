@@ -129,6 +129,7 @@ fun UniverseShell() {
     var selectedTrack by remember { mutableStateOf<TrackDto?>(null) }
     var selectedTrackQueue by remember { mutableStateOf<List<TrackDto>?>(null) }
     var selectedVideo by remember { mutableStateOf<VideoDto?>(null) }
+    var selectedSpotifyUrl by remember { mutableStateOf<String?>(null) }
     var selectedArtist by remember { mutableStateOf<ArtistDto?>(null) }
     var showVoiceAssistant by remember { mutableStateOf(false) }
     var showSettingsHub by remember { mutableStateOf(false) }
@@ -199,10 +200,9 @@ fun UniverseShell() {
             try {
                 if (url == null) error("This external track has no source link.")
                 if (isSpotifySource(selected.sourcePlatform, url)) {
-                    // Spotify's Android SDK delegates playback to the official Spotify app.
-                    // Do not attempt to extract Spotify audio or embed an unsupported native stream.
-                    val appUri = spotifyAppUri(url)
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(appUri ?: url)))
+                    // Use Spotify's official embedded player inside HTE. Spotify controls
+                    // entitlement and playback; HTE never extracts or proxies audio.
+                    selectedSpotifyUrl = url
                 } else {
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                 }
@@ -747,6 +747,7 @@ fun UniverseShell() {
         )
     }
     selectedVideo?.let { VideoPlayerDialog(video = it, quality = videoQuality, onDismiss = { selectedVideo = null }) }
+    selectedSpotifyUrl?.let { url -> SpotifyEmbedDialog(url = url, onDismiss = { selectedSpotifyUrl = null }) }
     if (showVoiceAssistant) {
         VoiceAssistantDialog(
             tracks = tracks,
@@ -1655,6 +1656,68 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
+}
+
+
+
+@Composable
+private fun SpotifyEmbedDialog(url: String, onDismiss: () -> Unit) {
+    val embedUrl = remember(url) { com.hightechentertainment.app.media.spotifyEmbedUrl(url) }
+    var loading by remember(url) { mutableStateOf(true) }
+    var failed by remember(url) { mutableStateOf(embedUrl == null) }
+    var generation by remember(url) { mutableIntStateOf(0) }
+    var webView by remember(url) { mutableStateOf<WebView?>(null) }
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(Modifier.fillMaxSize().background(Color(0xFF08090B)).padding(14.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("SPOTIFY PLAYER", color = ShellGold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                    Text("Listen inside HTE Universe", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
+                IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close Spotify player", tint = Color.White) }
+            }
+            Box(Modifier.fillMaxWidth().weight(1f).padding(top = 12.dp).background(Color(0xFF111318), RoundedCornerShape(18.dp)), contentAlignment = Alignment.Center) {
+                if (embedUrl != null && !failed) {
+                    key(generation) {
+                        AndroidView(
+                            factory = { ctx -> WebView(ctx).apply {
+                                webView = this
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                settings.mediaPlaybackRequiresUserGesture = true
+                                settings.loadsImagesAutomatically = true
+                                settings.useWideViewPort = true
+                                settings.loadWithOverviewMode = true
+                                settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                                CookieManager.getInstance().setAcceptCookie(true)
+                                CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                                webChromeClient = WebChromeClient()
+                                webViewClient = object : WebViewClient() {
+                                    override fun onPageStarted(view: WebView?, page: String?, favicon: android.graphics.Bitmap?) { loading = true; failed = false }
+                                    override fun onPageFinished(view: WebView?, page: String?) { loading = false }
+                                    override fun onReceivedError(view: WebView?, request: android.webkit.WebResourceRequest?, error: android.webkit.WebResourceError?) {
+                                        if (request?.isForMainFrame == true) { loading = false; failed = true }
+                                    }
+                                }
+                                setBackgroundColor(android.graphics.Color.rgb(17,19,24))
+                                loadUrl(embedUrl)
+                            } },
+                            modifier = Modifier.fillMaxSize(),
+                            onRelease = { view -> webView = null; runCatching { view.stopLoading() }; runCatching { view.loadUrl("about:blank") }; runCatching { view.destroy() } }
+                        )
+                    }
+                    if (loading) CircularProgressIndicator(color = ShellGold, strokeWidth = 2.5.dp)
+                } else {
+                    Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Spotify's embedded player could not be loaded for this link.", color = ShellSilver, fontSize = 12.sp)
+                        TextButton(onClick = { failed = false; loading = true; generation += 1 }) { Text("Retry", color = ShellGold) }
+                        TextButton(onClick = { runCatching { val appUri = com.hightechentertainment.app.media.spotifyAppUri(url) ?: url; webView?.context?.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(appUri))) } }) { Text("Open Spotify app", color = ShellSilver) }
+                    }
+                }
+            }
+            Text("Official Spotify embed. Playback availability and full-track access are controlled by Spotify and your account.", color = ShellMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 10.dp))
+        }
+    }
 }
 
 private fun formatVideoTime(milliseconds: Long): String {
