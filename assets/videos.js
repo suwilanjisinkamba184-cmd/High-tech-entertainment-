@@ -45,7 +45,7 @@ async function load(){
  let own=[],sourceError=false,timeoutId;
  if(db){
   try{
-   const request=db.from('videos').select('id,title,artist,description,video_url,thumbnail_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60);
+   const request=db.from('videos').select('id,title,artist,description,video_url,thumbnail_url,download_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60);
    const {data,error}=await Promise.race([
     request,
     new Promise((_,reject)=>{timeoutId=window.setTimeout(()=>reject(new Error('HTE video catalogue request timed out after 12 seconds.')),12000)})
