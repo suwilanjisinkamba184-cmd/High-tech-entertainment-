@@ -68,7 +68,7 @@ if (duplicates.length || missingFiles.length || missingManifestRows.length) {
 }
 console.log(`Verified ${expectedLiveVersions.length} live migration versions have unique formal source files and manifest entries.`);
 
-const orderedFiles = [...migrationFiles].sort();
+const orderedFiles = [...migrationFiles].sort((a, b) => a.match(/^\d{8,14}/)[0].localeCompare(b.match(/^\d{8,14}/)[0]));
 const createdAt = new Map();
 const sqlByFile = new Map();
 for (const file of orderedFiles) {
