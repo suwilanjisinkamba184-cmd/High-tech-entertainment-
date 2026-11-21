@@ -28,8 +28,9 @@ BEGIN
   END IF;
 
   IF has_table_privilege('anon', 'public.app_notifications', 'SELECT')
-     OR has_table_privilege('anon', 'public.hte_download_branding_settings', 'SELECT')
+     OR has_table_privilege('anon', 'public.hte_download_branding_settings', 'INSERT')
      OR has_table_privilege('anon', 'public.hte_download_branding_settings', 'UPDATE')
+     OR has_table_privilege('anon', 'public.hte_download_branding_settings', 'DELETE')
      OR has_table_privilege('authenticated', 'public.hte_social_connections', 'TRUNCATE') THEN
     RAISE EXCEPTION 'An excessive client table privilege remains';
   END IF;
@@ -113,6 +114,16 @@ BEGIN
      OR has_table_privilege('authenticated', 'public.hte_admin_contacts', 'INSERT')
      OR NOT has_table_privilege('service_role', 'public.hte_admin_contacts', 'SELECT') THEN
     RAISE EXCEPTION 'HTE admin contact directory privileges are not least-privilege';
+  END IF;
+
+  IF NOT has_table_privilege('service_role', 'public.app_notifications', 'SELECT')
+     OR NOT has_table_privilege('service_role', 'public.hte_audience_events', 'INSERT')
+     OR NOT has_table_privilege('service_role', 'public.hte_download_branding_settings', 'UPDATE')
+     OR NOT has_table_privilege('service_role', 'public.hte_marketing_campaigns', 'SELECT')
+     OR NOT has_table_privilege('service_role', 'public.hte_social_connections', 'SELECT')
+     OR NOT has_table_privilege('service_role', 'public.hte_social_publish_jobs', 'INSERT')
+     OR NOT has_table_privilege('service_role', 'public.ad_impressions', 'SELECT') THEN
+    RAISE EXCEPTION 'Trusted service-role table access was unintentionally removed';
   END IF;
 
   IF NOT EXISTS (
