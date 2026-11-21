@@ -1,22 +1,39 @@
 # Founder Studio implementation notes
 
-The first implementation slice adds a responsive Founder Command Centre.
+The Founder Studio overhaul is being implemented on an isolated feature branch from main. This is a source change only; production is not deployed.
 
-## Included in source
-- Compact responsive header rules and reduced Overview hero dominance.
-- Dedicated Bookings, Audience Analytics, System Health and Founder Activity Log workspaces.
+## Delivered in source
+- Added a responsive Founder Command Centre controller and stylesheet, loaded only by admin/index.html.
+- Added dedicated Bookings, Audience Analytics, System Health and Founder Activity Log workspaces.
+- Reworked the Overview first viewport to prioritise operational KPIs and reduced the promotional hero footprint.
+- Added a compact mobile topbar and improved small-screen layout.
 - Unified display of structured member/Android bookings and guest website booking requests without moving source records.
-- Explicit analytics labels distinguishing recorded events from verified downloads or plays.
-- Read-only authentication, catalogue database, storage and social-connection checks.
-- Additive SQL migration draft for guest booking workflow metadata, append-only audit records and a bounded 1–90 day audience series RPC.
-- New data calls require an authenticated founder session and the existing hte_is_admin() role check.
-- No browser-side secrets, production DDL, Edge Function deployment, public route changes or Android source changes.
+- Added private notes and follow-up scheduling for guest booking requests, backed by an additive workflow table migration.
+- Added explicit analytics labels distinguishing recorded events from verified downloads or plays; daily trends use a bounded 1–90 day server-side RPC.
+- Added read-only authentication, catalogue database, storage and social-connection health checks.
+- Added append-only audit logging for new Founder Studio booking status changes, catalogue operations, audio/video uploads and visibility changes, marketing draft creation and audio-ad visibility changes.
+- Added dedicated CI checks for browser-controller syntax, Edge Function types and architecture invariants.
+- Replaced the repository source for Meta publishing and Meta connection-check functions with role-based authorization using Supabase auth.getUser() plus hte_is_admin(), and strict official-origin CORS. The source no longer uses a hard-coded founder UUID.
+- Kept existing Founder authentication, Supabase project, catalogue tables, public routes and Android source intact.
 
-## Backend deployment gate
-The SQL migration is source-only and has not been applied to production. A Supabase development branch requires a cost quote and explicit user approval before creation. The live meta-publish Edge Function still contains a hard-coded founder UUID check; standardize it to auth.getUser() plus hte_is_admin() in an isolated environment before enabling live publishing.
+## Backend migration — not applied
+The migration file supabase/migrations/20261121190000_founder_studio_operations.sql adds:
+- Guest booking workflow metadata, including status, internal note and follow-up timestamp.
+- An append-only founder audit table with founder-only RLS and insert-only access.
+- A guarded audience time-series RPC with a 1–90 day bound.
+
+No production DDL has been run. The UI gracefully identifies when these new tables/RPCs are not installed yet. The migration must be applied and RLS-tested on a Supabase development branch first.
+
+## Edge Functions — source updated, live versions unchanged
+The live meta-publish function previously used a hard-coded founder UUID comparison. The repository source now verifies the signed-in user and checks hte_is_admin(). The live deployed functions have not been replaced. Do not enable publishing until the functions pass Deno checks, founder/non-founder authorization tests, Meta Page permission checks and a real test publish in the isolated environment.
 
 ## External configuration
-Supabase Auth leaked-password protection is disabled in the connected project's Security Advisor. This is an Auth dashboard setting and has not been changed. Enable it under Authentication → Settings → Password Security if supported by the project's plan.
+Supabase Auth leaked-password protection is disabled in the connected project's Security Advisor. This is an Auth dashboard setting and has not been changed by this PR. Enable it under Authentication → Settings → Password Security if supported by the project's plan.
 
 ## Verification status
-Source and schema were inspected. UI and migration have not yet been deployed or browser-tested. CI, RLS tests and cross-product regression checks remain required before merge.
+- Browser controller Node syntax: passed in the first CI run.
+- First Deno check exposed a CI npm node_modules configuration issue; workflow now uses Deno auto node_modules mode. A passing rerun has not yet been observed.
+- Browser-based mobile/desktop interaction testing has not been performed.
+- SQL migration has not been executed or validated against a development database.
+- Public website and Android regression checks are required to pass before merge.
+- PR remains draft; no merge or production deployment is authorized.
