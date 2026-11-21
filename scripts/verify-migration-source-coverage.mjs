@@ -86,7 +86,7 @@ for (const file of orderedFiles) {
 const createdPolicies = new Map();
 for (const file of orderedFiles) {
   const sql = sqlByFile.get(file);
-  for (const match of sql.matchAll(/create\\s+policy\\s+"([^"]+)"\\s+on\\s+((?:public|private|storage)\\.[a-z_][a-z0-9_]*)/ig)) {
+  for (const match of sql.matchAll(/create\s+policy\s+"([^"]+)"\s+on\s+((?:public|private|storage)\.[a-z_][a-z0-9_]*)/ig)) {
     const key = `${match[2].toLowerCase()}::${match[1]}`;
     if (!createdPolicies.has(key)) createdPolicies.set(key, { file, index: match.index });
   }
@@ -113,7 +113,7 @@ if (missingTableSources.length) {
 const policyErrors = [];
 for (const file of orderedFiles) {
   const sql = sqlByFile.get(file);
-  for (const match of sql.matchAll(/alter\\s+policy\\s+"([^"]+)"\\s+on\\s+((?:public|private|storage)\\.[a-z_][a-z0-9_]*)/ig)) {
+  for (const match of sql.matchAll(/alter\s+policy\s+"([^"]+)"\s+on\s+((?:public|private|storage)\.[a-z_][a-z0-9_]*)/ig)) {
     const key = `${match[2].toLowerCase()}::${match[1]}`;
     const creation = createdPolicies.get(key);
     if (!creation || fileOrder.get(creation.file) > fileOrder.get(file) ||
