@@ -80,6 +80,13 @@ data class FavoriteDto(
 )
 
 @Serializable
+private data class AvatarProfileInsertDto(
+    val id: String,
+    @SerialName("avatar_url") val avatarUrl: String,
+    @SerialName("updated_at") val updatedAt: String
+)
+
+@Serializable
 private data class FavoriteInsertDto(
     @SerialName("user_id") val userId: String,
     @SerialName("track_id") val trackId: String
@@ -175,7 +182,10 @@ class MemberRepository {
             "image/webp" -> "webp"
             else -> throw IllegalArgumentException("Choose a JPG, PNG or WebP profile photo.")
         }
-        val existing = getMyProfile()
+        val existing = client.from("profiles")
+            .select { filter { eq("id", userId) } }
+            .decodeList<ProfileDto>()
+            .firstOrNull()
         val path = "$userId/${UUID.randomUUID()}.$extension"
         val channel = ByteChannel(autoFlush = true)
         val producer = launch(Dispatchers.IO) {
@@ -201,16 +211,30 @@ class MemberRepository {
             }
             producer.join()
             try {
-                client.from("profiles").upsert(
-                    ProfileDto(
-                        id = userId,
-                        displayName = existing?.displayName.orEmpty(),
-                        bio = existing?.bio.orEmpty(),
-                        phone = existing?.phone.orEmpty(),
-                        avatarUrl = path,
-                        updatedAt = java.time.Instant.now().toString()
-                    )
-                )
+                val updatedAt = java.time.Instant.now().toString()
+                if (existing != null) {
+                    // Do not write stale profile fields captured before the upload.
+                    client.from("profiles").update({
+                        set("avatar_url", path)
+                        set("updated_at", updatedAt)
+                    }) {
+                        filter { eq("id", userId) }
+                    }
+                } else {
+                    // Insert only avatar fields. If another session creates the row
+                    // concurrently, retry as an avatar-only update instead of upserting
+                    // stale/default profile fields over that session's data.
+                    try {
+                        client.from("profiles").insert(AvatarProfileInsertDto(userId, path, updatedAt))
+                    } catch (insertError: Throwable) {
+                        client.from("profiles").update({
+                            set("avatar_url", path)
+                            set("updated_at", updatedAt)
+                        }) {
+                            filter { eq("id", userId) }
+                        }
+                    }
+                }
             } catch (error: Throwable) {
                 runCatching { client.storage.from("hte-avatars").delete(path) }
                 throw error
