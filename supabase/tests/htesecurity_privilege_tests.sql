@@ -22,12 +22,13 @@ BEGIN
 
   IF has_table_privilege('anon', 'public.hte_audience_events', 'INSERT') IS NOT TRUE
      OR has_table_privilege('authenticated', 'public.hte_audience_events', 'INSERT') IS NOT TRUE
-     OR has_table_privilege('anon', 'public.hte_download_branding_settings', 'SELECT') IS NOT TRUE
+     OR has_table_privilege('authenticated', 'public.hte_download_branding_settings', 'SELECT') IS NOT TRUE
      OR has_table_privilege('authenticated', 'public.app_notifications', 'SELECT') IS NOT TRUE THEN
     RAISE EXCEPTION 'A required public or member read/insert privilege is missing';
   END IF;
 
   IF has_table_privilege('anon', 'public.app_notifications', 'SELECT')
+     OR has_table_privilege('anon', 'public.hte_download_branding_settings', 'SELECT')
      OR has_table_privilege('anon', 'public.hte_download_branding_settings', 'UPDATE')
      OR has_table_privilege('authenticated', 'public.hte_social_connections', 'TRUNCATE') THEN
     RAISE EXCEPTION 'An excessive client table privilege remains';
