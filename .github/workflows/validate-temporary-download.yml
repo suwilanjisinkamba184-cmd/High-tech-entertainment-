@@ -6,8 +6,6 @@ on:
       - 'supabase/functions/hte-download-delivery/**'
       - 'supabase/functions/elevenlabs-ad-studio/**'
       - 'supabase/migrations/20261121170000_hte_atomic_download_quota.sql'
-      - 'supabase/functions/elevenlabs-ad-studio/**'
-      - 'supabase/migrations/20261121170000_hte_atomic_download_quota.sql'
       - 'database/changes/20261121_01_secure_temporary_downloads.sql'
       - 'database/changes/20261121_02_expand_temp_download_limit.sql'
       - 'database/changes/20261121_03_allow_flac_temp_downloads.sql'
@@ -23,6 +21,8 @@ on:
     branches: [main]
     paths:
       - 'supabase/functions/hte-download-delivery/**'
+      - 'supabase/functions/elevenlabs-ad-studio/**'
+      - 'supabase/migrations/20261121170000_hte_atomic_download_quota.sql'
       - 'database/changes/20261121_01_secure_temporary_downloads.sql'
       - 'database/changes/20261121_02_expand_temp_download_limit.sql'
       - 'database/changes/20261121_03_allow_flac_temp_downloads.sql'
@@ -54,6 +54,9 @@ jobs:
       - name: Type-check download delivery function
         run: deno check --config supabase/functions/hte-download-delivery/deno.json supabase/functions/hte-download-delivery/index.ts
 
+      - name: Type-check native-compatible AI Ad Studio function
+        run: deno check --config supabase/functions/elevenlabs-ad-studio/deno.json supabase/functions/elevenlabs-ad-studio/index.ts
+
       - name: Verify server-side-only temporary copy
         run: |
           grep -q 'destinationBucket: BUCKET' supabase/functions/hte-download-delivery/index.ts
@@ -64,7 +67,7 @@ jobs:
           grep -q 'pg_advisory_xact_lock' supabase/migrations/20261121170000_hte_atomic_download_quota.sql
           grep -q 'GRANT EXECUTE' supabase/migrations/20261121170000_hte_atomic_download_quota.sql
           ! grep -q 'req.headers.get("x-forwarded-for")' supabase/functions/hte-download-delivery/index.ts
-          grep -q 'Origin header' supabase/functions/elevenlabs-ad-studio/index.ts
+          grep -q 'Browser calls must originate' supabase/functions/elevenlabs-ad-studio/index.ts
           grep -q 'if (origin && !allowedOrigins.has(origin))' supabase/functions/elevenlabs-ad-studio/index.ts
           grep -q 'id-token: write' .github/workflows/cleanup-temporary-downloads.yml
           grep -q 'TO service_role' database/changes/20261121_05_scope_download_job_policy_to_service_role.sql
