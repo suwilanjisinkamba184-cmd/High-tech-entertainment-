@@ -188,7 +188,9 @@ Deno.serve(async (req) => {
   // Copy directly between private-managed buckets on the server. The visitor never uploads bytes.
   const { error: copyError } = await admin.storage.from(source.bucket).copy(source.path, objectPath, { destinationBucket: BUCKET });
   if (copyError) {
-    await admin.from("hte_download_jobs").delete().eq("id", id);
+    // Keep the reservation and nonce: deleting it would allow the same signed
+    // request to be replayed after a transient storage failure.
+    await admin.from("hte_download_jobs").update({ status: "failed" }).eq("id", id).eq("status", "created");
     console.error("HTE temporary audio copy failed", copyError);
     return reply({ error: "The authorised audio could not be staged in temporary Supabase storage." }, 502);
   }
@@ -199,7 +201,7 @@ Deno.serve(async (req) => {
   const fileType = String(file?.metadata?.mimetype || "").toLowerCase().split(";")[0];
   if (listError || !file || !fileSize || fileSize > MAX_BYTES || (fileType && !extForMime(fileType))) {
     await admin.storage.from(BUCKET).remove([objectPath]);
-    await admin.from("hte_download_jobs").delete().eq("id", id);
+    await admin.from("hte_download_jobs").update({ status: "failed" }).eq("id", id).eq("status", "created");
     return reply({ error: "The copied audio did not pass file validation or exceeds the 100 MB limit." }, 422);
   }
 
@@ -207,14 +209,15 @@ Deno.serve(async (req) => {
     .update({ status: "uploaded" }).eq("id", id).eq("status", "created");
   if (updateError) {
     await admin.storage.from(BUCKET).remove([objectPath]);
-    await admin.from("hte_download_jobs").delete().eq("id", id);
+    // Best-effort failure marking; never remove the nonce reservation.
+    await admin.from("hte_download_jobs").update({ status: "failed" }).eq("id", id).eq("status", "created");
     return reply({ error: "The temporary download could not be finalised." }, 500);
   }
   const { data: signed, error: signError } = await admin.storage.from(BUCKET)
     .createSignedUrl(objectPath, SIGNED_URL_TTL_SECONDS, { download: fileName });
   if (signError || !signed?.signedUrl) {
     await admin.storage.from(BUCKET).remove([objectPath]);
-    await admin.from("hte_download_jobs").delete().eq("id", id);
+    await admin.from("hte_download_jobs").update({ status: "failed" }).eq("id", id).eq("status", "uploaded");
     return reply({ error: "The temporary download link could not be created." }, 502);
   }
   return reply({ success: true, downloadUrl: signed.signedUrl, fileName, expiresInSeconds: SIGNED_URL_TTL_SECONDS });
