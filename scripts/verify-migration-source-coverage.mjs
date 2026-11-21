@@ -82,6 +82,24 @@ for (const file of orderedFiles) {
   }
 }
 
+const expectedApplicationTables = [
+  "public.artists", "public.releases", "public.tracks", "public.videos",
+  "public.contact_messages", "public.profiles", "public.booking_notification_log",
+  "public.support_feedback", "public.playlists", "public.playlist_tracks",
+  "public.user_favorites", "public.artist_follows", "public.listening_history",
+  "public.audio_ads", "public.ad_impressions", "public.app_preferences",
+  "private.user_roles", "private.booking_notification_rate_limits",
+  "public.hte_admin_contacts", "public.app_notifications", "public.bookings",
+  "public.hte_marketing_campaigns", "public.hte_social_connections",
+  "public.hte_social_publish_jobs", "public.hte_audience_events",
+  "public.hte_download_branding_settings", "public.hte_download_jobs"
+];
+const missingTableSources = expectedApplicationTables.filter(table => !createdAt.has(table));
+if (missingTableSources.length) {
+  console.error(JSON.stringify({ missingTableSources }, null, 2));
+  process.exit(1);
+}
+
 const sqlErrors = [];
 for (const file of orderedFiles) {
   const sql = sqlByFile.get(file);
