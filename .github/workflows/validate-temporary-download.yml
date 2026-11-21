@@ -83,7 +83,7 @@ jobs:
           ! grep -q 'cf-connecting-ip' cloudflare/workers/hte-download-gateway/src/index.js
           grep -q 'pg_advisory_xact_lock' supabase/migrations/20261121170000_hte_atomic_download_quota.sql
           grep -q 'GRANT EXECUTE' supabase/migrations/20261121170000_hte_atomic_download_quota.sql
-          grep -q 'REVOKE ALL ON TABLE public.app_notifications FROM anon, authenticated' supabase/migrations/20261121173000_hte_revoke_excess_client_table_privileges.sql
+          grep -q 'REVOKE ALL ON TABLE public.app_notifications FROM PUBLIC, anon, authenticated' supabase/migrations/20261121173000_hte_revoke_excess_client_table_privileges.sql
           grep -q 'REVOKE ALL ON TABLE public.hte_audience_events FROM anon, authenticated' supabase/migrations/20261121173000_hte_revoke_excess_client_table_privileges.sql
           ! grep -q 'GRANT TRUNCATE' supabase/migrations/20261121173000_hte_revoke_excess_client_table_privileges.sql
           ! grep -q 'req.headers.get("x-forwarded-for")' supabase/functions/hte-download-delivery/index.ts
