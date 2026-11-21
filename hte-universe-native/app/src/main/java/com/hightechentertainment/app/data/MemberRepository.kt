@@ -175,19 +175,35 @@ class MemberRepository {
     }
 
     suspend fun updateMyAvatar(input: InputStream, size: Long, mimeType: String): ProfileDto? = coroutineScope {
-        val userId = requireUserId()
-        val normalizedMime = mimeType.substringBefore(';').trim().lowercase()
-        require(size in 1L..(5L * 1024L * 1024L)) { "Profile photos must be 5 MB or smaller." }
-        val extension = when (normalizedMime) {
-            "image/jpeg" -> "jpg"
-            "image/png" -> "png"
-            "image/webp" -> "webp"
-            else -> throw IllegalArgumentException("Choose a JPG, PNG or WebP profile photo.")
+        val userId = try {
+            requireUserId()
+        } catch (error: Throwable) {
+            runCatching { input.close() }
+            throw error
         }
-        val existing = client.from("profiles")
-            .select { filter { eq("id", userId) } }
-            .decodeList<ProfileDto>()
-            .firstOrNull()
+        val (normalizedMime, extension) = try {
+            val normalized = mimeType.substringBefore(';').trim().lowercase()
+            require(size in 1L..(5L * 1024L * 1024L)) { "Profile photos must be 5 MB or smaller." }
+            val ext = when (normalized) {
+                "image/jpeg" -> "jpg"
+                "image/png" -> "png"
+                "image/webp" -> "webp"
+                else -> throw IllegalArgumentException("Choose a JPG, PNG or WebP profile photo.")
+            }
+            normalized to ext
+        } catch (error: Throwable) {
+            runCatching { input.close() }
+            throw error
+        }
+        val existing = try {
+            client.from("profiles")
+                .select { filter { eq("id", userId) } }
+                .decodeList<ProfileDto>()
+                .firstOrNull()
+        } catch (error: Throwable) {
+            runCatching { input.close() }
+            throw error
+        }
         val path = "$userId/${UUID.randomUUID()}.$extension"
         val channel = ByteChannel(autoFlush = true)
         val producer = launch(Dispatchers.IO) {
