@@ -46,9 +46,9 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
-private val MemberGold = Color(0xFFD6B15E)
-private val MemberPanel = Color(0xFF15111B)
-private val MemberMuted = Color(0xFF8B929D)
+private val MemberGold = com.hightechentertainment.app.ui.design.HteColors.Gold
+private val MemberPanel = com.hightechentertainment.app.ui.design.HteColors.Panel
+private val MemberMuted = com.hightechentertainment.app.ui.design.HteColors.Muted
 
 private suspend fun <T> captureAccountRequest(request: suspend () -> T): Result<T> = try {
     Result.success(request())
