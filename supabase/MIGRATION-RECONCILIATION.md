@@ -77,6 +77,7 @@ Do not reset or replay the production database. The production project already r
   - `supabase/migrations/20261121140000_backfill_native_video_download_urls.sql`
   - `supabase/migrations/20261121170000_hte_atomic_download_quota.sql`
   - `supabase/migrations/20261121173000_hte_revoke_excess_client_table_privileges.sql`
+- `supabase/migrations/20261121204500_hte_contact_rate_limit_search_path.sql`
 
 ## Required validation before sign-off
 
