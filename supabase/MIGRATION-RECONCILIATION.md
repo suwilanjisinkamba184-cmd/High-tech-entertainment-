@@ -31,7 +31,7 @@ Do not reset or replay the production database. The production project already r
 | `20261101191840` | `hte_revoke_anonymous_personal_data_grants` | `supabase/migrations/20261101191840_hte_revoke_anonymous_personal_data_grants.sql` | Consolidated marker; anonymous revokes are in 20261101121639 |
 | `20261101192215` | `hte_rate_limit_booking_notifications` | `supabase/migrations/20261101192215_hte_rate_limit_booking_notifications.sql` | Reconstructed from live private rate-limit table and function |
 | `20261101192359` | `hte_booking_rate_limit_hardening` | `supabase/migrations/20261101192359_hte_booking_rate_limit_hardening.sql` | Reconstructed from live contact-message trigger |
-| `20261101194034` | `hte_partner_admin_contact_directory` | `supabase/migrations/20261101194034_hte_partner_admin_contact_directory.sql` | Copied from supplemental admin directory SQL |
+| `20261101194034` | `hte_partner_admin_contact_directory` | `supabase/migrations/20261101194034_hte_partner_admin_contact_directory.sql` | Reconstructed from the live empty HTE admin contact directory table, constraints, RLS and grants |
 | `20261102200232` | `create_hte_artwork_bucket` | `supabase/migrations/20261102200232_create_hte_artwork_bucket.sql` | Copied from supplemental SQL |
 | `20261102200923` | `allow_admin_artwork_library_listing` | `supabase/migrations/20261102200923_allow_admin_artwork_library_listing.sql` | Copied from supplemental SQL |
 | `20261102201210` | `add_secure_admin_user_directory` | `supabase/migrations/20261102201210_add_secure_admin_user_directory.sql` | Copied from supplemental SQL |
