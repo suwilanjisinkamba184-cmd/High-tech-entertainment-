@@ -36,7 +36,7 @@ jobs:
           const { value: oidcToken } = await oidcResponse.json();
           if (!oidcToken) throw new Error('GitHub OIDC token was not returned.');
 
-          const response = await fetch(url.replace(/\\/$/, '') + '/functions/v1/hte-download-delivery', {
+          const response = await fetch(url.replace(/\/$/, '') + '/functions/v1/hte-download-delivery', {
             method: 'POST',
             headers: {
               apikey: key,

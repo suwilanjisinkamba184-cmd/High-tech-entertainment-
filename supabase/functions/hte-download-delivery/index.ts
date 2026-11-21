@@ -61,7 +61,7 @@ async function sha256(value: string) {
 }
 async function isTrustedCleanupRequest(req: Request) {
   const authorization = req.headers.get("authorization") || "";
-  const token = authorization.match(/^Bearer\\s+(.+)$/i)?.[1];
+  const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return false;
   try {
     const { payload } = await jwtVerify(token, GITHUB_OIDC_KEYS, {
