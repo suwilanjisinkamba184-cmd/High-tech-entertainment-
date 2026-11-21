@@ -52,6 +52,25 @@ jobs:
         with:
           gradle-version: '9.6.0'
 
+      - name: Install Android SDK 37 for analysis
+        if: matrix.language == 'java-kotlin'
+        uses: premex-ab/setup-android-cli@ec4f446c5fdea3c206fb73b4b3277709e7227e63
+        with:
+          packages: |
+            platform-tools
+            platforms/android-37.0
+            build-tools/37.0.0
+
+      - name: Link and validate Android SDK 37
+        if: matrix.language == 'java-kotlin'
+        run: |
+          set -euo pipefail
+          test -d "$ANDROID_HOME/platforms/android-37.0"
+          if [[ ! -e "$ANDROID_HOME/platforms/android-37" ]]; then
+            ln -s "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
+          fi
+          test -x "$ANDROID_HOME/build-tools/37.0.0/aapt"
+
       - name: Build Android sources for CodeQL
         if: matrix.language == 'java-kotlin'
         working-directory: hte-universe-native
