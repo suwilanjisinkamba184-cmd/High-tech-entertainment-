@@ -11,6 +11,15 @@ DECLARE
   accepted_count integer := 0;
   i integer;
 BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'hte_download_jobs_expiry_idx'
+      AND indexdef ILIKE '%failed%'
+  ) THEN
+    RAISE EXCEPTION 'Failed download reservations are missing from the expiry cleanup index';
+  END IF;
+
   INSERT INTO public.tracks (id, title, is_published)
   VALUES (test_track, 'HTE quota regression fixture', false);
 
