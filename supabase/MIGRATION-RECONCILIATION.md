@@ -3,7 +3,7 @@
 **Project:** `wqrxacjbsldbnoekbkbf`  
 **Audit date:** 2026-11-21  
 **Live migration ledger:** 53 records  
-**Repository formal migrations:** 60 files  
+**Repository formal migrations:** 61 files  
 **Live version coverage:** 50/53 versions represented
 
 ## Status
