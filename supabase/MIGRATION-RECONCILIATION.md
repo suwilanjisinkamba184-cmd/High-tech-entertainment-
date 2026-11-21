@@ -3,14 +3,14 @@
 **Project:** `wqrxacjbsldbnoekbkbf`  
 **Audit date:** 2026-11-21  
 **Live migration ledger:** 53 records  
-**Repository formal migrations:** 61 files  
+**Repository formal migrations:** 62 files  
 **Live version coverage:** 53/53 versions represented
 
 ## Status
 
 All 53 live migration versions now have a corresponding source file in `supabase/migrations/`. However, this is **source coverage, not yet a clean-replay certification**. Several early migrations were reconstructed from live catalog metadata, and several related migrations are intentionally consolidated into one source file with no-op version markers. Those files must be tested in chronological order against a clean temporary Supabase database before this is considered fully reproducible.
 
-Do not reset or replay the production database. The production project already records all 53 versions, so matching files should be skipped by version. The eight additional files comprise two deprecated no-op version markers and six pending migrations/hardening changes.
+Do not reset or replay the production database. The production project already records all 53 versions, so matching files should be skipped by version. The nine additional files comprise two deprecated no-op version markers and seven pending migrations/hardening changes.
 
 | Live version | Live migration name | Source file | Recovery method |
 |---|---|---|---|
@@ -39,7 +39,7 @@ Do not reset or replay the production database. The production project already r
 | `20261105020850` | `create_app_notifications` | `supabase/migrations/20261105020850_app_notifications_and_video_storage.sql` | Consolidated source containing notifications, video bucket and target policies |
 | `20261105020932` | `ensure_hte_videos_storage` | `supabase/migrations/20261105020932_ensure_hte_videos_storage.sql` | Consolidated marker; video bucket included in 20261105020850 |
 | `20261105021142` | `restrict_app_notification_targets` | `supabase/migrations/20261105021142_restrict_app_notification_targets.sql` | Consolidated marker; final notification policy included in 20261105020850 |
-| `20261107070030` | `native_android_bookings_workflow` | `supabase/migrations/20261107070030_native_android_bookings_workflow.sql` | Consolidated source for native booking, avatar, release description, role-check RPC and same-day Founder-only catalogue/media write policies |
+| `20261107070030` | `native_android_bookings_workflow` | `supabase/migrations/20261107070030_native_android_bookings_workflow.sql` | Consolidated source for native booking, avatar, release description and founder access-check RPC |
 | `20261107070158` | `native_android_bookings_workflow` | `supabase/migrations/20261107070158_native_android_bookings_workflow.sql` | Consolidated marker; included in 20261107070030 |
 | `20261107070320` | `native_android_public_avatar_delivery` | `supabase/migrations/20261107070320_native_android_public_avatar_delivery.sql` | Consolidated marker; included in 20261107070030 |
 | `20261107071201` | `native_android_release_descriptions` | `supabase/migrations/20261107071201_native_android_release_descriptions.sql` | Consolidated marker; included in 20261107070030 |
@@ -71,7 +71,8 @@ Do not reset or replay the production database. The production project already r
 ## Additional source files not in the live 53-version ledger
 
 - `20261109090000_hte_ai_marketing_agent.sql` and `20261109093000_hte_marketing_created_by_idx.sql` are deprecated no-op markers. Their DDL is represented by the exact live-version files `20261108230111` and `20261108230316`.
-- The following six migrations are pending and must be validated before production application:
+- The following seven migrations are pending and must be validated before production application:
+  - `supabase/migrations/20261107090000_founder_only_content_writes.sql` (recovered manual DDL already active in production; safe to replay to record it formally)
   - `supabase/migrations/20261120103000_shared_video_catalogue_sources.sql`
   - `supabase/migrations/20261120_member_booking_history.sql`
   - `supabase/migrations/20261121140000_backfill_native_video_download_urls.sql`
@@ -82,9 +83,9 @@ Do not reset or replay the production database. The production project already r
 ## Required validation before sign-off
 
 1. Create a clean temporary Supabase branch/database.
-2. Apply all 61 formal migration files in timestamp order, including the two deprecated no-op markers.
+2. Apply all 62 formal migration files in numeric-version order, including the two deprecated no-op markers and the recovered Founder policy migration.
 3. Compare tables, columns, constraints, indexes, functions, triggers, policies, grants, storage buckets and realtime publication against the live project.
 4. Run the SQL assertions in `supabase/tests/htesecurity_privilege_tests.sql`.
-5. Verify all six pending migrations on the temporary branch before applying any to production.
+5. Verify all seven pending migrations on the temporary branch before applying any to production.
 
 The inventory must not be treated as proof that the consolidated/reconstructed SQL is identical to the original manual migration statements.
