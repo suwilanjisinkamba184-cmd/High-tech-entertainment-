@@ -83,6 +83,15 @@ for (const file of orderedFiles) {
   }
 }
 
+const createdPolicies = new Map();
+for (const file of orderedFiles) {
+  const sql = sqlByFile.get(file);
+  for (const match of sql.matchAll(/create\\s+policy\\s+"([^"]+)"\\s+on\\s+((?:public|private|storage)\\.[a-z_][a-z0-9_]*)/ig)) {
+    const key = `${match[2].toLowerCase()}::${match[1]}`;
+    if (!createdPolicies.has(key)) createdPolicies.set(key, { file, index: match.index });
+  }
+}
+
 const expectedApplicationTables = [
   "public.artists", "public.releases", "public.tracks", "public.videos",
   "public.contact_messages", "public.profiles", "public.booking_notification_log",
@@ -98,6 +107,23 @@ const expectedApplicationTables = [
 const missingTableSources = expectedApplicationTables.filter(table => !createdAt.has(table));
 if (missingTableSources.length) {
   console.error(JSON.stringify({ missingTableSources }, null, 2));
+  process.exit(1);
+}
+
+const policyErrors = [];
+for (const file of orderedFiles) {
+  const sql = sqlByFile.get(file);
+  for (const match of sql.matchAll(/alter\\s+policy\\s+"([^"]+)"\\s+on\\s+((?:public|private|storage)\\.[a-z_][a-z0-9_]*)/ig)) {
+    const key = `${match[2].toLowerCase()}::${match[1]}`;
+    const creation = createdPolicies.get(key);
+    if (!creation || fileOrder.get(creation.file) > fileOrder.get(file) ||
+        (creation.file === file && creation.index > match.index)) {
+      policyErrors.push({ file, policy: match[1], table: match[2], issue: "ALTER POLICY has no earlier CREATE POLICY source" });
+    }
+  }
+}
+if (policyErrors.length) {
+  console.error(JSON.stringify({ policyErrors }, null, 2));
   process.exit(1);
 }
 
