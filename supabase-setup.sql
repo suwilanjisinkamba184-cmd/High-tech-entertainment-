@@ -104,6 +104,7 @@ revoke all on public.tracks from anon, authenticated;
 revoke all on public.videos from anon, authenticated;
 revoke all on public.contact_messages from anon, authenticated;
 grant select on public.artists, public.releases, public.tracks, public.videos to anon, authenticated;
+grant all on public.videos to service_role;
 grant insert on public.contact_messages to anon, authenticated;
 
 -- Storage bucket for public audio. Upload policy is intentionally not opened to everyone.
