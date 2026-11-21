@@ -47,11 +47,14 @@ class HteSplashSmokeTest {
 
     @Test
     fun accountTabAndSettingsHubRemainReachable() {
+        // NavigationBarItem merges its icon and label semantics. Assert and click
+        // the visible label rather than assuming the nested icon description is
+        // exposed as a standalone accessibility node on every Compose version.
         composeRule.waitUntil(timeoutMillis = 25_000) {
-            composeRule.onAllNodesWithContentDescription("Account")
+            composeRule.onAllNodesWithText("Account")
                 .fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithContentDescription("Account").performClick()
+        composeRule.onNodeWithText("Account").performClick()
         composeRule.waitUntil(timeoutMillis = 8_000) {
             composeRule.onAllNodesWithText("Welcome back")
                 .fetchSemanticsNodes().isNotEmpty()
