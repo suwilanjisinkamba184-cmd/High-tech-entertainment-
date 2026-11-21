@@ -58,29 +58,32 @@ private val MemberMuted = com.hightechentertainment.app.ui.design.HteColors.Mute
 private const val MAX_PROFILE_IMAGE_BYTES = 5L * 1024L * 1024L
 
 private suspend fun stageProfileImage(context: android.content.Context, uri: android.net.Uri): Pair<File, Long> =
-    withContext(Dispatchers.IO) {
-        val file = File.createTempFile("hte-profile-", ".upload", context.cacheDir)
-        try {
-            val input = context.contentResolver.openInputStream(uri)
-                ?: error("The selected image could not be opened. Choose another image.")
-            var total = 0L
-            input.use { source ->
-                FileOutputStream(file).use { destination ->
-                    val buffer = ByteArray(16 * 1024)
-                    while (true) {
-                        val count = source.read(buffer)
-                        if (count < 0) break
-                        total += count
-                        require(total <= MAX_PROFILE_IMAGE_BYTES) { "Choose an image file no larger than 5 MB." }
-                        destination.write(buffer, 0, count)
+    withTemporaryFileCleanup { registerFile ->
+        withContext(Dispatchers.IO) {
+            val file = File.createTempFile("hte-profile-", ".upload", context.cacheDir)
+            registerFile(file)
+            try {
+                val input = context.contentResolver.openInputStream(uri)
+                    ?: error("The selected image could not be opened. Choose another image.")
+                var total = 0L
+                input.use { source ->
+                    FileOutputStream(file).use { destination ->
+                        val buffer = ByteArray(16 * 1024)
+                        while (true) {
+                            val count = source.read(buffer)
+                            if (count < 0) break
+                            total += count
+                            require(total <= MAX_PROFILE_IMAGE_BYTES) { "Choose an image file no larger than 5 MB." }
+                            destination.write(buffer, 0, count)
+                        }
                     }
                 }
+                require(total > 0L) { "The selected image is empty." }
+                file to total
+            } catch (error: Throwable) {
+                file.delete()
+                throw error
             }
-            require(total > 0L) { "The selected image is empty." }
-            file to total
-        } catch (error: Throwable) {
-            file.delete()
-            throw error
         }
     }
 
