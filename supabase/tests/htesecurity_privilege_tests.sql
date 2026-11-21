@@ -1,4 +1,4 @@
--- Run after applying 20261121173000_hte_revoke_excess_client_table_privileges.sql.
+-- Run after applying the privilege, role-helper and contact-trigger hardening migrations.
 -- Raises if any client role retains a table-level TRUNCATE privilege or if
 -- required narrow access has been removed.
 DO $test$
