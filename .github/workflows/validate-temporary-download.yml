@@ -64,8 +64,10 @@ jobs:
       - name: Test signed download ingress helpers
         run: deno test supabase/functions/_shared/download-proxy-auth_test.ts
 
-      - name: Validate Cloudflare Worker syntax
-        run: node --check cloudflare/workers/hte-download-gateway/src/index.js
+      - name: Validate Cloudflare Worker syntax and ingress tests
+        run: |
+          node --check cloudflare/workers/hte-download-gateway/src/index.js
+          node --test cloudflare/workers/hte-download-gateway/src/index.test.js
 
       - name: Verify server-side-only temporary copy
         run: |
