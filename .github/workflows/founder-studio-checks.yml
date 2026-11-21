@@ -23,8 +23,15 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - name: Check browser controller syntax
-        run: node --check assets/founder-command-centre.js
+      - name: Check Founder Studio browser script syntax
+        run: |
+          node --check assets/founder-command-centre.js
+          node --check assets/app.js
+          node --check assets/admin-upload.js
+          node --check assets/admin-video.js
+          node --check assets/admin-enhancements.js
+          node --check assets/ai-ad-studio.js
+          node --check assets/ai-marketing-agent.js
       - name: Check edge function types
         run: deno check --node-modules-dir=auto supabase/functions/meta-publish/index.ts supabase/functions/meta-connection-check/index.ts
       - name: Check Founder Studio architecture invariants
