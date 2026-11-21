@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { createRemoteJWKSet, jwtVerify } from "npm:jose@6.1.0";
+import { normalizeTrustedClientIp, verifyDownloadProxySignature } from "../_shared/download-proxy-auth.ts";
 
 const BUCKET = "hte-download-temp";
 const MAX_BYTES = 100 * 1024 * 1024;
@@ -105,8 +106,9 @@ Deno.serve(async (req) => {
   if (!projectUrl || !serviceKey) return reply({ error: "Download delivery is not configured." }, 503);
   const admin = createClient(projectUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
+  const rawBody = await req.text();
   let body: any;
-  try { body = await req.json(); } catch { return reply({ error: "Invalid request body." }, 400); }
+  try { body = JSON.parse(rawBody); } catch { return reply({ error: "Invalid request body." }, 400); }
 
   if (body?.action === "cleanup") {
     if (!await isTrustedCleanupRequest(req)) return reply({ error: "Cleanup is restricted to the trusted HTE GitHub workflow." }, 401);
@@ -119,6 +121,23 @@ Deno.serve(async (req) => {
     }
   }
   if (body?.action !== "prepare") return reply({ error: "Unknown download action." }, 400);
+
+  // Prepare requests must be signed by the dedicated Cloudflare Worker. The
+  // function URL is public, so browser-supplied IP headers are never trusted.
+  // The signature binds method, timestamp, one-time nonce, edge-observed IP
+  // and the exact raw request body. Direct calls cannot manufacture this proof.
+  const proxySecret = Deno.env.get("HTE_DOWNLOAD_PROXY_SECRET") || "";
+  if (!proxySecret) return reply({ error: "Secure download delivery is not configured." }, 503);
+  const proxyTimestamp = req.headers.get("x-hte-proxy-timestamp") || "";
+  const proxyNonce = req.headers.get("x-hte-proxy-nonce") || "";
+  const proxySignature = req.headers.get("x-hte-proxy-signature") || "";
+  const rawClientIp = req.headers.get("x-hte-client-ip") || "";
+  const clientIp = normalizeTrustedClientIp(rawClientIp);
+  if (!clientIp || !await verifyDownloadProxySignature(
+    proxySecret, req.method, proxyTimestamp, proxyNonce, clientIp, rawBody, proxySignature
+  )) {
+    return reply({ error: "This download request did not come through the trusted HTE download gateway." }, 401);
+  }
 
   const trackId = String(body.trackId || "");
   if (!/^[0-9a-f-]{36}$/i.test(trackId)) return reply({ error: "Select a valid track." }, 400);
@@ -137,29 +156,6 @@ Deno.serve(async (req) => {
   const extension = extForPath(source.path);
   if (!extension) return reply({ error: "This audio format is not supported for temporary delivery." }, 415);
 
-  // Trust only Cloudflare's edge-provided client IP. X-Forwarded-For can be spoofed.
-  // Cloudflare is the supported public ingress and overwrites this header. Do not
-  // fall back to X-Forwarded-For or a shared placeholder: unidentified requests
-  // must not consume another visitor's quota.
-  const rawClientIp = req.headers.get("cf-connecting-ip")?.trim() || "";
-  // Requests reach this function through Supabase's Cloudflare edge. The edge
-  // supplies CF-Connecting-IP; never accept X-Forwarded-For or a client fallback.
-  // Canonicalise the address before hashing so alternate textual forms cannot
-  // create separate quota identities.
-  let clientIp = "";
-  if (/^[0-9.]+$/.test(rawClientIp)) {
-    const octets = rawClientIp.split(".");
-    if (octets.length === 4 && octets.every(part => /^(0|[1-9][0-9]{0,2})$/.test(part) && Number(part) <= 255)) {
-      clientIp = octets.map(Number).join(".");
-    }
-  } else if (/^[0-9a-fA-F:]+$/.test(rawClientIp) && rawClientIp.includes(":")) {
-    try {
-      clientIp = new URL("http://[" + rawClientIp + "]/").hostname.toLowerCase();
-    } catch { /* invalid IPv6 address */ }
-  }
-  if (!clientIp) {
-    return reply({ error: "The download service could not verify this connection. Please retry through the HTE website." }, 503);
-  }
   const ipHash = await sha256(serviceKey + ":" + clientIp);
 
   // Opportunistic cleanup runs only after a real, rights-cleared download request passes ingress validation.
@@ -171,6 +167,7 @@ Deno.serve(async (req) => {
   const expiresAt = new Date(Date.now() + JOB_TTL_MS).toISOString();
   const { data: jobCreated, error: insertError } = await admin.rpc("hte_create_download_job", {
     p_id: id,
+    p_request_nonce: proxyNonce,
     p_track_id: track.id,
     p_object_path: objectPath,
     p_file_name: fileName,
@@ -179,6 +176,7 @@ Deno.serve(async (req) => {
     p_max_downloads: 20,
   });
   if (insertError) {
+    if (insertError.code === "23505") return reply({ error: "This download request has already been used. Please retry." }, 409);
     console.error("HTE atomic download quota reservation failed", insertError);
     return reply({ error: "Download service is temporarily unavailable. Please retry." }, 503);
   }
