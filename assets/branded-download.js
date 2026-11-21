@@ -66,11 +66,11 @@ async function deliverTemporary(blob){
  const job=prepared.data;
  const uploaded=await client.storage.from(job.bucket).uploadToSignedUrl(job.path,job.token,blob,{contentType:mime,upsert:false});
  if(uploaded.error)throw uploaded.error;
- message('Temporary audio stored. Preparing your one-time download…');progress.style.width='94%';
+ message('Temporary audio stored. Preparing your secure download link…');progress.style.width='94%';
  const completed=await client.functions.invoke('hte-download-delivery',{body:{action:'complete',jobId:job.jobId}});
  if(completed.error||!completed.data?.success||!completed.data?.downloadUrl)throw new Error(completed.data?.error||completed.error?.message||'The temporary download could not be finalised.');
  const anchor=document.createElement('a');anchor.href=completed.data.downloadUrl;anchor.download=completed.data.fileName||fileName;anchor.rel='noopener';anchor.style.display='none';document.body.append(anchor);anchor.click();anchor.remove();
- progress.style.width='100%';message('Your download is being delivered securely. The temporary Supabase copy is removed after delivery.','success');
+ progress.style.width='100%';message('Your download is being delivered securely. The temporary Supabase copy is automatically removed after its retention period.','success');
 }
 async function brandedDownload(){
  if(busy||!track)return;busy=true;button.disabled=true;progress.style.width='0%';
