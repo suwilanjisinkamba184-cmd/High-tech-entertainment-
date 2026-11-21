@@ -141,28 +141,50 @@ Deno.serve(async (req) => {
   // Cloudflare is the supported public ingress and overwrites this header. Do not
   // fall back to X-Forwarded-For or a shared placeholder: unidentified requests
   // must not consume another visitor's quota.
-  const clientIp = req.headers.get("cf-connecting-ip")?.trim() || "";
-  if (!clientIp || clientIp.length > 64 || !/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$|^[0-9a-fA-F:]{2,64}$/.test(clientIp)) {
+  const rawClientIp = req.headers.get("cf-connecting-ip")?.trim() || "";
+  // Requests reach this function through Supabase's Cloudflare edge. The edge
+  // supplies CF-Connecting-IP; never accept X-Forwarded-For or a client fallback.
+  // Canonicalise the address before hashing so alternate textual forms cannot
+  // create separate quota identities.
+  let clientIp = "";
+  if (/^[0-9.]+$/.test(rawClientIp)) {
+    const octets = rawClientIp.split(".");
+    if (octets.length === 4 && octets.every(part => /^(0|[1-9][0-9]{0,2})$/.test(part) && Number(part) <= 255)) {
+      clientIp = octets.map(Number).join(".");
+    }
+  } else if (/^[0-9a-fA-F:]+$/.test(rawClientIp) && rawClientIp.includes(":")) {
+    try {
+      clientIp = new URL("http://[" + rawClientIp + "]/").hostname.toLowerCase();
+    } catch { /* invalid IPv6 address */ }
+  }
+  if (!clientIp) {
     return reply({ error: "The download service could not verify this connection. Please retry through the HTE website." }, 503);
   }
   const ipHash = await sha256(serviceKey + ":" + clientIp);
-  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { count, error: rateError } = await admin.from("hte_download_jobs")
-    .select("id", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("created_at", since);
-  if (rateError) return reply({ error: "Download service is temporarily unavailable." }, 503);
-  if ((count || 0) >= 20) return reply({ error: "Too many downloads from this connection. Please try again later." }, 429);
 
-  // Opportunistic cleanup runs only after a real, rights-cleared download request passes rate limiting.
+  // Opportunistic cleanup runs only after a real, rights-cleared download request passes ingress validation.
   try { await cleanupExpired(admin); } catch (error) { console.warn("HTE temp cleanup skipped", error); }
 
   const id = crypto.randomUUID();
   const fileName = safeFileName(String(track.title || "HTE-audio")) + "-HTE." + extension;
   const objectPath = "requests/" + id + "." + extension;
   const expiresAt = new Date(Date.now() + JOB_TTL_MS).toISOString();
-  const { error: insertError } = await admin.from("hte_download_jobs").insert({
-    id, track_id: track.id, object_path: objectPath, file_name: fileName, ip_hash: ipHash, status: "created", expires_at: expiresAt,
+  const { data: jobCreated, error: insertError } = await admin.rpc("hte_create_download_job", {
+    p_id: id,
+    p_track_id: track.id,
+    p_object_path: objectPath,
+    p_file_name: fileName,
+    p_ip_hash: ipHash,
+    p_expires_at: expiresAt,
+    p_max_downloads: 20,
   });
-  if (insertError) return reply({ error: "A temporary download could not be prepared. Please retry." }, 500);
+  if (insertError) {
+    console.error("HTE atomic download quota reservation failed", insertError);
+    return reply({ error: "Download service is temporarily unavailable. Please retry." }, 503);
+  }
+  if (jobCreated !== true) {
+    return reply({ error: "Too many downloads from this connection. Please try again later." }, 429);
+  }
 
   // Copy directly between private-managed buckets on the server. The visitor never uploads bytes.
   const { error: copyError } = await admin.storage.from(source.bucket).copy(source.path, objectPath, { destinationBucket: BUCKET });
