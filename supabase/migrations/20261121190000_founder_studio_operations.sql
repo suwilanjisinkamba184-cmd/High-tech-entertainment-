@@ -14,8 +14,8 @@ create index if not exists hte_booking_workflow_status_idx on public.hte_booking
 alter table public.hte_booking_workflow enable row level security;
 drop policy if exists "HTE founders manage guest booking workflow" on public.hte_booking_workflow;
 create policy "HTE founders manage guest booking workflow" on public.hte_booking_workflow for all to authenticated using (public.hte_is_admin()) with check (public.hte_is_admin());
-revoke all on public.hte_booking_workflow from anon;
-grant select,insert,update,delete on public.hte_booking_workflow to authenticated;
+revoke all on table public.hte_booking_workflow from public, anon, authenticated;
+grant select,insert,update on table public.hte_booking_workflow to authenticated;
 
 create table if not exists public.hte_admin_audit_log (
  id uuid primary key default gen_random_uuid(),
@@ -33,9 +33,8 @@ drop policy if exists "HTE founders read audit log" on public.hte_admin_audit_lo
 create policy "HTE founders read audit log" on public.hte_admin_audit_log for select to authenticated using (public.hte_is_admin());
 drop policy if exists "HTE founders append audit log" on public.hte_admin_audit_log;
 create policy "HTE founders append audit log" on public.hte_admin_audit_log for insert to authenticated with check (actor_id=(select auth.uid()) and public.hte_is_admin());
-revoke all on public.hte_admin_audit_log from anon;
-revoke update,delete on public.hte_admin_audit_log from authenticated;
-grant select,insert on public.hte_admin_audit_log to authenticated;
+revoke all on table public.hte_admin_audit_log from public, anon, authenticated;
+grant select,insert on table public.hte_admin_audit_log to authenticated;
 create or replace function private.reject_hte_audit_mutation() returns trigger language plpgsql set search_path='' as $function$ begin raise exception 'Founder audit records are append-only'; end; $function$;
 drop trigger if exists hte_admin_audit_log_append_only on public.hte_admin_audit_log;
 create trigger hte_admin_audit_log_append_only before update or delete on public.hte_admin_audit_log for each row execute function private.reject_hte_audit_mutation();
