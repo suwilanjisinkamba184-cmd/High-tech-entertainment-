@@ -2,7 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const BUCKET = "hte-download-temp";
 const MAX_BYTES = 80 * 1024 * 1024;
-const JOB_TTL_MS = 15 * 60 * 1000;
+const JOB_TTL_MS = 60 * 60 * 1000;
 const DELIVERY_TTL_MS = 5 * 60 * 1000;
 const SIGNED_URL_TTL_SECONDS = 120;
 const cors = {
@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
     if (!/^[0-9a-f-]{36}$/i.test(jobId) || token.length < 32) return reply({ error: "This download link is invalid." }, 400);
     try {
       const job = await findJob(admin, jobId);
-      if (!job || job.status !== "uploaded" || Date.parse(job.delivery_expires_at || "") <= Date.now()) {
+      if (!job || job.status !== "uploaded" || (!job.delivery_expires_at || Date.parse(job.delivery_expires_at) <= Date.now())) {
         return reply({ error: "This temporary download has expired. Please prepare it again." }, 410);
       }
       const tokenHash = await sha256(token);
@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
     const id = crypto.randomUUID();
     const fileName = safeFileName(String(track.title || "HTE-audio")) + "-HTE." + extension;
     const objectPath = "requests/" + id + "." + extension;
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + JOB_TTL_MS).toISOString();
     const { error: insertError } = await admin.from("hte_download_jobs").insert({
       id, track_id: track.id, object_path: objectPath, file_name: fileName, ip_hash: ipHash, status: "created", expires_at: expiresAt,
     });
