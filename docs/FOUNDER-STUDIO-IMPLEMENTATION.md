@@ -32,7 +32,8 @@ Supabase Auth leaked-password protection is disabled in the connected project's 
 
 ## Verification status
 - Browser controller Node syntax: passed in the first CI run.
-- First Deno check exposed a CI npm node_modules configuration issue; workflow now uses Deno auto node_modules mode. A passing rerun has not yet been observed.
+- Founder Studio CI passed on the implementation snapshot: Node syntax checks for all affected browser scripts, Deno type checks for both Meta Edge Functions, and architecture-invariant checks all succeeded.
+- Public website validation passed, including legacy JavaScript syntax and shared-route checks. The full website redesign build was still running at the last status check.
 - Browser-based mobile/desktop interaction testing has not been performed.
 - SQL migration has not been executed or validated against a development database.
 - Public website and Android regression checks are required to pass before merge.
