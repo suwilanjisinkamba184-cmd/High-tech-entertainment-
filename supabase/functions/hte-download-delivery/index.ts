@@ -77,8 +77,7 @@ Deno.serve(async (req) => {
 
   const projectUrl = Deno.env.get("SUPABASE_URL") || "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  const publicKeys = [Deno.env.get("SUPABASE_ANON_KEY"), Deno.env.get("SUPABASE_PUBLISHABLE_KEY")].filter((value): value is string => !!value);
-  if (!projectUrl || !serviceKey || !publicKeys.length) return reply({ error: "Download delivery is not configured." }, 503);
+  if (!projectUrl || !serviceKey) return reply({ error: "Download delivery is not configured." }, 503);
   const admin = createClient(projectUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
   if (req.method === "GET") {
@@ -153,7 +152,6 @@ Deno.serve(async (req) => {
     }
   }
 
-  if (!publicKeys.includes(req.headers.get("apikey") || "")) return reply({ error: "The download request is not authorised." }, 401);
   let body: any;
   try { body = await req.json(); } catch { return reply({ error: "Invalid request body." }, 400); }
   try { await cleanupExpired(admin); } catch (error) { console.warn("HTE temp cleanup skipped", error); }
