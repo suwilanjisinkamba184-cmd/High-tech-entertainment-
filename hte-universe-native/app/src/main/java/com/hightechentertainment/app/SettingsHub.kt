@@ -188,7 +188,7 @@ fun HteSettingsScreen(
             item {
                 SettingsCard {
                     SettingsActionRow(
-                        "SYNAPSE Voice Assistant",
+                        "HTE AI Voice Assistant",
                         "Search music, navigate HTE Universe and control playback by voice.",
                         onVoiceAssistant
                     )
@@ -436,7 +436,7 @@ fun HteSettingsScreen(
                         openSupportEmail(context, "HTE Universe app feedback")
                     }
                     SettingsDivider()
-                    SettingsInfoRow("AI & voice assistant", "Open SYNAPSE Voice Assistant here in Settings or from your Account page.")
+                    SettingsInfoRow("AI & voice assistant", "Use HTE AI voice control from Home, Account or Settings.")
                     SettingsInfoRow("Artist & Founder tools", "Publishing permissions are controlled by your verified account role.")
                     Text("HTE Universe · The Pride of Africa", color = SettingsGold, fontSize = 10.sp, letterSpacing = 1.2.sp)
                 }
