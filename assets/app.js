@@ -46,7 +46,7 @@ function trackPlayer(x){
   if(safe){
     const url=new URL(safe),path=url.pathname.toLowerCase(),storage=path.includes('/storage/v1/object/'),direct=storage||/\.(mp3|mp4|m4a|wav|aac|ogg|flac|opus|webm)$/i.test(path);
     if(direct){
-      const downloadReady=x.download_allowed===true;
+      const downloadReady=x.download_allowed===true&&x.rights_status==='owned_or_licensed';
       const downloadUrl=siteBasePath()+'download/?track='+encodeURIComponent(x.id);
       const download=downloadReady?'<a class="btn gold" style="width:100%;margin-top:8px" href="'+esc(downloadUrl)+'" data-track-download="'+esc(x.id)+'">↓ Download HTE-branded track</a>':'<p class="muted small">Downloads are not enabled for this source.</p>';
       return '<audio controls preload="none" src="'+esc(safe)+'" aria-label="Play '+esc(x.title)+'" data-track-play="'+esc(x.id)+'"></audio>'+download;
@@ -92,7 +92,7 @@ function renderPublic(){
  const el=$('#account-downloads');if(!el||!db)return;
  el.innerHTML='<div class="empty">Loading available downloads…</div>';
  try{
-  const {data,error}=await withTimeout(db.from('tracks').select('id,title,artist,genre,audio_url,source_url,source_platform,download_allowed,branded_audio_url,download_branding_status,cover_url').eq('is_published',true).order('created_at',{ascending:false}).limit(100),12000,'Downloads request timed out.');
+  const {data,error}=await withTimeout(db.from('tracks').select('id,title,artist,genre,audio_url,source_url,source_platform,rights_status,download_allowed,branded_audio_url,download_branding_status,cover_url').eq('is_published',true).order('created_at',{ascending:false}).limit(100),12000,'Downloads request timed out.');
   if(error)throw error;
   const items=data||[];
   el.innerHTML=items.length?'<div class="cards">'+items.map(x=>{
@@ -101,7 +101,7 @@ function renderPublic(){
    let action='';
    if(platform==='youtube'||youtubeVideoId(source))action='<a class="btn" href="'+esc(source)+'" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>';
    else if(platform==='spotify'||spotifyEmbed(source))action='<a class="btn" href="'+esc(spotifyLink(source))+'" target="_blank" rel="noopener noreferrer">Listen on Spotify ↗</a>';
-   else if(x.download_allowed===true)action='<a class="btn gold" href="'+esc(siteBasePath()+'download/?track='+encodeURIComponent(x.id))+'" data-track-download="'+esc(x.id)+'">Download HTE-branded audio ↓</a>';
+   else if(x.download_allowed===true&&x.rights_status==='owned_or_licensed')action='<a class="btn gold" href="'+esc(siteBasePath()+'download/?track='+encodeURIComponent(x.id))+'" data-track-download="'+esc(x.id)+'">Download HTE-branded audio ↓</a>';
    else action='<span class="muted small">Download is unavailable for this source</span>';
    return '<article class="music-card"><div class="cover">'+cover(x.cover_url,x.title)+'</div><h3>'+esc(x.title)+'</h3><p class="muted small">'+esc(x.artist||'High Tech Entertainment')+' · '+esc(x.genre||'Music')+'</p>'+action+'</article>';
   }).join('')+'</div>':'<div class="empty">No published music is available yet.</div>';
