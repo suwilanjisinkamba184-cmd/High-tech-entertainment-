@@ -129,16 +129,7 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
-          script: |
-            set -eu
-            cd hte-universe-native
-            bash ../.github/scripts/wait-android-services.sh
-            if gradle --no-daemon :app:connectedDebugAndroidTest --stacktrace --console=plain; then
-              echo "Instrumentation tests completed successfully."
-            else
-              bash ../.github/scripts/capture-android-diagnostics.sh || true
-              exit 1
-            fi
+          script: bash .github/scripts/run-android-instrumentation.sh
       - name: Upload Android emulator diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
