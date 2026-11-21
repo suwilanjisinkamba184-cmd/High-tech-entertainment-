@@ -27,7 +27,7 @@ Do not reset or replay the production database. The production project already r
 | `20261101121639` | `revoke_anon_personal_app_data_access` | `supabase/migrations/20261101121639_revoke_anon_personal_app_data_access.sql` | Reconstructed revoke plus role table/helper RPCs and role-aware public video read policy |
 | `20261101121711` | `split_audio_ads_founder_policies` | `supabase/migrations/20261101121711_split_audio_ads_founder_policies.sql` | Reconstructed from live audio_ads policies |
 | `20261101191601` | `hte_role_based_admin_access` | `supabase/migrations/20261101191601_hte_role_based_admin_access.sql` | Consolidated marker; role table and helper RPCs are in 20261101121639 to satisfy earlier dependencies |
-| `20261101191636` | `hte_admin_security_cleanup` | `supabase/migrations/20261101191636_hte_admin_security_cleanup.sql` | Consolidated marker; function grants are in 20261101191601 |
+| `20261101191636` | `hte_admin_security_cleanup` | `supabase/migrations/20261101191636_hte_admin_security_cleanup.sql` | Consolidated marker; function grants are in 20261101121639 |
 | `20261101191840` | `hte_revoke_anonymous_personal_data_grants` | `supabase/migrations/20261101191840_hte_revoke_anonymous_personal_data_grants.sql` | Consolidated marker; anonymous revokes are in 20261101121639 |
 | `20261101192215` | `hte_rate_limit_booking_notifications` | `supabase/migrations/20261101192215_hte_rate_limit_booking_notifications.sql` | Reconstructed from live private rate-limit table and function |
 | `20261101192359` | `hte_booking_rate_limit_hardening` | `supabase/migrations/20261101192359_hte_booking_rate_limit_hardening.sql` | Reconstructed from live contact-message trigger |
