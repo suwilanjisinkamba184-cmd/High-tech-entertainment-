@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS private.user_roles (
   created_at timestamptz NOT NULL DEFAULT now(),
   created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL
 );
+CREATE INDEX IF NOT EXISTS user_roles_created_by_idx ON private.user_roles (created_by);
 ALTER TABLE private.user_roles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Deny all client access to HTE role assignments" ON private.user_roles;
 CREATE POLICY "Deny all client access to HTE role assignments"
@@ -53,12 +54,12 @@ RETURNS boolean LANGUAGE sql STABLE SET search_path TO ''
 AS $function$ SELECT private.hte_has_role(ARRAY['owner','admin']); $function$;
 
 REVOKE ALL ON FUNCTION private.hte_current_role() FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION private.hte_has_role(text[]) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION private.hte_has_role(text[]) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.hte_my_role() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.hte_is_admin() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.is_hte_admin() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION private.hte_current_role() TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION private.hte_has_role(text[]) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION private.hte_has_role(text[]) TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.hte_my_role() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.hte_is_admin() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.is_hte_admin() TO authenticated, service_role;
