@@ -182,7 +182,7 @@ fun VoiceAssistantDialog(
 
     BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp), contentAlignment = Alignment.BottomCenter) {
             if (minimized) {
-                Surface(Modifier.align(Alignment.BottomEnd).fillMaxWidth().widthIn(max = 320.dp), color = VoicePanel, shape = RoundedCornerShape(22.dp), shadowElevation = 18.dp) {
+                Surface(Modifier.align(Alignment.BottomEnd).padding(bottom = if (maxWidth < 720.dp) 84.dp else 16.dp).fillMaxWidth().widthIn(max = 320.dp), color = VoicePanel, shape = RoundedCornerShape(22.dp), shadowElevation = 18.dp) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.GraphicEq, null, tint = VoiceGold, modifier = Modifier.size(25.dp))
                         Spacer(Modifier.width(9.dp))
@@ -196,7 +196,7 @@ fun VoiceAssistantDialog(
                     }
                 }
             } else {
-                Surface(Modifier.fillMaxWidth(.96f).widthIn(max = 420.dp).heightIn(max = maxHeight * .48f), color = com.hightechentertainment.app.ui.design.HteColors.Obsidian, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 18.dp, bottomEnd = 18.dp), shadowElevation = 20.dp) {
+                Surface(Modifier.align(Alignment.BottomCenter).padding(bottom = if (maxWidth < 720.dp) 84.dp else 16.dp).fillMaxWidth(.96f).widthIn(max = 420.dp).heightIn(max = maxHeight * .48f), color = com.hightechentertainment.app.ui.design.HteColors.Obsidian, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 18.dp, bottomEnd = 18.dp), shadowElevation = 20.dp) {
                     Column(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 9.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
