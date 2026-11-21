@@ -408,7 +408,7 @@ private fun startVoiceSession(
                                 val favourites = toolContext.favourites
                                 if (favourites.isEmpty()) ClientToolResult.failure("There are no saved favourites in the current library.")
                                 else {
-                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayFavourites(favourites) }
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayFavourites(favourites); toolContext.onActionCompleted() }
                                     ClientToolResult.success("Selected the saved favourites queue with " + favourites.size + " tracks.")
                                 }
                             }
@@ -417,7 +417,7 @@ private fun startVoiceSession(
                                     else findVoiceTrack(toolContext.tracks, query)
                                 if (track == null) ClientToolResult.failure("I could not find a playable published HTE track for that request.")
                                 else {
-                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayTrack(track) }
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayTrack(track); toolContext.onActionCompleted() }
                                     ClientToolResult.success(voicePlaybackConfirmation(track))
                                 }
                             }
@@ -427,7 +427,7 @@ private fun startVoiceSession(
                                 else if (!track.downloadAllowed || track.rightsStatus !in setOf("owned_or_licensed", "legacy_existing") || track.sourcePlatform.lowercase() in setOf("spotify", "youtube", "external") || !track.sourceUrl.isNullOrBlank()) {
                                     ClientToolResult.failure("This track is not an eligible HTE-owned or licensed download. Spotify and YouTube links must stay on their original platforms.")
                                 } else {
-                                    withContext(Dispatchers.Main.immediate) { toolContext.onDownloadTrack(track) }
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onDownloadTrack(track); toolContext.onActionCompleted() }
                                     if (track.brandedAudioUrl.isNullOrBlank() || track.downloadBrandingStatus != "ready") {
                                         ClientToolResult.success("Opened the HTE-branded download page for " + track.title + ". Complete the download in your browser; it is not saved to the in-app Library yet.")
                                     } else {
@@ -442,6 +442,7 @@ private fun startVoiceSession(
                                     withContext(Dispatchers.Main.immediate) {
                                         toolContext.onNavigate("VIDEOS")
                                         toolContext.onSearchVideos(query)
+                                        toolContext.onActionCompleted()
                                     }
                                     val summary = if (matches.isEmpty()) "No published HTE videos match that search. Videos is now open."
                                         else "Found " + matches.size + " matching video(s): " + matches.take(4).joinToString { it.title + " by " + (it.artist ?: "High-Tech Entertainment") } + ". Videos is now open."
@@ -452,7 +453,7 @@ private fun startVoiceSession(
                                 val video = findVoiceVideo(toolContext.videos, query)
                                 if (video == null) ClientToolResult.failure("I could not find a published HTE video matching that request.")
                                 else {
-                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayVideo(video) }
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayVideo(video); toolContext.onActionCompleted() }
                                     ClientToolResult.success("Opened " + video.title + " in the HTE video player.")
                                 }
                             }
@@ -461,11 +462,12 @@ private fun startVoiceSession(
                                 if (video == null) ClientToolResult.failure("I could not find a published HTE video matching that request.")
                                 else if (video.downloadUrl.isNullOrBlank()) ClientToolResult.failure("An original downloadable video file is not available for that item.")
                                 else {
-                                    withContext(Dispatchers.Main.immediate) { toolContext.onDownloadVideo(video) }
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onDownloadVideo(video); toolContext.onActionCompleted() }
                                     ClientToolResult.success("Sent the original video download request for " + video.title + ". Check Library for its progress.")
                                 }
                             }
                             else -> if (HtePlaybackController.performAction(action)) {
+                                withContext(Dispatchers.Main.immediate) { toolContext.onActionCompleted() }
                                 ClientToolResult.success("Playback action '" + action + "' executed by HTE Universe.")
                             } else {
                                 ClientToolResult.failure(when (action) {
@@ -491,7 +493,7 @@ private fun startVoiceSession(
                             "App Updates" -> "ACCOUNT"
                             else -> return ClientToolResult.failure("Unknown app destination: $destination")
                         }
-                        if (target != null) withContext(Dispatchers.Main.immediate) { toolContext.onNavigate(target) }
+                        if (target != null) withContext(Dispatchers.Main.immediate) { toolContext.onNavigate(target); toolContext.onActionCompleted() }
                         return ClientToolResult.success(if (destination == "Founder Studio") "Opened Account. Founder Studio is shown only when the native app verifies the signed-in owner role." else if (destination == "Voice Companion") "Voice Companion is already open." else if (destination == "App Updates") "Opened Account. Open Settings, then App Updates to manage this application." else "Opened $destination.")
                     }
                 },
@@ -502,7 +504,7 @@ private fun startVoiceSession(
                         val matches = toolContext.tracks.filter { track ->
                             track.title.contains(query, true) || track.artist.contains(query, true) || track.genre.orEmpty().contains(query, true)
                         }
-                        withContext(Dispatchers.Main.immediate) { toolContext.onSearch(query) }
+                        withContext(Dispatchers.Main.immediate) { toolContext.onSearch(query); toolContext.onActionCompleted() }
                         val summary = if (matches.isEmpty()) "No matching published tracks are currently loaded for '$query'. Discover search has been opened." else
                             "Found ${matches.size} published track(s): ${matches.take(5).joinToString { "${it.title} by ${it.artist}" }}. Discover search has been opened."
                         return ClientToolResult.success(summary)
