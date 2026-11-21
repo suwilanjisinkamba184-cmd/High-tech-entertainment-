@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
   const { count, error: rateError } = await admin.from("hte_download_jobs")
     .select("id", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("created_at", since);
   if (rateError) return reply({ error: "Download service is temporarily unavailable." }, 503);
-  if ((count || 0) >= 30) return reply({ error: "Too many downloads from this connection. Please try again later." }, 429);
+  if ((count || 0) >= 20) return reply({ error: "Too many downloads from this connection. Please try again later." }, 429);
 
   const id = crypto.randomUUID();
   const fileName = safeFileName(String(track.title || "HTE-audio")) + "-HTE." + extension;
