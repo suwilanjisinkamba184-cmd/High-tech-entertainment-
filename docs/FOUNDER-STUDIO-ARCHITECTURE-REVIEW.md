@@ -101,7 +101,7 @@ The current workflow checks the presence of admin routes and selected source pat
 
 The following additive backend changes are recommended, but **none have been applied**:
 
-- Add a `hte_booking_workflow` table for workflow state attached to legacy guest/member booking-message rows, with strict owner/admin RLS and explicit grants.
+- Add a `hte_booking_workflow` table for workflow state attached only to legacy guest booking requests stored in `contact_messages` (keyed by message ID), with strict owner/admin RLS and explicit grants. Member/native booking status remains in `bookings`.
 - Add guarded, read-only analytics RPCs for time-series and source/platform breakdowns, with bounded date windows and documented deduplication.
 - Standardize Meta and future publishing Edge Functions on the shared role authorization RPC; remove hard-coded fallback identity assumptions after confirming the founder role path.
 - Add a minimal `hte_admin_audit_log` table and guarded server-side insert path.
