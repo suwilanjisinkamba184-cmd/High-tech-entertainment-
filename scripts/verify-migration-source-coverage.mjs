@@ -92,7 +92,7 @@ for (const file of orderedFiles) {
     if (count % 2 !== 0) sqlErrors.push({ file, issue: `Unbalanced dollar quote ${tag} (count ${count})` });
   }
 
-  const referencePattern = /\b(?:alter\s+table|on|from|join|into|update|delete\s+from)\s+(public|private)\.([a-z_][a-z0-9_]*)/ig;
+  const referencePattern = /\b(?:alter\s+table|on(?:\s+table)?|from|join|into|update|delete\s+from|references)\s+(public|private)\.([a-z_][a-z0-9_]*)/ig;
   for (const match of sql.matchAll(referencePattern)) {
     const table = `${match[1].toLowerCase()}.${match[2].toLowerCase()}`;
     const creation = createdAt.get(table);
