@@ -1,6 +1,6 @@
 # Founder Studio — Architecture Review
 
-**Status:** Architecture review complete; implementation not yet started  
+**Status:** Architecture review complete; implementation staged in PR #160; backend migration remains unapplied  
 **Review date:** 2026-11-21  
 **Source of truth:** `main` at `2a5d205464197965fdf70997609001c41ab7f1b9`  
 **Supabase project:** High-tech entertainment (`wqrxacjbsldbnoekbkbf`), PostgreSQL 17.11.0.003  
