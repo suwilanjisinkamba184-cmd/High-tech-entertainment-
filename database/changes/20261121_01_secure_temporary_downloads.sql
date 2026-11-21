@@ -33,8 +33,6 @@ CREATE TABLE IF NOT EXISTS public.hte_download_jobs (
   object_path text NOT NULL UNIQUE,
   file_name text NOT NULL,
   ip_hash text NOT NULL,
-  download_token_hash text,
-  delivery_expires_at timestamptz,
   status text NOT NULL DEFAULT 'created'
     CHECK (status IN ('created','uploaded','downloading','delivered','expired')),
   created_at timestamptz NOT NULL DEFAULT now(),
