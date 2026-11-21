@@ -69,3 +69,12 @@ CREATE POLICY "Users and admins read ad impressions" ON public.ad_impressions FO
 GRANT EXECUTE ON FUNCTION public.hte_my_role() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.hte_is_admin() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.is_hte_admin() TO authenticated, service_role;
+
+-- Replace the baseline Founder-only video read rule with the live role-aware
+-- catalogue rule: public visitors see published videos; owners/admins can also
+-- inspect drafts in Founder Studio.
+DROP POLICY IF EXISTS "Public can read published videos" ON public.videos;
+DROP POLICY IF EXISTS "Public and administrators can read videos" ON public.videos;
+CREATE POLICY "Public and administrators can read videos" ON public.videos
+  FOR SELECT TO anon, authenticated
+  USING (is_published = true OR private.hte_has_role(ARRAY['owner','admin']));
