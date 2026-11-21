@@ -66,3 +66,5 @@
 .fs-note-editor{display:grid;gap:6px;margin-top:10px;color:#d8c58e;font-size:.72rem;font-weight:700;letter-spacing:.04em}
 .fs-note-editor textarea,.fs-note-editor input{width:100%;max-width:520px;min-height:40px;padding:9px 11px;border:1px solid rgba(197,164,90,.24);border-radius:9px;background:#080d13;color:#f3f5f7;font:400 .82rem/1.4 inherit}
 .fs-note-editor textarea{min-height:70px;resize:vertical}
+
+.admin-page .admin-status-orb{background:#c5a45a;box-shadow:none}
