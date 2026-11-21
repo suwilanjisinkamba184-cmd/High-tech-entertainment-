@@ -68,7 +68,7 @@ async function cleanupExpired(admin: SupabaseClient<any, "public", any>) {
   }
   await admin.from("hte_download_jobs").delete().lt("expires_at", nowIso());
 }
-async function findJob(admin: ReturnType<typeof createClient>, id: string) {
+async function findJob(admin: SupabaseClient<any, "public", any>, id: string) {
   const { data, error } = await admin.from("hte_download_jobs")
     .select("id,track_id,object_path,file_name,ip_hash,download_token_hash,status,expires_at,delivery_expires_at")
     .eq("id", id).maybeSingle();
