@@ -10,6 +10,7 @@ GRANT INSERT ON TABLE public.hte_audience_events TO anon;
 GRANT SELECT, INSERT ON TABLE public.hte_audience_events TO authenticated;
 
 REVOKE ALL ON TABLE public.hte_download_branding_settings FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON TABLE public.hte_download_branding_settings TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.hte_download_branding_settings TO authenticated;
 
 REVOKE ALL ON TABLE public.hte_marketing_campaigns FROM PUBLIC, anon, authenticated;
