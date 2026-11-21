@@ -17,8 +17,7 @@ const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body)
 const nowIso = () => new Date().toISOString();
 
 function safeFileName(value: string) {
-  const stem = value.normalize("NFKD").replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 70) || "HTE-audio";
-  return stem;
+  return value.normalize("NFKD").replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 70) || "HTE-audio";
 }
 function extForMime(mime: string) {
   const type = mime.toLowerCase().split(";")[0].trim();
@@ -26,8 +25,17 @@ function extForMime(mime: string) {
     "audio/mpeg": "mp3", "audio/mp3": "mp3", "audio/mp4": "m4a",
     "audio/x-m4a": "m4a", "audio/aac": "aac", "audio/wav": "wav",
     "audio/x-wav": "wav", "audio/ogg": "ogg", "audio/webm": "webm",
+    "audio/flac": "flac", "audio/x-flac": "flac",
   };
   return map[type] || "";
+}
+function extForPath(path: string) {
+  const extension = path.split("/").pop()?.split(".").pop()?.toLowerCase() || "";
+  const map: Record<string,string> = {
+    mp3: "mp3", mp4: "m4a", m4a: "m4a", aac: "aac",
+    wav: "wav", ogg: "ogg", webm: "webm", flac: "flac",
+  };
+  return map[extension] || "";
 }
 function parseHteAudio(value: string, projectUrl: string) {
   try {
@@ -40,9 +48,6 @@ function parseHteAudio(value: string, projectUrl: string) {
     if (!["hte-audio", "ht storage"].includes(bucket)) return null;
     return { bucket, path: match[2] };
   } catch { return null; }
-}
-function safeHteAudio(value: string, projectUrl: string) {
-  return !!parseHteAudio(value, projectUrl);
 }
 async function sha256(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
@@ -64,13 +69,6 @@ async function cleanupExpired(admin: SupabaseClient<any, "public", any>) {
   }
   await admin.from("hte_download_jobs").delete().lt("expires_at", nowIso());
 }
-async function findJob(admin: SupabaseClient<any, "public", any>, id: string) {
-  const { data, error } = await admin.from("hte_download_jobs")
-    .select("id,track_id,object_path,file_name,ip_hash,status,expires_at")
-    .eq("id", id).maybeSingle();
-  if (error) throw error;
-  return data;
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -86,96 +84,73 @@ Deno.serve(async (req) => {
   try { await cleanupExpired(admin); } catch (error) { console.warn("HTE temp cleanup skipped", error); }
 
   if (body?.action === "cleanup") return reply({ success: true, cleaned: true });
+  if (body?.action !== "prepare") return reply({ error: "Unknown download action." }, 400);
 
-  if (body?.action === "source") {
-    const trackId = String(body.trackId || "");
-    if (!/^[0-9a-f-]{36}$/i.test(trackId)) return reply({ error: "Select a valid track." }, 400);
-    const { data: track, error: trackError } = await admin.from("tracks")
-      .select("id,title,audio_url,source_platform,rights_status,download_allowed,is_published,branded_audio_url,download_branding_status")
-      .eq("id", trackId).eq("is_published", true).maybeSingle();
-    if (trackError || !track) return reply({ error: "This track is not available for download." }, 404);
-    if (track.source_platform !== "direct" || track.download_allowed !== true || track.rights_status !== "owned_or_licensed") {
-      return reply({ error: "Download is available only for HTE-owned or licensed audio with confirmed permissions." }, 403);
-    }
-    const branded = track.download_branding_status === "ready" ? parseHteAudio(String(track.branded_audio_url || ""), projectUrl) : null;
-    const original = parseHteAudio(String(track.audio_url || ""), projectUrl);
-    const source = branded || original;
-    if (!source) return reply({ error: "The original audio is not stored in an approved HTE audio bucket." }, 422);
-    const { data: signed, error: signError } = await admin.storage.from(source.bucket).createSignedUrl(source.path, 10 * 60);
-    if (signError || !signed?.signedUrl) return reply({ error: "The original HTE audio could not be opened securely." }, 502);
-    return reply({ success: true, sourceUrl: signed.signedUrl, alreadyBranded: !!branded });
+  const trackId = String(body.trackId || "");
+  if (!/^[0-9a-f-]{36}$/i.test(trackId)) return reply({ error: "Select a valid track." }, 400);
+  const { data: track, error: trackError } = await admin.from("tracks")
+    .select("id,title,audio_url,source_platform,rights_status,download_allowed,is_published,branded_audio_url,download_branding_status")
+    .eq("id", trackId).eq("is_published", true).maybeSingle();
+  if (trackError || !track) return reply({ error: "This track is not available for download." }, 404);
+  if (track.source_platform !== "direct" || track.download_allowed !== true || track.rights_status !== "owned_or_licensed") {
+    return reply({ error: "Download is available only for HTE-owned or licensed audio with confirmed permissions." }, 403);
   }
 
-  if (body?.action === "prepare") {
-    const trackId = String(body.trackId || "");
-    const mime = String(body.contentType || "").toLowerCase().split(";")[0].trim();
-    const size = Number(body.fileSize || 0);
-    const extension = extForMime(mime);
-    if (!/^[0-9a-f-]{36}$/i.test(trackId)) return reply({ error: "Select a valid track." }, 400);
-    if (!extension || !Number.isSafeInteger(size) || size < 1 || size > MAX_BYTES) {
-      return reply({ error: "This audio file type or size is not supported for temporary delivery." }, 413);
-    }
-    const { data: track, error: trackError } = await admin.from("tracks")
-      .select("id,title,audio_url,source_platform,rights_status,download_allowed,is_published")
-      .eq("id", trackId).eq("is_published", true).maybeSingle();
-    if (trackError || !track) return reply({ error: "This track is not available for download." }, 404);
-    if (track.source_platform !== "direct" || track.download_allowed !== true || track.rights_status !== "owned_or_licensed") {
-      return reply({ error: "Download is available only for HTE-owned or licensed audio with confirmed permissions." }, 403);
-    }
-    if (!safeHteAudio(String(track.audio_url || ""), projectUrl)) {
-      return reply({ error: "The original audio is not stored in an approved HTE audio bucket." }, 422);
-    }
+  const branded = track.download_branding_status === "ready" ? parseHteAudio(String(track.branded_audio_url || ""), projectUrl) : null;
+  const original = parseHteAudio(String(track.audio_url || ""), projectUrl);
+  const source = branded || original;
+  if (!source) return reply({ error: "The original audio is not stored in an approved HTE audio bucket." }, 422);
+  const extension = extForPath(source.path);
+  if (!extension) return reply({ error: "This audio format is not supported for temporary delivery." }, 415);
 
-    const forwarded = req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const ipHash = await sha256(serviceKey + ":" + forwarded);
-    const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { count, error: rateError } = await admin.from("hte_download_jobs")
-      .select("id", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("created_at", since);
-    if (rateError) return reply({ error: "Download service is temporarily unavailable." }, 503);
-    if ((count || 0) >= 30) return reply({ error: "Too many downloads from this connection. Please try again later." }, 429);
+  const forwarded = req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ipHash = await sha256(serviceKey + ":" + forwarded);
+  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { count, error: rateError } = await admin.from("hte_download_jobs")
+    .select("id", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("created_at", since);
+  if (rateError) return reply({ error: "Download service is temporarily unavailable." }, 503);
+  if ((count || 0) >= 30) return reply({ error: "Too many downloads from this connection. Please try again later." }, 429);
 
-    const id = crypto.randomUUID();
-    const fileName = safeFileName(String(track.title || "HTE-audio")) + "-HTE." + extension;
-    const objectPath = "requests/" + id + "." + extension;
-    const expiresAt = new Date(Date.now() + JOB_TTL_MS).toISOString();
-    const { error: insertError } = await admin.from("hte_download_jobs").insert({
-      id, track_id: track.id, object_path: objectPath, file_name: fileName, ip_hash: ipHash, status: "created", expires_at: expiresAt,
-    });
-    if (insertError) return reply({ error: "A temporary download could not be prepared. Please retry." }, 500);
-    const { data: upload, error: uploadError } = await admin.storage.from(BUCKET).createSignedUploadUrl(objectPath);
-    if (uploadError || !upload?.token) {
-      await admin.from("hte_download_jobs").delete().eq("id", id);
-      return reply({ error: "Secure temporary storage is unavailable. Please retry." }, 503);
-    }
-    return reply({ success: true, jobId: id, path: objectPath, token: upload.token, bucket: BUCKET, fileName });
+  const id = crypto.randomUUID();
+  const fileName = safeFileName(String(track.title || "HTE-audio")) + "-HTE." + extension;
+  const objectPath = "requests/" + id + "." + extension;
+  const expiresAt = new Date(Date.now() + JOB_TTL_MS).toISOString();
+  const { error: insertError } = await admin.from("hte_download_jobs").insert({
+    id, track_id: track.id, object_path: objectPath, file_name: fileName, ip_hash: ipHash, status: "created", expires_at: expiresAt,
+  });
+  if (insertError) return reply({ error: "A temporary download could not be prepared. Please retry." }, 500);
+
+  // Copy directly between private-managed buckets on the server. The visitor never uploads bytes.
+  const { error: copyError } = await admin.storage.from(source.bucket).copy(source.path, objectPath, { destinationBucket: BUCKET });
+  if (copyError) {
+    await admin.from("hte_download_jobs").delete().eq("id", id);
+    console.error("HTE temporary audio copy failed", copyError);
+    return reply({ error: "The authorised audio could not be staged in temporary Supabase storage." }, 502);
   }
 
-  if (body?.action === "complete") {
-    const jobId = String(body.jobId || "");
-    if (!/^[0-9a-f-]{36}$/i.test(jobId)) return reply({ error: "Invalid temporary download request." }, 400);
-    const job = await findJob(admin, jobId);
-    if (!job || job.status !== "created" || Date.parse(job.expires_at) <= Date.now()) {
-      return reply({ error: "The temporary upload expired. Prepare the download again." }, 410);
-    }
-    const parts = job.object_path.split("/");
-    const { data: files, error: listError } = await admin.storage.from(BUCKET).list("requests", { limit: 1000, search: jobId });
-    const file = (files || []).find((item: any) => item.name === parts[1]);
-    if (listError || !file) return reply({ error: "The temporary audio upload was not found. Please retry." }, 404);
-    const fileSize = Number(file.metadata?.size || 0);
-    const fileType = String(file.metadata?.mimetype || "").toLowerCase().split(";")[0];
-    if (!fileSize || fileSize > MAX_BYTES || (fileType && !extForMime(fileType))) {
-      await admin.storage.from(BUCKET).remove([job.object_path]);
-      await admin.from("hte_download_jobs").delete().eq("id", jobId);
-      return reply({ error: "The uploaded temporary file did not pass validation." }, 422);
-    }
-    const { data: signed, error: signError } = await admin.storage.from(BUCKET)
-      .createSignedUrl(job.object_path, SIGNED_URL_TTL_SECONDS, { download: job.file_name });
-    if (signError || !signed?.signedUrl) return reply({ error: "The temporary download link could not be created." }, 502);
-    const { error: updateError } = await admin.from("hte_download_jobs")
-      .update({ status: "uploaded" }).eq("id", jobId).eq("status", "created");
-    if (updateError) return reply({ error: "The temporary download could not be finalised." }, 500);
-    return reply({ success: true, downloadUrl: signed.signedUrl, fileName: job.file_name, expiresInSeconds: SIGNED_URL_TTL_SECONDS });
+  const { data: files, error: listError } = await admin.storage.from(BUCKET).list("requests", { limit: 1000, search: id });
+  const file = (files || []).find((item: any) => item.name === id + "." + extension);
+  const fileSize = Number(file?.metadata?.size || 0);
+  const fileType = String(file?.metadata?.mimetype || "").toLowerCase().split(";")[0];
+  if (listError || !file || !fileSize || fileSize > MAX_BYTES || (fileType && !extForMime(fileType))) {
+    await admin.storage.from(BUCKET).remove([objectPath]);
+    await admin.from("hte_download_jobs").delete().eq("id", id);
+    return reply({ error: "The copied audio did not pass file validation or exceeds the 100 MB limit." }, 422);
   }
 
-  return reply({ error: "Unknown download action." }, 400);
+  const { error: updateError } = await admin.from("hte_download_jobs")
+    .update({ status: "uploaded" }).eq("id", id).eq("status", "created");
+  if (updateError) {
+    await admin.storage.from(BUCKET).remove([objectPath]);
+    await admin.from("hte_download_jobs").delete().eq("id", id);
+    return reply({ error: "The temporary download could not be finalised." }, 500);
+  }
+  const { data: signed, error: signError } = await admin.storage.from(BUCKET)
+    .createSignedUrl(objectPath, SIGNED_URL_TTL_SECONDS, { download: fileName });
+  if (signError || !signed?.signedUrl) {
+    await admin.storage.from(BUCKET).remove([objectPath]);
+    await admin.from("hte_download_jobs").delete().eq("id", id);
+    return reply({ error: "The temporary download link could not be created." }, 502);
+  }
+  return reply({ success: true, downloadUrl: signed.signedUrl, fileName, expiresInSeconds: SIGNED_URL_TTL_SECONDS });
 });
