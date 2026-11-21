@@ -1,10 +1,16 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { createRemoteJWKSet, jwtVerify } from "npm:jose@6.1.0";
 
 const BUCKET = "hte-download-temp";
 const MAX_BYTES = 100 * 1024 * 1024;
 const JOB_TTL_MS = 60 * 60 * 1000;
 const OBJECT_TTL_MS = 30 * 60 * 1000;
 const SIGNED_URL_TTL_SECONDS = 180;
+const TRUSTED_GITHUB_REPOSITORY = "suwilanjisinkamba184-cmd/High-tech-entertainment-";
+const TRUSTED_CLEANUP_WORKFLOW = `${TRUSTED_GITHUB_REPOSITORY}/.github/workflows/cleanup-temporary-downloads.yml@refs/heads/main`;
+const GITHUB_OIDC_ISSUER = "https://token.actions.githubusercontent.com";
+const GITHUB_OIDC_AUDIENCE = "hte-download-cleanup";
+const GITHUB_OIDC_KEYS = createRemoteJWKSet(new URL("https://token.actions.githubusercontent.com/.well-known/jwks"));
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
@@ -53,6 +59,26 @@ async function sha256(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
 }
+async function isTrustedCleanupRequest(req: Request) {
+  const authorization = req.headers.get("authorization") || "";
+  const token = authorization.match(/^Bearer\\s+(.+)$/i)?.[1];
+  if (!token) return false;
+  try {
+    const { payload } = await jwtVerify(token, GITHUB_OIDC_KEYS, {
+      issuer: GITHUB_OIDC_ISSUER,
+      audience: GITHUB_OIDC_AUDIENCE,
+      clockTolerance: 5,
+      maxTokenAge: "5 minutes",
+    });
+    return payload.repository === TRUSTED_GITHUB_REPOSITORY
+      && payload.ref === "refs/heads/main"
+      && payload.workflow_ref === TRUSTED_CLEANUP_WORKFLOW
+      && ["schedule", "workflow_dispatch"].includes(String(payload.event_name));
+  } catch {
+    return false;
+  }
+}
+
 async function cleanupExpired(admin: SupabaseClient<any, "public", any>) {
   const cutoff = Date.now() - OBJECT_TTL_MS;
   const { data: objects, error } = await admin.storage.from(BUCKET).list("requests", {
@@ -81,9 +107,17 @@ Deno.serve(async (req) => {
 
   let body: any;
   try { body = await req.json(); } catch { return reply({ error: "Invalid request body." }, 400); }
-  try { await cleanupExpired(admin); } catch (error) { console.warn("HTE temp cleanup skipped", error); }
 
-  if (body?.action === "cleanup") return reply({ success: true, cleaned: true });
+  if (body?.action === "cleanup") {
+    if (!await isTrustedCleanupRequest(req)) return reply({ error: "Cleanup is restricted to the trusted HTE GitHub workflow." }, 401);
+    try {
+      await cleanupExpired(admin);
+      return reply({ success: true, cleaned: true });
+    } catch (error) {
+      console.error("HTE scheduled temporary cleanup failed", error);
+      return reply({ error: "Temporary download cleanup failed." }, 500);
+    }
+  }
   if (body?.action !== "prepare") return reply({ error: "Unknown download action." }, 400);
 
   const trackId = String(body.trackId || "");
@@ -103,13 +137,17 @@ Deno.serve(async (req) => {
   const extension = extForPath(source.path);
   if (!extension) return reply({ error: "This audio format is not supported for temporary delivery." }, 415);
 
-  const forwarded = req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const ipHash = await sha256(serviceKey + ":" + forwarded);
+  // Trust only Cloudflare's edge-provided client IP. X-Forwarded-For can be spoofed.
+  const clientIp = req.headers.get("cf-connecting-ip")?.trim() || "unknown";
+  const ipHash = await sha256(serviceKey + ":" + clientIp);
   const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const { count, error: rateError } = await admin.from("hte_download_jobs")
     .select("id", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("created_at", since);
   if (rateError) return reply({ error: "Download service is temporarily unavailable." }, 503);
   if ((count || 0) >= 20) return reply({ error: "Too many downloads from this connection. Please try again later." }, 429);
+
+  // Opportunistic cleanup runs only after a real, rights-cleared download request passes rate limiting.
+  try { await cleanupExpired(admin); } catch (error) { console.warn("HTE temp cleanup skipped", error); }
 
   const id = crypto.randomUUID();
   const fileName = safeFileName(String(track.title || "HTE-audio")) + "-HTE." + extension;
