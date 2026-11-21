@@ -97,6 +97,31 @@ fun MusicHomeScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(23.dp)
         ) {
+            item(key = "home_header_actions") {
+                Row(
+                    Modifier.fillMaxWidth().padding(bottom = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("HIGH-TECH ENTERTAINMENT", color = U26Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
+                        Text(
+                            profileName?.takeIf(String::isNotBlank)?.let { "Welcome, $it" } ?: "Your sound. Your universe.",
+                            color = U26Silver, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    IconButton(onClick = onVoice) {
+                        Icon(Icons.Outlined.GraphicEq, contentDescription = "Open HTE AI Voice Assistant", tint = U26Gold)
+                    }
+                    IconButton(onClick = onProfile) {
+                        Icon(Icons.Outlined.Person, contentDescription = "Open account", tint = U26Silver)
+                    }
+                    IconButton(onClick = onSettings) {
+                        Icon(Icons.Outlined.Settings, contentDescription = "Open settings", tint = U26Silver)
+                    }
+                }
+            }
+
             if (artists.isNotEmpty()) item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     U26SectionHeading("MEET THE ARTISTS", "DISCOVER MUSIC", onExplore)
