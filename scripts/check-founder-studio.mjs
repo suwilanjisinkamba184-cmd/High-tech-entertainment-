@@ -22,7 +22,7 @@ assert.ok(controller.includes("hte_admin_audit_log"), "Founder actions must use 
 assert.ok(styles.includes("@media(max-width:480px)"), "Mobile layout rules are required");
 assert.ok(migration.includes("enable row level security"), "New tables must enable RLS");
 assert.ok(migration.includes("append-only"), "Audit log must be append-only");
-assert.ok(migration.includes("least( coalesce"), "Analytics date range must be bounded");
+assert.ok(migration.includes("least(coalesce"), "Analytics date range must be bounded");
 assert.ok(!publish.includes("b268df9e-eff5-43b9-a38f-869b33add38b"), "Meta publisher must not hard-code founder identity");
 assert.ok(!check.includes("Access-Control-Allow-Origin\":\"*"), "Meta connection check must not use wildcard CORS");
 assert.ok(publish.includes("hte_is_admin") && check.includes("hte_is_admin"), "Both Meta functions must use role-based founder authorization");
