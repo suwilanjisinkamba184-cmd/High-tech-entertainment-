@@ -103,7 +103,7 @@ fun MemberCenter(
                 val mimeType = context.contentResolver.getType(uri).orEmpty()
                 val stream = context.contentResolver.openInputStream(uri)
                     ?: error("The selected image could not be opened. Choose another image.")
-                profile = MemberRepository().updateMyAvatar(stream, size, mimeType)
+                profile = stream.use { MemberRepository().updateMyAvatar(it, size, mimeType) }
                 statusMessage = "Profile photo updated."
             } catch (error: Exception) {
                 statusMessage = error.toHteUserMessage("Your profile photo could not be uploaded. Please retry.")
@@ -512,9 +512,9 @@ private fun MemberCard(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 private fun ProfileEditorDialog(profile: ProfileDto?, onDismiss: () -> Unit, onPickAvatar: () -> Unit, onSave: (String, String, String) -> Unit, isWorking: Boolean) {
-    var name by remember(profile) { mutableStateOf(profile?.displayName.orEmpty()) }
-    var bio by remember(profile) { mutableStateOf(profile?.bio.orEmpty()) }
-    var phone by remember(profile) { mutableStateOf(profile?.phone.orEmpty()) }
+    var name by remember(profile?.id) { mutableStateOf(profile?.displayName.orEmpty()) }
+    var bio by remember(profile?.id) { mutableStateOf(profile?.bio.orEmpty()) }
+    var phone by remember(profile?.id) { mutableStateOf(profile?.phone.orEmpty()) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit profile") },
