@@ -34,6 +34,16 @@ BEGIN
     RAISE EXCEPTION 'An excessive client table privilege remains';
   END IF;
 
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname = 'hte_contact_rate_limit'
+      AND p.proconfig @> ARRAY['search_path=""']
+  ) THEN
+    RAISE EXCEPTION 'Contact rate-limit SECURITY DEFINER search_path is not empty';
+  END IF;
+
   IF NOT has_schema_privilege('service_role', 'private', 'USAGE')
      OR NOT has_function_privilege('service_role', 'private.hte_current_role()', 'EXECUTE')
      OR NOT has_function_privilege('service_role', 'private.hte_has_role(text[])', 'EXECUTE') THEN
