@@ -1,0 +1,1 @@
+-- Consolidated into the reconstructed 20261027232300 baseline. The baseline contains the final initial admin-policy set; this marker preserves the live migration ledger version.
