@@ -57,6 +57,8 @@ class HteSplashSmokeTest {
                 .fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithText("Welcome back").assertExists()
+        composeRule.onNodeWithTag("member_center_list")
+            .performScrollToNode(hasText("Sign in"))
         composeRule.onNodeWithText("Sign in").assertExists()
         composeRule.onNodeWithTag("member_center_list")
             .performScrollToNode(hasText("Open Settings"))
