@@ -2,12 +2,14 @@ package com.hightechentertainment.app.data
 
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.exception.PostgrestRestException
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.storage.storage
 import io.github.jan.supabase.storage.UploadData
 import io.ktor.http.ContentType
 import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.writeFully
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -226,13 +228,25 @@ class MemberRepository {
                     // stale/default profile fields over that session's data.
                     try {
                         client.from("profiles").insert(AvatarProfileInsertDto(userId, path, updatedAt))
-                    } catch (insertError: Throwable) {
-                        client.from("profiles").update({
+                    } catch (insertError: CancellationException) {
+                        throw insertError
+                    } catch (insertError: Exception) {
+                        val isUniqueViolation =
+                            (insertError as? PostgrestRestException)?.code == "23505" ||
+                                insertError.message.orEmpty().contains("23505")
+                        if (!isUniqueViolation) throw insertError
+
+                        // A concurrent session may have inserted the profile after our
+                        // initial read. Retry only for the unique-key conflict and require
+                        // the returning update to prove that the row was actually changed.
+                        val updatedRows = client.from("profiles").update({
                             set("avatar_url", path)
                             set("updated_at", updatedAt)
                         }) {
+                            select()
                             filter { eq("id", userId) }
-                        }
+                        }.decodeList<ProfileDto>()
+                        if (updatedRows.isEmpty()) throw insertError
                     }
                 }
             } catch (error: Throwable) {
