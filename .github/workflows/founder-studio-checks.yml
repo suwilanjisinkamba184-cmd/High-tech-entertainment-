@@ -26,6 +26,6 @@ jobs:
       - name: Check browser controller syntax
         run: node --check assets/founder-command-centre.js
       - name: Check edge function types
-        run: deno check supabase/functions/meta-publish/index.ts supabase/functions/meta-connection-check/index.ts
+        run: deno check --node-modules-dir=auto supabase/functions/meta-publish/index.ts supabase/functions/meta-connection-check/index.ts
       - name: Check Founder Studio architecture invariants
         run: node scripts/check-founder-studio.mjs
