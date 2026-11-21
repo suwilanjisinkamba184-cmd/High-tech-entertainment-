@@ -16,7 +16,7 @@ jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: read
       security-events: write
@@ -24,7 +24,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [javascript-typescript, java-kotlin]
+        include:
+          - language: javascript-typescript
+            build-mode: none
+          - language: java-kotlin
+            build-mode: manual
     steps:
       - name: Check out source
         uses: actions/checkout@v7
@@ -33,7 +37,25 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
-          build-mode: autobuild
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Set up Java for Android analysis
+        if: matrix.language == 'java-kotlin'
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 9.6 for Android analysis
+        if: matrix.language == 'java-kotlin'
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Build Android sources for CodeQL
+        if: matrix.language == 'java-kotlin'
+        working-directory: hte-universe-native
+        run: gradle --no-daemon :app:assembleDebug
 
       - name: Analyze
         uses: github/codeql-action/analyze@v4
