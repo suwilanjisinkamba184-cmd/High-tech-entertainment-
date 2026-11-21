@@ -194,7 +194,7 @@ fun MemberCenter(
                 ) {
                     Icon(Icons.Outlined.Mic, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Open Voice Assistant")
+                    Text("Open HTE AI Voice Assistant")
                 }
             }
         }
