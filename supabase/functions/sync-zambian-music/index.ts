@@ -73,15 +73,20 @@ Deno.serve(async (req) => {
     }));
     const approved = channelResults.filter(Boolean) as {id:string;name:string;uploads:string}[];
     const playlistResults = await Promise.all(approved.map(async channel => {
-      const result = await youtube(youtubeKey, "playlistItems", {
-        part: "snippet,contentDetails", playlistId: channel.uploads, maxResults: "10",
-      });
-      return (result.items || []).map((item: any) => ({
-        id: item.contentDetails?.videoId,
-        channelId: channel.id,
-        channelName: channel.name,
-        publishedAt: item.snippet?.publishedAt || item.contentDetails?.videoPublishedAt || "",
-      })).filter((item: any) => item.id && Date.parse(item.publishedAt) >= cutoff);
+      try {
+        const result = await youtube(youtubeKey, "playlistItems", {
+          part: "snippet,contentDetails", playlistId: channel.uploads, maxResults: "10",
+        });
+        return (result.items || []).map((item: any) => ({
+          id: item.contentDetails?.videoId,
+          channelId: channel.id,
+          channelName: channel.name,
+          publishedAt: item.snippet?.publishedAt || item.contentDetails?.videoPublishedAt || "",
+        })).filter((item: any) => item.id && Date.parse(item.publishedAt) >= cutoff);
+      } catch (error) {
+        console.warn("Skipping unavailable YouTube uploads playlist", channel.name, channel.id, error);
+        return [];
+      }
     }));
     const candidates = playlistResults.flat();
     const uniqueIds = [...new Set(candidates.map((item: any) => item.id))];
