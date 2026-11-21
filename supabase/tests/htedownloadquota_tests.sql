@@ -51,6 +51,9 @@ BEGIN
     RAISE EXCEPTION 'Initial nonce reservation was rejected unexpectedly';
   END IF;
 
+  -- A downstream failure must not release the nonce and allow request replay.
+  UPDATE public.hte_download_jobs SET status = 'failed' WHERE id = request_id;
+
   BEGIN
     request_id := gen_random_uuid();
     PERFORM public.hte_create_download_job(
