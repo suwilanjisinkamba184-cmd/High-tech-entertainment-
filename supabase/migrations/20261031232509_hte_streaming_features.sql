@@ -79,5 +79,6 @@ CREATE POLICY "Users manage own listening history" ON public.listening_history F
 
 REVOKE ALL ON TABLE public.artist_follows, public.user_favorites, public.playlists, public.playlist_tracks, public.listening_history FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.artist_follows, public.user_favorites, public.playlists, public.listening_history TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.artist_follows, public.user_favorites, public.playlists, public.playlist_tracks, public.listening_history TO service_role;
 GRANT SELECT ON TABLE public.playlist_tracks TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.playlist_tracks TO authenticated;
