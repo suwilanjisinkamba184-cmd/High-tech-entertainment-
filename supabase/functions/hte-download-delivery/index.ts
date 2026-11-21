@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 const BUCKET = "hte-download-temp";
 const MAX_BYTES = 80 * 1024 * 1024;
@@ -52,7 +52,7 @@ function randomToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
-async function cleanupExpired(admin: ReturnType<typeof createClient>) {
+async function cleanupExpired(admin: SupabaseClient<any, "public", any>) {
   const cutoff = Date.now() - 30 * 60 * 1000;
   const { data: objects, error } = await admin.storage.from(BUCKET).list("requests", {
     limit: 1000, sortBy: { column: "created_at", order: "asc" },
