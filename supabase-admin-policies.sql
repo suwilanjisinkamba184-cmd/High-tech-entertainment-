@@ -24,16 +24,16 @@ on conflict (id) do update set public = true, file_size_limit = 104857600, allow
 
 drop policy if exists "Public can read HTE audio" on storage.objects;
 create policy "Public can read HTE audio" on storage.objects for select to anon, authenticated using (bucket_id = 'hte-audio');
-drop policy if exists "HTE admin can upload audio" on storage.objects;
-create policy "HTE admin can upload audio" on storage.objects
+drop policy if exists "HTE administrators upload audio" on storage.objects;
+create policy "HTE administrators upload audio" on storage.objects
 for insert to authenticated
 with check (
   bucket_id = 'hte-audio'
   and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
 );
 
-drop policy if exists "HTE admin can update audio" on storage.objects;
-create policy "HTE admin can update audio" on storage.objects
+drop policy if exists "HTE administrators update audio" on storage.objects;
+create policy "HTE administrators update audio" on storage.objects
 for update to authenticated
 using (
   bucket_id = 'hte-audio'
@@ -44,58 +44,58 @@ with check (
   and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
 );
 
-drop policy if exists "HTE admin can delete audio" on storage.objects;
-create policy "HTE admin can delete audio" on storage.objects
+drop policy if exists "HTE administrators delete audio" on storage.objects;
+create policy "HTE administrators delete audio" on storage.objects
 for delete to authenticated
 using (
   bucket_id = 'hte-audio'
   and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
 );
 
-drop policy if exists "HTE admin can insert tracks" on public.tracks;
-create policy "HTE admin can insert tracks" on public.tracks
+drop policy if exists "HTE administrators insert tracks" on public.tracks;
+create policy "HTE administrators insert tracks" on public.tracks
 for insert to authenticated
 with check ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
 
-drop policy if exists "HTE admin can update tracks" on public.tracks;
-create policy "HTE admin can update tracks" on public.tracks
+drop policy if exists "HTE administrators update tracks" on public.tracks;
+create policy "HTE administrators update tracks" on public.tracks
 for update to authenticated
 using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid)
 with check ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
 
-drop policy if exists "HTE admin can delete tracks" on public.tracks;
-create policy "HTE admin can delete tracks" on public.tracks
+drop policy if exists "HTE administrators delete tracks" on public.tracks;
+create policy "HTE administrators delete tracks" on public.tracks
 for delete to authenticated
 using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
 
 -- Admin writes for artists/releases are separate from public SELECT policies.
 drop policy if exists "HTE admin manages artists" on public.artists;
-drop policy if exists "HTE admin inserts artists" on public.artists;
-create policy "HTE admin inserts artists" on public.artists
+drop policy if exists "HTE administrators insert artists" on public.artists;
+create policy "HTE administrators insert artists" on public.artists
 for insert to authenticated
 with check ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
-drop policy if exists "HTE admin updates artists" on public.artists;
-create policy "HTE admin updates artists" on public.artists
+drop policy if exists "HTE administrators update artists" on public.artists;
+create policy "HTE administrators update artists" on public.artists
 for update to authenticated
 using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid)
 with check ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
-drop policy if exists "HTE admin deletes artists" on public.artists;
-create policy "HTE admin deletes artists" on public.artists
+drop policy if exists "HTE administrators delete artists" on public.artists;
+create policy "HTE administrators delete artists" on public.artists
 for delete to authenticated
 using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
 
 drop policy if exists "HTE admin manages releases" on public.releases;
-drop policy if exists "HTE admin inserts releases" on public.releases;
-create policy "HTE admin inserts releases" on public.releases
+drop policy if exists "HTE administrators insert releases" on public.releases;
+create policy "HTE administrators insert releases" on public.releases
 for insert to authenticated
 with check ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
-drop policy if exists "HTE admin updates releases" on public.releases;
-create policy "HTE admin updates releases" on public.releases
+drop policy if exists "HTE administrators update releases" on public.releases;
+create policy "HTE administrators update releases" on public.releases
 for update to authenticated
 using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid)
 with check ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
-drop policy if exists "HTE admin deletes releases" on public.releases;
-create policy "HTE admin deletes releases" on public.releases
+drop policy if exists "HTE administrators delete releases" on public.releases;
+create policy "HTE administrators delete releases" on public.releases
 for delete to authenticated
 using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
 
@@ -160,16 +160,16 @@ create policy "Public can read HTE artwork" on storage.objects
 for select to anon, authenticated
 using (bucket_id = 'hte-artwork');
 
-drop policy if exists "HTE admin can upload artwork" on storage.objects;
-create policy "HTE admin can upload artwork" on storage.objects
+drop policy if exists "HTE administrators upload artwork" on storage.objects;
+create policy "HTE administrators upload artwork" on storage.objects
 for insert to authenticated
 with check (
   bucket_id = 'hte-artwork'
   and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
 );
 
-drop policy if exists "HTE admin can update artwork" on storage.objects;
-create policy "HTE admin can update artwork" on storage.objects
+drop policy if exists "HTE administrators update artwork" on storage.objects;
+create policy "HTE administrators update artwork" on storage.objects
 for update to authenticated
 using (
   bucket_id = 'hte-artwork'
@@ -180,8 +180,8 @@ with check (
   and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
 );
 
-drop policy if exists "HTE admin can delete artwork" on storage.objects;
-create policy "HTE admin can delete artwork" on storage.objects
+drop policy if exists "HTE administrators delete artwork" on storage.objects;
+create policy "HTE administrators delete artwork" on storage.objects
 for delete to authenticated
 using (
   bucket_id = 'hte-artwork'
