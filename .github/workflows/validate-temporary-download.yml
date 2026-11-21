@@ -19,7 +19,7 @@ on:
       - 'website/src/components/PublicCatalogue.tsx'
       - 'supabase/config.toml'
       - '.github/workflows/validate-temporary-download.yml'
-  push:  push:
+  push:
     branches: [main]
     paths:
       - 'supabase/functions/hte-download-delivery/**'
