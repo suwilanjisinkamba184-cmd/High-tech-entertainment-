@@ -206,21 +206,27 @@ class MemberRepository {
         }
         val path = "$userId/${UUID.randomUUID()}.$extension"
         val channel = ByteChannel(autoFlush = true)
-        val producer = launch(Dispatchers.IO) {
-            try {
-                input.use { stream ->
-                    val buffer = ByteArray(32 * 1024)
-                    while (true) {
-                        val count = stream.read(buffer)
-                        if (count < 0) break
-                        channel.writeFully(buffer, 0, count)
+        val producer = try {
+            launch(Dispatchers.IO) {
+                try {
+                    input.use { stream ->
+                        val buffer = ByteArray(32 * 1024)
+                        while (true) {
+                            val count = stream.read(buffer)
+                            if (count < 0) break
+                            channel.writeFully(buffer, 0, count)
+                        }
                     }
+                    channel.close()
+                } catch (error: Throwable) {
+                    channel.close()
+                    throw error
                 }
-                channel.close()
-            } catch (error: Throwable) {
-                channel.close()
-                throw error
             }
+        } catch (error: Throwable) {
+            runCatching { input.close() }
+            channel.close()
+            throw error
         }
         try {
             client.storage.from("hte-avatars").upload(path, UploadData(channel, size)) {
