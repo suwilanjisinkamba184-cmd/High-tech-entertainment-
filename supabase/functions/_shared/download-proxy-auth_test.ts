@@ -29,7 +29,7 @@ Deno.test("accepts only fresh numeric timestamps and UUID nonces", () => {
 
 Deno.test("verifies the signed method, timestamp, nonce, IP and exact body", async () => {
   const secret = "test-only-download-proxy-secret";
-  const timestamp = "1795291000";
+  const timestamp = String(Math.floor(Date.now() / 1000));
   const nonce = "3f8d1a8b-6a52-4b87-8d6a-2a9bdf123456";
   const ip = "203.0.113.7";
   const body = '{"action":"prepare","trackId":"00000000-0000-4000-8000-000000000001"}';
