@@ -4,6 +4,15 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.storage.storage
+import io.github.jan.supabase.storage.UploadData
+import io.ktor.http.ContentType
+import io.ktor.utils.io.ByteChannel
+import io.ktor.utils.io.writeFully
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import java.io.InputStream
+import java.util.UUID
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
@@ -153,6 +162,64 @@ class MemberRepository {
                 avatarUrl = googleAvatar.orEmpty()
             )
             else -> null
+        }
+    }
+
+    suspend fun updateMyAvatar(input: InputStream, size: Long, mimeType: String): ProfileDto? = coroutineScope {
+        val userId = requireUserId()
+        val normalizedMime = mimeType.substringBefore(';').trim().lowercase()
+        require(size in 1L..(5L * 1024L * 1024L)) { "Profile photos must be 5 MB or smaller." }
+        val extension = when (normalizedMime) {
+            "image/jpeg" -> "jpg"
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            else -> throw IllegalArgumentException("Choose a JPG, PNG or WebP profile photo.")
+        }
+        val existing = getMyProfile()
+        val path = "$userId/${UUID.randomUUID()}.$extension"
+        val channel = ByteChannel(autoFlush = true)
+        val producer = launch(Dispatchers.IO) {
+            try {
+                input.use { stream ->
+                    val buffer = ByteArray(32 * 1024)
+                    while (true) {
+                        val count = stream.read(buffer)
+                        if (count < 0) break
+                        channel.writeFully(buffer, 0, count)
+                    }
+                }
+                channel.close()
+            } catch (error: Throwable) {
+                channel.close()
+                throw error
+            }
+        }
+        try {
+            client.storage.from("hte-avatars").upload(path, UploadData(channel, size)) {
+                contentType = ContentType.parse(normalizedMime)
+                upsert = false
+            }
+            producer.join()
+            try {
+                client.from("profiles").upsert(
+                    ProfileDto(
+                        id = userId,
+                        displayName = existing?.displayName.orEmpty(),
+                        bio = existing?.bio.orEmpty(),
+                        phone = existing?.phone.orEmpty(),
+                        avatarUrl = path,
+                        updatedAt = java.time.Instant.now().toString()
+                    )
+                )
+            } catch (error: Throwable) {
+                runCatching { client.storage.from("hte-avatars").delete(path) }
+                throw error
+            }
+            getMyProfile()
+        } catch (error: Throwable) {
+            producer.cancel()
+            channel.close()
+            throw error
         }
     }
 

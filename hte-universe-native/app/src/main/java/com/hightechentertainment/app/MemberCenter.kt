@@ -1,6 +1,8 @@
 package com.hightechentertainment.app
 
 import androidx.compose.foundation.layout.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.StrokeCap
@@ -92,6 +94,24 @@ fun MemberCenter(
     var artistVideoSuccess by remember { mutableStateOf(false) }
     var isWorking by remember { mutableStateOf(false) }
     val auth = remember(configured) { if (configured) runCatching { SupabaseClientProvider.client.auth }.getOrNull() else null }
+    val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) scope.launch {
+            isWorking = true
+            try {
+                val size = context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1L
+                require(size in 1L..(5L * 1024L * 1024L)) { "Choose an image file no larger than 5 MB." }
+                val mimeType = context.contentResolver.getType(uri).orEmpty()
+                val stream = context.contentResolver.openInputStream(uri)
+                    ?: error("The selected image could not be opened. Choose another image.")
+                profile = MemberRepository().updateMyAvatar(stream, size, mimeType)
+                statusMessage = "Profile photo updated."
+            } catch (error: Exception) {
+                statusMessage = error.toHteUserMessage("Your profile photo could not be uploaded. Please retry.")
+            } finally {
+                isWorking = false
+            }
+        }
+    }
 
     LaunchedEffect(auth) {
         if (auth != null) {
@@ -413,7 +433,7 @@ fun MemberCenter(
     }
 
     if (showProfileEditor && auth != null) {
-        ProfileEditorDialog(profile = profile, onDismiss = { showProfileEditor = false }, onSave = { name, bio, phone ->
+        ProfileEditorDialog(profile = profile, onDismiss = { showProfileEditor = false }, onPickAvatar = { avatarPicker.launch("image/*") }, onSave = { name, bio, phone ->
             scope.launch {
                 isWorking = true
                 try {
@@ -491,7 +511,7 @@ private fun MemberCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun ProfileEditorDialog(profile: ProfileDto?, onDismiss: () -> Unit, onSave: (String, String, String) -> Unit, isWorking: Boolean) {
+private fun ProfileEditorDialog(profile: ProfileDto?, onDismiss: () -> Unit, onPickAvatar: () -> Unit, onSave: (String, String, String) -> Unit, isWorking: Boolean) {
     var name by remember(profile) { mutableStateOf(profile?.displayName.orEmpty()) }
     var bio by remember(profile) { mutableStateOf(profile?.bio.orEmpty()) }
     var phone by remember(profile) { mutableStateOf(profile?.phone.orEmpty()) }
@@ -500,6 +520,8 @@ private fun ProfileEditorDialog(profile: ProfileDto?, onDismiss: () -> Unit, onS
         title = { Text("Edit profile") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onPickAvatar, enabled = !isWorking) { Text("Change profile photo") }
+                Text("JPG, PNG or WebP · maximum 5 MB", color = MemberMuted, fontSize = 11.sp)
                 OutlinedTextField(name, { name = it }, label = { Text("Display name") }, singleLine = true)
                 OutlinedTextField(phone, { phone = it }, label = { Text("Phone") }, singleLine = true)
                 OutlinedTextField(bio, { bio = it }, label = { Text("Bio") }, minLines = 3)

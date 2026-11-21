@@ -56,7 +56,7 @@ Only approved credentials/configuration may be migrated from the previous projec
 - Supabase client/auth/catalogue data layer; SDK 37 toolchain aligned with AGP 9.3.1, Gradle 9.6.0 and Kotlin 2.4.21.
 - Media3 1.11.1 playback, HLS and DASH libraries included as the native media foundation.
 - CI uses current Node 24 GitHub Actions releases and verifies the original production signing certificate.
-- Playback service and UI, final startup narration, real-device acceptance, offline downloads, Founder Studio and full screen-by-screen UI still require implementation and testing.
+- The source tree now includes the Media3 playback service and UI, 15-second branded splash, offline download manager, Founder Studio, member account/profile flows and native video playback. These paths still require complete end-to-end and physical-device acceptance; CI smoke tests are not a substitute for device testing.
 
 
 ## Native release and update strategy

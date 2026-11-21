@@ -19,11 +19,13 @@ function reply(body: unknown, status = 200, origin = "") {
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin") || "";
   if (req.method === "OPTIONS") {
-    if (!allowedOrigins.has(origin)) return new Response("Origin not allowed.", { status: 403, headers: cors });
-    return new Response("ok", { headers: { ...cors, "Access-Control-Allow-Origin": origin } });
+    if (origin && !allowedOrigins.has(origin)) return new Response("Origin not allowed.", { status: 403, headers: cors });
+    return new Response("ok", { headers: { ...cors, ...(origin ? { "Access-Control-Allow-Origin": origin } : {}) } });
   }
   if (req.method !== "POST") return reply({ error: "Method not allowed." }, 405, origin);
-  if (!allowedOrigins.has(origin)) return reply({ error: "Origin not allowed." }, 403, origin);
+  // Browser calls must originate from the official site. Native Android requests do not
+  // send a browser Origin header; their identity is enforced by JWT validation below.
+  if (origin && !allowedOrigins.has(origin)) return reply({ error: "Origin not allowed." }, 403, origin);
 
   const authHeader = req.headers.get("Authorization") || "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
@@ -55,9 +57,9 @@ Deno.serve(async (req) => {
   if (authError || !auth.user) {
     return reply({ error: "A valid signed-in account is required." }, 401, origin);
   }
-  const { data: isAdmin, error: roleError } = await db.rpc("hte_is_admin");
-  if (roleError || isAdmin !== true) {
-    return reply({ error: "An active HTE administrator role is required." }, 403, origin);
+  const { data: role, error: roleError } = await db.rpc("hte_my_role");
+  if (roleError || String(role || "").toLowerCase() !== "owner") {
+    return reply({ error: "The verified HTE founder account is required." }, 403, origin);
   }
 
   let body: Record<string, unknown>;

@@ -87,7 +87,8 @@ private data class VideoInsertDto(
     val artist: String? = null,
     @SerialName("video_url") val videoUrl: String,
     @SerialName("thumbnail_url") val thumbnailUrl: String? = null,
-    @SerialName("is_published") val isPublished: Boolean = false
+    @SerialName("is_published") val isPublished: Boolean = false,
+    @SerialName("download_url") val downloadUrl: String? = null
 )
 
 @Serializable
@@ -306,7 +307,7 @@ class FounderStudioRepository {
         val videoUrl = uploadStream("hte-videos", path, input, size, mimeType)
         try {
             client.from("videos").insert(
-                VideoInsertDto(title.trim(), description.trim().takeIf { it.isNotEmpty() }, artist.trim().takeIf { it.isNotEmpty() }, videoUrl, thumbnailUrl, false)
+                VideoInsertDto(title.trim(), description.trim().takeIf { it.isNotEmpty() }, artist.trim().takeIf { it.isNotEmpty() }, videoUrl, thumbnailUrl, false, videoUrl)
             )
         } catch (error: Throwable) {
             runCatching { client.storage.from("hte-videos").delete(path) }

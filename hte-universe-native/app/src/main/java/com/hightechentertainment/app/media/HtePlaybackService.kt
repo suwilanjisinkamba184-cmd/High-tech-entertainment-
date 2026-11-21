@@ -35,6 +35,9 @@ class HtePlaybackService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, audioPlayer).build()
     }
 
+    // Media3 grants playback commands to trusted controllers (System UI, Bluetooth and Auto)
+    // while untrusted controllers receive read-only access. Keep this default policy so
+    // external media keys continue working without granting arbitrary playback commands.
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
 
     override fun onDestroy() {
