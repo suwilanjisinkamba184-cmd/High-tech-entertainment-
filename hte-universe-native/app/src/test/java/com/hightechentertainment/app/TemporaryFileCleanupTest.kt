@@ -9,6 +9,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TemporaryFileCleanupTest {
@@ -27,7 +28,7 @@ class TemporaryFileCleanupTest {
         }
 
         val staged = created.await()
-        assertFalse("Test precondition: staged file should exist", !staged.exists())
+        assertTrue("Test precondition: staged file should exist", staged.exists())
         job.cancelAndJoin()
 
         assertFalse("Cancelled staging must delete its temporary file", staged.exists())

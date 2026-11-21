@@ -146,6 +146,8 @@ fun MemberCenter(
                 } finally {
                     stagedFile.delete()
                 }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (error: Exception) {
                 statusMessage = error.toHteUserMessage("Your profile photo could not be uploaded. Please retry.")
             } finally {

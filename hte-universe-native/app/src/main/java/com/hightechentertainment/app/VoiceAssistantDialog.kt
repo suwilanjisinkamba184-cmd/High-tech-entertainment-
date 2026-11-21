@@ -83,7 +83,7 @@ internal fun voiceFailureMessage(details: String): String {
             "Your HTE session may have expired. Sign in again, then reopen HTE AI Voice Assistant."
         listOf("timeout", "network", "connection", "offline", "unreachable").any(normalized::contains) ->
             "HTE AI Voice Assistant could not connect. Check your internet connection and try again."
-        else -> "Voice Companion is temporarily unavailable. Please try again."
+        else -> "HTE AI Voice Assistant is temporarily unavailable. Please try again."
     }
 }
 
@@ -201,9 +201,9 @@ fun VoiceAssistantDialog(
                             Text("HTE AI", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             Text(if (session == null) "HTE AI · standby" else if (muted) "Microphone muted" else "Connected · say Hey HTE", color = VoiceMuted, fontSize = 9.sp)
                         }
-                        if (session != null) IconButton(onClick = { scope.launch { session?.toggleMute() } }) { Icon(if (muted) Icons.Outlined.MicOff else Icons.Outlined.Mic, if (muted) "Unmute Voice Companion" else "Mute Voice Companion", tint = if (muted) VoiceMuted else VoiceGold) }
-                        IconButton(onClick = { minimized = false }) { Icon(Icons.Outlined.ExpandLess, "Expand Voice Companion", tint = VoiceGold) }
-                        IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "End Voice Companion", tint = VoiceMuted) }
+                        if (session != null) IconButton(onClick = { scope.launch { session?.toggleMute() } }) { Icon(if (muted) Icons.Outlined.MicOff else Icons.Outlined.Mic, if (muted) "Unmute HTE AI Voice Assistant" else "Mute HTE AI Voice Assistant", tint = if (muted) VoiceMuted else VoiceGold) }
+                        IconButton(onClick = { minimized = false }) { Icon(Icons.Outlined.ExpandLess, "Expand HTE AI Voice Assistant", tint = VoiceGold) }
+                        IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "End HTE AI Voice Assistant", tint = VoiceMuted) }
                     }
                 }
             } else {
