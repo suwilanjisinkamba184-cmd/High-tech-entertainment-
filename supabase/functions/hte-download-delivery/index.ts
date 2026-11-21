@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 const BUCKET = "hte-download-temp";
-const MAX_BYTES = 80 * 1024 * 1024;
+const MAX_BYTES = 100 * 1024 * 1024;
 const JOB_TTL_MS = 60 * 60 * 1000;
 const OBJECT_TTL_MS = 30 * 60 * 1000;
 const SIGNED_URL_TTL_SECONDS = 180;
