@@ -68,15 +68,15 @@ Do not reset or replay the production database. The production project already r
 | `20261121161222` | `hte_download_jobs_track_idx_and_contact_select_policy_20261121` | `supabase/migrations/20261121161222_hte_download_jobs_track_idx_and_contact_policy_20261121.sql` | Copied from supplemental SQL |
 | `20261121162206` | `hte_download_jobs_service_role_policy_20261121` | `supabase/migrations/20261121162206_hte_download_jobs_service_role_policy_20261121.sql` | Copied from supplemental SQL |
 
-## Additional unapplied source migrations
+## Additional source files not in the live 53-version ledger
 
-- `supabase/migrations/20261109090000_hte_ai_marketing_agent.sql`
-- `supabase/migrations/20261109093000_hte_marketing_created_by_idx.sql`
-- `supabase/migrations/20261120103000_shared_video_catalogue_sources.sql`
-- `supabase/migrations/20261120_member_booking_history.sql`
-- `supabase/migrations/20261121140000_backfill_native_video_download_urls.sql`
-- `supabase/migrations/20261121170000_hte_atomic_download_quota.sql`
-- `supabase/migrations/20261121173000_hte_revoke_excess_client_table_privileges.sql`
+- `20261109090000_hte_ai_marketing_agent.sql` and `20261109093000_hte_marketing_created_by_idx.sql` are deprecated no-op markers. Their DDL is represented by the exact live-version files `20261108230111` and `20261108230316`.
+- The following five migrations are pending and must be validated before production application:
+  - `supabase/migrations/20261120103000_shared_video_catalogue_sources.sql`
+  - `supabase/migrations/20261120_member_booking_history.sql`
+  - `supabase/migrations/20261121140000_backfill_native_video_download_urls.sql`
+  - `supabase/migrations/20261121170000_hte_atomic_download_quota.sql`
+  - `supabase/migrations/20261121173000_hte_revoke_excess_client_table_privileges.sql`
 
 ## Required validation before sign-off
 
