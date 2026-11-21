@@ -129,7 +129,7 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
           script: |
-            set -euo pipefail
+            set -eu
             cd hte-universe-native
             bash ../.github/scripts/wait-android-services.sh
             if gradle --no-daemon :app:connectedDebugAndroidTest --console=plain; then
