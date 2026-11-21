@@ -452,7 +452,6 @@ export default function PublicCatalogue() {
         const isStorageAudio = !!source && new URL(source).pathname.includes('/storage/v1/object/');
         const isAudioFile = platform === 'direct' && !!source && (isStorageAudio || /\.(mp3|mp4|m4a|wav|aac|ogg|flac|opus|webm)$/i.test(new URL(source).pathname));
         const canDownload = platform === 'direct' && isStorageAudio && track.download_allowed === true && track.rights_status === 'owned_or_licensed';
-        const brandedMaster = '';
         const downloadPage = (location.pathname.startsWith('/High-tech-entertainment-/') ? '/High-tech-entertainment-/' : '/') + 'download/?track=' + encodeURIComponent(track.id);
         const downloadUrl = canDownload ? downloadPage : '';
         const saved = savedIds.includes(track.id);
