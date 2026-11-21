@@ -31,6 +31,11 @@ concurrency:
 
 jobs:
   android-build:
+    name: Android validation (API ${{ matrix.api-level }})
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [34, 35]
     runs-on: ubuntu-latest
     timeout-minutes: 35
     defaults:
@@ -126,7 +131,7 @@ jobs:
       - name: Run Android instrumentation tests on API 35 emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
-          api-level: 35
+          api-level: ${{ matrix.api-level }}
           target: google_apis
           arch: x86_64
           disable-animations: true
