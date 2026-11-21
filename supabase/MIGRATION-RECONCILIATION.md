@@ -85,7 +85,7 @@ Do not reset or replay the production database. The production project already r
 1. Create a clean temporary Supabase branch/database.
 2. Apply all 62 formal migration files in numeric-version order, including the two deprecated no-op markers and the recovered Founder policy migration.
 3. Compare tables, columns, constraints, indexes, functions, triggers, policies, grants, storage buckets and realtime publication against the live project.
-4. Run the SQL assertions in `supabase/tests/htesecurity_privilege_tests.sql`.
+4. Run the SQL assertions in `supabase/tests/htesecurity_privilege_tests.sql` and `supabase/tests/htedownloadquota_tests.sql`.
 5. Verify all seven pending migrations on the temporary branch before applying any to production.
 
 The inventory must not be treated as proof that the consolidated/reconstructed SQL is identical to the original manual migration statements.
