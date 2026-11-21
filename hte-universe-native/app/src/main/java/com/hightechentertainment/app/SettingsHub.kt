@@ -227,10 +227,23 @@ fun HteSettingsScreen(
                         eqBands = values; settingsStore.setEqualizerBands(values)
                         HteAudioEffects.apply(HtePlaybackService.activeAudioSessionId, eqEnabled, values)
                     }
-                    SettingsActionRow(
-                        if (showCustomEqualizer) "Hide custom equalizer bands" else "Custom equalizer bands",
-                        if (showCustomEqualizer) "Close the advanced 10-band studio curve." else "Open advanced frequency controls; sound presets remain available."
-                    ) { showCustomEqualizer = !showCustomEqualizer }
+                    TextButton(
+                        onClick = { showCustomEqualizer = !showCustomEqualizer },
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 9.dp)
+                    ) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(if (showCustomEqualizer) "Hide custom equalizer bands" else "Custom equalizer bands", color = SettingsSilver, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                Text(if (showCustomEqualizer) "Close the advanced 10-band studio curve." else "Open advanced frequency controls; sound presets remain available.", color = SettingsMuted, fontSize = 11.sp)
+                            }
+                            Icon(
+                                if (showCustomEqualizer) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                                contentDescription = if (showCustomEqualizer) "Collapse custom equalizer bands" else "Expand custom equalizer bands",
+                                tint = SettingsGold
+                            )
+                        }
+                    }
                     if (showCustomEqualizer) {
                         val bandLabels = listOf("31 Hz", "62 Hz", "125 Hz", "250 Hz", "500 Hz", "1 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz")
                         bandLabels.forEachIndexed { index, label ->
