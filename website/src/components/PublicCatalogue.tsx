@@ -449,7 +449,7 @@ export default function PublicCatalogue() {
         const isYoutube = platform === 'youtube' && !!externalSource;
         const placeholderTitle = !!spotify && /^spotify track(?:\s+[a-z0-9]{22})?$/i.test(track.title.trim());
         const placeholderArtist = !!spotify && (!track.artist?.trim() || /^(artist details pending|unknown artist|tba|to be announced)$/i.test(track.artist.trim()));
-        const isStorageAudio = !!source && new URL(source).pathname.includes('/storage/v1/object/');
+        const isStorageAudio = !!safeStorageDownload(source,['hte-audio','ht storage']);
         const isAudioFile = platform === 'direct' && !!source && (isStorageAudio || /\.(mp3|mp4|m4a|wav|aac|ogg|flac|opus|webm)$/i.test(new URL(source).pathname));
         const canDownload = platform === 'direct' && isStorageAudio && track.download_allowed === true && track.rights_status === 'owned_or_licensed';
         const downloadPage = (location.pathname.startsWith('/High-tech-entertainment-/') ? '/High-tech-entertainment-/' : '/') + 'download/?track=' + encodeURIComponent(track.id);
