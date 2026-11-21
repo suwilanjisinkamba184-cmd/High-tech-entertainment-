@@ -68,7 +68,8 @@ internal fun voiceFailureMessage(details: String): String {
     return when {
         listOf("timeout", "network", "connection", "offline", "unreachable").any(normalized::contains) ->
             "HTE AI Voice Assistant could not connect. Check your internet connection and try again."
-        listOf("convai_write", "missing permission", "forbidden", "403", "credentials", "api key", "not configured", "conversation token").any(normalized::contains) ->
+        listOf("convai_write", "missing permission", "forbidden", "credentials", "api key", "not configured", "conversation token").any(normalized::contains) ||
+            Regex("""(?<![A-Za-z0-9])403(?![A-Za-z0-9])""").containsMatchIn(details) ->
             "HTE AI Voice Assistant was rejected by the voice provider. The project owner needs to check the agent permissions and server-side API credentials."
         listOf("sign in", "session expired", "401").any(normalized::contains) ->
             "Your HTE session may have expired. Sign in again, then reopen HTE AI Voice Assistant."
@@ -196,7 +197,7 @@ fun VoiceAssistantDialog(
                     }
                 }
             } else {
-                Surface(Modifier.align(Alignment.BottomCenter).padding(bottom = if (maxWidth < 720.dp) 84.dp else 16.dp).fillMaxWidth(.96f).widthIn(max = 420.dp).heightIn(max = maxHeight * .48f), color = com.hightechentertainment.app.ui.design.HteColors.Obsidian, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 18.dp, bottomEnd = 18.dp), shadowElevation = 20.dp) {
+                Surface(Modifier.align(Alignment.BottomCenter).padding(bottom = if (maxWidth < 720.dp) 84.dp else 16.dp).widthIn(max = 420.dp).fillMaxWidth(.96f).heightIn(max = maxHeight * .48f), color = com.hightechentertainment.app.ui.design.HteColors.Obsidian, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 18.dp, bottomEnd = 18.dp), shadowElevation = 20.dp) {
                     Column(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 9.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
