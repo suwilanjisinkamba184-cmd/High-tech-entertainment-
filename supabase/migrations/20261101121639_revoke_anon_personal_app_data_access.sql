@@ -17,9 +17,6 @@ CREATE TABLE IF NOT EXISTS private.user_roles (
 );
 CREATE INDEX IF NOT EXISTS user_roles_created_by_idx ON private.user_roles (created_by);
 ALTER TABLE private.user_roles ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Users read own ad impressions" ON public.ad_impressions;
-CREATE POLICY "Users and admins read ad impressions" ON public.ad_impressions FOR SELECT TO authenticated
-  USING ((user_id = (SELECT auth.uid())) OR private.hte_has_role(ARRAY['owner','admin']));
 DROP POLICY IF EXISTS "Deny all client access to HTE role assignments" ON private.user_roles;
 CREATE POLICY "Deny all client access to HTE role assignments"
   ON private.user_roles FOR ALL TO anon, authenticated USING (false) WITH CHECK (false);
@@ -62,6 +59,10 @@ REVOKE ALL ON FUNCTION public.hte_is_admin() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.is_hte_admin() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION private.hte_current_role() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION private.hte_has_role(text[]) TO anon, authenticated, service_role;
+
+DROP POLICY IF EXISTS "Users read own ad impressions" ON public.ad_impressions;
+CREATE POLICY "Users and admins read ad impressions" ON public.ad_impressions FOR SELECT TO authenticated
+  USING ((user_id = (SELECT auth.uid())) OR private.hte_has_role(ARRAY['owner','admin']));
 GRANT EXECUTE ON FUNCTION public.hte_my_role() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.hte_is_admin() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.is_hte_admin() TO authenticated, service_role;
