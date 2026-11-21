@@ -50,10 +50,15 @@ Deno.serve(async (req) => {
 
   try {
     const channelResults = await Promise.all(channels.map(async (handle: string) => {
-      const resolved = await youtube(youtubeKey, "channels", { part: "snippet,contentDetails", forHandle: handle.replace(/^@/, "") });
-      const channel = resolved.items?.[0];
-      if (!channel?.id || !channel.contentDetails?.relatedPlaylists?.uploads) return null;
-      return { id: channel.id, name: channel.snippet?.title || handle, uploads: channel.contentDetails.relatedPlaylists.uploads };
+      try {
+        const resolved = await youtube(youtubeKey, "channels", { part: "snippet,contentDetails", forHandle: handle.replace(/^@/, "") });
+        const channel = resolved.items?.[0];
+        if (!channel?.id || !channel.contentDetails?.relatedPlaylists?.uploads) return null;
+        return { id: channel.id, name: channel.snippet?.title || handle, uploads: channel.contentDetails.relatedPlaylists.uploads };
+      } catch (error) {
+        console.warn("Skipping unresolved YouTube channel", handle, error);
+        return null;
+      }
     }));
     const approved = channelResults.filter(Boolean) as {id:string;name:string;uploads:string}[];
     const playlistResults = await Promise.all(approved.map(async channel => {
