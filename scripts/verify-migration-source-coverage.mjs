@@ -73,10 +73,10 @@ const createdAt = new Map();
 const sqlByFile = new Map();
 for (const file of orderedFiles) {
   const sql = readFileSync(`supabase/migrations/${file}`, "utf8")
-    .replace(/--[^\\n]*/g, "")
-    .replace(/\\/\\*[\\s\\S]*?\\*\\//g, "");
+    .replace(/--[^\n]*/g, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
   sqlByFile.set(file, sql);
-  for (const match of sql.matchAll(/create\\s+table\\s+(?:if\\s+not\\s+exists\\s+)?((?:public|private)\\.[a-z_][a-z0-9_]*)/ig)) {
+  for (const match of sql.matchAll(/create\s+table\s+(?:if\s+not\s+exists\s+)?((?:public|private)\.[a-z_][a-z0-9_]*)/ig)) {
     const table = match[1].toLowerCase();
     if (!createdAt.has(table)) createdAt.set(table, { file, index: match.index });
   }
@@ -85,14 +85,14 @@ for (const file of orderedFiles) {
 const sqlErrors = [];
 for (const file of orderedFiles) {
   const sql = sqlByFile.get(file);
-  const dollarTags = sql.match(/\\$[A-Za-z_][A-Za-z0-9_]*\\$|\\$\\$/g) || [];
+  const dollarTags = sql.match(/\$[A-Za-z_][A-Za-z0-9_]*\$|\$\$/g) || [];
   const tagCounts = new Map();
   for (const tag of dollarTags) tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
   for (const [tag, count] of tagCounts) {
     if (count % 2 !== 0) sqlErrors.push({ file, issue: `Unbalanced dollar quote ${tag} (count ${count})` });
   }
 
-  const referencePattern = /\\b(?:alter\\s+table|on|from|join|into|update|delete\\s+from)\\s+(public|private)\\.([a-z_][a-z0-9_]*)/ig;
+  const referencePattern = /\b(?:alter\s+table|on|from|join|into|update|delete\s+from)\s+(public|private)\.([a-z_][a-z0-9_]*)/ig;
   for (const match of sql.matchAll(referencePattern)) {
     const table = `${match[1].toLowerCase()}.${match[2].toLowerCase()}`;
     const creation = createdAt.get(table);
