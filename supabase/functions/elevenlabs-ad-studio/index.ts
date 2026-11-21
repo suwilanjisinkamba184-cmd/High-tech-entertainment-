@@ -47,6 +47,10 @@ Deno.serve(async (req) => {
     console.error("AI Ad Studio missing runtime configuration:", missingConfig.join(", "));
     return reply({ error: "AI Ad Studio server configuration is incomplete.", missing: missingConfig }, 503, origin);
   }
+  // Keep TypeScript's control-flow analysis aligned with the runtime configuration guard.
+  if (!supabaseUrl || !anonKey || !elevenKey) {
+    return reply({ error: "AI Ad Studio server configuration is incomplete.", missing: missingConfig }, 503, origin);
+  }
   if (!token) return reply({ error: "Sign in as the founder first." }, 401, origin);
 
   const db = createClient(supabaseUrl, anonKey, {
