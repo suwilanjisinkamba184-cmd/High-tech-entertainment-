@@ -34,6 +34,12 @@ BEGIN
     RAISE EXCEPTION 'An excessive client table privilege remains';
   END IF;
 
+  IF NOT has_schema_privilege('service_role', 'private', 'USAGE')
+     OR NOT has_function_privilege('service_role', 'private.hte_current_role()', 'EXECUTE')
+     OR NOT has_function_privilege('service_role', 'private.hte_has_role(text[])', 'EXECUTE') THEN
+    RAISE EXCEPTION 'Service-role access to private role helpers is incomplete';
+  END IF;
+
   IF has_table_privilege('anon', 'private.user_roles', 'SELECT')
      OR has_function_privilege('anon', 'private.hte_current_role()', 'EXECUTE')
      OR has_function_privilege('anon', 'private.hte_has_role(text[])', 'EXECUTE') IS NOT TRUE
