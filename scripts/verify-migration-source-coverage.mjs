@@ -67,3 +67,45 @@ if (duplicates.length || missingFiles.length || missingManifestRows.length) {
   process.exit(1);
 }
 console.log(`Verified ${expectedLiveVersions.length} live migration versions have unique formal source files and manifest entries.`);
+
+const orderedFiles = [...migrationFiles].sort();
+const createdAt = new Map();
+const sqlByFile = new Map();
+for (const file of orderedFiles) {
+  const sql = readFileSync(`supabase/migrations/${file}`, "utf8")
+    .replace(/--[^\\n]*/g, "")
+    .replace(/\\/\\*[\\s\\S]*?\\*\\//g, "");
+  sqlByFile.set(file, sql);
+  for (const match of sql.matchAll(/create\\s+table\\s+(?:if\\s+not\\s+exists\\s+)?((?:public|private)\\.[a-z_][a-z0-9_]*)/ig)) {
+    const table = match[1].toLowerCase();
+    if (!createdAt.has(table)) createdAt.set(table, { file, index: match.index });
+  }
+}
+
+const sqlErrors = [];
+for (const file of orderedFiles) {
+  const sql = sqlByFile.get(file);
+  const dollarTags = sql.match(/\\$[A-Za-z_][A-Za-z0-9_]*\\$|\\$\\$/g) || [];
+  const tagCounts = new Map();
+  for (const tag of dollarTags) tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+  for (const [tag, count] of tagCounts) {
+    if (count % 2 !== 0) sqlErrors.push({ file, issue: `Unbalanced dollar quote ${tag} (count ${count})` });
+  }
+
+  const referencePattern = /\\b(?:alter\\s+table|on|from|join|into|update|delete\\s+from)\\s+(public|private)\\.([a-z_][a-z0-9_]*)/ig;
+  for (const match of sql.matchAll(referencePattern)) {
+    const table = `${match[1].toLowerCase()}.${match[2].toLowerCase()}`;
+    const creation = createdAt.get(table);
+    if (!creation) continue; // Supabase-managed or pre-existing object; validated separately.
+    if (creation.file.localeCompare(file) > 0 ||
+        (creation.file === file && creation.index > match.index)) {
+      sqlErrors.push({ file, issue: `${table} is referenced before it is created in ${creation.file}` });
+    }
+  }
+}
+
+if (sqlErrors.length) {
+  console.error(JSON.stringify({ sqlErrors }, null, 2));
+  process.exit(1);
+}
+console.log(`Verified SQL dollar-quote balance and in-order references across ${orderedFiles.length} migration files.`);
