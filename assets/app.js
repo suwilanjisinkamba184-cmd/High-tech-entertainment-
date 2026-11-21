@@ -48,7 +48,7 @@ function trackPlayer(x){
     if(direct){
       const downloadReady=x.download_allowed===true&&x.rights_status==='owned_or_licensed';
       const downloadUrl=siteBasePath()+'download/?track='+encodeURIComponent(x.id);
-      const download=downloadReady?'<a class="btn gold" style="width:100%;margin-top:8px" href="'+esc(downloadUrl)+'" data-track-download="'+esc(x.id)+'">↓ Download HTE-branded track</a>':'<p class="muted small">Downloads are not enabled for this source.</p>';
+      const download=downloadReady?'<a class="btn gold" style="width:100%;margin-top:8px" href="'+esc(downloadUrl)+'" data-track-download="'+esc(x.id)+'">↓ Download audio</a>':storage?'<button class="btn" style="width:100%;margin-top:8px" type="button" disabled>Download unavailable — rights review</button>':'<p class="muted small">Downloads are not enabled for this source.</p>';
       return '<audio controls preload="none" src="'+esc(safe)+'" aria-label="Play '+esc(x.title)+'" data-track-play="'+esc(x.id)+'"></audio>'+download;
     }
     return '<a class="btn gold" style="width:100%;margin-top:8px" target="_blank" rel="noopener noreferrer" data-track-open="'+esc(x.id)+'" href="'+esc(safe)+'">Open audio ↗</a>';
@@ -96,12 +96,13 @@ function renderPublic(){
   if(error)throw error;
   const items=data||[];
   el.innerHTML=items.length?'<div class="cards">'+items.map(x=>{
-   const source=String(x.source_url||'').trim(),platform=String(x.source_platform||'').toLowerCase();
+   const source=String(x.source_url||'').trim(),platform=String(x.source_platform||'').toLowerCase(),audioPath=String(x.audio_url||'');const storageAudio=/\/storage\/v1\/object\//i.test(audioPath);
    const branded=safeHttpsUrl(x.branded_audio_url),ready=x.download_allowed===true&&x.download_branding_status==='ready'&&!!branded;
    let action='';
    if(platform==='youtube'||youtubeVideoId(source))action='<a class="btn" href="'+esc(source)+'" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>';
    else if(platform==='spotify'||spotifyEmbed(source))action='<a class="btn" href="'+esc(spotifyLink(source))+'" target="_blank" rel="noopener noreferrer">Listen on Spotify ↗</a>';
-   else if(x.download_allowed===true&&x.rights_status==='owned_or_licensed')action='<a class="btn gold" href="'+esc(siteBasePath()+'download/?track='+encodeURIComponent(x.id))+'" data-track-download="'+esc(x.id)+'">Download HTE-branded audio ↓</a>';
+   else if(x.download_allowed===true&&x.rights_status==='owned_or_licensed')action='<a class="btn gold" href="'+esc(siteBasePath()+'download/?track='+encodeURIComponent(x.id))+'" data-track-download="'+esc(x.id)+'">Download audio ↓</a>';
+   else if(storageAudio)action='<button class="btn" type="button" disabled>Download unavailable — rights review</button>';
    else action='<span class="muted small">Download is unavailable for this source</span>';
    return '<article class="music-card"><div class="cover">'+cover(x.cover_url,x.title)+'</div><h3>'+esc(x.title)+'</h3><p class="muted small">'+esc(x.artist||'High Tech Entertainment')+' · '+esc(x.genre||'Music')+'</p>'+action+'</article>';
   }).join('')+'</div>':'<div class="empty">No published music is available yet.</div>';
