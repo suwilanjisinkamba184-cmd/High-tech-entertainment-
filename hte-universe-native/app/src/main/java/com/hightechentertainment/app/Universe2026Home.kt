@@ -39,14 +39,14 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.hightechentertainment.app.media.spotifyAppUri
 
-private val U26Black = Color(0xFF0B0A0F)
-private val U26Panel = Color(0xFF141414)
-private val U26Raised = Color(0xFF1E1C18)
-private val U26Gold = Color(0xFFE5C158)
+private val U26Black = com.hightechentertainment.app.ui.design.HteColors.Obsidian
+private val U26Panel = com.hightechentertainment.app.ui.design.HteColors.Panel
+private val U26Raised = com.hightechentertainment.app.ui.design.HteColors.PanelRaised
+private val U26Gold = com.hightechentertainment.app.ui.design.HteColors.Gold
 private val U26GoldLight = Color(0xFFF0DCA7)
-private val U26Silver = Color(0xFFC7CCD6)
-private val U26Muted = Color(0xFF89919D)
-private val U26Line = Color(0xFF3A3427)
+private val U26Silver = com.hightechentertainment.app.ui.design.HteColors.Silver
+private val U26Muted = com.hightechentertainment.app.ui.design.HteColors.Muted
+private val U26Line = com.hightechentertainment.app.ui.design.HteColors.Hairline
 
 /** Stable, case-insensitive ordering used by Home's opt-in favourite-genre recommendations. */
 internal fun rankGenreIndexesByPreference(genres: List<String?>, preferredGenreCounts: Map<String, Int>): List<Int> =
