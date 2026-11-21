@@ -1,8 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+const PROJECT_REF = "wqrxacjbsldbnoekbkbf";
+
 const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info, x-ht-sync-key",
+  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info, x-supabase-access-token",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
@@ -15,6 +17,12 @@ function durationSeconds(value: string) {
   const match = value.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
   if (!match) return 0;
   return Number(match[1] || 0) * 3600 + Number(match[2] || 0) * 60 + Number(match[3] || 0);
+}
+async function validateManagementToken(token: string) {
+  const response = await fetch(`https://api.supabase.com/v1/projects/${PROJECT_REF}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  return response.ok;
 }
 async function youtube(apiKey: string, endpoint: string, params: Record<string,string>) {
   const url = new URL("https://www.googleapis.com/youtube/v3/" + endpoint);
@@ -33,7 +41,10 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
   const projectUrl = Deno.env.get("SUPABASE_URL") || "";
   if (!youtubeKey || !serviceKey || !projectUrl) return reply({ error: "Zambian music sync is not configured in Supabase." }, 503);
-  if (req.headers.get("x-ht-sync-key") !== youtubeKey) return reply({ error: "Sync authorisation failed." }, 401);
+  const managementToken = req.headers.get("x-supabase-access-token") || "";
+  let authorised = false;
+  try { authorised = !!managementToken && await validateManagementToken(managementToken); } catch { authorised = false; }
+  if (!authorised) return reply({ error: "Unauthorized sync request." }, 401);
 
   let body: any;
   try { body = await req.json(); } catch { return reply({ error: "Invalid sync request." }, 400); }
