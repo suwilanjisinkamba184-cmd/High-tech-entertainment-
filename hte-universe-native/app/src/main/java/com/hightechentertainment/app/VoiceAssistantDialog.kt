@@ -201,6 +201,10 @@ fun VoiceAssistantDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(9.dp)
             ) {
+                Box(
+                    Modifier.padding(top = 2.dp).width(34.dp).height(4.dp)
+                        .clip(RoundedCornerShape(50)).background(VoiceMuted.copy(alpha = .55f))
+                )
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text("HTE UNIVERSE / AI VOICE ASSISTANT", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
