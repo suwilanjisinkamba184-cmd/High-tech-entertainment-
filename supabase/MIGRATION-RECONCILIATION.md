@@ -59,9 +59,9 @@ Do not reset or replay the production database. The production project already r
 | `20261116162504` | `hte_catalogue_audience_download_branding_20261116` | `supabase/migrations/20261116162504_hte_catalogue_audience_download_branding_20261116.sql` | Copied from supplemental SQL |
 | `20261116162608` | `index_hte_audience_artist_events_20261116` | `supabase/migrations/20261116162608_index_hte_audience_artist_events_20261116.sql` | Reconstructed from live index definition; idempotent |
 | `20261116162721` | `hte_download_branding_settings_20261116` | `supabase/migrations/20261116162721_hte_download_branding_settings_20261116.sql` | Copied from supplemental SQL |
-| `20261120082626` | `public_artist_drafts_discoverable_20261120` | `UNMAPPED` | No source mapping |
-| `20261120083422` | `split_download_branding_read_and_admin_policies_20261120` | `UNMAPPED` | No source mapping |
-| `20261120180335` | `enable_realtime_for_releases_and_videos` | `UNMAPPED` | No source mapping |
+| `20261120082626` | `public_artist_drafts_discoverable_20261120` | `supabase/migrations/20261120082626_public_artist_drafts_discoverable_20261120.sql` | Existing formal migration |
+| `20261120083422` | `split_download_branding_read_and_admin_policies_20261120` | `supabase/migrations/20261120083422_split_download_branding_read_and_admin_policies_20261120.sql` | Existing formal migration |
+| `20261120180335` | `enable_realtime_for_releases_and_videos` | `supabase/migrations/20261120180335_enable_realtime_for_releases_and_videos.sql` | Existing formal migration |
 | `20261121153907` | `hte_secure_temporary_downloads_20261121` | `supabase/migrations/20261121153907_hte_secure_temporary_downloads_20261121.sql` | Copied from supplemental SQL |
 | `20261121154050` | `hte_temp_download_limit_100mb_20261121` | `supabase/migrations/20261121154050_hte_temp_download_limit_100mb_20261121.sql` | Copied from supplemental SQL |
 | `20261121154406` | `hte_temp_download_allow_flac_20261121` | `supabase/migrations/20261121154406_hte_temp_download_allow_flac_20261121.sql` | Copied from supplemental SQL |
