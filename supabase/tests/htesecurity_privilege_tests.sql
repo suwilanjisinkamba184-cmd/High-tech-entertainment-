@@ -35,6 +35,38 @@ BEGIN
   END IF;
 
   IF NOT EXISTS (
+    SELECT 1 FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relname = 'videos' AND c.relrowsecurity
+  ) THEN
+    RAISE EXCEPTION 'Video catalogue RLS is not enabled';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'videos'
+      AND policyname = 'Public and administrators can read videos'
+      AND cmd = 'SELECT'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'videos'
+      AND policyname = 'HTE administrators insert videos'
+      AND cmd = 'INSERT' AND with_check LIKE '%hte_has_role%'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'videos'
+      AND policyname = 'HTE administrators update videos'
+      AND cmd = 'UPDATE' AND qual LIKE '%hte_has_role%' AND with_check LIKE '%hte_has_role%'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'videos'
+      AND policyname = 'HTE administrators delete videos'
+      AND cmd = 'DELETE' AND qual LIKE '%hte_has_role%'
+  ) THEN
+    RAISE EXCEPTION 'Video catalogue Founder-only write policies are incomplete';
+  END IF;
+
+  IF NOT EXISTS (
     SELECT 1 FROM pg_proc p
     JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public'
