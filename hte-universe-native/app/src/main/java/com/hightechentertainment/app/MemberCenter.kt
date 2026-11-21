@@ -557,19 +557,20 @@ private fun MemberCard(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 private fun ProfileEditorDialog(profile: ProfileDto?, accountId: String, onDismiss: () -> Unit, onPickAvatar: () -> Unit, onSave: (String, String, String) -> Unit, isWorking: Boolean) {
-    var name by remember(accountId) { mutableStateOf(profile?.displayName.orEmpty()) }
-    var bio by remember(accountId) { mutableStateOf(profile?.bio.orEmpty()) }
-    var phone by remember(accountId) { mutableStateOf(profile?.phone.orEmpty()) }
-    var hasEditedDraft by remember(accountId) { mutableStateOf(false) }
+    var draft by remember(accountId) {
+        mutableStateOf(
+            ProfileDraftState(
+                name = profile?.displayName.orEmpty(),
+                bio = profile?.bio.orEmpty(),
+                phone = profile?.phone.orEmpty()
+            )
+        )
+    }
 
-    // Hydrate a late-arriving first profile only while the member has not started
-    // editing. Avatar-only profile refreshes therefore cannot erase a live draft.
-    LaunchedEffect(accountId, profile?.id) {
-        if (!hasEditedDraft && profile != null) {
-            name = profile.displayName
-            bio = profile.bio
-            phone = profile.phone
-        }
+    // Hydrate each field independently. Editing one field must never prevent
+    // untouched fields from receiving the asynchronously loaded profile values.
+    LaunchedEffect(accountId, profile?.id, profile?.displayName, profile?.bio, profile?.phone) {
+        if (profile != null) draft = draft.hydrate(profile.displayName, profile.bio, profile.phone)
     }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -578,12 +579,12 @@ private fun ProfileEditorDialog(profile: ProfileDto?, accountId: String, onDismi
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = onPickAvatar, enabled = !isWorking) { Text("Change profile photo") }
                 Text("JPG, PNG or WebP · maximum 5 MB", color = MemberMuted, fontSize = 11.sp)
-                OutlinedTextField(name, { name = it; hasEditedDraft = true }, label = { Text("Display name") }, singleLine = true)
-                OutlinedTextField(phone, { phone = it; hasEditedDraft = true }, label = { Text("Phone") }, singleLine = true)
-                OutlinedTextField(bio, { bio = it; hasEditedDraft = true }, label = { Text("Bio") }, minLines = 3)
+                OutlinedTextField(draft.name, { draft = draft.editName(it) }, label = { Text("Display name") }, singleLine = true)
+                OutlinedTextField(draft.phone, { draft = draft.editPhone(it) }, label = { Text("Phone") }, singleLine = true)
+                OutlinedTextField(draft.bio, { draft = draft.editBio(it) }, label = { Text("Bio") }, minLines = 3)
             }
         },
-        confirmButton = { TextButton(onClick = { onSave(name, bio, phone) }, enabled = !isWorking && name.isNotBlank()) { Text("Save") } },
+        confirmButton = { TextButton(onClick = { onSave(draft.name, draft.bio, draft.phone) }, enabled = !isWorking && draft.name.isNotBlank()) { Text("Save") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
