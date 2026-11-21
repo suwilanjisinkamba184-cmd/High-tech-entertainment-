@@ -1,5 +1,7 @@
 # Founder Studio implementation notes
 
+**Status:** Implementation staged in draft PR #160. No production deployment or merge.
+
 The Founder Studio overhaul is being implemented on an isolated feature branch from main. This is a source change only; production is not deployed.
 
 ## Delivered in source
