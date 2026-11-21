@@ -110,16 +110,45 @@ jobs:
         run: gradle --no-daemon :app:testDebugUnitTest --console=plain
       - name: Compile Android instrumentation smoke tests
         run: gradle --no-daemon :app:assembleDebugAndroidTest --console=plain
+      - name: Grant the runner access to hardware acceleration
+        run: |
+          set -euo pipefail
+          if [[ ! -e /dev/kvm ]]; then
+            echo "::error::The GitHub runner does not expose /dev/kvm; Android x86_64 emulator cannot use hardware acceleration."
+            exit 1
+          fi
+          sudo chmod 0666 /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+          ls -l /dev/kvm
       - name: Run Android instrumentation tests on API 35 emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
-        env:
-          ANDROID_I_WANT_MY_TCG: "yes"
         with:
           api-level: 35
           target: google_apis
           arch: x86_64
           disable-animations: true
-          script: cd hte-universe-native && gradle --no-daemon :app:connectedDebugAndroidTest --console=plain
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+          script: |
+            set -euo pipefail
+            cd hte-universe-native
+            bash ../.github/scripts/wait-android-services.sh
+            if gradle --no-daemon :app:connectedDebugAndroidTest --console=plain; then
+              echo "Instrumentation tests completed successfully."
+            else
+              bash ../.github/scripts/capture-android-diagnostics.sh || true
+              exit 1
+            fi
+      - name: Upload Android emulator diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hte-android-emulator-diagnostics
+          if-no-files-found: warn
+          retention-days: 7
+          path: |
+            hte-universe-native/build/diagnostics/**
+            hte-universe-native/app/build/reports/androidTests/connected/**
+            hte-universe-native/app/build/outputs/androidTest-results/**
       - name: Run debug lint
         run: gradle --no-daemon :app:lintDebug --console=plain
       - name: Run release lint
