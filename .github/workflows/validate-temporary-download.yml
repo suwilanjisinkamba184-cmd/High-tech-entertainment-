@@ -1,0 +1,35 @@
+name: Validate HTE temporary download delivery
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/hte-download-delivery/**'
+      - 'database/changes/20261121_01_secure_temporary_downloads.sql'
+      - 'supabase/config.toml'
+      - '.github/workflows/validate-temporary-download.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/hte-download-delivery/**'
+      - 'database/changes/20261121_01_secure_temporary_downloads.sql'
+      - 'supabase/config.toml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Type-check Supabase Edge Function
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check download delivery function
+        run: deno check supabase/functions/hte-download-delivery/index.ts
