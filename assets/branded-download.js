@@ -16,10 +16,10 @@ async function load(){
   if(result.error)throw result.error;track=result.data;
   title.textContent=track.title||'HTE track';artist.textContent=track.artist||'High-Tech Entertainment';
   if(track.source_platform!=='direct'||track.download_allowed!==true||track.rights_status!=='owned_or_licensed')throw Error('Download is available only for HTE-owned or licensed audio with confirmed permissions.');
-  const branded=safeHteAudio(track.branded_audio_url);
-  alreadyBranded=!!(branded&&track.download_branding_status==='ready');
-  sourceUrl=alreadyBranded?branded:safeHteAudio(track.audio_url);
-  if(!sourceUrl)throw Error('The original audio is not stored in an approved HTE audio bucket.');
+  const sourceResult=await client.functions.invoke('hte-download-delivery',{body:{action:'source',trackId:track.id}});
+  if(sourceResult.error||!sourceResult.data?.success||!sourceResult.data?.sourceUrl)throw new Error(sourceResult.data?.error||sourceResult.error?.message||'The original HTE audio could not be opened securely.');
+  sourceUrl=sourceResult.data.sourceUrl;
+  alreadyBranded=sourceResult.data.alreadyBranded===true;
   if(!alreadyBranded){
    const {data:settings}=await client.from('hte_download_branding_settings').select('jingle_url').eq('id',1).eq('is_active',true).maybeSingle();
    jingleUrl=safeHteAudio(settings?.jingle_url);
