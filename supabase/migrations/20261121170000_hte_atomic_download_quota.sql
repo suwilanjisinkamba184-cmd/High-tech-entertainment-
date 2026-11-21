@@ -12,6 +12,13 @@ ALTER TABLE public.hte_download_jobs
   ADD CONSTRAINT hte_download_jobs_status_check
   CHECK (status IN ('created', 'uploaded', 'failed'));
 
+-- Failed reservations remain until expiry for replay prevention, so include
+-- them in the cleanup index as well.
+DROP INDEX IF EXISTS public.hte_download_jobs_expiry_idx;
+CREATE INDEX hte_download_jobs_expiry_idx
+  ON public.hte_download_jobs (expires_at)
+  WHERE status IN ('created', 'uploaded', 'failed');
+
 CREATE UNIQUE INDEX IF NOT EXISTS hte_download_jobs_request_nonce_key
   ON public.hte_download_jobs (request_nonce)
   WHERE request_nonce IS NOT NULL;
