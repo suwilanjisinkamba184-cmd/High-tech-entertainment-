@@ -1,35 +1,34 @@
-create or replace function public.hte_admin_list_users()
-returns table (
-  id uuid,
-  email text,
-  created_at timestamptz,
-  last_sign_in_at timestamptz,
-  role text
-)
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  if not private.hte_has_role(array['owner','admin']) then
-    raise exception 'Not authorized to view platform users'
-      using errcode = '42501';
-  end if;
+-- Reconstructed from the live HTE partner/admin contact directory table.
+-- Direct client access is intentionally denied; trusted service-role workflows
+-- may manage records, while public website cards can be served through a safe RPC.
+CREATE TABLE IF NOT EXISTS public.hte_admin_contacts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  display_name text NOT NULL
+    CHECK (char_length(trim(display_name)) BETWEEN 2 AND 100),
+  job_title text NOT NULL
+    CHECK (char_length(trim(job_title)) BETWEEN 2 AND 100),
+  public_email text
+    CHECK (public_email IS NULL OR char_length(public_email) <= 254),
+  public_phone text
+    CHECK (public_phone IS NULL OR char_length(public_phone) <= 40),
+  public_contact_url text
+    CHECK (public_contact_url IS NULL OR char_length(public_contact_url) <= 500),
+  sort_order integer NOT NULL DEFAULT 0,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT hte_admin_contacts_contact_required CHECK (
+    NULLIF(trim(COALESCE(public_email, '')), '') IS NOT NULL
+    OR NULLIF(trim(COALESCE(public_phone, '')), '') IS NOT NULL
+    OR NULLIF(trim(COALESCE(public_contact_url, '')), '') IS NOT NULL
+  )
+);
 
-  return query
-  select
-    users.id,
-    users.email::text,
-    users.created_at,
-    users.last_sign_in_at,
-    coalesce(user_roles.role, 'user')::text
-  from auth.users as users
-  left join private.user_roles as user_roles
-    on user_roles.user_id = users.id
-  order by users.created_at desc
-  limit 200;
-end;
-$$;
+ALTER TABLE public.hte_admin_contacts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "deny all direct access to HTE admin contacts" ON public.hte_admin_contacts;
+CREATE POLICY "deny all direct access to HTE admin contacts"
+  ON public.hte_admin_contacts FOR ALL TO anon, authenticated
+  USING (false) WITH CHECK (false);
 
-revoke all on function public.hte_admin_list_users() from public, anon;
-grant execute on function public.hte_admin_list_users() to authenticated;
+REVOKE ALL ON TABLE public.hte_admin_contacts FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE public.hte_admin_contacts TO service_role;
