@@ -22,4 +22,4 @@ This Worker is a dedicated ingress for public website audio downloads. It does n
 
 ## Rollback
 
-If the gateway is not healthy, revert the website endpoint and Edge Function together to the previous known-good revision. Do not remove the new database column or nonce index as part of rollback; they are additive and safe for existing jobs. Do not deploy the new Edge Function before both secrets and the Worker are configured, because it intentionally fails closed when the shared secret is missing.
+If the gateway is not healthy, disable the website download action or roll the website back to a non-download fallback while keeping the Edge Function's signed-request requirement in place. Do not restore the old unsigned prepare endpoint. Do not remove the new database column or nonce index; they are additive and safe for existing jobs. Do not deploy the new Edge Function before both secrets and the Worker are configured, because it intentionally fails closed when the shared secret is missing.
