@@ -63,8 +63,8 @@ private data class VoiceTokenResponse(
     @SerialName("user_id") val userId: String
 )
 
-private val voiceHttp401Pattern = Regex("""(?<![A-Za-z0-9])401(?![A-Za-z0-9])""")
-private val voiceHttp403Pattern = Regex("""(?<![A-Za-z0-9])403(?![A-Za-z0-9])""")
+private val voiceHttp401Pattern = Regex("""(?<![A-Za-z0-9_])401(?![A-Za-z0-9_])""")
+private val voiceHttp403Pattern = Regex("""(?<![A-Za-z0-9_])403(?![A-Za-z0-9_])""")
 
 internal fun voiceFailureMessage(details: String): String {
     val normalized = details.lowercase()
