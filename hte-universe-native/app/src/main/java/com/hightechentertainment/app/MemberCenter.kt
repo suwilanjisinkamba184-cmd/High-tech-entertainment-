@@ -482,7 +482,7 @@ fun MemberCenter(
                             statusMessage = "Profile saved."
                             showProfileEditor = false
                             captureAccountRequest { MemberRepository().getMyProfile() }
-                                .onSuccess { refreshed -> if (profileRevision > 0) profile = refreshed else profile = refreshed }
+                                .onSuccess { refreshed -> profile = refreshed }
                                 .onFailure { accountDataError = it.toHteUserMessage("Your profile was saved, but the refreshed details could not be loaded.") }
                         }
                         .onFailure { statusMessage = it.toHteUserMessage("Your profile could not be saved. Please retry.") }
