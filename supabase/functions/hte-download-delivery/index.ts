@@ -65,7 +65,7 @@ async function cleanupExpired(admin: ReturnType<typeof createClient>) {
 }
 async function findJob(admin: ReturnType<typeof createClient>, id: string) {
   const { data, error } = await admin.from("hte_download_jobs")
-    .select("id,track_id,object_path,file_name,ip_hash,download_token_hash,status,expires_at")
+    .select("id,track_id,object_path,file_name,ip_hash,download_token_hash,status,expires_at,delivery_expires_at")
     .eq("id", id).maybeSingle();
   if (error) throw error;
   return data;
@@ -77,8 +77,8 @@ Deno.serve(async (req) => {
 
   const projectUrl = Deno.env.get("SUPABASE_URL") || "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  const publicKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
-  if (!projectUrl || !serviceKey || !publicKey) return reply({ error: "Download delivery is not configured." }, 503);
+  const publicKeys = [Deno.env.get("SUPABASE_ANON_KEY"), Deno.env.get("SUPABASE_PUBLISHABLE_KEY")].filter((value): value is string => !!value);
+  if (!projectUrl || !serviceKey || !publicKeys.length) return reply({ error: "Download delivery is not configured." }, 503);
   const admin = createClient(projectUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
   if (req.method === "GET") {
@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
     if (!/^[0-9a-f-]{36}$/i.test(jobId) || token.length < 32) return reply({ error: "This download link is invalid." }, 400);
     try {
       const job = await findJob(admin, jobId);
-      if (!job || job.status !== "uploaded" || Date.parse(job.expires_at) <= Date.now()) {
+      if (!job || job.status !== "uploaded" || Date.parse(job.delivery_expires_at || "") <= Date.now()) {
         return reply({ error: "This temporary download has expired. Please prepare it again." }, 410);
       }
       const tokenHash = await sha256(token);
@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  if (req.headers.get("apikey") !== publicKey) return reply({ error: "The download request is not authorised." }, 401);
+  if (!publicKeys.includes(req.headers.get("apikey") || "")) return reply({ error: "The download request is not authorised." }, 401);
   let body: any;
   try { body = await req.json(); } catch { return reply({ error: "Invalid request body." }, 400); }
   try { await cleanupExpired(admin); } catch (error) { console.warn("HTE temp cleanup skipped", error); }
@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
     const id = crypto.randomUUID();
     const fileName = safeFileName(String(track.title || "HTE-audio")) + "-HTE." + extension;
     const objectPath = "requests/" + id + "." + extension;
-    const expiresAt = new Date(Date.now() + JOB_TTL_MS).toISOString();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     const { error: insertError } = await admin.from("hte_download_jobs").insert({
       id, track_id: track.id, object_path: objectPath, file_name: fileName, ip_hash: ipHash, status: "created", expires_at: expiresAt,
     });
@@ -222,9 +222,9 @@ Deno.serve(async (req) => {
     }
     const token = randomToken();
     const tokenHash = await sha256(token);
-    const expiresAt = new Date(Date.now() + DELIVERY_TTL_MS).toISOString();
+    const deliveryExpiresAt = new Date(Date.now() + DELIVERY_TTL_MS).toISOString();
     const { error: updateError } = await admin.from("hte_download_jobs")
-      .update({ status: "uploaded", download_token_hash: tokenHash, expires_at: expiresAt })
+      .update({ status: "uploaded", download_token_hash: tokenHash, delivery_expires_at: deliveryExpiresAt })
       .eq("id", jobId).eq("status", "created");
     if (updateError) return reply({ error: "The temporary download could not be finalised." }, 500);
     const downloadUrl = new URL("/functions/v1/hte-download-delivery", projectUrl);
