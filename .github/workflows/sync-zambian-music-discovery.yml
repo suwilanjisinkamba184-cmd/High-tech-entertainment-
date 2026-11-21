@@ -8,12 +8,16 @@ on:
     paths:
       - 'config/zambian-youtube.json'
       - 'scripts/youtube_zambian_sync.py'
+      - 'supabase/functions/sync-zambian-music/**'
+      - 'supabase/config.toml'
       - '.github/workflows/sync-zambian-music-discovery.yml'
   push:
     branches: [main]
     paths:
       - 'config/zambian-youtube.json'
       - 'scripts/youtube_zambian_sync.py'
+      - 'supabase/functions/sync-zambian-music/**'
+      - 'supabase/config.toml'
       - '.github/workflows/sync-zambian-music-discovery.yml'
 
 permissions:
@@ -30,10 +34,19 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v7
-      - name: Validate discovery script and configuration
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Validate discovery configuration and Edge Function
         run: |
           python -m py_compile scripts/youtube_zambian_sync.py
           python -m json.tool config/zambian-youtube.json > /dev/null
+          deno check --config supabase/functions/sync-zambian-music/deno.json supabase/functions/sync-zambian-music/index.ts
 
   discover:
     if: ${{ github.event_name != 'pull_request' }}
@@ -43,25 +56,57 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v7
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Check required API credentials
+      - name: Check YouTube API credential
+        id: credentials
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          if [ -z "$YOUTUBE_API_KEY" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-            echo "::notice::Zambian music discovery is safely skipped. Add YOUTUBE_API_KEY and SUPABASE_SERVICE_ROLE_KEY to repository Actions secrets to enable automatic publishing."
-            exit 0
+          if [ -z "$YOUTUBE_API_KEY" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Zambian music discovery is skipped. Configure YOUTUBE_API_KEY in repository Actions secrets."
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Discover and publish verified music videos
+      - name: Invoke Supabase server-side discovery
+        if: ${{ steps.credentials.outputs.enabled == 'true' }}
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          PYTHONUNBUFFERED: '1'
-        run: python scripts/youtube_zambian_sync.py --limit 8
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+
+          const siteConfig = readFileSync('supabase-config.js', 'utf8');
+          const url = siteConfig.match(/url:\s*'([^']+)'/)?.[1];
+          const publishableKey = siteConfig.match(/publishableKey:\s*'([^']+)'/)?.[1];
+          const discovery = JSON.parse(readFileSync('config/zambian-youtube.json', 'utf8'));
+          if (!url || !publishableKey) throw new Error('Public Supabase configuration could not be read.');
+
+          const response = await fetch(url.replace(/\/$/, '') + '/functions/v1/sync-zambian-music', {
+            method: 'POST',
+            headers: {
+              apikey: publishableKey,
+              Authorization: 'Bearer ' + publishableKey,
+              'x-ht-sync-key': process.env.YOUTUBE_API_KEY,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              action: 'sync',
+              channels: discovery.channels,
+              lookback_days: discovery.lookback_days,
+              max_posts_per_run: discovery.max_posts_per_run,
+              min_duration_seconds: discovery.min_duration_seconds,
+              max_duration_seconds: discovery.max_duration_seconds
+            })
+          });
+          const result = await response.json();
+          if (!response.ok || result.success !== true) {
+            throw new Error(result.error || 'Zambian music sync failed with HTTP ' + response.status);
+          }
+          console.log(JSON.stringify({
+            imported: result.imported,
+            duplicates: result.skippedDuplicates,
+            channels: result.scannedChannels,
+            titles: result.titles
+          }, null, 2));
+          NODE
