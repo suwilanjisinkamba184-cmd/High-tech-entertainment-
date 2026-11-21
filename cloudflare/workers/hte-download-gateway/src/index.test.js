@@ -68,14 +68,14 @@ test("signs the Cloudflare-observed IP and forwards the exact request body", asy
     const timestamp = headers.get("x-hte-proxy-timestamp");
     const nonce = headers.get("x-hte-proxy-nonce");
     const signature = headers.get("x-hte-proxy-signature");
-    assert.match(timestamp || "", /^\\d{10}$/);
+    assert.match(timestamp || "", /^\d{10}$/);
     assert.match(nonce || "", /^[0-9a-f-]{36}$/i);
     assert.match(signature || "", /^[0-9a-f]{64}$/);
     const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), {
       name: "HMAC", hash: "SHA-256"
     }, false, ["sign"]);
     const expected = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(
-      ["POST", timestamp, nonce, "203.0.113.7", BODY].join("\\n")
+      ["POST", timestamp, nonce, "203.0.113.7", BODY].join("\n")
     ));
     const expectedHex = [...new Uint8Array(expected)].map(value => value.toString(16).padStart(2, "0")).join("");
     assert.equal(signature, expectedHex);
