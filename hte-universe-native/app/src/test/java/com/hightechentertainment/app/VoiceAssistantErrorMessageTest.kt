@@ -19,6 +19,11 @@ class VoiceAssistantErrorMessageTest {
         assertTrue(voiceFailureMessage("401 session expired").contains("Sign in again"))
     }
 
+    @Test fun embedded403InsideIdentifierDoesNotTriggerPermissionGuidance() {
+        val message = voiceFailureMessage("Unexpected server error; request_id=abc403def")
+        assertTrue(message.contains("temporarily unavailable"))
+    }
+
     @Test fun providerPermissionFailuresExplainTheCorrectOwnerAction() {
         val message = voiceFailureMessage("403 forbidden")
         assertTrue(message.contains("agent permissions"))
