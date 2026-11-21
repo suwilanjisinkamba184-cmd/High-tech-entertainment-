@@ -47,6 +47,47 @@ create table if not exists public.tracks (
   created_at timestamptz not null default now()
 );
 
+-- Video catalogue existed in production before the native 3.1 migration.
+-- Reconstructed here so a clean chronological replay creates the table before
+-- the November 7 Founder policy migration modifies its write policies.
+create table if not exists public.videos (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text,
+  artist text,
+  video_url text not null,
+  thumbnail_url text,
+  is_published boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+alter table public.videos enable row level security;
+
+drop policy if exists "Public can read published videos" on public.videos;
+create policy "Public can read published videos" on public.videos
+  for select to anon, authenticated using (is_published = true);
+
+drop policy if exists "HTE administrators insert videos" on public.videos;
+create policy "HTE administrators insert videos" on public.videos
+  for insert to authenticated
+  with check ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+
+drop policy if exists "HTE administrators update videos" on public.videos;
+create policy "HTE administrators update videos" on public.videos
+  for update to authenticated
+  using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid)
+  with check ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+
+drop policy if exists "HTE administrators delete videos" on public.videos;
+create policy "HTE administrators delete videos" on public.videos
+  for delete to authenticated
+  using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+
+revoke all on public.videos from anon, authenticated;
+grant select on public.videos to anon, authenticated;
+grant insert, update, delete on public.videos to authenticated;
+grant all on public.videos to service_role;
+
 create table if not exists public.contact_messages (
   id uuid primary key default gen_random_uuid(),
   name text not null check (char_length(name) between 1 and 100),
