@@ -7,7 +7,6 @@ on:
   pull_request:
     paths:
       - 'config/zambian-youtube.json'
-      - 'scripts/youtube_zambian_sync.py'
       - 'supabase/functions/sync-zambian-music/**'
       - 'supabase/config.toml'
       - '.github/workflows/sync-zambian-music-discovery.yml'
@@ -44,7 +43,6 @@ jobs:
           deno-version: v2.x
       - name: Validate discovery configuration and Edge Function
         run: |
-          python -m py_compile scripts/youtube_zambian_sync.py
           python -m json.tool config/zambian-youtube.json > /dev/null
           deno check --config supabase/functions/sync-zambian-music/deno.json supabase/functions/sync-zambian-music/index.ts
 
@@ -56,14 +54,14 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v7
 
-      - name: Check YouTube API credential
+      - name: Check Supabase Management API credential
         id: credentials
         env:
-          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
-          if [ -z "$YOUTUBE_API_KEY" ]; then
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
             echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Zambian music discovery is skipped. Configure YOUTUBE_API_KEY in repository Actions secrets."
+            echo "::notice::Zambian music discovery is skipped. Configure the existing SUPABASE_ACCESS_TOKEN repository secret."
           else
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           fi
@@ -71,7 +69,7 @@ jobs:
       - name: Invoke Supabase server-side discovery
         if: ${{ steps.credentials.outputs.enabled == 'true' }}
         env:
-          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           node --input-type=module <<'NODE'
           import { readFileSync } from 'node:fs';
@@ -87,7 +85,7 @@ jobs:
             headers: {
               apikey: publishableKey,
               Authorization: 'Bearer ' + publishableKey,
-              'x-ht-sync-key': process.env.YOUTUBE_API_KEY,
+              'x-supabase-access-token': process.env.SUPABASE_ACCESS_TOKEN,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
