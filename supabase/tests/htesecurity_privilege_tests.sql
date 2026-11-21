@@ -35,6 +35,41 @@ BEGIN
   END IF;
 
   IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'artists'
+      AND policyname = 'Public and administrators can read artists' AND cmd = 'SELECT'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'releases'
+      AND policyname = 'Public and administrators can read releases' AND cmd = 'SELECT'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'tracks'
+      AND policyname = 'Public and administrators can read tracks' AND cmd = 'SELECT'
+  ) THEN
+    RAISE EXCEPTION 'Role-aware public catalogue read policies are incomplete';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'artists'
+      AND policyname = 'HTE administrators insert artists'
+      AND with_check LIKE '%hte_has_role%'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'releases'
+      AND policyname = 'HTE administrators insert releases'
+      AND with_check LIKE '%hte_has_role%'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'tracks'
+      AND policyname = 'HTE administrators insert tracks'
+      AND with_check LIKE '%hte_has_role%'
+  ) THEN
+    RAISE EXCEPTION 'Founder-only catalogue insert policies are incomplete';
+  END IF;
+
+  IF NOT EXISTS (
     SELECT 1 FROM pg_class c
     JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = 'public' AND c.relname = 'videos' AND c.relrowsecurity
