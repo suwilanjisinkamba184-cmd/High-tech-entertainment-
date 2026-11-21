@@ -1,0 +1,45 @@
+name: Clean expired HTE temporary downloads
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Remove expired temporary media
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+
+          const config = readFileSync('supabase-config.js', 'utf8');
+          const url = config.match(/url:\s*'([^']+)'/)?.[1];
+          const key = config.match(/publishableKey:\s*'([^']+)'/)?.[1];
+          if (!url || !key) throw new Error('Public Supabase configuration could not be read.');
+
+          const response = await fetch(url.replace(/\/$/, '') + '/functions/v1/hte-download-delivery', {
+            method: 'POST',
+            headers: {
+              apikey: key,
+              Authorization: 'Bearer ' + key,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ action: 'cleanup' })
+          });
+          if (!response.ok) {
+            const body = await response.text();
+            throw new Error('Temporary download cleanup failed: HTTP ' + response.status + ' ' + body);
+          }
+          const result = await response.json();
+          if (result.success !== true) throw new Error('Temporary download cleanup did not confirm success.');
+          console.log('Expired HTE temporary downloads cleaned.');
+          NODE
