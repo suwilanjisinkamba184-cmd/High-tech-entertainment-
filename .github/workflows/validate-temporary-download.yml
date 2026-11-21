@@ -6,6 +6,8 @@ on:
       - 'supabase/functions/hte-download-delivery/**'
       - 'cloudflare/workers/hte-download-gateway/**'
       - 'supabase/functions/_shared/**'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
       - 'supabase/MIGRATION-RECONCILIATION.md'
       - 'scripts/verify-migration-source-coverage.mjs'
       - 'supabase/functions/elevenlabs-ad-studio/**'
