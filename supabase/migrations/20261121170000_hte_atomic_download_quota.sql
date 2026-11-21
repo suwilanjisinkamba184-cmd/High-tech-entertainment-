@@ -26,9 +26,53 @@ AS $function$
 DECLARE
   recent_count bigint;
 BEGIN
-  IF p_ip_hash IS NULL OR length(p_ip_hash) <> 64
+  IF p_id IS NULL OR p_track_id IS NULL
+     OR p_object_path IS NULL OR length(trim(p_object_path)) = 0
+     OR p_file_name IS NULL OR length(trim(p_file_name)) = 0
+     OR p_ip_hash IS NULL OR p_ip_hash !~ '^[0-9a-f]{64}
+    RAISE EXCEPTION 'Invalid download quota parameters'
+      USING ERRCODE = '22023';
+  END IF;
+
+  -- A transaction-scoped advisory lock is released automatically on commit
+  -- or rollback. Hash collisions can only serialize unrelated callers; they
+  -- cannot grant extra quota.
+  PERFORM pg_advisory_xact_lock(hashtextextended(p_ip_hash, 0));
+
+  SELECT count(*)
+    INTO recent_count
+    FROM public.hte_download_jobs
+   WHERE ip_hash = p_ip_hash
+     AND created_at >= now() - interval '1 hour';
+
+  IF recent_count >= p_max_downloads THEN
+    RETURN false;
+  END IF;
+
+  INSERT INTO public.hte_download_jobs (
+    id, request_nonce, track_id, object_path, file_name, ip_hash, status, expires_at
+  ) VALUES (
+    p_id, p_request_nonce, p_track_id, p_object_path, p_file_name, p_ip_hash, 'created', p_expires_at
+  );
+
+  RETURN true;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.hte_create_download_job(
+  uuid, uuid, uuid, text, text, text, timestamptz, integer
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.hte_create_download_job(
+  uuid, uuid, uuid, text, text, text, timestamptz, integer
+) TO service_role;
+
+COMMENT ON FUNCTION public.hte_create_download_job(
+  uuid, uuid, uuid, text, text, text, timestamptz, integer
+) IS 'Atomically enforces the per-visitor rolling-hour temporary download quota and creates the job. Service-role only.';
+
      OR p_request_nonce IS NULL
-     OR p_max_downloads < 1 OR p_max_downloads > 100 THEN
+     OR p_expires_at IS NULL OR p_expires_at <= now()
+     OR p_max_downloads IS NULL OR p_max_downloads < 1 OR p_max_downloads > 100 THEN
     RAISE EXCEPTION 'Invalid download quota parameters'
       USING ERRCODE = '22023';
   END IF;
