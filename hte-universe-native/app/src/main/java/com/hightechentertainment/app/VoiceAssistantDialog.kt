@@ -63,16 +63,26 @@ private data class VoiceTokenResponse(
     @SerialName("user_id") val userId: String
 )
 
+private val voiceHttp401Pattern = Regex("""(?<![A-Za-z0-9])401(?![A-Za-z0-9])""")
+private val voiceHttp403Pattern = Regex("""(?<![A-Za-z0-9])403(?![A-Za-z0-9])""")
+
 internal fun voiceFailureMessage(details: String): String {
     val normalized = details.lowercase()
+    val isSessionFailure = listOf("sign in", "session expired").any(normalized::contains) ||
+        voiceHttp401Pattern.containsMatchIn(details)
+    val isProviderAuthorizationFailure =
+        listOf("convai_write", "missing permission", "forbidden", "credentials", "api key", "not configured", "conversation token").any(normalized::contains) ||
+            voiceHttp403Pattern.containsMatchIn(details)
+
     return when {
+        // Authorization responses must win over transport wording: provider SDKs can
+        // include "connection" or "WebSocket" in a 403 diagnostic.
+        isProviderAuthorizationFailure ->
+            "HTE AI Voice Assistant was rejected by the voice provider. The project owner needs to check the agent permissions and server-side API credentials."
+        isSessionFailure ->
+            "Your HTE session may have expired. Sign in again, then reopen HTE AI Voice Assistant."
         listOf("timeout", "network", "connection", "offline", "unreachable").any(normalized::contains) ->
             "HTE AI Voice Assistant could not connect. Check your internet connection and try again."
-        listOf("convai_write", "missing permission", "forbidden", "credentials", "api key", "not configured", "conversation token").any(normalized::contains) ||
-            Regex("""(?<![A-Za-z0-9])403(?![A-Za-z0-9])""").containsMatchIn(details) ->
-            "HTE AI Voice Assistant was rejected by the voice provider. The project owner needs to check the agent permissions and server-side API credentials."
-        listOf("sign in", "session expired", "401").any(normalized::contains) ->
-            "Your HTE session may have expired. Sign in again, then reopen HTE AI Voice Assistant."
         else -> "Voice Companion is temporarily unavailable. Please try again."
     }
 }
