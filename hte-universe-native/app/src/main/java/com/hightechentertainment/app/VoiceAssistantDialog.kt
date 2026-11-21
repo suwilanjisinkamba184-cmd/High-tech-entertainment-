@@ -374,7 +374,7 @@ private class VoiceToolContext {
     var onSearch: (String) -> Unit = {}
     var onSearchVideos: (String) -> Unit = {}
     var onActionCompleted: () -> Unit = {}
-    var onUserTranscript: (String) -> Unit = {
+    var onUserTranscript: (String) -> Unit = {}
     var onAgentResponse: (String) -> Unit = {}
     var onError: (String) -> Unit = {}
 }
