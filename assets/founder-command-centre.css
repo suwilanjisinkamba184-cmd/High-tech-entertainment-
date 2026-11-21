@@ -55,12 +55,12 @@
 .fs-health-card strong{margin:5px 0;font-size:.95rem}
 .fs-health-card p{margin:0;color:#9ca6b1;font-size:.75rem;line-height:1.45}
 .fs-chart{display:grid;gap:9px}
-.fs-bar-row{display:grid;grid-template-columns:65px minmax(0,1fr) 44px;gap:10px;align-items:center;font-size:.72rem;color:#aeb6c0}
+.fs-bar-row{display:grid;grid-template-columns:112px minmax(0,1fr) 44px;gap:10px;align-items:center;font-size:.72rem;color:#aeb6c0}
 .fs-bar-row strong{text-align:right;color:#e4d3a4;font-variant-numeric:tabular-nums}
 .fs-bar-track{height:9px;border-radius:99px;background:#222a34;overflow:hidden}
 .fs-bar-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#9e7a37,#e0c27d)}
 @media(max-width:900px){.admin-page .admin-topbar-inner{width:calc(100% - 24px);min-height:62px}.admin-page .admin-top-actions{gap:5px}.admin-page .admin-top-actions .admin-live{display:none}.admin-page .admin-top-actions .btn{font-size:.72rem;padding:7px 8px;min-height:36px}.admin-page .admin-main{padding:22px 16px 28px}.fs-executive,.fs-panel{padding:17px}.fs-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.fs-record{display:grid}.fs-record-actions{justify-content:flex-start}}
-@media(max-width:480px){.admin-page .admin-brand{font-size:.75rem;letter-spacing:.08em}.admin-page .admin-brand-logo{width:36px;height:36px}.admin-page .admin-brand small{font-size:.52rem;letter-spacing:.1em}.admin-page .admin-top-actions .btn.ghost[href="../account/"]{display:none}.admin-page .admin-main-top{display:block}.admin-page .admin-main-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}.admin-page .admin-user-chip{order:3}.admin-page #refresh-admin{margin-left:auto}.fs-executive-head,.fs-panel-head{display:grid}.fs-kpi{padding:12px}.fs-kpi strong{font-size:1.5rem}.fs-dashboard-foot{display:grid}.fs-audit-row{grid-template-columns:1fr}}
+@media(max-width:480px){.fs-bar-row{grid-template-columns:88px minmax(0,1fr) 40px}.admin-page .admin-brand{font-size:.75rem;letter-spacing:.08em}.admin-page .admin-brand-logo{width:36px;height:36px}.admin-page .admin-brand small{font-size:.52rem;letter-spacing:.1em}.admin-page .admin-top-actions .btn.ghost[href="../account/"]{display:none}.admin-page .admin-main-top{display:block}.admin-page .admin-main-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}.admin-page .admin-user-chip{order:3}.admin-page #refresh-admin{margin-left:auto}.fs-executive-head,.fs-panel-head{display:grid}.fs-kpi{padding:12px}.fs-kpi strong{font-size:1.5rem}.fs-dashboard-foot{display:grid}.fs-audit-row{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.admin-page .admin-view{animation:none}}
 
 .fs-note-editor{display:grid;gap:6px;margin-top:10px;color:#d8c58e;font-size:.72rem;font-weight:700;letter-spacing:.04em}
