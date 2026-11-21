@@ -24,7 +24,7 @@ Do not reset or replay the production database. The production project already r
 | `20261030231014` | `create_public_support_feedback` | `supabase/migrations/20261030231014_create_public_support_feedback.sql` | Reconstructed from live table, constraints, grants and RLS |
 | `20261030231529` | `secure_public_booking_submission_rpc` | `supabase/migrations/20261030231529_secure_public_booking_submission_rpc.sql` | Reconstructed from live function definitions and execute grants |
 | `20261031232509` | `hte_streaming_features` | `supabase/migrations/20261031232509_hte_streaming_features.sql` | Reconstructed from live streaming/library tables and RLS |
-| `20261101121639` | `revoke_anon_personal_app_data_access` | `supabase/migrations/20261101121639_revoke_anon_personal_app_data_access.sql` | Reconstructed revoke plus role table/helper RPCs and role-aware public video read policy |
+| `20261101121639` | `revoke_anon_personal_app_data_access` | `supabase/migrations/20261101121639_revoke_anon_personal_app_data_access.sql` | Reconstructed revoke plus role table/helper RPCs and role-aware public catalogue reads for artists, releases, tracks and videos |
 | `20261101121711` | `split_audio_ads_founder_policies` | `supabase/migrations/20261101121711_split_audio_ads_founder_policies.sql` | Reconstructed from live audio_ads policies |
 | `20261101191601` | `hte_role_based_admin_access` | `supabase/migrations/20261101191601_hte_role_based_admin_access.sql` | Consolidated marker; role table and helper RPCs are in 20261101121639 to satisfy earlier dependencies |
 | `20261101191636` | `hte_admin_security_cleanup` | `supabase/migrations/20261101191636_hte_admin_security_cleanup.sql` | Consolidated marker; function grants are in 20261101121639 |
