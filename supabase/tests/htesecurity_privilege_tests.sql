@@ -33,5 +33,12 @@ BEGIN
      OR has_table_privilege('authenticated', 'public.hte_social_connections', 'TRUNCATE') THEN
     RAISE EXCEPTION 'An excessive client table privilege remains';
   END IF;
+
+  IF has_table_privilege('anon', 'private.user_roles', 'SELECT')
+     OR has_function_privilege('anon', 'private.hte_current_role()', 'EXECUTE')
+     OR has_function_privilege('anon', 'private.hte_has_role(text[])', 'EXECUTE') IS NOT TRUE
+     OR has_function_privilege('authenticated', 'private.hte_has_role(text[])', 'EXECUTE') IS NOT TRUE THEN
+    RAISE EXCEPTION 'Role-helper privileges do not preserve public RLS evaluation safely';
+  END IF;
 END;
 $test$;
