@@ -1,0 +1,50 @@
+name: Discover and publish new Zambian YouTube music
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'config/zambian-youtube.json'
+      - 'scripts/youtube_zambian_sync.py'
+      - '.github/workflows/sync-zambian-music-discovery.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hte-zambian-music-discovery
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check required API credentials
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$YOUTUBE_API_KEY" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::notice::Zambian music discovery is safely skipped. Add YOUTUBE_API_KEY and SUPABASE_SERVICE_ROLE_KEY to repository Actions secrets to enable automatic publishing."
+            exit 0
+          fi
+
+      - name: Discover and publish verified music videos
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          PYTHONUNBUFFERED: '1'
+        run: python scripts/youtube_zambian_sync.py --limit 8
