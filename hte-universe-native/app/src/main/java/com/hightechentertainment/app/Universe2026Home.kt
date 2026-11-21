@@ -39,14 +39,14 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.hightechentertainment.app.media.spotifyAppUri
 
-private val U26Black = Color(0xFF0B0A0F)
-private val U26Panel = Color(0xFF141414)
-private val U26Raised = Color(0xFF1E1C18)
-private val U26Gold = Color(0xFFE5C158)
+private val U26Black = com.hightechentertainment.app.ui.design.HteColors.Obsidian
+private val U26Panel = com.hightechentertainment.app.ui.design.HteColors.Panel
+private val U26Raised = com.hightechentertainment.app.ui.design.HteColors.PanelRaised
+private val U26Gold = com.hightechentertainment.app.ui.design.HteColors.Gold
 private val U26GoldLight = Color(0xFFF0DCA7)
-private val U26Silver = Color(0xFFC7CCD6)
-private val U26Muted = Color(0xFF89919D)
-private val U26Line = Color(0xFF3A3427)
+private val U26Silver = com.hightechentertainment.app.ui.design.HteColors.Silver
+private val U26Muted = com.hightechentertainment.app.ui.design.HteColors.Muted
+private val U26Line = com.hightechentertainment.app.ui.design.HteColors.Hairline
 
 /** Stable, case-insensitive ordering used by Home's opt-in favourite-genre recommendations. */
 internal fun rankGenreIndexesByPreference(genres: List<String?>, preferredGenreCounts: Map<String, Int>): List<Int> =
@@ -97,6 +97,31 @@ fun MusicHomeScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(23.dp)
         ) {
+            item(key = "home_header_actions") {
+                Row(
+                    Modifier.fillMaxWidth().padding(bottom = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("HIGH-TECH ENTERTAINMENT", color = U26Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
+                        Text(
+                            profileName?.takeIf(String::isNotBlank)?.let { "Welcome, $it" } ?: "Your sound. Your universe.",
+                            color = U26Silver, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    IconButton(onClick = onVoice) {
+                        Icon(Icons.Outlined.GraphicEq, contentDescription = "Open HTE AI Voice Assistant", tint = U26Gold)
+                    }
+                    IconButton(onClick = onProfile) {
+                        Icon(Icons.Outlined.Person, contentDescription = "Open account", tint = U26Silver)
+                    }
+                    IconButton(onClick = onSettings) {
+                        Icon(Icons.Outlined.Settings, contentDescription = "Open settings", tint = U26Silver)
+                    }
+                }
+            }
+
             if (artists.isNotEmpty()) item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     U26SectionHeading("MEET THE ARTISTS", "DISCOVER MUSIC", onExplore)

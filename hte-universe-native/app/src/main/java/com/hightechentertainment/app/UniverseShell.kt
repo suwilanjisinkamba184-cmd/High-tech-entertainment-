@@ -105,11 +105,11 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.TimeoutCancellationException
 
-private val ShellGold = Color(0xFFE5C158)
-private val ShellSilver = Color(0xFFC4CAD2)
-private val ShellMuted = Color(0xFF8B929D)
-private val ShellPanel = Color(0xFF17161E)
-private val ShellBackground = Color(0xFF0B0A0F)
+private val ShellGold = com.hightechentertainment.app.ui.design.HteColors.Gold
+private val ShellSilver = com.hightechentertainment.app.ui.design.HteColors.Silver
+private val ShellMuted = com.hightechentertainment.app.ui.design.HteColors.Muted
+private val ShellPanel = com.hightechentertainment.app.ui.design.HteColors.Panel
+private val ShellBackground = com.hightechentertainment.app.ui.design.HteColors.Obsidian
 
 private data class CatalogueSnapshot(
     val tracks: List<TrackDto>,

@@ -46,9 +46,9 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
-private val MemberGold = Color(0xFFD6B15E)
-private val MemberPanel = Color(0xFF15111B)
-private val MemberMuted = Color(0xFF8B929D)
+private val MemberGold = com.hightechentertainment.app.ui.design.HteColors.Gold
+private val MemberPanel = com.hightechentertainment.app.ui.design.HteColors.Panel
+private val MemberMuted = com.hightechentertainment.app.ui.design.HteColors.Muted
 
 private suspend fun <T> captureAccountRequest(request: suspend () -> T): Result<T> = try {
     Result.success(request())
@@ -136,7 +136,7 @@ fun MemberCenter(
     LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MemberPanel), shape = RoundedCornerShape(22.dp)) {
-                Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF3A1746), MemberPanel, Color(0xFF0C1118)))).padding(18.dp)) {
+                Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(com.hightechentertainment.app.ui.design.HteColors.PanelRaised, MemberPanel, com.hightechentertainment.app.ui.design.HteColors.Obsidian))).padding(18.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Outlined.AccountCircle, null, tint = MemberGold, modifier = Modifier.size(34.dp))
@@ -194,7 +194,7 @@ fun MemberCenter(
                 ) {
                     Icon(Icons.Outlined.Mic, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Open Voice Assistant")
+                    Text("Open HTE AI Voice Assistant")
                 }
             }
         }
@@ -397,7 +397,7 @@ fun MemberCenter(
 
     if (showSettings) {
         Dialog(onDismissRequest = { showSettings = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-            Surface(Modifier.fillMaxSize(), color = Color(0xFF08090B)) {
+            Surface(Modifier.fillMaxSize(), color = com.hightechentertainment.app.ui.design.HteColors.Obsidian) {
                 SettingsHub(
                     onClose = { showSettings = false },
                     settingsStore = settingsStore,
@@ -468,7 +468,7 @@ fun MemberCenter(
 
     if (showFounderStudio) {
         Dialog(onDismissRequest = { showFounderStudio = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-            Surface(Modifier.fillMaxSize(), color = Color(0xFF08090B)) {
+            Surface(Modifier.fillMaxSize(), color = com.hightechentertainment.app.ui.design.HteColors.Obsidian) {
                 FounderStudioScreen(onClose = { showFounderStudio = false })
             }
         }

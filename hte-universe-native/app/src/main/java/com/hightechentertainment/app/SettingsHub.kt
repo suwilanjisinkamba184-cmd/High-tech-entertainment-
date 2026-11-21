@@ -45,11 +45,11 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import javax.net.ssl.SSLException
 
-private val SettingsGold = Color(0xFFE5C158)
-private val SettingsSilver = Color(0xFFC4CAD2)
-private val SettingsMuted = Color(0xFF8B929D)
-private val SettingsPanel = Color(0xFF151515)
-private val SettingsBackground = Color(0xFF0B0A0F)
+private val SettingsGold = com.hightechentertainment.app.ui.design.HteColors.Gold
+private val SettingsSilver = com.hightechentertainment.app.ui.design.HteColors.Silver
+private val SettingsMuted = com.hightechentertainment.app.ui.design.HteColors.Muted
+private val SettingsPanel = com.hightechentertainment.app.ui.design.HteColors.Panel
+private val SettingsBackground = com.hightechentertainment.app.ui.design.HteColors.Obsidian
 
 @androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
 @Composable
@@ -188,7 +188,7 @@ fun HteSettingsScreen(
             item {
                 SettingsCard {
                     SettingsActionRow(
-                        "SYNAPSE Voice Assistant",
+                        "HTE AI Voice Assistant",
                         "Search music, navigate HTE Universe and control playback by voice.",
                         onVoiceAssistant
                     )
@@ -436,7 +436,7 @@ fun HteSettingsScreen(
                         openSupportEmail(context, "HTE Universe app feedback")
                     }
                     SettingsDivider()
-                    SettingsInfoRow("AI & voice assistant", "Open SYNAPSE Voice Assistant here in Settings or from your Account page.")
+                    SettingsInfoRow("AI & voice assistant", "Use HTE AI voice control from Home, Account or Settings.")
                     SettingsInfoRow("Artist & Founder tools", "Publishing permissions are controlled by your verified account role.")
                     Text("HTE Universe · The Pride of Africa", color = SettingsGold, fontSize = 10.sp, letterSpacing = 1.2.sp)
                 }
