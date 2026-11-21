@@ -4,6 +4,9 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -55,6 +58,14 @@ class HteSplashSmokeTest {
         }
         composeRule.onNodeWithText("Welcome back").assertExists()
         composeRule.onNodeWithText("Sign in").assertExists()
+        repeat(5) {
+            if (composeRule.onAllNodesWithText("Open Settings").fetchSemanticsNodes().isEmpty()) {
+                composeRule.onRoot().performTouchInput { swipeUp() }
+            }
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithText("Open Settings").fetchSemanticsNodes().isNotEmpty()
+        }
         composeRule.onNodeWithText("Open Settings").performClick()
         composeRule.onNodeWithText("Settings").assertExists()
         composeRule.onNodeWithText("Personalise your universe.").assertExists()
