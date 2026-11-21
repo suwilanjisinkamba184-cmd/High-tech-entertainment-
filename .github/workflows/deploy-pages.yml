@@ -105,7 +105,7 @@ jobs:
           grep -q 'function logDiagnostic(label,error){if(founderAccess)' assets/app.js
           grep -q 'HTE catalogue section unavailable:' website/src/components/PublicCatalogue.tsx
           ! grep -Fq "console.error('HTE catalogue '" website/src/components/PublicCatalogue.tsx
-          grep -q 'Download HTE-branded audio' website/src/components/PublicCatalogue.tsx
+          grep -q 'Download audio' website/src/components/PublicCatalogue.tsx
           grep -q 'is_root_reference = target.startswith("/")' scripts/build-website.sh
           ! grep -Fq 'href={downloadUrl || src}' website/src/components/PublicCatalogue.tsx
           test -s admin/index.html
