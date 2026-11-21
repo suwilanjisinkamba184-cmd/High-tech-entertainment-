@@ -8,6 +8,7 @@ on:
       - 'database/changes/20261121_02_expand_temp_download_limit.sql'
       - 'database/changes/20261121_03_allow_flac_temp_downloads.sql'
       - 'database/changes/20261121_04_optimize_download_jobs_and_contact_policies.sql'
+      - 'database/changes/20261121_05_scope_download_job_policy_to_service_role.sql'
       - '.github/workflows/cleanup-temporary-downloads.yml'
       - 'assets/branded-download.js'
       - 'admin/index.html'
@@ -22,6 +23,7 @@ on:
       - 'database/changes/20261121_02_expand_temp_download_limit.sql'
       - 'database/changes/20261121_03_allow_flac_temp_downloads.sql'
       - 'database/changes/20261121_04_optimize_download_jobs_and_contact_policies.sql'
+      - 'database/changes/20261121_05_scope_download_job_policy_to_service_role.sql'
       - '.github/workflows/cleanup-temporary-downloads.yml'
       - 'assets/branded-download.js'
       - 'admin/index.html'
@@ -56,4 +58,5 @@ jobs:
           grep -q 'TRUSTED_CLEANUP_WORKFLOW' supabase/functions/hte-download-delivery/index.ts
           ! grep -q 'x-forwarded-for' supabase/functions/hte-download-delivery/index.ts
           grep -q 'id-token: write' .github/workflows/cleanup-temporary-downloads.yml
+          grep -q 'TO service_role' database/changes/20261121_05_scope_download_job_policy_to_service_role.sql
           ! grep -q 'uploadToSignedUrl' assets/branded-download.js
