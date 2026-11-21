@@ -31,7 +31,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   <main>
     <div class="brand">High-Tech Entertainment</div>
     <h1>Your music.<br>Delivered securely.</h1>
-    <p>HTE prepares a private temporary copy of authorised audio in Supabase, then streams it to your device through a one-time download link. The temporary copy is removed after delivery.</p>
+    <p>HTE prepares a private temporary copy of authorised audio in Supabase, then streams it to your device through a short-lived download link. The temporary copy is automatically removed after its retention period.</p>
     <div class="track"><strong id="track-title">Loading track…</strong><span id="track-artist">Please wait</span></div>
     <button id="create-download" type="button" disabled>Prepare secure download</button>
     <div class="progress" aria-hidden="true"><span id="download-progress"></span></div>
