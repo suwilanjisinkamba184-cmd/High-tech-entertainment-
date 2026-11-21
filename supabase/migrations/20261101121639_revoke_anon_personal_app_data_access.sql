@@ -3,11 +3,14 @@
 REVOKE ALL ON TABLE public.profiles, public.app_preferences,
   public.user_favorites, public.playlists, public.listening_history, public.ad_impressions
 FROM PUBLIC, anon;
+-- app_notifications is introduced by the later 20261105020850 migration;
+-- its client grants are hardened in 20261121173000 after that table exists.
 
 -- Role assignment storage and server-verified role RPCs are established here so
 -- later audio-ad and Founder policies can safely depend on them.
 -- Reconstructed from the live private role-assignment table and role RPC definitions.
 CREATE SCHEMA IF NOT EXISTS private;
+GRANT USAGE ON SCHEMA private TO anon, authenticated, service_role;
 CREATE TABLE IF NOT EXISTS private.user_roles (
   user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   role text NOT NULL CHECK (role IN ('owner','admin','music_promoter','partner')),
