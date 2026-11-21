@@ -4,13 +4,13 @@
 **Audit date:** 2026-11-21  
 **Live migration ledger:** 53 records  
 **Repository formal migrations:** 61 files  
-**Live version coverage:** 50/53 versions represented
+**Live version coverage:** 53/53 versions represented
 
 ## Status
 
 All 53 live migration versions now have a corresponding source file in `supabase/migrations/`. However, this is **source coverage, not yet a clean-replay certification**. Several early migrations were reconstructed from live catalog metadata, and several related migrations are intentionally consolidated into one source file with no-op version markers. Those files must be tested in chronological order against a clean temporary Supabase database before this is considered fully reproducible.
 
-Do not reset or replay the production database. The production project already records all 53 versions, so matching files should be skipped by version. The seven additional files in the repository are pending/unapplied migrations or new hardening work.
+Do not reset or replay the production database. The production project already records all 53 versions, so matching files should be skipped by version. The eight additional files comprise two deprecated no-op version markers and six pending migrations/hardening changes.
 
 | Live version | Live migration name | Source file | Recovery method |
 |---|---|---|---|
@@ -71,20 +71,20 @@ Do not reset or replay the production database. The production project already r
 ## Additional source files not in the live 53-version ledger
 
 - `20261109090000_hte_ai_marketing_agent.sql` and `20261109093000_hte_marketing_created_by_idx.sql` are deprecated no-op markers. Their DDL is represented by the exact live-version files `20261108230111` and `20261108230316`.
-- The following five migrations are pending and must be validated before production application:
+- The following six migrations are pending and must be validated before production application:
   - `supabase/migrations/20261120103000_shared_video_catalogue_sources.sql`
   - `supabase/migrations/20261120_member_booking_history.sql`
   - `supabase/migrations/20261121140000_backfill_native_video_download_urls.sql`
   - `supabase/migrations/20261121170000_hte_atomic_download_quota.sql`
   - `supabase/migrations/20261121173000_hte_revoke_excess_client_table_privileges.sql`
-- `supabase/migrations/20261121204500_hte_contact_rate_limit_search_path.sql`
+  - `supabase/migrations/20261121204500_hte_contact_rate_limit_search_path.sql`
 
 ## Required validation before sign-off
 
 1. Create a clean temporary Supabase branch/database.
-2. Apply all 60 formal migration files in timestamp order.
+2. Apply all 61 formal migration files in timestamp order, including the two deprecated no-op markers.
 3. Compare tables, columns, constraints, indexes, functions, triggers, policies, grants, storage buckets and realtime publication against the live project.
 4. Run the SQL assertions in `supabase/tests/htesecurity_privilege_tests.sql`.
-5. Verify the two new pending migrations on the temporary branch before applying either to production.
+5. Verify all six pending migrations on the temporary branch before applying any to production.
 
 The inventory must not be treated as proof that the consolidated/reconstructed SQL is identical to the original manual migration statements.
