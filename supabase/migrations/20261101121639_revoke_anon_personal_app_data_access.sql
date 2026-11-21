@@ -1,8 +1,7 @@
 -- Revoke anonymous access to personal application data while retaining
 -- the intentionally public catalogue, public playlist-track reads, and contact inserts.
-REVOKE ALL ON TABLE public.profiles, public.app_preferences, public.app_notifications,
-  public.user_favorites, public.playlists, public.listening_history, public.bookings,
-  public.ad_impressions
+REVOKE ALL ON TABLE public.profiles, public.app_preferences,
+  public.user_favorites, public.playlists, public.listening_history, public.ad_impressions
 FROM PUBLIC, anon;
 
 -- Role assignment storage and server-verified role RPCs are established here so
@@ -18,6 +17,9 @@ CREATE TABLE IF NOT EXISTS private.user_roles (
 );
 CREATE INDEX IF NOT EXISTS user_roles_created_by_idx ON private.user_roles (created_by);
 ALTER TABLE private.user_roles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users read own ad impressions" ON public.ad_impressions;
+CREATE POLICY "Users and admins read ad impressions" ON public.ad_impressions FOR SELECT TO authenticated
+  USING ((user_id = (SELECT auth.uid())) OR private.hte_has_role(ARRAY['owner','admin']));
 DROP POLICY IF EXISTS "Deny all client access to HTE role assignments" ON private.user_roles;
 CREATE POLICY "Deny all client access to HTE role assignments"
   ON private.user_roles FOR ALL TO anon, authenticated USING (false) WITH CHECK (false);
