@@ -101,6 +101,13 @@ BEGIN
     RAISE EXCEPTION 'Video catalogue Founder-only write policies are incomplete';
   END IF;
 
+  IF has_table_privilege('anon', 'public.hte_admin_contacts', 'SELECT')
+     OR has_table_privilege('authenticated', 'public.hte_admin_contacts', 'SELECT')
+     OR has_table_privilege('authenticated', 'public.hte_admin_contacts', 'INSERT')
+     OR NOT has_table_privilege('service_role', 'public.hte_admin_contacts', 'SELECT') THEN
+    RAISE EXCEPTION 'HTE admin contact directory privileges are not least-privilege';
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1 FROM pg_proc p
     JOIN pg_namespace n ON n.oid = p.pronamespace
