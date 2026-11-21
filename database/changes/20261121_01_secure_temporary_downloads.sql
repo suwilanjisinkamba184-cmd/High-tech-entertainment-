@@ -19,7 +19,7 @@ VALUES (
   'hte-download-temp',
   'hte-download-temp',
   false,
-  104857600,
+  83886080,
   ARRAY['audio/mpeg','audio/mp3','audio/mp4','audio/x-m4a','audio/aac','audio/wav','audio/x-wav','audio/ogg','audio/webm']::text[]
 )
 ON CONFLICT (id) DO UPDATE
