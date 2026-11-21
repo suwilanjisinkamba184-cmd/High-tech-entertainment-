@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 */6 * * *'
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'config/zambian-youtube.json'
+      - 'scripts/youtube_zambian_sync.py'
+      - '.github/workflows/sync-zambian-music-discovery.yml'
   push:
     branches: [main]
     paths:
@@ -19,7 +24,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+      - name: Validate discovery script and configuration
+        run: |
+          python -m py_compile scripts/youtube_zambian_sync.py
+          python -m json.tool config/zambian-youtube.json > /dev/null
+
   discover:
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
