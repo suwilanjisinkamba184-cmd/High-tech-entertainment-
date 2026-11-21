@@ -180,6 +180,8 @@ Deno.serve(async (req) => {
     return reply({ success: true, sourceUrl: signed.signedUrl, alreadyBranded: !!branded });
   }
 
+  if (body?.action === "cleanup") return reply({ success: true, cleaned: true });
+
   if (body?.action === "prepare") {
     const trackId = String(body.trackId || "");
     const mime = String(body.contentType || "").toLowerCase().split(";")[0].trim();
