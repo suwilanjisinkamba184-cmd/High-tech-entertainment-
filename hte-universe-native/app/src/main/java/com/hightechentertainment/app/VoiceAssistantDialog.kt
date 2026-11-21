@@ -52,9 +52,9 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-private val VoiceGold = Color(0xFFD6B15E)
-private val VoicePanel = Color(0xFF121418)
-private val VoiceMuted = Color(0xFF8B929D)
+private val VoiceGold = com.hightechentertainment.app.ui.design.HteColors.Gold
+private val VoicePanel = com.hightechentertainment.app.ui.design.HteColors.Panel
+private val VoiceMuted = com.hightechentertainment.app.ui.design.HteColors.Muted
 private val voiceJson = Json { ignoreUnknownKeys = true }
 
 @Serializable
@@ -127,6 +127,7 @@ fun VoiceAssistantDialog(
     var minimized by remember { mutableStateOf(false) }
 
     SideEffect {
+        toolContext.onActionCompleted = { minimized = true }
         toolContext.tracks = currentTracks
         toolContext.favourites = currentFavourites
         toolContext.videos = currentVideos
@@ -179,9 +180,9 @@ fun VoiceAssistantDialog(
         }
     }
 
-    Box(Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.BottomEnd) {
+    BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp), contentAlignment = Alignment.BottomCenter) {
             if (minimized) {
-                Surface(Modifier.fillMaxWidth().widthIn(max = 320.dp), color = VoicePanel, shape = RoundedCornerShape(22.dp), shadowElevation = 18.dp) {
+                Surface(Modifier.align(Alignment.BottomEnd).fillMaxWidth().widthIn(max = 320.dp), color = VoicePanel, shape = RoundedCornerShape(22.dp), shadowElevation = 18.dp) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.GraphicEq, null, tint = VoiceGold, modifier = Modifier.size(25.dp))
                         Spacer(Modifier.width(9.dp))
@@ -195,16 +196,17 @@ fun VoiceAssistantDialog(
                     }
                 }
             } else {
-                Surface(Modifier.fillMaxWidth(.96f).widthIn(max = 440.dp).fillMaxHeight(.88f), color = Color(0xFF08090B), shape = RoundedCornerShape(26.dp), shadowElevation = 24.dp) {
+                Surface(Modifier.fillMaxWidth(.96f).widthIn(max = 420.dp).heightIn(max = maxHeight * .48f), color = com.hightechentertainment.app.ui.design.HteColors.Obsidian, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 18.dp, bottomEnd = 18.dp), shadowElevation = 20.dp) {
                     Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp, vertical = 18.dp),
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 9.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                Box(Modifier.width(32.dp).height(4.dp).clip(RoundedCornerShape(50)).background(VoiceMuted.copy(alpha = .5f)))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text("HTE UNIVERSE / AI VOICE ASSISTANT", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
-                        Text("HTE AI Voice Assistant", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                        Text("HTE AI Voice Assistant", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         Text("Talk to HTE AI and control your HTE Universe experience", color = VoiceMuted, fontSize = 11.sp)
                     }
                     IconButton(onClick = { minimized = true }) { Icon(Icons.Outlined.ExpandMore, "Minimize HTE AI Voice Assistant", tint = Color.White) }
@@ -215,7 +217,7 @@ fun VoiceAssistantDialog(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF11161C)),
                     shape = RoundedCornerShape(18.dp)
                 ) {
-                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.Shield, null, tint = VoiceGold, modifier = Modifier.size(23.dp))
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
@@ -226,13 +228,13 @@ fun VoiceAssistantDialog(
                     }
                 }
                 Box(
-                    Modifier.fillMaxWidth().height(210.dp)
+                    Modifier.fillMaxWidth().height(92.dp)
                         .background(Brush.radialGradient(listOf(Color(0xFF3C3220), Color(0xFF18212A), Color(0xFF08090B))), RoundedCornerShape(24.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(Modifier.size(164.dp).clip(CircleShape).background(VoiceGold.copy(alpha = .07f)), contentAlignment = Alignment.Center) {
-                        Box(Modifier.size(126.dp).clip(CircleShape).background(VoiceGold.copy(alpha = .13f)), contentAlignment = Alignment.Center) {
-                            Box(Modifier.size(88.dp).clip(CircleShape).background(VoiceGold.copy(alpha = .18f)), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(84.dp).clip(CircleShape).background(VoiceGold.copy(alpha = .07f)), contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(62.dp).clip(CircleShape).background(VoiceGold.copy(alpha = .13f)), contentAlignment = Alignment.Center) {
+                            Box(Modifier.size(42.dp).clip(CircleShape).background(VoiceGold.copy(alpha = .18f)), contentAlignment = Alignment.Center) {
                                 Icon(Icons.Outlined.GraphicEq, null, tint = VoiceGold, modifier = Modifier.size(46.dp))
                             }
                         }
@@ -298,35 +300,35 @@ fun VoiceAssistantDialog(
                     if (session == null) {
                         Button(
                             onClick = { connect() }, enabled = !isConnecting,
-                            modifier = Modifier.weight(1f).height(52.dp),
+                            modifier = Modifier.weight(1f).height(42.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = VoiceGold, contentColor = Color.Black),
                             shape = RoundedCornerShape(15.dp)
                         ) {
                             Icon(Icons.Outlined.Mic, null); Spacer(Modifier.width(8.dp)); Text(if (isConnecting) "Connecting…" else "Start voice session")
                         }
                     } else {
-                        OutlinedButton(onClick = { scope.launch { session?.toggleMute() } }, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(15.dp)) {
+                        OutlinedButton(onClick = { scope.launch { session?.toggleMute() } }, modifier = Modifier.weight(1f).height(42.dp), shape = RoundedCornerShape(15.dp)) {
                             Icon(if (muted) Icons.Outlined.MicOff else Icons.Outlined.Mic, null); Spacer(Modifier.width(6.dp)); Text(if (muted) "Unmute" else "Mute")
                         }
-                        Button(onClick = { session = null; status = "Disconnecting" }, modifier = Modifier.weight(1f).height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8E3434), contentColor = Color.White), shape = RoundedCornerShape(15.dp)) {
+                        Button(onClick = { session = null; status = "Disconnecting" }, modifier = Modifier.weight(1f).height(42.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8E3434), contentColor = Color.White), shape = RoundedCornerShape(15.dp)) {
                             Icon(Icons.Outlined.CallEnd, null); Spacer(Modifier.width(6.dp)); Text("End session")
                         }
                     }
                 }
                 Text("QUICK LAUNCH", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { currentOnSearch("Zambian") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                    OutlinedButton(onClick = { currentOnSearch("Zambian"); minimized = true }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
                         Icon(Icons.Outlined.Search, null); Spacer(Modifier.width(4.dp)); Text("Zambian music", fontSize = 10.sp)
                     }
-                    OutlinedButton(onClick = { currentOnNavigate("DISCOVER") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                    OutlinedButton(onClick = { currentOnNavigate("DISCOVER"); minimized = true }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
                         Icon(Icons.Outlined.Explore, null); Spacer(Modifier.width(4.dp)); Text("Discover", fontSize = 10.sp)
                     }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { currentOnNavigate("LIBRARY") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                    OutlinedButton(onClick = { currentOnNavigate("LIBRARY"); minimized = true }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
                         Icon(Icons.Outlined.LibraryMusic, null); Spacer(Modifier.width(4.dp)); Text("My library", fontSize = 10.sp)
                     }
-                    OutlinedButton(onClick = { currentOnNavigate("HOME") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                    OutlinedButton(onClick = { currentOnNavigate("HOME"); minimized = true }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
                         Icon(Icons.Outlined.Home, null); Spacer(Modifier.width(4.dp)); Text("Home", fontSize = 10.sp)
                     }
                 }
@@ -371,7 +373,8 @@ private class VoiceToolContext {
     var onNavigate: (String) -> Unit = {}
     var onSearch: (String) -> Unit = {}
     var onSearchVideos: (String) -> Unit = {}
-    var onUserTranscript: (String) -> Unit = {}
+    var onActionCompleted: () -> Unit = {}
+    var onUserTranscript: (String) -> Unit = {
     var onAgentResponse: (String) -> Unit = {}
     var onError: (String) -> Unit = {}
 }
