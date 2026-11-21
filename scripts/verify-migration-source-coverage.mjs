@@ -69,6 +69,7 @@ if (duplicates.length || missingFiles.length || missingManifestRows.length) {
 console.log(`Verified ${expectedLiveVersions.length} live migration versions have unique formal source files and manifest entries.`);
 
 const orderedFiles = [...migrationFiles].sort((a, b) => a.match(/^\d{8,14}/)[0].localeCompare(b.match(/^\d{8,14}/)[0]));
+const fileOrder = new Map(orderedFiles.map((file, index) => [file, index]));
 const createdAt = new Map();
 const sqlByFile = new Map();
 for (const file of orderedFiles) {
@@ -115,7 +116,7 @@ for (const file of orderedFiles) {
     const table = `${match[1].toLowerCase()}.${match[2].toLowerCase()}`;
     const creation = createdAt.get(table);
     if (!creation) continue; // Supabase-managed or pre-existing object; validated separately.
-    if (creation.file.localeCompare(file) > 0 ||
+    if (fileOrder.get(creation.file) > fileOrder.get(file) ||
         (creation.file === file && creation.index > match.index)) {
       sqlErrors.push({ file, issue: `${table} is referenced before it is created in ${creation.file}` });
     }
