@@ -91,6 +91,7 @@ import com.hightechentertainment.app.media.isPlayableInAppAudioUrl
 import com.hightechentertainment.app.media.isPlayableVideoUrl
 import com.hightechentertainment.app.media.OfflineDownloadManager
 import com.hightechentertainment.app.media.OfflineDownloadRecord
+import com.hightechentertainment.app.media.temporaryAudioDownloadPage
 import com.hightechentertainment.app.ui.design.HteIcons
 import com.hightechentertainment.app.ui.design.HteGlowingIconBadge
 import kotlinx.coroutines.CancellationException
@@ -495,12 +496,13 @@ fun UniverseShell() {
                         Toast.makeText(context, "This track links to an external streaming page. Spotify and YouTube audio cannot be downloaded through HTE.", Toast.LENGTH_LONG).show()
                         return@launch
                     }
-                    if (url.isNullOrBlank()) {
-                        val downloadPage = "https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/download/?track=${Uri.encode(trackId)}"
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(downloadPage)))
-                        Toast.makeText(context, "Opening HTE branded download for $title…", Toast.LENGTH_SHORT).show()
-                        return@launch
-                    }
+                    // All catalogue audio must pass through the server-side temporary
+                    // Supabase delivery flow. Never enqueue the permanent branded URL
+                    // directly from Android, even when one is already available.
+                    val downloadPage = temporaryAudioDownloadPage(trackId)
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(downloadPage)))
+                    Toast.makeText(context, "Opening secure HTE temporary download for $title…", Toast.LENGTH_SHORT).show()
+                    return@launch
                 }
                 if (url.isNullOrBlank()) error(
                     if (mediaType == "audio") "The HTE-branded download is not ready yet."
