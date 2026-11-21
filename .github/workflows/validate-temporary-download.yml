@@ -5,6 +5,11 @@ on:
     paths:
       - 'supabase/functions/hte-download-delivery/**'
       - 'database/changes/20261121_01_secure_temporary_downloads.sql'
+      - 'database/changes/20261121_02_expand_temp_download_limit.sql'
+      - 'database/changes/20261121_03_allow_flac_temp_downloads.sql'
+      - 'assets/branded-download.js'
+      - 'admin/index.html'
+      - 'website/src/components/PublicCatalogue.tsx'
       - 'supabase/config.toml'
       - '.github/workflows/validate-temporary-download.yml'
   push:
@@ -12,6 +17,11 @@ on:
     paths:
       - 'supabase/functions/hte-download-delivery/**'
       - 'database/changes/20261121_01_secure_temporary_downloads.sql'
+      - 'database/changes/20261121_02_expand_temp_download_limit.sql'
+      - 'database/changes/20261121_03_allow_flac_temp_downloads.sql'
+      - 'assets/branded-download.js'
+      - 'admin/index.html'
+      - 'website/src/components/PublicCatalogue.tsx'
       - 'supabase/config.toml'
 
 permissions:
@@ -33,3 +43,9 @@ jobs:
 
       - name: Type-check download delivery function
         run: deno check --config supabase/functions/hte-download-delivery/deno.json supabase/functions/hte-download-delivery/index.ts
+
+      - name: Verify server-side-only temporary copy
+        run: |
+          grep -q 'destinationBucket: BUCKET' supabase/functions/hte-download-delivery/index.ts
+          grep -q 'audio/flac' supabase/functions/hte-download-delivery/index.ts
+          ! grep -q 'uploadToSignedUrl' assets/branded-download.js
