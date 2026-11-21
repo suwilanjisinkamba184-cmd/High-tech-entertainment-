@@ -24,6 +24,18 @@ class VoiceAssistantErrorMessageTest {
         assertTrue(message.contains("temporarily unavailable"))
     }
 
+    @Test fun embedded401InsideIdentifierDoesNotTriggerSessionGuidance() {
+        val message = voiceFailureMessage("Unexpected server error; request_id=abc401def")
+        assertTrue(message.contains("temporarily unavailable"))
+    }
+
+    @Test fun provider403WinsOverWebSocketConnectionWording() {
+        val message = voiceFailureMessage("403 WebSocket connection failed")
+        assertTrue(message.contains("agent permissions"))
+        assertTrue(message.contains("server-side API credentials"))
+        assertTrue(!message.contains("internet connection"))
+    }
+
     @Test fun providerPermissionFailuresExplainTheCorrectOwnerAction() {
         val message = voiceFailureMessage("403 forbidden")
         assertTrue(message.contains("agent permissions"))
