@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS public.hte_download_jobs (
   file_name text NOT NULL,
   ip_hash text NOT NULL,
   status text NOT NULL DEFAULT 'created'
-    CHECK (status IN ('created','uploaded','downloading','delivered','expired')),
+    CHECK (status IN ('created','uploaded')),
   created_at timestamptz NOT NULL DEFAULT now(),
   expires_at timestamptz NOT NULL
 );
@@ -50,4 +50,4 @@ REVOKE ALL ON TABLE public.hte_download_jobs FROM PUBLIC, anon, authenticated;
 GRANT ALL ON TABLE public.hte_download_jobs TO service_role;
 
 COMMENT ON TABLE public.hte_download_jobs IS
-  'Server-only short-lived temporary media delivery jobs. Objects are stored in private hte-download-temp and deleted after delivery or expiry.';
+  'Server-only temporary media delivery jobs. Private objects are removed after 30 minutes; job records expire after 60 minutes.';
