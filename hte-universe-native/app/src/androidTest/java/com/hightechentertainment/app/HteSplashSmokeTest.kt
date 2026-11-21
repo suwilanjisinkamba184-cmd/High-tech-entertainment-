@@ -42,4 +42,22 @@ class HteSplashSmokeTest {
         composeRule.onNodeWithText("HTE AI Voice Assistant").assertExists()
     }
 
+    @Test
+    fun accountTabAndSettingsHubRemainReachable() {
+        composeRule.waitUntil(timeoutMillis = 25_000) {
+            composeRule.onAllNodesWithContentDescription("Account")
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithContentDescription("Account").performClick()
+        composeRule.waitUntil(timeoutMillis = 8_000) {
+            composeRule.onAllNodesWithText("Welcome back")
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText("Welcome back").assertExists()
+        composeRule.onNodeWithText("Sign in").assertExists()
+        composeRule.onNodeWithText("Open Settings").performClick()
+        composeRule.onNodeWithText("Settings").assertExists()
+        composeRule.onNodeWithText("Personalise your universe.").assertExists()
+    }
+
 }
