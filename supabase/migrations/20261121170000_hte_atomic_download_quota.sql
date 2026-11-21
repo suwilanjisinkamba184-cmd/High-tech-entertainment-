@@ -27,6 +27,7 @@ DECLARE
   recent_count bigint;
 BEGIN
   IF p_ip_hash IS NULL OR length(p_ip_hash) <> 64
+     OR p_request_nonce IS NULL
      OR p_max_downloads < 1 OR p_max_downloads > 100 THEN
     RAISE EXCEPTION 'Invalid download quota parameters'
       USING ERRCODE = '22023';
