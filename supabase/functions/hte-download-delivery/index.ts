@@ -3,12 +3,12 @@ import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 const BUCKET = "hte-download-temp";
 const MAX_BYTES = 80 * 1024 * 1024;
 const JOB_TTL_MS = 60 * 60 * 1000;
-const DELIVERY_TTL_MS = 5 * 60 * 1000;
-const SIGNED_URL_TTL_SECONDS = 120;
+const OBJECT_TTL_MS = 30 * 60 * 1000;
+const SIGNED_URL_TTL_SECONDS = 180;
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
-  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -48,12 +48,8 @@ async function sha256(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
 }
-function randomToken() {
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
-  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
 async function cleanupExpired(admin: SupabaseClient<any, "public", any>) {
-  const cutoff = Date.now() - 30 * 60 * 1000;
+  const cutoff = Date.now() - OBJECT_TTL_MS;
   const { data: objects, error } = await admin.storage.from(BUCKET).list("requests", {
     limit: 1000, sortBy: { column: "created_at", order: "asc" },
   });
@@ -70,7 +66,7 @@ async function cleanupExpired(admin: SupabaseClient<any, "public", any>) {
 }
 async function findJob(admin: SupabaseClient<any, "public", any>, id: string) {
   const { data, error } = await admin.from("hte_download_jobs")
-    .select("id,track_id,object_path,file_name,ip_hash,download_token_hash,status,expires_at,delivery_expires_at")
+    .select("id,track_id,object_path,file_name,ip_hash,status,expires_at")
     .eq("id", id).maybeSingle();
   if (error) throw error;
   return data;
@@ -78,88 +74,18 @@ async function findJob(admin: SupabaseClient<any, "public", any>, id: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (req.method !== "POST" && req.method !== "GET") return reply({ error: "Method not allowed" }, 405);
+  if (req.method !== "POST") return reply({ error: "Method not allowed" }, 405);
 
   const projectUrl = Deno.env.get("SUPABASE_URL") || "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
   if (!projectUrl || !serviceKey) return reply({ error: "Download delivery is not configured." }, 503);
   const admin = createClient(projectUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
-  if (req.method === "GET") {
-    const url = new URL(req.url);
-    const jobId = url.searchParams.get("job") || "";
-    const token = url.searchParams.get("token") || "";
-    if (!/^[0-9a-f-]{36}$/i.test(jobId) || token.length < 32) return reply({ error: "This download link is invalid." }, 400);
-    try {
-      const job = await findJob(admin, jobId);
-      if (!job || job.status !== "uploaded" || (!job.delivery_expires_at || Date.parse(job.delivery_expires_at) <= Date.now())) {
-        return reply({ error: "This temporary download has expired. Please prepare it again." }, 410);
-      }
-      const tokenHash = await sha256(token);
-      if (tokenHash !== job.download_token_hash) return reply({ error: "This download link is invalid or has already been used." }, 403);
-      const { data: claimed, error: claimError } = await admin.from("hte_download_jobs")
-        .update({ status: "downloading" })
-        .eq("id", jobId).eq("status", "uploaded").eq("download_token_hash", tokenHash)
-        .select("id").maybeSingle();
-      if (claimError || !claimed) return reply({ error: "This download link has already been used." }, 409);
-
-      const { data: signed, error: signError } = await admin.storage.from(BUCKET)
-        .createSignedUrl(job.object_path, SIGNED_URL_TTL_SECONDS);
-      if (signError || !signed?.signedUrl) {
-        await admin.from("hte_download_jobs").update({ status: "uploaded" }).eq("id", jobId);
-        return reply({ error: "The temporary audio could not be opened. Please retry." }, 502);
-      }
-      const upstream = await fetch(signed.signedUrl);
-      if (!upstream.ok || !upstream.body) {
-        await admin.from("hte_download_jobs").update({ status: "uploaded" }).eq("id", jobId);
-        return reply({ error: "The temporary audio could not be delivered. Please retry." }, 502);
-      }
-
-      const contentType = upstream.headers.get("Content-Type") || "application/octet-stream";
-      const contentLength = upstream.headers.get("Content-Length");
-      const reader = upstream.body.getReader();
-      let cleaned = false;
-      const cleanup = async () => {
-        if (cleaned) return;
-        cleaned = true;
-        await admin.storage.from(BUCKET).remove([job.object_path]);
-        await admin.from("hte_download_jobs").update({ status: "delivered", download_token_hash: null }).eq("id", jobId);
-      };
-      const stream = new ReadableStream<Uint8Array>({
-        async pull(controller) {
-          try {
-            const part = await reader.read();
-            if (part.done) {
-              await cleanup();
-              controller.close();
-            } else controller.enqueue(part.value);
-          } catch (error) {
-            await cleanup();
-            controller.error(error);
-          }
-        },
-        async cancel() {
-          try { await reader.cancel(); } finally { await cleanup(); }
-        },
-      });
-      const headers = new Headers({
-        ...cors,
-        "Content-Type": contentType,
-        "Content-Disposition": 'attachment; filename="' + job.file_name.replace(/["\\\r\n]/g, "") + '"',
-        "Cache-Control": "no-store, private, max-age=0",
-        "X-Content-Type-Options": "nosniff",
-      });
-      if (contentLength) headers.set("Content-Length", contentLength);
-      return new Response(stream, { status: 200, headers });
-    } catch (error) {
-      console.error("HTE temporary download stream failed", error);
-      return reply({ error: "The temporary download could not be delivered. Please try again." }, 500);
-    }
-  }
-
   let body: any;
   try { body = await req.json(); } catch { return reply({ error: "Invalid request body." }, 400); }
   try { await cleanupExpired(admin); } catch (error) { console.warn("HTE temp cleanup skipped", error); }
+
+  if (body?.action === "cleanup") return reply({ success: true, cleaned: true });
 
   if (body?.action === "source") {
     const trackId = String(body.trackId || "");
@@ -179,8 +105,6 @@ Deno.serve(async (req) => {
     if (signError || !signed?.signedUrl) return reply({ error: "The original HTE audio could not be opened securely." }, 502);
     return reply({ success: true, sourceUrl: signed.signedUrl, alreadyBranded: !!branded });
   }
-
-  if (body?.action === "cleanup") return reply({ success: true, cleaned: true });
 
   if (body?.action === "prepare") {
     const trackId = String(body.trackId || "");
@@ -244,17 +168,13 @@ Deno.serve(async (req) => {
       await admin.from("hte_download_jobs").delete().eq("id", jobId);
       return reply({ error: "The uploaded temporary file did not pass validation." }, 422);
     }
-    const token = randomToken();
-    const tokenHash = await sha256(token);
-    const deliveryExpiresAt = new Date(Date.now() + DELIVERY_TTL_MS).toISOString();
+    const { data: signed, error: signError } = await admin.storage.from(BUCKET)
+      .createSignedUrl(job.object_path, SIGNED_URL_TTL_SECONDS, { download: job.file_name });
+    if (signError || !signed?.signedUrl) return reply({ error: "The temporary download link could not be created." }, 502);
     const { error: updateError } = await admin.from("hte_download_jobs")
-      .update({ status: "uploaded", download_token_hash: tokenHash, delivery_expires_at: deliveryExpiresAt })
-      .eq("id", jobId).eq("status", "created");
+      .update({ status: "uploaded" }).eq("id", jobId).eq("status", "created");
     if (updateError) return reply({ error: "The temporary download could not be finalised." }, 500);
-    const downloadUrl = new URL("/functions/v1/hte-download-delivery", projectUrl);
-    downloadUrl.searchParams.set("job", jobId);
-    downloadUrl.searchParams.set("token", token);
-    return reply({ success: true, downloadUrl: downloadUrl.toString(), fileName: job.file_name });
+    return reply({ success: true, downloadUrl: signed.signedUrl, fileName: job.file_name, expiresInSeconds: SIGNED_URL_TTL_SECONDS });
   }
 
   return reply({ error: "Unknown download action." }, 400);
