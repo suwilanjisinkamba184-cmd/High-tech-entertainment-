@@ -560,6 +560,17 @@ private fun ProfileEditorDialog(profile: ProfileDto?, accountId: String, onDismi
     var name by remember(accountId) { mutableStateOf(profile?.displayName.orEmpty()) }
     var bio by remember(accountId) { mutableStateOf(profile?.bio.orEmpty()) }
     var phone by remember(accountId) { mutableStateOf(profile?.phone.orEmpty()) }
+    var hasEditedDraft by remember(accountId) { mutableStateOf(false) }
+
+    // Hydrate a late-arriving first profile only while the member has not started
+    // editing. Avatar-only profile refreshes therefore cannot erase a live draft.
+    LaunchedEffect(accountId, profile?.id) {
+        if (!hasEditedDraft && profile != null) {
+            name = profile.displayName
+            bio = profile.bio
+            phone = profile.phone
+        }
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit profile") },
@@ -567,9 +578,9 @@ private fun ProfileEditorDialog(profile: ProfileDto?, accountId: String, onDismi
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = onPickAvatar, enabled = !isWorking) { Text("Change profile photo") }
                 Text("JPG, PNG or WebP · maximum 5 MB", color = MemberMuted, fontSize = 11.sp)
-                OutlinedTextField(name, { name = it }, label = { Text("Display name") }, singleLine = true)
-                OutlinedTextField(phone, { phone = it }, label = { Text("Phone") }, singleLine = true)
-                OutlinedTextField(bio, { bio = it }, label = { Text("Bio") }, minLines = 3)
+                OutlinedTextField(name, { name = it; hasEditedDraft = true }, label = { Text("Display name") }, singleLine = true)
+                OutlinedTextField(phone, { phone = it; hasEditedDraft = true }, label = { Text("Phone") }, singleLine = true)
+                OutlinedTextField(bio, { bio = it; hasEditedDraft = true }, label = { Text("Bio") }, minLines = 3)
             }
         },
         confirmButton = { TextButton(onClick = { onSave(name, bio, phone) }, enabled = !isWorking && name.isNotBlank()) { Text("Save") } },
