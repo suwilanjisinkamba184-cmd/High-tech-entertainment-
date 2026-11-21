@@ -3,7 +3,7 @@ const $=s=>document.querySelector(s),params=new URLSearchParams(location.search)
 const config=window.HTE_SUPABASE_CONFIG||{},client=window.HTE_SUPABASE_CLIENT||(window.supabase&&config.url&&config.publishableKey?window.supabase.createClient(config.url,config.publishableKey):null);
 const button=$('#create-download'),status=$('#download-status'),title=$('#track-title'),artist=$('#track-artist'),progress=$('#download-progress');
 let track=null,sourceUrl='',jingleUrl='',alreadyBranded=false,busy=false;
-const MAX_BYTES=80*1024*1024;
+const MAX_BYTES=100*1024*1024;
 function message(text,type=''){status.textContent=text;status.className='status '+type}
 function safeHteAudio(value){try{const u=new URL(String(value||'')),base=new URL(config.url||'');if(u.protocol!=='https:'||u.origin!==base.origin||u.username||u.password)return '';const path=decodeURIComponent(u.pathname),match=path.match(/^\/storage\/v1\/object\/(?:public|sign|authenticated)\/([^/]+)\/(.+)$/);return match&&['hte-audio','ht storage'].includes(decodeURIComponent(match[1]))?u.href:''}catch{return ''}}
 function fileStem(value){return String(value||'HTE-track').normalize('NFKD').replace(/[^A-Za-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,70)||'HTE-track'}
@@ -54,7 +54,7 @@ async function originalBlob(){
  const response=await fetch(sourceUrl,{mode:'cors',cache:'no-store'});
  if(!response.ok)throw Error('The original audio could not be retrieved. Check the connection and retry.');
  const blob=await response.blob();
- if(!blob.size||blob.size>MAX_BYTES)throw Error('The audio file is empty or exceeds the 80 MB temporary download limit.');
+ if(!blob.size||blob.size>MAX_BYTES)throw Error('The audio file is empty or exceeds the 100 MB temporary download limit.');
  return blob;
 }
 async function deliverTemporary(blob){
