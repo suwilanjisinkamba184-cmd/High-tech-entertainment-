@@ -46,11 +46,43 @@ import kotlinx.serialization.json.put
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 import java.time.LocalDate
 
 private val MemberGold = com.hightechentertainment.app.ui.design.HteColors.Gold
 private val MemberPanel = com.hightechentertainment.app.ui.design.HteColors.Panel
 private val MemberMuted = com.hightechentertainment.app.ui.design.HteColors.Muted
+private const val MAX_PROFILE_IMAGE_BYTES = 5L * 1024L * 1024L
+
+private suspend fun stageProfileImage(context: android.content.Context, uri: android.net.Uri): Pair<File, Long> =
+    withContext(Dispatchers.IO) {
+        val file = File.createTempFile("hte-profile-", ".upload", context.cacheDir)
+        try {
+            val input = context.contentResolver.openInputStream(uri)
+                ?: error("The selected image could not be opened. Choose another image.")
+            var total = 0L
+            input.use { source ->
+                FileOutputStream(file).use { destination ->
+                    val buffer = ByteArray(16 * 1024)
+                    while (true) {
+                        val count = source.read(buffer)
+                        if (count < 0) break
+                        total += count
+                        require(total <= MAX_PROFILE_IMAGE_BYTES) { "Choose an image file no larger than 5 MB." }
+                        destination.write(buffer, 0, count)
+                    }
+                }
+            }
+            require(total > 0L) { "The selected image is empty." }
+            file to total
+        } catch (error: Throwable) {
+            file.delete()
+            throw error
+        }
+    }
 
 private suspend fun <T> captureAccountRequest(request: suspend () -> T): Result<T> = try {
     Result.success(request())
@@ -85,6 +117,7 @@ fun MemberCenter(
     var accountDataLoading by remember { mutableStateOf(false) }
     var accountDataError by remember { mutableStateOf<String?>(null) }
     var accountRefreshKey by remember { mutableIntStateOf(0) }
+    var profileRevision by remember { mutableIntStateOf(0) }
     var showProfileEditor by remember { mutableStateOf(false) }
     var showBookingForm by remember { mutableStateOf(false) }
     var artistVideoUrl by remember { mutableStateOf("") }
@@ -98,13 +131,18 @@ fun MemberCenter(
         if (uri != null) scope.launch {
             isWorking = true
             try {
-                val size = context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1L
-                require(size in 1L..(5L * 1024L * 1024L)) { "Choose an image file no larger than 5 MB." }
                 val mimeType = context.contentResolver.getType(uri).orEmpty()
-                val stream = context.contentResolver.openInputStream(uri)
-                    ?: error("The selected image could not be opened. Choose another image.")
-                profile = stream.use { MemberRepository().updateMyAvatar(it, size, mimeType) }
-                statusMessage = "Profile photo updated."
+                val (stagedFile, measuredSize) = stageProfileImage(context, uri)
+                try {
+                    val updatedProfile = stagedFile.inputStream().use { stream ->
+                        MemberRepository().updateMyAvatar(stream, measuredSize, mimeType)
+                    }
+                    profileRevision++
+                    profile = updatedProfile
+                    statusMessage = "Profile photo updated."
+                } finally {
+                    stagedFile.delete()
+                }
             } catch (error: Exception) {
                 statusMessage = error.toHteUserMessage("Your profile photo could not be uploaded. Please retry.")
             } finally {
@@ -126,11 +164,12 @@ fun MemberCenter(
             accountDataError = null
             try {
                 val repo = MemberRepository()
+                val profileRevisionAtStart = profileRevision
                 val profileResult = captureAccountRequest { repo.getMyProfile() }
                 val bookingsResult = captureAccountRequest { repo.getMyBookings() }
                 val notificationsResult = captureAccountRequest { repo.getNotifications() }
                 val roleResult = captureAccountRequest { repo.getCurrentRole() }
-                profileResult.onSuccess { profile = it }
+                profileResult.onSuccess { if (profileRevision == profileRevisionAtStart) profile = it }
                 bookingsResult.onSuccess { bookings = it }
                 notificationsResult.onSuccess { notifications = it }
                 roleResult.onSuccess { role = it }
@@ -439,10 +478,11 @@ fun MemberCenter(
                 try {
                     captureAccountRequest { MemberRepository().saveMyProfile(name, bio, phone) }
                         .onSuccess {
+                            profileRevision++
                             statusMessage = "Profile saved."
                             showProfileEditor = false
                             captureAccountRequest { MemberRepository().getMyProfile() }
-                                .onSuccess { profile = it }
+                                .onSuccess { refreshed -> if (profileRevision > 0) profile = refreshed else profile = refreshed }
                                 .onFailure { accountDataError = it.toHteUserMessage("Your profile was saved, but the refreshed details could not be loaded.") }
                         }
                         .onFailure { statusMessage = it.toHteUserMessage("Your profile could not be saved. Please retry.") }
