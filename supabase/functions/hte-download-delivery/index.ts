@@ -158,9 +158,6 @@ Deno.serve(async (req) => {
 
   const ipHash = await sha256(serviceKey + ":" + clientIp);
 
-  // Opportunistic cleanup runs only after a real, rights-cleared download request passes ingress validation.
-  try { await cleanupExpired(admin); } catch (error) { console.warn("HTE temp cleanup skipped", error); }
-
   const id = crypto.randomUUID();
   const fileName = safeFileName(String(track.title || "HTE-audio")) + "-HTE." + extension;
   const objectPath = "requests/" + id + "." + extension;
@@ -183,6 +180,10 @@ Deno.serve(async (req) => {
   if (jobCreated !== true) {
     return reply({ error: "Too many downloads from this connection. Please try again later." }, 429);
   }
+
+  // Run opportunistic cleanup only after the atomic quota reservation succeeds.
+  // Rejected requests therefore cannot trigger privileged storage-list/delete work.
+  try { await cleanupExpired(admin); } catch (error) { console.warn("HTE temp cleanup skipped", error); }
 
   // Copy directly between private-managed buckets on the server. The visitor never uploads bytes.
   const { error: copyError } = await admin.storage.from(source.bucket).copy(source.path, objectPath, { destinationBucket: BUCKET });
