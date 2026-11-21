@@ -31,4 +31,14 @@ class HteSplashSmokeTest {
         composeRule.onNodeWithText("HTE UNIVERSE").assertExists()
         composeRule.onNodeWithText(HTE_STARTUP_TAGLINE.uppercase()).assertExists()
     }
+    @Test
+    fun homeVoiceEntryOpensCompactAssistant() {
+        composeRule.waitUntil(timeoutMillis = 25_000) {
+            composeRule.onAllNodesWithContentDescription("Open HTE AI Voice Assistant")
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithContentDescription("Open HTE AI Voice Assistant").performClick()
+        composeRule.onNodeWithText("HTE AI Voice Assistant").assertExists()
+    }
+
 }
