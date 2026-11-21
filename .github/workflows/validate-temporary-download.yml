@@ -6,6 +6,8 @@ on:
       - 'supabase/functions/hte-download-delivery/**'
       - 'cloudflare/workers/hte-download-gateway/**'
       - 'supabase/functions/_shared/**'
+      - 'supabase/MIGRATION-RECONCILIATION.md'
+      - 'scripts/verify-migration-source-coverage.mjs'
       - 'supabase/functions/elevenlabs-ad-studio/**'
       - 'supabase/migrations/20261121170000_hte_atomic_download_quota.sql'
       - 'supabase/migrations/20261121173000_hte_revoke_excess_client_table_privileges.sql'
@@ -69,6 +71,9 @@ jobs:
         run: |
           node --check cloudflare/workers/hte-download-gateway/src/index.js
           node --test cloudflare/workers/hte-download-gateway/src/index.test.js
+
+      - name: Verify live migration source coverage
+        run: node scripts/verify-migration-source-coverage.mjs
 
       - name: Verify server-side-only temporary copy
         run: |
