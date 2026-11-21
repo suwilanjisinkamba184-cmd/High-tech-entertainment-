@@ -42,6 +42,17 @@ create table if not exists public.tracks (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.videos (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text,
+  artist text,
+  video_url text not null,
+  thumbnail_url text,
+  is_published boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.contact_messages (
   id uuid primary key default gen_random_uuid(),
   name text not null check (char_length(name) between 1 and 100),
@@ -58,6 +69,7 @@ alter table public.tracks add column if not exists genre text;
 alter table public.artists enable row level security;
 alter table public.releases enable row level security;
 alter table public.tracks enable row level security;
+alter table public.videos enable row level security;
 alter table public.contact_messages enable row level security;
 
 -- Index catalog foreign keys used for joins and deletes.
@@ -71,6 +83,8 @@ drop policy if exists "Public can read published releases" on public.releases;
 create policy "Public can read published releases" on public.releases for select to anon, authenticated using (is_published = true);
 drop policy if exists "Public can read published tracks" on public.tracks;
 create policy "Public can read published tracks" on public.tracks for select to anon, authenticated using (is_published = true);
+drop policy if exists "Public can read published videos" on public.videos;
+create policy "Public can read published videos" on public.videos for select to anon, authenticated using (is_published = true);
 
 -- Public visitors can send a message but cannot read messages back.
 drop policy if exists "Visitors can submit contact messages" on public.contact_messages;
@@ -87,8 +101,9 @@ create policy "Visitors can submit contact messages" on public.contact_messages 
 revoke all on public.artists from anon, authenticated;
 revoke all on public.releases from anon, authenticated;
 revoke all on public.tracks from anon, authenticated;
+revoke all on public.videos from anon, authenticated;
 revoke all on public.contact_messages from anon, authenticated;
-grant select on public.artists, public.releases, public.tracks to anon, authenticated;
+grant select on public.artists, public.releases, public.tracks, public.videos to anon, authenticated;
 grant insert on public.contact_messages to anon, authenticated;
 
 -- Storage bucket for public audio. Upload policy is intentionally not opened to everyone.
