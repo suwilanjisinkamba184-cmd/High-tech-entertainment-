@@ -25,18 +25,18 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   <script is:inline src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
   <script is:inline src={`${base}supabase-config.js`}></script>
   <script is:inline src={`${base}assets/app.js?v=22`}></script>
-  <script is:inline src={`${base}assets/branded-download.js?v=1`} defer></script>
+  <script is:inline src={`${base}assets/branded-download.js?v=2`} defer></script>
 </head>
 <body>
   <main>
     <div class="brand">High-Tech Entertainment</div>
-    <h1>Your music.<br>With the HTE signature.</h1>
-    <p>We add the official High-Tech Entertainment audio ident before your authorised track, then prepare one branded audio file for your device.</p>
+    <h1>Your music.<br>Delivered securely.</h1>
+    <p>HTE prepares a private temporary copy of authorised audio in Supabase, then streams it to your device through a one-time download link. The temporary copy is removed after delivery.</p>
     <div class="track"><strong id="track-title">Loading track…</strong><span id="track-artist">Please wait</span></div>
-    <button id="create-download" type="button" disabled>Prepare HTE-branded download</button>
+    <button id="create-download" type="button" disabled>Prepare secure download</button>
     <div class="progress" aria-hidden="true"><span id="download-progress"></span></div>
     <p id="download-status" class="status" role="status" aria-live="polite">Checking track and download permissions…</p>
-    <p class="fine">Downloads are available only for HTE-owned or appropriately licensed audio. YouTube and Spotify links open on their original platforms and are not copied or re-uploaded by HTE. <a href={`${base}privacy-policy.html`}>Privacy policy</a></p>
+    <p class="fine">Downloads are available only for HTE-owned or appropriately licensed audio. YouTube and Spotify links remain on their original platforms and are never copied or re-uploaded by HTE. <a href={`${base}privacy-policy.html`}>Privacy policy</a></p>
   </main>
 </body>
 </html>
