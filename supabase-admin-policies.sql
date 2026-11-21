@@ -68,6 +68,22 @@ create policy "HTE administrators delete tracks" on public.tracks
 for delete to authenticated
 using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
 
+drop policy if exists "HTE administrators insert videos" on public.videos;
+create policy "HTE administrators insert videos" on public.videos
+for insert to authenticated
+with check ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+
+drop policy if exists "HTE administrators update videos" on public.videos;
+create policy "HTE administrators update videos" on public.videos
+for update to authenticated
+using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid)
+with check ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+
+drop policy if exists "HTE administrators delete videos" on public.videos;
+create policy "HTE administrators delete videos" on public.videos
+for delete to authenticated
+using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+
 -- Admin writes for artists/releases are separate from public SELECT policies.
 drop policy if exists "HTE admin manages artists" on public.artists;
 drop policy if exists "HTE administrators insert artists" on public.artists;
@@ -123,6 +139,7 @@ grant select on public.tracks, public.artists, public.releases to authenticated;
 
 -- Required SQL privileges for authenticated admin actions; RLS policies above enforce the founder user ID restriction.
 grant insert, update, delete on public.tracks to authenticated;
+grant insert, update, delete on public.videos to authenticated;
 grant insert, update, delete on public.artists to authenticated;
 grant insert, update, delete on public.releases to authenticated;
 
