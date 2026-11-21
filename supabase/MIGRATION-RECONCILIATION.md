@@ -10,7 +10,7 @@
 
 All 53 live migration versions now have a corresponding source file in `supabase/migrations/`. However, this is **source coverage, not yet a clean-replay certification**. Several early migrations were reconstructed from live catalog metadata, and several related migrations are intentionally consolidated into one source file with no-op version markers. Those files must be tested in chronological order against a clean temporary Supabase database before this is considered fully reproducible.
 
-Do not reset or replay the production database. The production project already records all 53 versions, so matching files should be skipped by version. The nine additional files comprise two deprecated no-op version markers and seven pending migrations/hardening changes.
+Do not reset or replay the production database. The production project already records all 53 versions, so matching files should be skipped by version. The live project also contains an empty legacy `public.public` table with RLS enabled and no application-code references; it is intentionally excluded from the clean application schema baseline. The nine additional files comprise two deprecated no-op version markers and seven pending migrations/hardening changes.
 
 | Live version | Live migration name | Source file | Recovery method |
 |---|---|---|---|
