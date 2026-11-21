@@ -73,6 +73,7 @@ fun HteSettingsScreen(
     var eqEnabled by remember { mutableStateOf(settingsStore.equalizerEnabled) }
     var eqPreset by remember { mutableStateOf(settingsStore.equalizerPreset) }
     var eqBands by remember { mutableStateOf(settingsStore.equalizerBands()) }
+    var showCustomEqualizer by remember { mutableStateOf(false) }
     var networkPolicy by remember { mutableStateOf(settingsStore.networkPolicy) }
     var updateNetworkPolicy by remember { mutableStateOf(settingsStore.updateNetworkPolicy) }
     var streamingQuality by remember { mutableStateOf(settingsStore.streamingQuality) }
@@ -226,28 +227,34 @@ fun HteSettingsScreen(
                         eqBands = values; settingsStore.setEqualizerBands(values)
                         HteAudioEffects.apply(HtePlaybackService.activeAudioSessionId, eqEnabled, values)
                     }
-                    val bandLabels = listOf("31 Hz", "62 Hz", "125 Hz", "250 Hz", "500 Hz", "1 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz")
-                    bandLabels.forEachIndexed { index, label ->
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(label, color = SettingsSilver, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                                Text(if (eqBands[index] > 0) "+${eqBands[index]} dB" else "${eqBands[index]} dB", color = SettingsGold, fontSize = 11.sp)
+                    SettingsActionRow(
+                        if (showCustomEqualizer) "Hide custom equalizer bands" else "Custom equalizer bands",
+                        if (showCustomEqualizer) "Close the advanced 10-band studio curve." else "Open advanced frequency controls; sound presets remain available."
+                    ) { showCustomEqualizer = !showCustomEqualizer }
+                    if (showCustomEqualizer) {
+                        val bandLabels = listOf("31 Hz", "62 Hz", "125 Hz", "250 Hz", "500 Hz", "1 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz")
+                        bandLabels.forEachIndexed { index, label ->
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(label, color = SettingsSilver, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                                    Text(if (eqBands[index] > 0) "+${eqBands[index]} dB" else "${eqBands[index]} dB", color = SettingsGold, fontSize = 12.sp)
+                                }
+                                Slider(
+                                    value = eqBands[index].toFloat(),
+                                    onValueChange = { value ->
+                                        val updated = eqBands.toMutableList().also { it[index] = value.toInt() }
+                                        eqBands = updated; eqPreset = "CUSTOM"
+                                        settingsStore.equalizerPreset = "CUSTOM"; settingsStore.setEqualizerBands(updated)
+                                        HteAudioEffects.apply(HtePlaybackService.activeAudioSessionId, eqEnabled, updated)
+                                    },
+                                    valueRange = -12f..12f,
+                                    enabled = eqEnabled,
+                                    colors = SliderDefaults.colors(thumbColor = SettingsGold, activeTrackColor = SettingsGold)
+                                )
                             }
-                            Slider(
-                                value = eqBands[index].toFloat(),
-                                onValueChange = { value ->
-                                    val updated = eqBands.toMutableList().also { it[index] = value.toInt() }
-                                    eqBands = updated; eqPreset = "CUSTOM"
-                                    settingsStore.equalizerPreset = "CUSTOM"; settingsStore.setEqualizerBands(updated)
-                                    HteAudioEffects.apply(HtePlaybackService.activeAudioSessionId, eqEnabled, updated)
-                                },
-                                valueRange = -12f..12f,
-                                enabled = eqEnabled,
-                                colors = SliderDefaults.colors(thumbColor = SettingsGold, activeTrackColor = SettingsGold)
-                            )
                         }
+                        Text("10-band studio curve · HTE maps these controls to the actual equalizer bands supported by each phone. Some devices expose fewer hardware bands or disable system audio effects.", color = SettingsMuted, fontSize = 11.sp)
                     }
-                    Text("10-band studio curve · HTE maps these controls to the actual equalizer bands supported by each phone. Some devices expose fewer hardware bands or disable system audio effects.", color = SettingsMuted, fontSize = 10.sp)
                     SettingsDivider()
                     SettingsChoice("Music streaming quality", streamingQuality, listOf("AUTO", "DATA SAVER", "NORMAL", "HIGH")) {
                         streamingQuality = it
@@ -486,9 +493,9 @@ private fun SettingsHero() {
     Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = SettingsPanel)) {
         Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF3A2E18), SettingsPanel, Color(0xFF0D1015)))).padding(18.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("PERSONAL CONTROL SYSTEM", color = SettingsGold, fontSize = 9.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+                Text("PERSONAL CONTROL SYSTEM", color = SettingsGold, fontSize = 10.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
                 Text("Your sound. Your universe.", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text("A unified control centre for playback, downloads, updates and your HTE experience.", color = SettingsSilver, fontSize = 11.sp)
+                Text("A unified control centre for playback, downloads, updates and your HTE experience.", color = SettingsSilver, fontSize = 12.sp)
             }
         }
     }
@@ -497,8 +504,8 @@ private fun SettingsHero() {
 @Composable
 private fun SettingsSection(title: String, subtitle: String) {
     Column(Modifier.padding(top = 8.dp, bottom = 2.dp)) {
-        Text(title, color = SettingsGold, fontSize = 10.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
-        Text(subtitle, color = SettingsMuted, fontSize = 10.sp)
+        Text(title, color = SettingsGold, fontSize = 11.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
+        Text(subtitle, color = SettingsMuted, fontSize = 11.sp)
     }
 }
 
@@ -514,7 +521,7 @@ private fun SettingsSwitch(title: String, subtitle: String, checked: Boolean, on
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-            Text(subtitle, color = SettingsMuted, fontSize = 10.sp)
+            Text(subtitle, color = SettingsMuted, fontSize = 11.sp)
         }
         Switch(checked = checked, onCheckedChange = onChanged, colors = SwitchDefaults.colors(checkedThumbColor = SettingsBackground, checkedTrackColor = SettingsGold))
     }
@@ -541,7 +548,7 @@ private fun SettingsChips(options: List<String>, selected: String, onSelect: (St
             FilterChip(
                 selected = option == selected,
                 onClick = { onSelect(option) },
-                label = { Text(label, fontSize = 10.sp, maxLines = 1) },
+                label = { Text(label, fontSize = 11.sp, maxLines = 1) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = SettingsGold.copy(alpha = .16f),
                     selectedLabelColor = SettingsGold
@@ -557,7 +564,7 @@ private fun SettingsActionRow(title: String, description: String, onClick: () ->
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(title, color = SettingsSilver, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Text(description, color = SettingsMuted, fontSize = 10.sp)
+                Text(description, color = SettingsMuted, fontSize = 11.sp)
             }
             Icon(Icons.Outlined.ChevronRight, contentDescription = "Open $title", tint = SettingsGold)
         }
@@ -582,7 +589,7 @@ private fun openSupportEmail(context: android.content.Context, subject: String) 
 private fun SettingsInfoRow(title: String, description: String) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(title, color = SettingsSilver, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-        Text(description, color = SettingsMuted, fontSize = 10.sp)
+        Text(description, color = SettingsMuted, fontSize = 11.sp)
     }
 }
 
