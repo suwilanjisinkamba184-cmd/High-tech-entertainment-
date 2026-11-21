@@ -32,4 +32,4 @@ jobs:
           deno-version: v2.x
 
       - name: Type-check download delivery function
-        run: deno check supabase/functions/hte-download-delivery/index.ts
+        run: deno check --config supabase/functions/hte-download-delivery/deno.json supabase/functions/hte-download-delivery/index.ts
