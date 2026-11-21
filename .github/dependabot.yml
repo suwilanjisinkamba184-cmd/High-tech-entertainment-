@@ -1,5 +1,27 @@
 version: 2
 updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:30"
+      timezone: Africa/Lusaka
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - backend
+  - package-ecosystem: npm
+    directory: /website
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:45"
+      timezone: Africa/Lusaka
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - website
   - package-ecosystem: gradle
     directory: /hte-universe-native
     schedule:
