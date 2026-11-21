@@ -4,6 +4,14 @@
 ALTER TABLE public.hte_download_jobs
   ADD COLUMN IF NOT EXISTS request_nonce uuid;
 
+-- Failed staging attempts retain their one-time nonce and quota reservation.
+-- This prevents replaying a signed request after a downstream copy/validation failure.
+ALTER TABLE public.hte_download_jobs
+  DROP CONSTRAINT IF EXISTS hte_download_jobs_status_check;
+ALTER TABLE public.hte_download_jobs
+  ADD CONSTRAINT hte_download_jobs_status_check
+  CHECK (status IN ('created', 'uploaded', 'failed'));
+
 CREATE UNIQUE INDEX IF NOT EXISTS hte_download_jobs_request_nonce_key
   ON public.hte_download_jobs (request_nonce)
   WHERE request_nonce IS NOT NULL;
