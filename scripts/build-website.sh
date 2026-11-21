@@ -47,6 +47,10 @@ test ! -e dist/assets/booking-confirmation.aac || { echo "Source AAC must not be
 cp app-download.html robots.txt sitemap.xml account-deletion.html privacy-policy.html high-tech-logo.svg music-spotlight.html dist/
 node scripts/generate-public-sitemap.mjs
 
+# Ensure the public video catalogue retains recent YouTube posts and older HTE uploads with real download links.
+grep -Fq "eq('source_platform','upload')" assets/videos.js || { echo "Public video catalogue must include uploaded HTE videos outside the recent-feed window." >&2; exit 1; }
+grep -Fq "video-download-original" assets/videos.js || { echo "Public uploaded-video download control is missing." >&2; exit 1; }
+
 for file in terms-of-service.html; do
   if [ ! -s "$file" ]; then
     echo "Required source page is missing: $file" >&2
