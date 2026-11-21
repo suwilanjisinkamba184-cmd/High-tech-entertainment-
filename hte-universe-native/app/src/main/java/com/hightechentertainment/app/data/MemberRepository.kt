@@ -274,7 +274,22 @@ class MemberRepository {
                     }
                 }
             } catch (error: Throwable) {
-                runCatching { client.storage.from("hte-avatars").delete(path) }
+                // A failed client response does not prove the database write rolled
+                // back. Never delete an object while the profile reference is unknown.
+                if (error !is CancellationException) {
+                    val confirmedUnreferenced = try {
+                        val current = client.from("profiles")
+                            .select { filter { eq("id", userId) } }
+                            .decodeList<ProfileDto>()
+                            .firstOrNull()
+                        current?.avatarUrl != path
+                    } catch (_: Throwable) {
+                        false
+                    }
+                    if (confirmedUnreferenced) {
+                        runCatching { client.storage.from("hte-avatars").delete(path) }
+                    }
+                }
                 throw error
             }
             getMyProfile()

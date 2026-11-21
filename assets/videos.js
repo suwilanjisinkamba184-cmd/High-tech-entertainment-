@@ -38,7 +38,7 @@ function videoCard(video){
  else{player='<a class="video-external" href="'+esc(src)+'" target="_blank" rel="noopener noreferrer">Watch video ↗</a>'}
  let download='';
  const original=safeHttps(video.download_url);
- if(original&&cfg.url){try{const origin=new URL(cfg.url).origin,downloadUrl=new URL(original);if(downloadUrl.origin===origin&&downloadUrl.pathname.includes('/storage/v1/object/public/hte-video/')){const href=original+(original.includes('?')?'&':'?')+'download';download='<a class="btn ghost video-download-original" href="'+esc(href)+'" download rel="noopener noreferrer">Download original ↓</a>'}}catch{}}
+ if(original&&cfg.url){try{const origin=new URL(cfg.url).origin,downloadUrl=new URL(original);if(downloadUrl.origin===origin&&(/^\/storage\/v1\/object\/public\/hte-videos?\//).test(downloadUrl.pathname)){const href=original+(original.includes('?')?'&':'?')+'download';download='<a class="btn ghost video-download-original" href="'+esc(href)+'" download rel="noopener noreferrer">Download original ↓</a>'}}catch{}}
  return '<article class="video-card'+(video.featured?' is-featured':'')+'">'+(video.featured?'<span class="video-card-kicker">Featured Zambian release</span>':'')+player+'<h3>'+title+'</h3><p>'+artist+description+'</p>'+download+'</article>';
 }
 async function load(){

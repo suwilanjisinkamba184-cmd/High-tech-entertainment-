@@ -138,7 +138,13 @@ Deno.serve(async (req) => {
   if (!extension) return reply({ error: "This audio format is not supported for temporary delivery." }, 415);
 
   // Trust only Cloudflare's edge-provided client IP. X-Forwarded-For can be spoofed.
-  const clientIp = req.headers.get("cf-connecting-ip")?.trim() || "unknown";
+  // Cloudflare is the supported public ingress and overwrites this header. Do not
+  // fall back to X-Forwarded-For or a shared placeholder: unidentified requests
+  // must not consume another visitor's quota.
+  const clientIp = req.headers.get("cf-connecting-ip")?.trim() || "";
+  if (!clientIp || clientIp.length > 64 || !/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$|^[0-9a-fA-F:]{2,64}$/.test(clientIp)) {
+    return reply({ error: "The download service could not verify this connection. Please retry through the HTE website." }, 503);
+  }
   const ipHash = await sha256(serviceKey + ":" + clientIp);
   const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const { count, error: rateError } = await admin.from("hte_download_jobs")

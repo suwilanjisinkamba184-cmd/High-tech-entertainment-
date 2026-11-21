@@ -477,7 +477,7 @@ fun MemberCenter(
     }
 
     if (showProfileEditor && auth != null) {
-        ProfileEditorDialog(profile = profile, onDismiss = { showProfileEditor = false }, onPickAvatar = { avatarPicker.launch("image/*") }, onSave = { name, bio, phone ->
+        ProfileEditorDialog(profile = profile, accountId = auth.currentUserOrNull()?.id.orEmpty(), onDismiss = { showProfileEditor = false }, onPickAvatar = { avatarPicker.launch("image/*") }, onSave = { name, bio, phone ->
             scope.launch {
                 isWorking = true
                 try {
@@ -556,10 +556,10 @@ private fun MemberCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun ProfileEditorDialog(profile: ProfileDto?, onDismiss: () -> Unit, onPickAvatar: () -> Unit, onSave: (String, String, String) -> Unit, isWorking: Boolean) {
-    var name by remember(profile?.id) { mutableStateOf(profile?.displayName.orEmpty()) }
-    var bio by remember(profile?.id) { mutableStateOf(profile?.bio.orEmpty()) }
-    var phone by remember(profile?.id) { mutableStateOf(profile?.phone.orEmpty()) }
+private fun ProfileEditorDialog(profile: ProfileDto?, accountId: String, onDismiss: () -> Unit, onPickAvatar: () -> Unit, onSave: (String, String, String) -> Unit, isWorking: Boolean) {
+    var name by remember(accountId) { mutableStateOf(profile?.displayName.orEmpty()) }
+    var bio by remember(accountId) { mutableStateOf(profile?.bio.orEmpty()) }
+    var phone by remember(accountId) { mutableStateOf(profile?.phone.orEmpty()) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit profile") },
