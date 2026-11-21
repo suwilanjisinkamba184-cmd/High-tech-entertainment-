@@ -30,6 +30,7 @@ concurrency:
 jobs:
   android-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     defaults:
       run:
         working-directory: hte-universe-native
@@ -132,7 +133,7 @@ jobs:
             set -eu
             cd hte-universe-native
             bash ../.github/scripts/wait-android-services.sh
-            if gradle --no-daemon :app:connectedDebugAndroidTest --console=plain; then
+            if gradle --no-daemon :app:connectedDebugAndroidTest --stacktrace --console=plain; then
               echo "Instrumentation tests completed successfully."
             else
               bash ../.github/scripts/capture-android-diagnostics.sh || true
