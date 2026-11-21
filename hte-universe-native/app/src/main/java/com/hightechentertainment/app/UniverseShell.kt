@@ -501,6 +501,15 @@ fun UniverseShell() {
                     // directly from Android, even when one is already available.
                     val downloadPage = temporaryAudioDownloadPage(trackId)
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(downloadPage)))
+                    // Preserve the existing download analytics event after handing
+                    // the user to the secure website delivery flow.
+                    try {
+                        withContext(Dispatchers.IO) { audienceAnalytics.record("track_download", trackId) }
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: Throwable) {
+                        // Analytics must never prevent or misreport a successful hand-off.
+                    }
                     Toast.makeText(context, "Opening secure HTE temporary download for $title…", Toast.LENGTH_SHORT).show()
                     return@launch
                 }
