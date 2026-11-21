@@ -101,6 +101,13 @@ BEGIN
     RAISE EXCEPTION 'Video catalogue Founder-only write policies are incomplete';
   END IF;
 
+  IF NOT has_table_privilege('anon', 'public.hte_download_branding_settings', 'SELECT')
+     OR has_table_privilege('anon', 'public.hte_download_branding_settings', 'INSERT')
+     OR has_table_privilege('anon', 'public.hte_download_branding_settings', 'UPDATE')
+     OR has_table_privilege('anon', 'public.hte_download_branding_settings', 'DELETE') THEN
+    RAISE EXCEPTION 'Public active download branding must remain read-only for anonymous visitors';
+  END IF;
+
   IF has_table_privilege('anon', 'public.hte_admin_contacts', 'SELECT')
      OR has_table_privilege('authenticated', 'public.hte_admin_contacts', 'SELECT')
      OR has_table_privilege('authenticated', 'public.hte_admin_contacts', 'INSERT')
