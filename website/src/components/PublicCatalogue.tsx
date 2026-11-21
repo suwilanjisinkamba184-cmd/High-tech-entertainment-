@@ -88,7 +88,7 @@ function formatMediaTime(seconds:number) {
   return mins + ":" + secs;
 }
 
-function AudioPlayer({src,title,downloadUrl,onPlay,onEnded}:{src:string;title:string;downloadUrl?:string;onPlay?:()=>void;onEnded?:()=>void}) {
+function AudioPlayer({src,title,downloadUrl,downloadDisabled=false,onPlay,onEnded}:{src:string;title:string;downloadUrl?:string;downloadDisabled?:boolean;onPlay?:()=>void;onEnded?:()=>void}) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing,setPlaying] = useState(false);
   const [current,setCurrent] = useState(0);
@@ -129,7 +129,7 @@ function AudioPlayer({src,title,downloadUrl,onPlay,onEnded}:{src:string;title:st
       <span className="hte-player-time" aria-live="polite">{failed ? "Unavailable" : duration > 0 ? formatMediaTime(current) + " / " + formatMediaTime(duration) : metadataLoaded ? "Duration unavailable" : "Tap play to load duration"}</span>
     </div>
     {failed && <div className="hte-player-error" role="alert"><p>This audio could not be loaded. Check your connection and try again.</p><button type="button" className="video-retry-button" onClick={()=>void retryPlayback()}>Retry audio ↻</button></div>}
-    {downloadUrl && <a className="hte-player-download" href={downloadUrl} download={downloadUrl.startsWith('https://') ? true : undefined}>Download HTE-branded audio <span aria-hidden="true">↓</span></a>}
+    {downloadUrl ? <a className="hte-player-download" href={downloadUrl}>Download audio <span aria-hidden="true">↓</span></a> : downloadDisabled ? <button type="button" className="hte-player-download" disabled>Download unavailable — rights review</button> : null}
   </div>;
 }
 
@@ -460,7 +460,7 @@ export default function PublicCatalogue() {
           <div className="card-copy">
             <span className="tag">{track.genre || 'Music'}</span>{!placeholderTitle && <h3>{track.title}</h3>}{!placeholderArtist && <p className="muted">{track.artist || 'High-Tech Entertainment'}</p>}
             {spotify && (placeholderTitle || placeholderArtist) && <p className="muted small">Track details are shown in the Spotify player.</p>}
-            {spotify ? <Spotify url={safeHttps(spotifyUrl) || ''} title={placeholderTitle ? 'this track' : track.title} /> : isYoutube ? <VideoPlayer url={externalSource} title={track.title} /> : isAudioFile ? <AudioPlayer src={source} title={track.title} downloadUrl={downloadUrl} onPlay={()=>void recordPlay(track.id)} onEnded={()=>void markCompleted(track.id)} /> : platform !== 'direct' && externalSource ? <a className="text-link" href={externalSource} target="_blank" rel="noopener noreferrer">Open original platform ↗</a> : source ? <a className="text-link" href={source} target="_blank" rel="noopener noreferrer">Open audio ↗</a> : <p className="muted small">Audio coming soon.</p>}
+            {spotify ? <Spotify url={safeHttps(spotifyUrl) || ''} title={placeholderTitle ? 'this track' : track.title} /> : isYoutube ? <VideoPlayer url={externalSource} title={track.title} /> : isAudioFile ? <AudioPlayer src={source} title={track.title} downloadUrl={downloadUrl} downloadDisabled={isStorageAudio && !canDownload} onPlay={()=>void recordPlay(track.id)} onEnded={()=>void markCompleted(track.id)} /> : platform !== 'direct' && externalSource ? <a className="text-link" href={externalSource} target="_blank" rel="noopener noreferrer">Open original platform ↗</a> : source ? <a className="text-link" href={source} target="_blank" rel="noopener noreferrer">Open audio ↗</a> : <p className="muted small">Audio coming soon.</p>}
             <button type="button" className="catalogue-save-button" aria-pressed={saved} onClick={()=>toggleSaved(track.id)}>{saved ? '♥ Saved' : '♡ Save track'}</button>
           </div>
         </article>;
