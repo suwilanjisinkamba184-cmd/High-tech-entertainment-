@@ -14,7 +14,7 @@ Do not reset or replay the production database. The production project already r
 
 | Live version | Live migration name | Source file | Recovery method |
 |---|---|---|---|
-| `20261027232300` | `add_admin_audio_update_policy` | `supabase/migrations/20261027232300_add_admin_audio_update_policy.sql` | Reconstructed baseline combining current supabase-setup.sql and supabase-admin-policies.sql |
+| `20261027232300` | `add_admin_audio_update_policy` | `supabase/migrations/20261027232300_add_admin_audio_update_policy.sql` | Reconstructed baseline combining setup/admin policies plus the previously untracked videos table and initial Founder write policies |
 | `20261028002834` | `fix_hte_catalog_schema_and_storage` | `supabase/migrations/20261028002834_fix_hte_catalog_schema_and_storage.sql` | Consolidated marker; final baseline schema is in 20261027232300 |
 | `20261028002944` | `optimize_hte_admin_rls_policies` | `supabase/migrations/20261028002944_optimize_hte_admin_rls_policies.sql` | Consolidated marker; final initial admin policies are in 20261027232300 |
 | `20261028102747` | `profiles_and_private_avatars` | `supabase/migrations/20261028102747_profiles_and_private_avatars.sql` | Copied from SUPABASE-REDESIGN-MIGRATION.sql |
@@ -24,7 +24,7 @@ Do not reset or replay the production database. The production project already r
 | `20261030231014` | `create_public_support_feedback` | `supabase/migrations/20261030231014_create_public_support_feedback.sql` | Reconstructed from live table, constraints, grants and RLS |
 | `20261030231529` | `secure_public_booking_submission_rpc` | `supabase/migrations/20261030231529_secure_public_booking_submission_rpc.sql` | Reconstructed from live function definitions and execute grants |
 | `20261031232509` | `hte_streaming_features` | `supabase/migrations/20261031232509_hte_streaming_features.sql` | Reconstructed from live streaming/library tables and RLS |
-| `20261101121639` | `revoke_anon_personal_app_data_access` | `supabase/migrations/20261101121639_revoke_anon_personal_app_data_access.sql` | Reconstructed revoke plus role table and helper RPCs, ordered before Founder policies |
+| `20261101121639` | `revoke_anon_personal_app_data_access` | `supabase/migrations/20261101121639_revoke_anon_personal_app_data_access.sql` | Reconstructed revoke plus role table/helper RPCs and role-aware public video read policy |
 | `20261101121711` | `split_audio_ads_founder_policies` | `supabase/migrations/20261101121711_split_audio_ads_founder_policies.sql` | Reconstructed from live audio_ads policies |
 | `20261101191601` | `hte_role_based_admin_access` | `supabase/migrations/20261101191601_hte_role_based_admin_access.sql` | Consolidated marker; role table and helper RPCs are in 20261101121639 to satisfy earlier dependencies |
 | `20261101191636` | `hte_admin_security_cleanup` | `supabase/migrations/20261101191636_hte_admin_security_cleanup.sql` | Consolidated marker; function grants are in 20261101191601 |
@@ -39,7 +39,7 @@ Do not reset or replay the production database. The production project already r
 | `20261105020850` | `create_app_notifications` | `supabase/migrations/20261105020850_app_notifications_and_video_storage.sql` | Consolidated source containing notifications, video bucket and target policies |
 | `20261105020932` | `ensure_hte_videos_storage` | `supabase/migrations/20261105020932_ensure_hte_videos_storage.sql` | Consolidated marker; video bucket included in 20261105020850 |
 | `20261105021142` | `restrict_app_notification_targets` | `supabase/migrations/20261105021142_restrict_app_notification_targets.sql` | Consolidated marker; final notification policy included in 20261105020850 |
-| `20261107070030` | `native_android_bookings_workflow` | `supabase/migrations/20261107070030_native_android_bookings_workflow.sql` | Consolidated source for native booking, avatar, release description and founder RPC changes |
+| `20261107070030` | `native_android_bookings_workflow` | `supabase/migrations/20261107070030_native_android_bookings_workflow.sql` | Consolidated source for native booking, avatar, release description, role-check RPC and same-day Founder-only catalogue/media write policies |
 | `20261107070158` | `native_android_bookings_workflow` | `supabase/migrations/20261107070158_native_android_bookings_workflow.sql` | Consolidated marker; included in 20261107070030 |
 | `20261107070320` | `native_android_public_avatar_delivery` | `supabase/migrations/20261107070320_native_android_public_avatar_delivery.sql` | Consolidated marker; included in 20261107070030 |
 | `20261107071201` | `native_android_release_descriptions` | `supabase/migrations/20261107071201_native_android_release_descriptions.sql` | Consolidated marker; included in 20261107070030 |
