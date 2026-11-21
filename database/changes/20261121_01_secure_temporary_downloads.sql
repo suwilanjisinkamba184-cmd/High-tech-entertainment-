@@ -50,4 +50,4 @@ REVOKE ALL ON TABLE public.hte_download_jobs FROM PUBLIC, anon, authenticated;
 GRANT ALL ON TABLE public.hte_download_jobs TO service_role;
 
 COMMENT ON TABLE public.hte_download_jobs IS
-  'Server-only one-time temporary media delivery jobs. Objects are stored in private hte-download-temp and deleted after delivery or expiry.';
+  'Server-only short-lived temporary media delivery jobs. Objects are stored in private hte-download-temp and deleted after delivery or expiry.';
