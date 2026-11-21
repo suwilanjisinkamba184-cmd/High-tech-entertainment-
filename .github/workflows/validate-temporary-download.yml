@@ -59,7 +59,7 @@ jobs:
         run: deno check --config supabase/functions/hte-download-delivery/deno.json supabase/functions/hte-download-delivery/index.ts
 
       - name: Type-check native-compatible AI Ad Studio function
-        run: deno check supabase/functions/elevenlabs-ad-studio/index.ts
+        run: deno check --config supabase/functions/elevenlabs-ad-studio/deno.json supabase/functions/elevenlabs-ad-studio/index.ts
 
       - name: Test signed download ingress helpers
         run: deno test supabase/functions/_shared/download-proxy-auth_test.ts
