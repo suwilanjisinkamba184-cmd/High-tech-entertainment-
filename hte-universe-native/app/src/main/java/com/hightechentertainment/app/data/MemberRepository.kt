@@ -216,12 +216,14 @@ class MemberRepository {
                 val updatedAt = java.time.Instant.now().toString()
                 if (existing != null) {
                     // Do not write stale profile fields captured before the upload.
-                    client.from("profiles").update({
+                    val updatedRows = client.from("profiles").update({
                         set("avatar_url", path)
                         set("updated_at", updatedAt)
                     }) {
+                        select()
                         filter { eq("id", userId) }
-                    }
+                    }.decodeList<ProfileDto>()
+                    check(updatedRows.isNotEmpty()) { "Profile disappeared before the avatar update completed." }
                 } else {
                     // Insert only avatar fields. If another session creates the row
                     // concurrently, retry as an avatar-only update instead of upserting
