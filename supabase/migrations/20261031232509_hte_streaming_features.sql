@@ -77,6 +77,8 @@ CREATE TABLE IF NOT EXISTS public.listening_history (
 CREATE INDEX IF NOT EXISTS listening_history_track_id_idx ON public.listening_history (track_id);
 CREATE INDEX IF NOT EXISTS listening_history_user_played_idx ON public.listening_history (user_id, played_at DESC);
 
+REVOKE ALL ON TABLE public.audio_ads, public.ad_impressions, public.app_preferences
+  FROM PUBLIC, anon, authenticated;
 ALTER TABLE public.audio_ads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ad_impressions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.app_preferences ENABLE ROW LEVEL SECURITY;
