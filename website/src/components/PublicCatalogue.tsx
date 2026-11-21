@@ -4,7 +4,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 type Track = { id:string; title:string; artist?:string|null; genre?:string|null; audio_url?:string|null; source_url?:string|null; source_platform?:string|null; rights_status?:string|null; download_allowed?:boolean|null; branded_audio_url?:string|null; download_branding_status?:string|null; cover_url?:string|null };
 type Artist = { id:string; name:string; bio?:string|null; image_url?:string|null };
 type Release = { id:string; title:string; release_date?:string|null; cover_url?:string|null; spotify_url?:string|null };
-type Video = { id:string; title:string; artist?:string|null; description?:string|null; video_url:string; thumbnail_url?:string|null };
+type Video = { id:string; title:string; artist?:string|null; description?:string|null; video_url:string; thumbnail_url?:string|null; download_url?:string|null };
 type Data = { tracks:Track[]; artists:Artist[]; releases:Release[]; videos:Video[] };
 
 const empty:Data = { tracks:[], artists:[], releases:[], videos:[] };
@@ -35,6 +35,19 @@ function safeHttps(value?:string|null) {
     const url = new URL(String(value || ''));
     if (url.protocol !== 'https:' || url.username || url.password) return '';
     return url.href;
+  } catch { return ''; }
+}
+
+function safeStorageDownload(value?:string|null,allowedBuckets:string[]=['hte-audio','ht storage','hte-video','hte-videos']) {
+  const safe = safeHttps(value);
+  if (!safe) return '';
+  try {
+    const cfg = (window as Window & { HTE_SUPABASE_CONFIG?:{url:string} }).HTE_SUPABASE_CONFIG;
+    if (!cfg?.url || new URL(safe).origin !== new URL(cfg.url).origin) return '';
+    const path = decodeURIComponent(new URL(safe).pathname);
+    const match = path.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/([^/]+)\/(.+)$/);
+    if (!match) return '';
+    return allowedBuckets.includes(decodeURIComponent(match[1])) ? safe : '';
   } catch { return ''; }
 }
 
@@ -75,7 +88,7 @@ function formatMediaTime(seconds:number) {
   return mins + ":" + secs;
 }
 
-function AudioPlayer({src,title,downloadUrl,onPlay,onEnded}:{src:string;title:string;downloadUrl?:string;onPlay?:()=>void;onEnded?:()=>void}) {
+function AudioPlayer({src,title,downloadUrl,downloadDisabled=false,onPlay,onEnded}:{src:string;title:string;downloadUrl?:string;downloadDisabled?:boolean;onPlay?:()=>void;onEnded?:()=>void}) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing,setPlaying] = useState(false);
   const [current,setCurrent] = useState(0);
@@ -116,7 +129,7 @@ function AudioPlayer({src,title,downloadUrl,onPlay,onEnded}:{src:string;title:st
       <span className="hte-player-time" aria-live="polite">{failed ? "Unavailable" : duration > 0 ? formatMediaTime(current) + " / " + formatMediaTime(duration) : metadataLoaded ? "Duration unavailable" : "Tap play to load duration"}</span>
     </div>
     {failed && <div className="hte-player-error" role="alert"><p>This audio could not be loaded. Check your connection and try again.</p><button type="button" className="video-retry-button" onClick={()=>void retryPlayback()}>Retry audio ↻</button></div>}
-    {downloadUrl && <a className="hte-player-download" href={downloadUrl} download={downloadUrl.startsWith('https://') ? true : undefined}>Download HTE-branded audio <span aria-hidden="true">↓</span></a>}
+    {downloadUrl ? <a className="hte-player-download" href={downloadUrl}>Download audio <span aria-hidden="true">↓</span></a> : downloadDisabled ? <button type="button" className="hte-player-download" disabled>Download unavailable — rights review</button> : null}
   </div>;
 }
 
@@ -268,7 +281,7 @@ export default function PublicCatalogue() {
         withTimeout(db.from('tracks').select('id,title,artist,genre,audio_url,source_url,source_platform,rights_status,download_allowed,branded_audio_url,download_branding_status,cover_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),12000),
         withTimeout(db.from('artists').select('id,name,bio,image_url,created_at').order('created_at',{ascending:false}).limit(60),12000),
         withTimeout(db.from('releases').select('id,title,release_date,cover_url,spotify_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60),12000),
-        withTimeout(db.from('videos').select('id,title,artist,description,video_url,thumbnail_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(40),12000)
+        withTimeout(db.from('videos').select('id,title,artist,description,video_url,thumbnail_url,download_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(40),12000)
       ]);
       if (!active) return;
       const names = ['tracks','artists','releases','videos'];
@@ -436,19 +449,18 @@ export default function PublicCatalogue() {
         const isYoutube = platform === 'youtube' && !!externalSource;
         const placeholderTitle = !!spotify && /^spotify track(?:\s+[a-z0-9]{22})?$/i.test(track.title.trim());
         const placeholderArtist = !!spotify && (!track.artist?.trim() || /^(artist details pending|unknown artist|tba|to be announced)$/i.test(track.artist.trim()));
-        const isStorageAudio = !!source && new URL(source).pathname.includes('/storage/v1/object/');
+        const isStorageAudio = !!safeStorageDownload(source,['hte-audio','ht storage']);
         const isAudioFile = platform === 'direct' && !!source && (isStorageAudio || /\.(mp3|mp4|m4a|wav|aac|ogg|flac|opus|webm)$/i.test(new URL(source).pathname));
-        const canDownload = platform === 'direct' && track.download_allowed === true && ['owned_or_licensed','legacy_existing'].includes(String(track.rights_status || ''));
-        const brandedMaster = canDownload && track.download_branding_status === 'ready' ? safeHttps(track.branded_audio_url) : '';
+        const canDownload = platform === 'direct' && isStorageAudio && track.download_allowed === true && track.rights_status === 'owned_or_licensed';
         const downloadPage = (location.pathname.startsWith('/High-tech-entertainment-/') ? '/High-tech-entertainment-/' : '/') + 'download/?track=' + encodeURIComponent(track.id);
-        const downloadUrl = brandedMaster || (canDownload ? downloadPage : '');
+        const downloadUrl = canDownload ? downloadPage : '';
         const saved = savedIds.includes(track.id);
         return <article className="media-card" key={track.id}>
           <Cover src={track.cover_url} alt={track.title + ' artwork'} />
           <div className="card-copy">
             <span className="tag">{track.genre || 'Music'}</span>{!placeholderTitle && <h3>{track.title}</h3>}{!placeholderArtist && <p className="muted">{track.artist || 'High-Tech Entertainment'}</p>}
             {spotify && (placeholderTitle || placeholderArtist) && <p className="muted small">Track details are shown in the Spotify player.</p>}
-            {spotify ? <Spotify url={safeHttps(spotifyUrl) || ''} title={placeholderTitle ? 'this track' : track.title} /> : isYoutube ? <VideoPlayer url={externalSource} title={track.title} /> : isAudioFile ? <AudioPlayer src={source} title={track.title} downloadUrl={downloadUrl} onPlay={()=>void recordPlay(track.id)} onEnded={()=>void markCompleted(track.id)} /> : platform !== 'direct' && externalSource ? <a className="text-link" href={externalSource} target="_blank" rel="noopener noreferrer">Open original platform ↗</a> : source ? <a className="text-link" href={source} target="_blank" rel="noopener noreferrer">Open audio ↗</a> : <p className="muted small">Audio coming soon.</p>}
+            {spotify ? <Spotify url={safeHttps(spotifyUrl) || ''} title={placeholderTitle ? 'this track' : track.title} /> : isYoutube ? <VideoPlayer url={externalSource} title={track.title} /> : isAudioFile ? <AudioPlayer src={source} title={track.title} downloadUrl={downloadUrl} downloadDisabled={isStorageAudio && !canDownload} onPlay={()=>void recordPlay(track.id)} onEnded={()=>void markCompleted(track.id)} /> : platform !== 'direct' && externalSource ? <a className="text-link" href={externalSource} target="_blank" rel="noopener noreferrer">Open original platform ↗</a> : source ? <a className="text-link" href={source} target="_blank" rel="noopener noreferrer">Open audio ↗</a> : <p className="muted small">Audio coming soon.</p>}
             <button type="button" className="catalogue-save-button" aria-pressed={saved} onClick={()=>toggleSaved(track.id)}>{saved ? '♥ Saved' : '♡ Save track'}</button>
           </div>
         </article>;
@@ -461,7 +473,10 @@ export default function PublicCatalogue() {
       {data.releases.length ? <div className="card-grid release-grid">{data.releases.map(release=><article className="media-card" key={release.id}><Cover src={release.cover_url} alt={release.title + ' cover'} /><div className="card-copy"><h3>{release.title}</h3><p className="muted">{release.release_date||'Official release'}</p>{release.spotify_url&&<Spotify url={release.spotify_url} title={release.title}/>}</div></article>)}</div>:!loading && <p className="empty">{errors.includes('releases') ? 'Official releases could not be loaded. Retry above.' : 'Official releases will appear here soon.'}</p>}
     </section>
     <section className="catalogue-section" id="videos"><div className="section-heading"><div><span className="eyebrow">WATCH & EXPERIENCE</span><h2>Visual releases.</h2></div><span className="section-count">{data.videos.length} videos</span></div>
-      {data.videos.length ? <div className="card-grid video-grid">{data.videos.map(video=><article className="media-card" key={video.id}><VideoPlayer url={video.video_url} title={video.title} poster={video.thumbnail_url} /><div className="card-copy"><h3>{video.title}</h3><p className="muted">{[video.artist,video.description].filter(Boolean).join(' · ')}</p></div></article>)}</div>:!loading && <p className="empty">{errors.includes('videos') ? 'Official videos could not be loaded. Retry above.' : 'Official videos will appear here soon.'}</p>}
+      {data.videos.length ? <div className="card-grid video-grid">{data.videos.map(video=>{
+        const downloadableVideo = safeStorageDownload(video.download_url || video.video_url,['hte-video','hte-videos']);
+        return <article className="media-card" key={video.id}><VideoPlayer url={video.video_url} title={video.title} poster={video.thumbnail_url} />{downloadableVideo && <a className="hte-player-download" href={downloadableVideo + (downloadableVideo.includes('?') ? '&' : '?') + 'download'}>Download original video <span aria-hidden="true">↓</span></a>}<div className="card-copy"><h3>{video.title}</h3><p className="muted">{[video.artist,video.description].filter(Boolean).join(' · ')}</p></div></article>;
+      })}</div>:!loading && <p className="empty">{errors.includes('videos') ? 'Official videos could not be loaded. Retry above.' : 'Official videos will appear here soon.'}</p>}
     </section>
   </div>;
 }
