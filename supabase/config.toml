@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.hte-download-delivery]
 verify_jwt = false
+
+[functions.sync-zambian-music]
+verify_jwt = false
