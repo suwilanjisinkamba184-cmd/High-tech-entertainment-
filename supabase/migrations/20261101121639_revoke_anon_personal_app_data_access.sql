@@ -79,7 +79,7 @@ CREATE POLICY "Public and administrators can read videos" ON public.videos
   FOR SELECT TO anon, authenticated
   USING (is_published = true OR private.hte_has_role(ARRAY['owner','admin']));
 
--- Replace baseline Founder-UUID read policies with role-aware catalogue reads.
+-- Replace baseline catalogue read policies with the canonical role-aware catalogue reads.
 -- The later 20261120082626 migration intentionally makes artist cards discoverable
 -- before publication; releases and tracks remain publication-gated for visitors.
 DROP POLICY IF EXISTS "Public can read published artists" ON public.artists;
