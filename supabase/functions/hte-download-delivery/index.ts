@@ -29,15 +29,20 @@ function extForMime(mime: string) {
   };
   return map[type] || "";
 }
-function safeHteAudio(value: string, projectUrl: string) {
+function parseHteAudio(value: string, projectUrl: string) {
   try {
     const url = new URL(value);
-    if (url.origin !== new URL(projectUrl).origin || url.protocol !== "https:" || url.username || url.password) return false;
+    if (url.origin !== new URL(projectUrl).origin || url.protocol !== "https:" || url.username || url.password) return null;
     const path = decodeURIComponent(url.pathname);
     const match = path.match(/^\/storage\/v1\/object\/(?:public|sign|authenticated)\/([^/]+)\/(.+)$/);
-    if (!match) return false;
-    return ["hte-audio", "ht storage"].includes(decodeURIComponent(match[1]));
-  } catch { return false; }
+    if (!match) return null;
+    const bucket = decodeURIComponent(match[1]);
+    if (!["hte-audio", "ht storage"].includes(bucket)) return null;
+    return { bucket, path: match[2] };
+  } catch { return null; }
+}
+function safeHteAudio(value: string, projectUrl: string) {
+  return !!parseHteAudio(value, projectUrl);
 }
 async function sha256(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
@@ -155,6 +160,25 @@ Deno.serve(async (req) => {
   let body: any;
   try { body = await req.json(); } catch { return reply({ error: "Invalid request body." }, 400); }
   try { await cleanupExpired(admin); } catch (error) { console.warn("HTE temp cleanup skipped", error); }
+
+  if (body?.action === "source") {
+    const trackId = String(body.trackId || "");
+    if (!/^[0-9a-f-]{36}$/i.test(trackId)) return reply({ error: "Select a valid track." }, 400);
+    const { data: track, error: trackError } = await admin.from("tracks")
+      .select("id,title,audio_url,source_platform,rights_status,download_allowed,is_published,branded_audio_url,download_branding_status")
+      .eq("id", trackId).eq("is_published", true).maybeSingle();
+    if (trackError || !track) return reply({ error: "This track is not available for download." }, 404);
+    if (track.source_platform !== "direct" || track.download_allowed !== true || track.rights_status !== "owned_or_licensed") {
+      return reply({ error: "Download is available only for HTE-owned or licensed audio with confirmed permissions." }, 403);
+    }
+    const branded = track.download_branding_status === "ready" ? parseHteAudio(String(track.branded_audio_url || ""), projectUrl) : null;
+    const original = parseHteAudio(String(track.audio_url || ""), projectUrl);
+    const source = branded || original;
+    if (!source) return reply({ error: "The original audio is not stored in an approved HTE audio bucket." }, 422);
+    const { data: signed, error: signError } = await admin.storage.from(source.bucket).createSignedUrl(source.path, 10 * 60);
+    if (signError || !signed?.signedUrl) return reply({ error: "The original HTE audio could not be opened securely." }, 502);
+    return reply({ success: true, sourceUrl: signed.signedUrl, alreadyBranded: !!branded });
+  }
 
   if (body?.action === "prepare") {
     const trackId = String(body.trackId || "");
