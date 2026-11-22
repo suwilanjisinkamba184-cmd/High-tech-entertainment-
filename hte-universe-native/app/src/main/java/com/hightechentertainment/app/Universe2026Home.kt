@@ -518,6 +518,7 @@ private fun U26TrendingRow(index: Int, track: TrackDto, onPlay: () -> Unit, onDo
 
 @Composable
 private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onDownload: (() -> Unit)?) {
+    val posterUrl = resolveVideoThumbnailUrl(video)
     Column(Modifier.width(if (wide) 238.dp else 194.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Box(
             Modifier.fillMaxWidth().height(if (wide) 140.dp else 112.dp).clip(RoundedCornerShape(16.dp))
