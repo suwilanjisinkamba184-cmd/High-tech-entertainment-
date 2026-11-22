@@ -85,7 +85,7 @@ def status_for(pass_label: str, *needles: str) -> str:
     return pass_label
 
 feature_rows = [
-    ("Splash branding", status_for("PASS", "startupDisplaysApprovedBrandingWithoutRemovedLogo"), "Checks approved splash text and confirms the removed logo is absent."),
+    ("Splash branding", status_for("PASS", "startupDisplaysApprovedBrandingAndOfficialLogo"), "Checks the HTE brand mark, title and approved startup tagline."),
     ("AI assistant", status_for("PARTIAL", "homeVoiceEntryOpensCompactAssistant"), "UI entry and voice preset logic only; no live microphone/WebSocket/provider conversation test."),
     ("Account and Settings navigation", status_for("PARTIAL", "accountTabAndSettingsHubRemainReachable"), "Navigation reachability only; no live sign-in/profile/avatar integration test."),
     ("Video poster URL/fallback logic", status_for("PASS (UNIT LOGIC)", "VideoThumbnailUrlTest"), "Validates URL selection and fallback logic; does not prove remote image loading or playback."),
