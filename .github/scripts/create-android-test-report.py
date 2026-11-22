@@ -123,7 +123,7 @@ if cases:
     report += ["| Test | Result | Source |", "|---|---|---|"]
     for case in cases:
         test_name = f"{case['class']}.{case['name']}".strip(".")
-        detail_cell = " ".join(case["detail"].replace("\\r", " ").replace("\\n", " ").split()).replace("|", "\\\\|")
+        detail_cell = " ".join(case["detail"].replace("\r", " ").replace("\n", " ").split()).replace("|", "\\|")
         report.append(f"| {test_name} | {case['outcome']}{(': ' + detail_cell) if detail_cell else ''} | {case['source']} |")
 else:
     report.append("**NO JUNIT TEST CASES WERE FOUND.** Inspect the workflow logs; this report must not be interpreted as a pass.")
