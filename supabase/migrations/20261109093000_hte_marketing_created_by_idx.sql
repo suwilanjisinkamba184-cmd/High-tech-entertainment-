@@ -1,3 +1,1 @@
--- Cover the creator foreign key for efficient founder campaign filtering.
-create index if not exists hte_marketing_campaigns_created_by_idx
-  on public.hte_marketing_campaigns(created_by);
+-- Deprecated duplicate-version marker. The exact live migration source is 20261108230316_hte_marketing_created_by_idx.sql. This file intentionally contains no DDL to avoid applying the same index migration twice on clean replay.

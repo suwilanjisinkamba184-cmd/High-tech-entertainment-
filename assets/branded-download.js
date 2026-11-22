@@ -21,10 +21,17 @@ async function startDownload(){
  if(busy||!track)return;busy=true;button.disabled=true;progress.style.width='8%';
  try{
   message('Checking rights and preparing a private temporary Supabase copy…');
-  const result=await client.functions.invoke('hte-download-delivery',{body:{action:'prepare',trackId:track.id}});
-  if(result.error||!result.data?.success||!result.data?.downloadUrl)throw new Error(result.data?.error||result.error?.message||'The secure download could not be prepared.');
+  const sessionResult=await client.auth.getSession();
+  const accessToken=sessionResult?.data?.session?.access_token;
+  const headers={'Content-Type':'application/json','apikey':config.publishableKey};
+  if(accessToken)headers.Authorization='Bearer '+accessToken;
+  const response=await fetch('https://hte-download-gateway.suwilanjisinkamba184-d77.workers.dev',{
+   method:'POST',headers,body:JSON.stringify({action:'prepare',trackId:track.id})
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data?.success||!data?.downloadUrl)throw new Error(data?.error||'The secure download could not be prepared.');
   progress.style.width='100%';
-  const anchor=document.createElement('a');anchor.href=result.data.downloadUrl;anchor.download=result.data.fileName||'HTE-audio';anchor.rel='noopener';anchor.style.display='none';document.body.append(anchor);anchor.click();anchor.remove();
+  const anchor=document.createElement('a');anchor.href=data.downloadUrl;anchor.download=data.fileName||'HTE-audio';anchor.rel='noopener';anchor.style.display='none';document.body.append(anchor);anchor.click();anchor.remove();
   message('Your download is ready. The private Supabase copy is automatically removed after 30 minutes; this download link expires in 3 minutes.','success');
  }catch(error){message(error.message||'The HTE download could not be prepared. Please retry.','error')}
  finally{busy=false;button.disabled=false}

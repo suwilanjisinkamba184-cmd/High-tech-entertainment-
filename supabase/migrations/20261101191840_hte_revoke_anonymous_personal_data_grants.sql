@@ -1,0 +1,1 @@
+-- Consolidated source note: anonymous personal-data privileges are revoked in 20261101121639_revoke_anon_personal_app_data_access.sql. This marker preserves the live ledger version.

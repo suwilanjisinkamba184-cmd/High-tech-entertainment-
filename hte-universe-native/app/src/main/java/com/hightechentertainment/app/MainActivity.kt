@@ -20,7 +20,7 @@ import com.hightechentertainment.app.media.HtePlaybackController
 import com.hightechentertainment.app.security.HteSecurityFirewall
 import com.hightechentertainment.app.ui.design.HteTheme
 
-private val Obsidian = Color(0xFF08090B)
+private val Obsidian = com.hightechentertainment.app.ui.design.HteColors.Obsidian
 
 internal const val HTE_STARTUP_TAGLINE = "Music. Beats. Production. Beyond."
 

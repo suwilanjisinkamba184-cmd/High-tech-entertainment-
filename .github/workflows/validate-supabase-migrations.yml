@@ -1,0 +1,66 @@
+name: Validate Supabase migrations and security SQL
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - "supabase/config.toml"
+      - ".github/workflows/validate-supabase-migrations.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-migration-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  replay-and-test:
+    name: Clean local migration replay and database tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out PR source
+        uses: actions/checkout@v7
+
+      - name: Install pinned Supabase CLI v2
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.1
+
+      - name: Start isolated local Supabase services
+        run: supabase start
+
+      - name: Replay every migration against a clean local database
+        run: supabase db reset --local
+
+      - name: Capture the CLI-reported local database URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          test -n "${DB_URL:-}"
+          echo "::add-mask::$DB_URL"
+          echo "DB_URL=$DB_URL" >> "$GITHUB_ENV"
+
+      - name: Run privilege and RLS regression assertions
+        run: |
+          set -euo pipefail
+          psql --no-psqlrc --set ON_ERROR_STOP=1 "$DB_URL" \
+            --file supabase/tests/htesecurity_privilege_tests.sql
+
+      - name: Run atomic download quota and nonce replay tests
+        run: |
+          set -euo pipefail
+          psql --no-psqlrc --set ON_ERROR_STOP=1 "$DB_URL" \
+            --file supabase/tests/htedownloadquota_tests.sql
+
+      - name: Verify the final migration is recorded
+        run: |
+          set -euo pipefail
+          latest="$(psql --no-psqlrc --tuples-only --no-align "$DB_URL" \
+            --command "select version from supabase_migrations.schema_migrations order by version desc limit 1")"
+          test "$latest" = "20261121230000"
+          echo "Clean replay reached migration $latest."

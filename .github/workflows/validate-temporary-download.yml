@@ -4,9 +4,21 @@ on:
   pull_request:
     paths:
       - 'supabase/functions/hte-download-delivery/**'
+      - 'cloudflare/workers/hte-download-gateway/**'
+      - 'supabase/functions/_shared/**'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
+      - 'supabase/MIGRATION-RECONCILIATION.md'
+      - 'scripts/verify-migration-source-coverage.mjs'
+      - 'supabase/functions/elevenlabs-ad-studio/**'
+      - 'supabase/migrations/20261121170000_hte_atomic_download_quota.sql'
+      - 'supabase/migrations/20261121173000_hte_revoke_excess_client_table_privileges.sql'
       - 'database/changes/20261121_01_secure_temporary_downloads.sql'
       - 'database/changes/20261121_02_expand_temp_download_limit.sql'
       - 'database/changes/20261121_03_allow_flac_temp_downloads.sql'
+      - 'database/changes/20261121_04_optimize_download_jobs_and_contact_policies.sql'
+      - 'database/changes/20261121_05_scope_download_job_policy_to_service_role.sql'
+      - '.github/workflows/cleanup-temporary-downloads.yml'
       - 'assets/branded-download.js'
       - 'admin/index.html'
       - 'website/src/components/PublicCatalogue.tsx'
@@ -16,9 +28,15 @@ on:
     branches: [main]
     paths:
       - 'supabase/functions/hte-download-delivery/**'
-      - 'database/changes/20261121_01_secure_temporary_downloads.sql'
-      - 'database/changes/20261121_02_expand_temp_download_limit.sql'
-      - 'database/changes/20261121_03_allow_flac_temp_downloads.sql'
+      - 'supabase/functions/elevenlabs-ad-studio/**'
+      - 'supabase/functions/_shared/**'
+      - 'supabase/migrations/**'
+      - 'supabase/MIGRATION-RECONCILIATION.md'
+      - 'supabase/tests/**'
+      - 'scripts/verify-migration-source-coverage.mjs'
+      - 'cloudflare/workers/hte-download-gateway/**'
+      - '.github/workflows/cleanup-temporary-downloads.yml'
+      - '.github/workflows/validate-temporary-download.yml'
       - 'assets/branded-download.js'
       - 'admin/index.html'
       - 'website/src/components/PublicCatalogue.tsx'
@@ -44,8 +62,39 @@ jobs:
       - name: Type-check download delivery function
         run: deno check --config supabase/functions/hte-download-delivery/deno.json supabase/functions/hte-download-delivery/index.ts
 
+      - name: Type-check native-compatible AI Ad Studio function
+        run: deno check --config supabase/functions/elevenlabs-ad-studio/deno.json supabase/functions/elevenlabs-ad-studio/index.ts
+
+      - name: Test signed download ingress helpers
+        run: deno test supabase/functions/_shared/download-proxy-auth_test.ts
+
+      - name: Validate Cloudflare Worker syntax and ingress tests
+        run: |
+          node --check cloudflare/workers/hte-download-gateway/src/index.js
+          node --test cloudflare/workers/hte-download-gateway/src/index.test.js
+
+      - name: Verify live migration source coverage
+        run: node scripts/verify-migration-source-coverage.mjs
+
       - name: Verify server-side-only temporary copy
         run: |
           grep -q 'destinationBucket: BUCKET' supabase/functions/hte-download-delivery/index.ts
           grep -q 'audio/flac' supabase/functions/hte-download-delivery/index.ts
+          grep -q 'createRemoteJWKSet' supabase/functions/hte-download-delivery/index.ts
+          grep -q 'TRUSTED_CLEANUP_WORKFLOW' supabase/functions/hte-download-delivery/index.ts
+          grep -q 'hte_create_download_job' supabase/functions/hte-download-delivery/index.ts
+          grep -q 'verifyDownloadProxySignature' supabase/functions/hte-download-delivery/index.ts
+          grep -q 'request_nonce' supabase/migrations/20261121170000_hte_atomic_download_quota.sql
+          grep -q 'request.cf?.connectingIP' cloudflare/workers/hte-download-gateway/src/index.js
+          ! grep -q 'cf-connecting-ip' cloudflare/workers/hte-download-gateway/src/index.js
+          grep -q 'pg_advisory_xact_lock' supabase/migrations/20261121170000_hte_atomic_download_quota.sql
+          grep -q 'GRANT EXECUTE' supabase/migrations/20261121170000_hte_atomic_download_quota.sql
+          grep -q 'REVOKE ALL ON TABLE public.app_notifications FROM PUBLIC, anon, authenticated' supabase/migrations/20261121173000_hte_revoke_excess_client_table_privileges.sql
+          grep -q 'REVOKE ALL ON TABLE public.hte_audience_events FROM PUBLIC, anon, authenticated' supabase/migrations/20261121173000_hte_revoke_excess_client_table_privileges.sql
+          ! grep -q 'GRANT TRUNCATE' supabase/migrations/20261121173000_hte_revoke_excess_client_table_privileges.sql
+          ! grep -q 'req.headers.get("x-forwarded-for")' supabase/functions/hte-download-delivery/index.ts
+          grep -q 'Browser calls must originate' supabase/functions/elevenlabs-ad-studio/index.ts
+          grep -q 'if (origin && !allowedOrigins.has(origin))' supabase/functions/elevenlabs-ad-studio/index.ts
+          grep -q 'id-token: write' .github/workflows/cleanup-temporary-downloads.yml
+          grep -q 'TO service_role' database/changes/20261121_05_scope_download_job_policy_to_service_role.sql
           ! grep -q 'uploadToSignedUrl' assets/branded-download.js

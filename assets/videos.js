@@ -38,7 +38,7 @@ function videoCard(video){
  else{player='<a class="video-external" href="'+esc(src)+'" target="_blank" rel="noopener noreferrer">Watch video ↗</a>'}
  let download='';
  const original=safeHttps(video.download_url);
- if(original&&cfg.url){try{const origin=new URL(cfg.url).origin,downloadUrl=new URL(original);if(downloadUrl.origin===origin&&downloadUrl.pathname.includes('/storage/v1/object/public/hte-video/'))download='<a class="btn ghost video-download-original" href="'+esc(original)+'" download rel="noopener noreferrer">Download original ↓</a>'}catch{}}
+ if(original&&cfg.url){try{const origin=new URL(cfg.url).origin,downloadUrl=new URL(original);if(downloadUrl.origin===origin&&(/^\/storage\/v1\/object\/public\/hte-videos?\//).test(downloadUrl.pathname)){const href=original+(original.includes('?')?'&':'?')+'download';download='<a class="btn ghost video-download-original" href="'+esc(href)+'" download rel="noopener noreferrer">Download original ↓</a>'}}catch{}}
  return '<article class="video-card'+(video.featured?' is-featured':'')+'">'+(video.featured?'<span class="video-card-kicker">Featured Zambian release</span>':'')+player+'<h3>'+title+'</h3><p>'+artist+description+'</p>'+download+'</article>';
 }
 async function load(){
@@ -46,13 +46,20 @@ async function load(){
  let own=[],sourceError=false,timeoutId;
  if(db){
   try{
-   const request=db.from('videos').select('id,title,artist,description,video_url,thumbnail_url,download_url,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(60);
-   const {data,error}=await Promise.race([
+   const columns='id,title,artist,description,video_url,thumbnail_url,download_url,created_at,source_platform';
+   const request=Promise.all([
+    db.from('videos').select(columns).eq('is_published',true).order('created_at',{ascending:false}).limit(60),
+    db.from('videos').select(columns).eq('is_published',true).eq('source_platform','upload').order('created_at',{ascending:false}).limit(200)
+   ]);
+   const [recentResult,uploadedResult]=await Promise.race([
     request,
     new Promise((_,reject)=>{timeoutId=window.setTimeout(()=>reject(new Error('HTE video catalogue request timed out after 12 seconds.')),12000)})
    ]);
-   if(error)throw error;
-   own=data||[];
+   if(recentResult.error)throw recentResult.error;
+   if(uploadedResult.error)throw uploadedResult.error;
+   const merged=new Map();
+   [...(recentResult.data||[]),...(uploadedResult.data||[])].forEach(video=>merged.set(video.id,video));
+   own=[...merged.values()].sort((a,b)=>Date.parse(b.created_at||'')-Date.parse(a.created_at||''));
   }catch(error){
    sourceError=true;
    console.warn('HTE public video catalogue unavailable; showing curated YouTube releases.',error);

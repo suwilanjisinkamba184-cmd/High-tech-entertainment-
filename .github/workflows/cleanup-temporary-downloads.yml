@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   cleanup:
@@ -26,11 +27,20 @@ jobs:
           const key = config.match(/publishableKey:\s*'([^']+)'/)?.[1];
           if (!url || !key) throw new Error('Public Supabase configuration could not be read.');
 
+          const oidcUrl = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
+          oidcUrl.searchParams.set('audience', 'hte-download-cleanup');
+          const oidcResponse = await fetch(oidcUrl, {
+            headers: { Authorization: 'Bearer ' + process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }
+          });
+          if (!oidcResponse.ok) throw new Error('GitHub OIDC token request failed: HTTP ' + oidcResponse.status);
+          const { value: oidcToken } = await oidcResponse.json();
+          if (!oidcToken) throw new Error('GitHub OIDC token was not returned.');
+
           const response = await fetch(url.replace(/\/$/, '') + '/functions/v1/hte-download-delivery', {
             method: 'POST',
             headers: {
               apikey: key,
-              Authorization: 'Bearer ' + key,
+              Authorization: 'Bearer ' + oidcToken,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({ action: 'cleanup' })

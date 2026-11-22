@@ -1,0 +1,1 @@
+-- Consolidated source note: Anonymous booking privilege restrictions are included in 20261107070030_native_android_bookings_workflow.sql. This marker preserves the corresponding live migration ledger version for clean replays; no additional DDL is required.

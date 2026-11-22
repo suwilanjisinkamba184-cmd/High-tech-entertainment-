@@ -91,6 +91,7 @@ import com.hightechentertainment.app.media.isPlayableInAppAudioUrl
 import com.hightechentertainment.app.media.isPlayableVideoUrl
 import com.hightechentertainment.app.media.OfflineDownloadManager
 import com.hightechentertainment.app.media.OfflineDownloadRecord
+import com.hightechentertainment.app.media.temporaryAudioDownloadPage
 import com.hightechentertainment.app.ui.design.HteIcons
 import com.hightechentertainment.app.ui.design.HteGlowingIconBadge
 import kotlinx.coroutines.CancellationException
@@ -105,11 +106,11 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.TimeoutCancellationException
 
-private val ShellGold = Color(0xFFE5C158)
-private val ShellSilver = Color(0xFFC4CAD2)
-private val ShellMuted = Color(0xFF8B929D)
-private val ShellPanel = Color(0xFF17161E)
-private val ShellBackground = Color(0xFF0B0A0F)
+private val ShellGold = com.hightechentertainment.app.ui.design.HteColors.Gold
+private val ShellSilver = com.hightechentertainment.app.ui.design.HteColors.Silver
+private val ShellMuted = com.hightechentertainment.app.ui.design.HteColors.Muted
+private val ShellPanel = com.hightechentertainment.app.ui.design.HteColors.Panel
+private val ShellBackground = com.hightechentertainment.app.ui.design.HteColors.Obsidian
 
 private data class CatalogueSnapshot(
     val tracks: List<TrackDto>,
@@ -495,12 +496,22 @@ fun UniverseShell() {
                         Toast.makeText(context, "This track links to an external streaming page. Spotify and YouTube audio cannot be downloaded through HTE.", Toast.LENGTH_LONG).show()
                         return@launch
                     }
-                    if (url.isNullOrBlank()) {
-                        val downloadPage = "https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/download/?track=${Uri.encode(trackId)}"
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(downloadPage)))
-                        Toast.makeText(context, "Opening HTE branded download for $title…", Toast.LENGTH_SHORT).show()
-                        return@launch
+                    // All catalogue audio must pass through the server-side temporary
+                    // Supabase delivery flow. Never enqueue the permanent branded URL
+                    // directly from Android, even when one is already available.
+                    val downloadPage = temporaryAudioDownloadPage(trackId)
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(downloadPage)))
+                    // Preserve the existing download analytics event after handing
+                    // the user to the secure website delivery flow.
+                    try {
+                        withContext(Dispatchers.IO) { audienceAnalytics.record("track_download", trackId) }
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: Throwable) {
+                        // Analytics must never prevent or misreport a successful hand-off.
                     }
+                    Toast.makeText(context, "Opening secure HTE temporary download for $title…", Toast.LENGTH_SHORT).show()
+                    return@launch
                 }
                 if (url.isNullOrBlank()) error(
                     if (mediaType == "audio") "The HTE-branded download is not ready yet."

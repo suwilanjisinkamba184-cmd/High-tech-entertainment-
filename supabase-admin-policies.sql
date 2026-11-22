@@ -1,7 +1,53 @@
+-- Canonical HTE authorization: roles live in a private table and are changed only by trusted server-side operations.
+create schema if not exists private;
+grant usage on schema private to anon, authenticated, service_role;
+
+create table if not exists private.user_roles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  role text not null check (role in ('owner','admin','music_promoter','partner')),
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  created_by uuid references auth.users(id) on delete set null
+);
+create index if not exists user_roles_created_by_idx on private.user_roles (created_by);
+alter table private.user_roles enable row level security;
+drop policy if exists "Deny all client access to HTE role assignments" on private.user_roles;
+create policy "Deny all client access to HTE role assignments"
+  on private.user_roles for all to anon, authenticated using (false) with check (false);
+revoke all on table private.user_roles from public, anon, authenticated;
+grant all on table private.user_roles to service_role;
+
+create or replace function private.hte_has_role(_roles text[])
+returns boolean
+language sql
+stable
+security definer
+set search_path to ''
+as $function$
+  select auth.uid() is not null and exists (
+    select 1
+    from private.user_roles r
+    where r.user_id = auth.uid()
+      and r.is_active
+      and r.role = any(_roles)
+  );
+$function$;
+revoke all on function private.hte_has_role(text[]) from public;
+grant execute on function private.hte_has_role(text[]) to anon, authenticated, service_role;
+
+-- Seed the configured Founder account as owner when it exists; no-op on fresh environments
+-- where the Founder has not registered yet.
+insert into private.user_roles (user_id, role, is_active)
+select id, 'owner', true
+from auth.users
+where lower(email) = lower('suwilanjisinkamba184@gmail.com')
+on conflict (user_id) do update
+set role = 'owner', is_active = true;
+
 -- High-Tech Entertainment admin policies.
--- Founder-only authorization is bound to the confirmed Supabase Auth user UUID.
+-- Founder-only authorization uses private.user_roles and private.hte_has_role().
 -- Founder email (for reference): suwilanjisinkamba184@gmail.com
--- Founder auth.uid(): b268df9e-eff5-43b9-a38f-869b33add38b
+-- Founder authorization uses private.user_roles and private.hte_has_role().
 -- Run supabase-setup.sql first, then run this file.
 -- The website uses the bucket ID hte-audio. A separately created HT Storage bucket is not used by this code.
 -- Do NOT enable open/public INSERT or UPDATE policies for catalog tables.
@@ -24,80 +70,96 @@ on conflict (id) do update set public = true, file_size_limit = 104857600, allow
 
 drop policy if exists "Public can read HTE audio" on storage.objects;
 create policy "Public can read HTE audio" on storage.objects for select to anon, authenticated using (bucket_id = 'hte-audio');
-drop policy if exists "HTE admin can upload audio" on storage.objects;
-create policy "HTE admin can upload audio" on storage.objects
+drop policy if exists "HTE administrators upload audio" on storage.objects;
+create policy "HTE administrators upload audio" on storage.objects
 for insert to authenticated
 with check (
   bucket_id = 'hte-audio'
-  and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
+  and (select private.hte_has_role(ARRAY['owner']::text[]))
 );
 
-drop policy if exists "HTE admin can update audio" on storage.objects;
-create policy "HTE admin can update audio" on storage.objects
+drop policy if exists "HTE administrators update audio" on storage.objects;
+create policy "HTE administrators update audio" on storage.objects
 for update to authenticated
 using (
   bucket_id = 'hte-audio'
-  and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
+  and (select private.hte_has_role(ARRAY['owner']::text[]))
 )
 with check (
   bucket_id = 'hte-audio'
-  and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
+  and (select private.hte_has_role(ARRAY['owner']::text[]))
 );
 
-drop policy if exists "HTE admin can delete audio" on storage.objects;
-create policy "HTE admin can delete audio" on storage.objects
+drop policy if exists "HTE administrators delete audio" on storage.objects;
+create policy "HTE administrators delete audio" on storage.objects
 for delete to authenticated
 using (
   bucket_id = 'hte-audio'
-  and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
+  and (select private.hte_has_role(ARRAY['owner']::text[]))
 );
 
-drop policy if exists "HTE admin can insert tracks" on public.tracks;
-create policy "HTE admin can insert tracks" on public.tracks
+drop policy if exists "HTE administrators insert tracks" on public.tracks;
+create policy "HTE administrators insert tracks" on public.tracks
 for insert to authenticated
-with check ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+with check ((select private.hte_has_role(ARRAY['owner']::text[])));
 
-drop policy if exists "HTE admin can update tracks" on public.tracks;
-create policy "HTE admin can update tracks" on public.tracks
+drop policy if exists "HTE administrators update tracks" on public.tracks;
+create policy "HTE administrators update tracks" on public.tracks
 for update to authenticated
-using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid)
-with check ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+using ((select private.hte_has_role(ARRAY['owner']::text[])))
+with check ((select private.hte_has_role(ARRAY['owner']::text[])));
 
-drop policy if exists "HTE admin can delete tracks" on public.tracks;
-create policy "HTE admin can delete tracks" on public.tracks
+drop policy if exists "HTE administrators delete tracks" on public.tracks;
+create policy "HTE administrators delete tracks" on public.tracks
 for delete to authenticated
-using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+using ((select private.hte_has_role(ARRAY['owner']::text[])));
+
+drop policy if exists "HTE administrators insert videos" on public.videos;
+create policy "HTE administrators insert videos" on public.videos
+for insert to authenticated
+with check ((select private.hte_has_role(ARRAY['owner']::text[])));
+
+drop policy if exists "HTE administrators update videos" on public.videos;
+create policy "HTE administrators update videos" on public.videos
+for update to authenticated
+using ((select private.hte_has_role(ARRAY['owner']::text[])))
+with check ((select private.hte_has_role(ARRAY['owner']::text[])));
+
+drop policy if exists "HTE administrators delete videos" on public.videos;
+create policy "HTE administrators delete videos" on public.videos
+for delete to authenticated
+using ((select private.hte_has_role(ARRAY['owner']::text[])));
 
 -- Admin writes for artists/releases are separate from public SELECT policies.
 drop policy if exists "HTE admin manages artists" on public.artists;
-drop policy if exists "HTE admin inserts artists" on public.artists;
-create policy "HTE admin inserts artists" on public.artists
+drop policy if exists "HTE administrators insert artists" on public.artists;
+create policy "HTE administrators insert artists" on public.artists
 for insert to authenticated
-with check ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
-drop policy if exists "HTE admin updates artists" on public.artists;
-create policy "HTE admin updates artists" on public.artists
+with check ((select private.hte_has_role(ARRAY['owner']::text[])));
+drop policy if exists "HTE administrators update artists" on public.artists;
+create policy "HTE administrators update artists" on public.artists
 for update to authenticated
-using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid)
-with check ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
-drop policy if exists "HTE admin deletes artists" on public.artists;
-create policy "HTE admin deletes artists" on public.artists
+using ((select private.hte_has_role(ARRAY['owner']::text[])))
+with check ((select private.hte_has_role(ARRAY['owner']::text[])));
+drop policy if exists "HTE administrators delete artists" on public.artists;
+create policy "HTE administrators delete artists" on public.artists
 for delete to authenticated
-using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+using ((select private.hte_has_role(ARRAY['owner']::text[])));
 
 drop policy if exists "HTE admin manages releases" on public.releases;
-drop policy if exists "HTE admin inserts releases" on public.releases;
-create policy "HTE admin inserts releases" on public.releases
+drop policy if exists "HTE administrators insert releases" on public.releases;
+create policy "HTE administrators insert releases" on public.releases
 for insert to authenticated
-with check ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
-drop policy if exists "HTE admin updates releases" on public.releases;
-create policy "HTE admin updates releases" on public.releases
+with check ((select private.hte_has_role(ARRAY['owner']::text[])));
+drop policy if exists "HTE administrators update releases" on public.releases;
+create policy "HTE administrators update releases" on public.releases
 for update to authenticated
-using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid)
-with check ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
-drop policy if exists "HTE admin deletes releases" on public.releases;
-create policy "HTE admin deletes releases" on public.releases
+using ((select private.hte_has_role(ARRAY['owner']::text[])))
+with check ((select private.hte_has_role(ARRAY['owner']::text[])));
+drop policy if exists "HTE administrators delete releases" on public.releases;
+create policy "HTE administrators delete releases" on public.releases
 for delete to authenticated
-using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+using ((select private.hte_has_role(ARRAY['owner']::text[])));
 
 -- One SELECT policy per catalog table: public visitors see published rows;
 -- the founder can also see unpublished drafts.
@@ -105,24 +167,25 @@ DROP POLICY IF EXISTS "HTE founder can read all tracks" ON public.tracks;
 DROP POLICY IF EXISTS "Public can read published tracks" ON public.tracks;
 CREATE POLICY "Public and founder can read tracks" ON public.tracks
 FOR SELECT TO anon, authenticated
-USING (is_published = true OR (SELECT auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+USING (is_published = true OR private.hte_has_role(ARRAY['owner','admin']::text[]));
 
 DROP POLICY IF EXISTS "HTE founder can read all artists" ON public.artists;
 DROP POLICY IF EXISTS "Public can read published artists" ON public.artists;
 CREATE POLICY "Public and founder can read artists" ON public.artists
 FOR SELECT TO anon, authenticated
-USING (is_published = true OR (SELECT auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+USING (is_published = true OR private.hte_has_role(ARRAY['owner','admin']::text[]));
 
 DROP POLICY IF EXISTS "HTE founder can read all releases" ON public.releases;
 DROP POLICY IF EXISTS "Public can read published releases" ON public.releases;
 CREATE POLICY "Public and founder can read releases" ON public.releases
 FOR SELECT TO anon, authenticated
-USING (is_published = true OR (SELECT auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+USING (is_published = true OR private.hte_has_role(ARRAY['owner','admin']::text[]));
 
 grant select on public.tracks, public.artists, public.releases to authenticated;
 
 -- Required SQL privileges for authenticated admin actions; RLS policies above enforce the founder user ID restriction.
 grant insert, update, delete on public.tracks to authenticated;
+grant insert, update, delete on public.videos to authenticated;
 grant insert, update, delete on public.artists to authenticated;
 grant insert, update, delete on public.releases to authenticated;
 
@@ -130,7 +193,7 @@ grant insert, update, delete on public.releases to authenticated;
 drop policy if exists "HTE founder can read contact messages" on public.contact_messages;
 create policy "HTE founder can read contact messages" on public.contact_messages
 for select to authenticated
-using ((select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid);
+using ((select private.hte_has_role(ARRAY['owner','admin']::text[])));
 grant select on public.contact_messages to authenticated;
 
 -- The extra "HT Storage" bucket is not used by the website. Keep it private if empty.
@@ -160,30 +223,30 @@ create policy "Public can read HTE artwork" on storage.objects
 for select to anon, authenticated
 using (bucket_id = 'hte-artwork');
 
-drop policy if exists "HTE admin can upload artwork" on storage.objects;
-create policy "HTE admin can upload artwork" on storage.objects
+drop policy if exists "HTE administrators upload artwork" on storage.objects;
+create policy "HTE administrators upload artwork" on storage.objects
 for insert to authenticated
 with check (
   bucket_id = 'hte-artwork'
-  and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
+  and (select private.hte_has_role(ARRAY['owner']::text[]))
 );
 
-drop policy if exists "HTE admin can update artwork" on storage.objects;
-create policy "HTE admin can update artwork" on storage.objects
+drop policy if exists "HTE administrators update artwork" on storage.objects;
+create policy "HTE administrators update artwork" on storage.objects
 for update to authenticated
 using (
   bucket_id = 'hte-artwork'
-  and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
+  and (select private.hte_has_role(ARRAY['owner']::text[]))
 )
 with check (
   bucket_id = 'hte-artwork'
-  and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
+  and (select private.hte_has_role(ARRAY['owner']::text[]))
 );
 
-drop policy if exists "HTE admin can delete artwork" on storage.objects;
-create policy "HTE admin can delete artwork" on storage.objects
+drop policy if exists "HTE administrators delete artwork" on storage.objects;
+create policy "HTE administrators delete artwork" on storage.objects
 for delete to authenticated
 using (
   bucket_id = 'hte-artwork'
-  and (select auth.uid()) = 'b268df9e-eff5-43b9-a38f-869b33add38b'::uuid
+  and (select private.hte_has_role(ARRAY['owner']::text[]))
 );

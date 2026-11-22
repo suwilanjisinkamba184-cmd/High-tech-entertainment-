@@ -11,7 +11,7 @@ where youtube_id is null and video_url ~ '(?:v=|youtu\.be/|/embed/|/shorts/|/liv
 
 update public.videos set source_platform = case when youtube_id is not null then 'youtube' else 'upload' end;
 update public.videos set download_url = video_url
-where download_url is null and video_url like 'https://wqrxacjbsldbnoekbkbf.supabase.co/storage/v1/object/public/hte-video/%';
+where download_url is null and (video_url like 'https://wqrxacjbsldbnoekbkbf.supabase.co/storage/v1/object/public/hte-video/%' or video_url like 'https://wqrxacjbsldbnoekbkbf.supabase.co/storage/v1/object/public/hte-videos/%');
 
 drop index if exists public.videos_youtube_id_key;
 create unique index if not exists videos_youtube_id_key on public.videos (youtube_id);

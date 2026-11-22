@@ -1,10 +1,17 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { createRemoteJWKSet, jwtVerify } from "npm:jose@6.1.0";
+import { normalizeTrustedClientIp, verifyDownloadProxySignature } from "../_shared/download-proxy-auth.ts";
 
 const BUCKET = "hte-download-temp";
 const MAX_BYTES = 100 * 1024 * 1024;
 const JOB_TTL_MS = 60 * 60 * 1000;
 const OBJECT_TTL_MS = 30 * 60 * 1000;
 const SIGNED_URL_TTL_SECONDS = 180;
+const TRUSTED_GITHUB_REPOSITORY = "suwilanjisinkamba184-cmd/High-tech-entertainment-";
+const TRUSTED_CLEANUP_WORKFLOW = `${TRUSTED_GITHUB_REPOSITORY}/.github/workflows/cleanup-temporary-downloads.yml@refs/heads/main`;
+const GITHUB_OIDC_ISSUER = "https://token.actions.githubusercontent.com";
+const GITHUB_OIDC_AUDIENCE = "hte-download-cleanup";
+const GITHUB_OIDC_KEYS = createRemoteJWKSet(new URL("https://token.actions.githubusercontent.com/.well-known/jwks"));
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
@@ -53,6 +60,26 @@ async function sha256(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
 }
+async function isTrustedCleanupRequest(req: Request) {
+  const authorization = req.headers.get("authorization") || "";
+  const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!token) return false;
+  try {
+    const { payload } = await jwtVerify(token, GITHUB_OIDC_KEYS, {
+      issuer: GITHUB_OIDC_ISSUER,
+      audience: GITHUB_OIDC_AUDIENCE,
+      clockTolerance: 5,
+      maxTokenAge: "5 minutes",
+    });
+    return payload.repository === TRUSTED_GITHUB_REPOSITORY
+      && payload.ref === "refs/heads/main"
+      && payload.workflow_ref === TRUSTED_CLEANUP_WORKFLOW
+      && ["schedule", "workflow_dispatch"].includes(String(payload.event_name));
+  } catch {
+    return false;
+  }
+}
+
 async function cleanupExpired(admin: SupabaseClient<any, "public", any>) {
   const cutoff = Date.now() - OBJECT_TTL_MS;
   const { data: objects, error } = await admin.storage.from(BUCKET).list("requests", {
@@ -79,12 +106,38 @@ Deno.serve(async (req) => {
   if (!projectUrl || !serviceKey) return reply({ error: "Download delivery is not configured." }, 503);
   const admin = createClient(projectUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
+  const rawBody = await req.text();
   let body: any;
-  try { body = await req.json(); } catch { return reply({ error: "Invalid request body." }, 400); }
-  try { await cleanupExpired(admin); } catch (error) { console.warn("HTE temp cleanup skipped", error); }
+  try { body = JSON.parse(rawBody); } catch { return reply({ error: "Invalid request body." }, 400); }
 
-  if (body?.action === "cleanup") return reply({ success: true, cleaned: true });
+  if (body?.action === "cleanup") {
+    if (!await isTrustedCleanupRequest(req)) return reply({ error: "Cleanup is restricted to the trusted HTE GitHub workflow." }, 401);
+    try {
+      await cleanupExpired(admin);
+      return reply({ success: true, cleaned: true });
+    } catch (error) {
+      console.error("HTE scheduled temporary cleanup failed", error);
+      return reply({ error: "Temporary download cleanup failed." }, 500);
+    }
+  }
   if (body?.action !== "prepare") return reply({ error: "Unknown download action." }, 400);
+
+  // Prepare requests must be signed by the dedicated Cloudflare Worker. The
+  // function URL is public, so browser-supplied IP headers are never trusted.
+  // The signature binds method, timestamp, one-time nonce, edge-observed IP
+  // and the exact raw request body. Direct calls cannot manufacture this proof.
+  const proxySecret = Deno.env.get("HTE_DOWNLOAD_PROXY_SECRET") || "";
+  if (!proxySecret) return reply({ error: "Secure download delivery is not configured." }, 503);
+  const proxyTimestamp = req.headers.get("x-hte-proxy-timestamp") || "";
+  const proxyNonce = req.headers.get("x-hte-proxy-nonce") || "";
+  const proxySignature = req.headers.get("x-hte-proxy-signature") || "";
+  const rawClientIp = req.headers.get("x-hte-client-ip") || "";
+  const clientIp = normalizeTrustedClientIp(rawClientIp);
+  if (!clientIp || !await verifyDownloadProxySignature(
+    proxySecret, req.method, proxyTimestamp, proxyNonce, clientIp, rawBody, proxySignature
+  )) {
+    return reply({ error: "This download request did not come through the trusted HTE download gateway." }, 401);
+  }
 
   const trackId = String(body.trackId || "");
   if (!/^[0-9a-f-]{36}$/i.test(trackId)) return reply({ error: "Select a valid track." }, 400);
@@ -103,27 +156,41 @@ Deno.serve(async (req) => {
   const extension = extForPath(source.path);
   if (!extension) return reply({ error: "This audio format is not supported for temporary delivery." }, 415);
 
-  const forwarded = req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const ipHash = await sha256(serviceKey + ":" + forwarded);
-  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { count, error: rateError } = await admin.from("hte_download_jobs")
-    .select("id", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("created_at", since);
-  if (rateError) return reply({ error: "Download service is temporarily unavailable." }, 503);
-  if ((count || 0) >= 20) return reply({ error: "Too many downloads from this connection. Please try again later." }, 429);
+  const ipHash = await sha256(serviceKey + ":" + clientIp);
 
   const id = crypto.randomUUID();
   const fileName = safeFileName(String(track.title || "HTE-audio")) + "-HTE." + extension;
   const objectPath = "requests/" + id + "." + extension;
   const expiresAt = new Date(Date.now() + JOB_TTL_MS).toISOString();
-  const { error: insertError } = await admin.from("hte_download_jobs").insert({
-    id, track_id: track.id, object_path: objectPath, file_name: fileName, ip_hash: ipHash, status: "created", expires_at: expiresAt,
+  const { data: jobCreated, error: insertError } = await admin.rpc("hte_create_download_job", {
+    p_id: id,
+    p_request_nonce: proxyNonce,
+    p_track_id: track.id,
+    p_object_path: objectPath,
+    p_file_name: fileName,
+    p_ip_hash: ipHash,
+    p_expires_at: expiresAt,
+    p_max_downloads: 20,
   });
-  if (insertError) return reply({ error: "A temporary download could not be prepared. Please retry." }, 500);
+  if (insertError) {
+    if (insertError.code === "23505") return reply({ error: "This download request has already been used. Please retry." }, 409);
+    console.error("HTE atomic download quota reservation failed", insertError);
+    return reply({ error: "Download service is temporarily unavailable. Please retry." }, 503);
+  }
+  if (jobCreated !== true) {
+    return reply({ error: "Too many downloads from this connection. Please try again later." }, 429);
+  }
+
+  // Run opportunistic cleanup only after the atomic quota reservation succeeds.
+  // Rejected requests therefore cannot trigger privileged storage-list/delete work.
+  try { await cleanupExpired(admin); } catch (error) { console.warn("HTE temp cleanup skipped", error); }
 
   // Copy directly between private-managed buckets on the server. The visitor never uploads bytes.
   const { error: copyError } = await admin.storage.from(source.bucket).copy(source.path, objectPath, { destinationBucket: BUCKET });
   if (copyError) {
-    await admin.from("hte_download_jobs").delete().eq("id", id);
+    // Keep the reservation and nonce: deleting it would allow the same signed
+    // request to be replayed after a transient storage failure.
+    await admin.from("hte_download_jobs").update({ status: "failed" }).eq("id", id).eq("status", "created");
     console.error("HTE temporary audio copy failed", copyError);
     return reply({ error: "The authorised audio could not be staged in temporary Supabase storage." }, 502);
   }
@@ -134,7 +201,7 @@ Deno.serve(async (req) => {
   const fileType = String(file?.metadata?.mimetype || "").toLowerCase().split(";")[0];
   if (listError || !file || !fileSize || fileSize > MAX_BYTES || (fileType && !extForMime(fileType))) {
     await admin.storage.from(BUCKET).remove([objectPath]);
-    await admin.from("hte_download_jobs").delete().eq("id", id);
+    await admin.from("hte_download_jobs").update({ status: "failed" }).eq("id", id).eq("status", "created");
     return reply({ error: "The copied audio did not pass file validation or exceeds the 100 MB limit." }, 422);
   }
 
@@ -142,14 +209,15 @@ Deno.serve(async (req) => {
     .update({ status: "uploaded" }).eq("id", id).eq("status", "created");
   if (updateError) {
     await admin.storage.from(BUCKET).remove([objectPath]);
-    await admin.from("hte_download_jobs").delete().eq("id", id);
+    // Best-effort failure marking; never remove the nonce reservation.
+    await admin.from("hte_download_jobs").update({ status: "failed" }).eq("id", id).eq("status", "created");
     return reply({ error: "The temporary download could not be finalised." }, 500);
   }
   const { data: signed, error: signError } = await admin.storage.from(BUCKET)
     .createSignedUrl(objectPath, SIGNED_URL_TTL_SECONDS, { download: fileName });
   if (signError || !signed?.signedUrl) {
     await admin.storage.from(BUCKET).remove([objectPath]);
-    await admin.from("hte_download_jobs").delete().eq("id", id);
+    await admin.from("hte_download_jobs").update({ status: "failed" }).eq("id", id).eq("status", "uploaded");
     return reply({ error: "The temporary download link could not be created." }, 502);
   }
   return reply({ success: true, downloadUrl: signed.signedUrl, fileName, expiresInSeconds: SIGNED_URL_TTL_SECONDS });

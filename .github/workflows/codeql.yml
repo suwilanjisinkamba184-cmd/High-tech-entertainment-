@@ -1,0 +1,82 @@
+name: CodeQL security analysis
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '23 4 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: javascript-typescript
+            build-mode: none
+          - language: java-kotlin
+            build-mode: manual
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Set up Java for Android analysis
+        if: matrix.language == 'java-kotlin'
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 9.6 for Android analysis
+        if: matrix.language == 'java-kotlin'
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Install Android SDK 37 for analysis
+        if: matrix.language == 'java-kotlin'
+        uses: premex-ab/setup-android-cli@ec4f446c5fdea3c206fb73b4b3277709e7227e63
+        with:
+          packages: |
+            platform-tools
+            platforms/android-37.0
+            build-tools/37.0.0
+
+      - name: Link and validate Android SDK 37
+        if: matrix.language == 'java-kotlin'
+        run: |
+          set -euo pipefail
+          test -d "$ANDROID_HOME/platforms/android-37.0"
+          if [[ ! -e "$ANDROID_HOME/platforms/android-37" ]]; then
+            ln -s "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
+          fi
+          test -x "$ANDROID_HOME/build-tools/37.0.0/aapt"
+
+      - name: Build Android sources for CodeQL
+        if: matrix.language == 'java-kotlin'
+        working-directory: hte-universe-native
+        run: gradle --no-daemon :app:assembleDebug
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}

@@ -47,6 +47,10 @@ test ! -e dist/assets/booking-confirmation.aac || { echo "Source AAC must not be
 cp app-download.html robots.txt sitemap.xml account-deletion.html privacy-policy.html high-tech-logo.svg music-spotlight.html dist/
 node scripts/generate-public-sitemap.mjs
 
+# Ensure the public video catalogue retains recent YouTube posts and older HTE uploads with real download links.
+grep -Fq "eq('source_platform','upload')" assets/videos.js || { echo "Public video catalogue must include uploaded HTE videos outside the recent-feed window." >&2; exit 1; }
+grep -Fq "video-download-original" assets/videos.js || { echo "Public uploaded-video download control is missing." >&2; exit 1; }
+
 for file in terms-of-service.html; do
   if [ ! -s "$file" ]; then
     echo "Required source page is missing: $file" >&2
@@ -66,7 +70,7 @@ for file in index.html app-download.html robots.txt sitemap.xml supabase-config.
 
   test -s "dist/$file" || { echo "Missing required build output: $file" >&2; exit 1; }
 done
-for file in services/index.html services/music-production/index.html services/mixing-mastering/index.html services/artist-promotion/index.html services/software-development/index.html journal/index.html journal/prepare-for-a-recording-session/index.html journal/from-beat-to-release/index.html; do
+for file in services/index.html services/music-production/index.html services/mixing-mastering/index.html services/artist-promotion/index.html services/software-development/index.html journal/index.html journal/prepare-for-a-recording-session/index.html journal/from-beat-to-release/index.html videos/index.html; do
   test -s "dist/$file" || { echo "Missing published SEO service page: $file" >&2; exit 1; }
 done
 if [ ! -s dist/assets/booking-confirmation.mp3 ]; then

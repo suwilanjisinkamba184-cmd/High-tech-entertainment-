@@ -52,9 +52,9 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-private val VoiceGold = Color(0xFFD6B15E)
-private val VoicePanel = Color(0xFF121418)
-private val VoiceMuted = Color(0xFF8B929D)
+private val VoiceGold = com.hightechentertainment.app.ui.design.HteColors.Gold
+private val VoicePanel = com.hightechentertainment.app.ui.design.HteColors.Panel
+private val VoiceMuted = com.hightechentertainment.app.ui.design.HteColors.Muted
 private val voiceJson = Json { ignoreUnknownKeys = true }
 
 @Serializable
@@ -63,16 +63,27 @@ private data class VoiceTokenResponse(
     @SerialName("user_id") val userId: String
 )
 
+private val voiceHttp401Pattern = Regex("""(?<![A-Za-z0-9_])401(?![A-Za-z0-9_])""")
+private val voiceHttp403Pattern = Regex("""(?<![A-Za-z0-9_])403(?![A-Za-z0-9_])""")
+
 internal fun voiceFailureMessage(details: String): String {
     val normalized = details.lowercase()
+    val isSessionFailure = listOf("sign in", "session expired").any(normalized::contains) ||
+        voiceHttp401Pattern.containsMatchIn(details)
+    val isProviderAuthorizationFailure =
+        listOf("convai_write", "missing permission", "forbidden", "credentials", "api key", "not configured", "conversation token").any(normalized::contains) ||
+            voiceHttp403Pattern.containsMatchIn(details)
+
     return when {
+        // Authorization responses must win over transport wording: provider SDKs can
+        // include "connection" or "WebSocket" in a 403 diagnostic.
+        isProviderAuthorizationFailure ->
+            "HTE AI Voice Assistant was rejected by the voice provider. The project owner needs to check the agent permissions and server-side API credentials."
+        isSessionFailure ->
+            "Your HTE session may have expired. Sign in again, then reopen HTE AI Voice Assistant."
         listOf("timeout", "network", "connection", "offline", "unreachable").any(normalized::contains) ->
             "HTE AI Voice Assistant could not connect. Check your internet connection and try again."
-        listOf("sign in", "session expired", "401").any(normalized::contains) ->
-            "Your HTE session may have expired. Sign in again, then reopen HTE AI Voice Assistant."
-        listOf("convai_write", "missing permission", "forbidden", "credentials", "api key", "not configured", "conversation token").any(normalized::contains) ->
-            "HTE AI Voice Assistant is not fully configured yet. The HTE project owner needs to correct the server-side voice API credentials and permissions."
-        else -> "Voice Companion is temporarily unavailable. Please try again."
+        else -> "HTE AI Voice Assistant is temporarily unavailable. Please try again."
     }
 }
 
@@ -127,6 +138,7 @@ fun VoiceAssistantDialog(
     var minimized by remember { mutableStateOf(false) }
 
     SideEffect {
+        toolContext.onActionCompleted = { minimized = true }
         toolContext.tracks = currentTracks
         toolContext.favourites = currentFavourites
         toolContext.videos = currentVideos
@@ -179,9 +191,9 @@ fun VoiceAssistantDialog(
         }
     }
 
-    Box(Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.BottomEnd) {
+    BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp), contentAlignment = Alignment.BottomCenter) {
             if (minimized) {
-                Surface(Modifier.fillMaxWidth().widthIn(max = 320.dp), color = VoicePanel, shape = RoundedCornerShape(22.dp), shadowElevation = 18.dp) {
+                Surface(Modifier.align(Alignment.BottomEnd).padding(bottom = if (maxWidth < 720.dp) 84.dp else 16.dp).fillMaxWidth().widthIn(max = 320.dp), color = VoicePanel, shape = RoundedCornerShape(22.dp), shadowElevation = 18.dp) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.GraphicEq, null, tint = VoiceGold, modifier = Modifier.size(25.dp))
                         Spacer(Modifier.width(9.dp))
@@ -189,22 +201,23 @@ fun VoiceAssistantDialog(
                             Text("HTE AI", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             Text(if (session == null) "HTE AI · standby" else if (muted) "Microphone muted" else "Connected · say Hey HTE", color = VoiceMuted, fontSize = 9.sp)
                         }
-                        if (session != null) IconButton(onClick = { scope.launch { session?.toggleMute() } }) { Icon(if (muted) Icons.Outlined.MicOff else Icons.Outlined.Mic, if (muted) "Unmute Voice Companion" else "Mute Voice Companion", tint = if (muted) VoiceMuted else VoiceGold) }
-                        IconButton(onClick = { minimized = false }) { Icon(Icons.Outlined.ExpandLess, "Expand Voice Companion", tint = VoiceGold) }
-                        IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "End Voice Companion", tint = VoiceMuted) }
+                        if (session != null) IconButton(onClick = { scope.launch { session?.toggleMute() } }) { Icon(if (muted) Icons.Outlined.MicOff else Icons.Outlined.Mic, if (muted) "Unmute HTE AI Voice Assistant" else "Mute HTE AI Voice Assistant", tint = if (muted) VoiceMuted else VoiceGold) }
+                        IconButton(onClick = { minimized = false }) { Icon(Icons.Outlined.ExpandLess, "Expand HTE AI Voice Assistant", tint = VoiceGold) }
+                        IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "End HTE AI Voice Assistant", tint = VoiceMuted) }
                     }
                 }
             } else {
-                Surface(Modifier.fillMaxWidth(.96f).widthIn(max = 440.dp).fillMaxHeight(.88f), color = Color(0xFF08090B), shape = RoundedCornerShape(26.dp), shadowElevation = 24.dp) {
+                Surface(Modifier.align(Alignment.BottomCenter).padding(bottom = if (maxWidth < 720.dp) 84.dp else 16.dp).widthIn(max = 420.dp).fillMaxWidth(.96f).heightIn(max = maxHeight * .48f), color = com.hightechentertainment.app.ui.design.HteColors.Obsidian, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 18.dp, bottomEnd = 18.dp), shadowElevation = 20.dp) {
                     Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp, vertical = 18.dp),
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 9.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                Box(Modifier.width(32.dp).height(4.dp).clip(RoundedCornerShape(50)).background(VoiceMuted.copy(alpha = .5f)))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text("HTE UNIVERSE / AI VOICE ASSISTANT", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
-                        Text("HTE AI Voice Assistant", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                        Text("HTE AI Voice Assistant", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         Text("Talk to HTE AI and control your HTE Universe experience", color = VoiceMuted, fontSize = 11.sp)
                     }
                     IconButton(onClick = { minimized = true }) { Icon(Icons.Outlined.ExpandMore, "Minimize HTE AI Voice Assistant", tint = Color.White) }
@@ -215,7 +228,7 @@ fun VoiceAssistantDialog(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF11161C)),
                     shape = RoundedCornerShape(18.dp)
                 ) {
-                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.Shield, null, tint = VoiceGold, modifier = Modifier.size(23.dp))
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
@@ -226,14 +239,14 @@ fun VoiceAssistantDialog(
                     }
                 }
                 Box(
-                    Modifier.fillMaxWidth().height(210.dp)
+                    Modifier.fillMaxWidth().height(92.dp)
                         .background(Brush.radialGradient(listOf(Color(0xFF3C3220), Color(0xFF18212A), Color(0xFF08090B))), RoundedCornerShape(24.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(Modifier.size(164.dp).clip(CircleShape).background(VoiceGold.copy(alpha = .07f)), contentAlignment = Alignment.Center) {
-                        Box(Modifier.size(126.dp).clip(CircleShape).background(VoiceGold.copy(alpha = .13f)), contentAlignment = Alignment.Center) {
-                            Box(Modifier.size(88.dp).clip(CircleShape).background(VoiceGold.copy(alpha = .18f)), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Outlined.GraphicEq, null, tint = VoiceGold, modifier = Modifier.size(46.dp))
+                    Box(Modifier.size(84.dp).clip(CircleShape).background(VoiceGold.copy(alpha = .07f)), contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(62.dp).clip(CircleShape).background(VoiceGold.copy(alpha = .13f)), contentAlignment = Alignment.Center) {
+                            Box(Modifier.size(42.dp).clip(CircleShape).background(VoiceGold.copy(alpha = .18f)), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Outlined.GraphicEq, null, tint = VoiceGold, modifier = Modifier.size(24.dp))
                             }
                         }
                     }
@@ -298,35 +311,35 @@ fun VoiceAssistantDialog(
                     if (session == null) {
                         Button(
                             onClick = { connect() }, enabled = !isConnecting,
-                            modifier = Modifier.weight(1f).height(52.dp),
+                            modifier = Modifier.weight(1f).height(42.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = VoiceGold, contentColor = Color.Black),
                             shape = RoundedCornerShape(15.dp)
                         ) {
                             Icon(Icons.Outlined.Mic, null); Spacer(Modifier.width(8.dp)); Text(if (isConnecting) "Connecting…" else "Start voice session")
                         }
                     } else {
-                        OutlinedButton(onClick = { scope.launch { session?.toggleMute() } }, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(15.dp)) {
+                        OutlinedButton(onClick = { scope.launch { session?.toggleMute() } }, modifier = Modifier.weight(1f).height(42.dp), shape = RoundedCornerShape(15.dp)) {
                             Icon(if (muted) Icons.Outlined.MicOff else Icons.Outlined.Mic, null); Spacer(Modifier.width(6.dp)); Text(if (muted) "Unmute" else "Mute")
                         }
-                        Button(onClick = { session = null; status = "Disconnecting" }, modifier = Modifier.weight(1f).height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8E3434), contentColor = Color.White), shape = RoundedCornerShape(15.dp)) {
+                        Button(onClick = { session = null; status = "Disconnecting" }, modifier = Modifier.weight(1f).height(42.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8E3434), contentColor = Color.White), shape = RoundedCornerShape(15.dp)) {
                             Icon(Icons.Outlined.CallEnd, null); Spacer(Modifier.width(6.dp)); Text("End session")
                         }
                     }
                 }
                 Text("QUICK LAUNCH", color = VoiceGold, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { currentOnSearch("Zambian") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                    OutlinedButton(onClick = { currentOnSearch("Zambian"); minimized = true }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
                         Icon(Icons.Outlined.Search, null); Spacer(Modifier.width(4.dp)); Text("Zambian music", fontSize = 10.sp)
                     }
-                    OutlinedButton(onClick = { currentOnNavigate("DISCOVER") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                    OutlinedButton(onClick = { currentOnNavigate("DISCOVER"); minimized = true }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
                         Icon(Icons.Outlined.Explore, null); Spacer(Modifier.width(4.dp)); Text("Discover", fontSize = 10.sp)
                     }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { currentOnNavigate("LIBRARY") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                    OutlinedButton(onClick = { currentOnNavigate("LIBRARY"); minimized = true }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
                         Icon(Icons.Outlined.LibraryMusic, null); Spacer(Modifier.width(4.dp)); Text("My library", fontSize = 10.sp)
                     }
-                    OutlinedButton(onClick = { currentOnNavigate("HOME") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                    OutlinedButton(onClick = { currentOnNavigate("HOME"); minimized = true }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
                         Icon(Icons.Outlined.Home, null); Spacer(Modifier.width(4.dp)); Text("Home", fontSize = 10.sp)
                     }
                 }
@@ -371,6 +384,7 @@ private class VoiceToolContext {
     var onNavigate: (String) -> Unit = {}
     var onSearch: (String) -> Unit = {}
     var onSearchVideos: (String) -> Unit = {}
+    var onActionCompleted: () -> Unit = {}
     var onUserTranscript: (String) -> Unit = {}
     var onAgentResponse: (String) -> Unit = {}
     var onError: (String) -> Unit = {}
@@ -405,7 +419,7 @@ private fun startVoiceSession(
                                 val favourites = toolContext.favourites
                                 if (favourites.isEmpty()) ClientToolResult.failure("There are no saved favourites in the current library.")
                                 else {
-                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayFavourites(favourites) }
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayFavourites(favourites); toolContext.onActionCompleted() }
                                     ClientToolResult.success("Selected the saved favourites queue with " + favourites.size + " tracks.")
                                 }
                             }
@@ -414,7 +428,7 @@ private fun startVoiceSession(
                                     else findVoiceTrack(toolContext.tracks, query)
                                 if (track == null) ClientToolResult.failure("I could not find a playable published HTE track for that request.")
                                 else {
-                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayTrack(track) }
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayTrack(track); toolContext.onActionCompleted() }
                                     ClientToolResult.success(voicePlaybackConfirmation(track))
                                 }
                             }
@@ -424,7 +438,7 @@ private fun startVoiceSession(
                                 else if (!track.downloadAllowed || track.rightsStatus !in setOf("owned_or_licensed", "legacy_existing") || track.sourcePlatform.lowercase() in setOf("spotify", "youtube", "external") || !track.sourceUrl.isNullOrBlank()) {
                                     ClientToolResult.failure("This track is not an eligible HTE-owned or licensed download. Spotify and YouTube links must stay on their original platforms.")
                                 } else {
-                                    withContext(Dispatchers.Main.immediate) { toolContext.onDownloadTrack(track) }
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onDownloadTrack(track); toolContext.onActionCompleted() }
                                     if (track.brandedAudioUrl.isNullOrBlank() || track.downloadBrandingStatus != "ready") {
                                         ClientToolResult.success("Opened the HTE-branded download page for " + track.title + ". Complete the download in your browser; it is not saved to the in-app Library yet.")
                                     } else {
@@ -439,6 +453,7 @@ private fun startVoiceSession(
                                     withContext(Dispatchers.Main.immediate) {
                                         toolContext.onNavigate("VIDEOS")
                                         toolContext.onSearchVideos(query)
+                                        toolContext.onActionCompleted()
                                     }
                                     val summary = if (matches.isEmpty()) "No published HTE videos match that search. Videos is now open."
                                         else "Found " + matches.size + " matching video(s): " + matches.take(4).joinToString { it.title + " by " + (it.artist ?: "High-Tech Entertainment") } + ". Videos is now open."
@@ -449,7 +464,7 @@ private fun startVoiceSession(
                                 val video = findVoiceVideo(toolContext.videos, query)
                                 if (video == null) ClientToolResult.failure("I could not find a published HTE video matching that request.")
                                 else {
-                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayVideo(video) }
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onPlayVideo(video); toolContext.onActionCompleted() }
                                     ClientToolResult.success("Opened " + video.title + " in the HTE video player.")
                                 }
                             }
@@ -458,11 +473,12 @@ private fun startVoiceSession(
                                 if (video == null) ClientToolResult.failure("I could not find a published HTE video matching that request.")
                                 else if (video.downloadUrl.isNullOrBlank()) ClientToolResult.failure("An original downloadable video file is not available for that item.")
                                 else {
-                                    withContext(Dispatchers.Main.immediate) { toolContext.onDownloadVideo(video) }
+                                    withContext(Dispatchers.Main.immediate) { toolContext.onDownloadVideo(video); toolContext.onActionCompleted() }
                                     ClientToolResult.success("Sent the original video download request for " + video.title + ". Check Library for its progress.")
                                 }
                             }
                             else -> if (HtePlaybackController.performAction(action)) {
+                                withContext(Dispatchers.Main.immediate) { toolContext.onActionCompleted() }
                                 ClientToolResult.success("Playback action '" + action + "' executed by HTE Universe.")
                             } else {
                                 ClientToolResult.failure(when (action) {
@@ -488,7 +504,7 @@ private fun startVoiceSession(
                             "App Updates" -> "ACCOUNT"
                             else -> return ClientToolResult.failure("Unknown app destination: $destination")
                         }
-                        if (target != null) withContext(Dispatchers.Main.immediate) { toolContext.onNavigate(target) }
+                        if (target != null) withContext(Dispatchers.Main.immediate) { toolContext.onNavigate(target); toolContext.onActionCompleted() }
                         return ClientToolResult.success(if (destination == "Founder Studio") "Opened Account. Founder Studio is shown only when the native app verifies the signed-in owner role." else if (destination == "Voice Companion") "Voice Companion is already open." else if (destination == "App Updates") "Opened Account. Open Settings, then App Updates to manage this application." else "Opened $destination.")
                     }
                 },
@@ -499,7 +515,7 @@ private fun startVoiceSession(
                         val matches = toolContext.tracks.filter { track ->
                             track.title.contains(query, true) || track.artist.contains(query, true) || track.genre.orEmpty().contains(query, true)
                         }
-                        withContext(Dispatchers.Main.immediate) { toolContext.onSearch(query) }
+                        withContext(Dispatchers.Main.immediate) { toolContext.onSearch(query); toolContext.onActionCompleted() }
                         val summary = if (matches.isEmpty()) "No matching published tracks are currently loaded for '$query'. Discover search has been opened." else
                             "Found ${matches.size} published track(s): ${matches.take(5).joinToString { "${it.title} by ${it.artist}" }}. Discover search has been opened."
                         return ClientToolResult.success(summary)
@@ -516,14 +532,20 @@ private fun startVoiceSession(
                 clientTools = clientTools,
                 onUserTranscriptEvent = { text, _ -> toolContext.onUserTranscript(text) },
                 onAgentResponseEvent = { text, _ -> toolContext.onAgentResponse(text) },
-                onError = { _, _ -> toolContext.onError("Voice Companion could not complete that request. Please try again.") }
+                onError = { code, message -> toolContext.onError(voiceFailureMessage(listOfNotNull(message, "provider error $code").joinToString(" "))) }
             )
             val active = ConversationClient.startSession(config, context)
             onSession(active)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            onFailure(error.toHteUserMessage("HTE AI Voice Assistant could not connect. Please try again."))
+            // Include both the transport/provider detail and the app's safe fallback
+            // so token-endpoint failures use the same actionable guidance as SDK errors.
+            val details = listOfNotNull(
+                error.message,
+                error.toHteUserMessage("HTE AI Voice Assistant could not connect. Please try again.")
+            ).joinToString(" ")
+            onFailure(voiceFailureMessage(details))
         }
     }
 }

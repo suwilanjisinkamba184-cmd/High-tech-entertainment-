@@ -2,8 +2,19 @@ package com.hightechentertainment.app.data
 
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.exception.PostgrestRestException
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.storage.storage
+import io.github.jan.supabase.storage.UploadData
+import io.ktor.http.ContentType
+import io.ktor.utils.io.ByteChannel
+import io.ktor.utils.io.writeFully
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import java.io.InputStream
+import java.util.UUID
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
@@ -68,6 +79,13 @@ data class FavoriteDto(
     @SerialName("user_id") val userId: String,
     @SerialName("track_id") val trackId: String,
     @SerialName("created_at") val createdAt: String? = null
+)
+
+@Serializable
+private data class AvatarProfileInsertDto(
+    val id: String,
+    @SerialName("avatar_url") val avatarUrl: String,
+    @SerialName("updated_at") val updatedAt: String
 )
 
 @Serializable
@@ -153,6 +171,132 @@ class MemberRepository {
                 avatarUrl = googleAvatar.orEmpty()
             )
             else -> null
+        }
+    }
+
+    suspend fun updateMyAvatar(input: InputStream, size: Long, mimeType: String): ProfileDto? = coroutineScope {
+        val userId = try {
+            requireUserId()
+        } catch (error: Throwable) {
+            runCatching { input.close() }
+            throw error
+        }
+        val (normalizedMime, extension) = try {
+            val normalized = mimeType.substringBefore(';').trim().lowercase()
+            require(size in 1L..(5L * 1024L * 1024L)) { "Profile photos must be 5 MB or smaller." }
+            val ext = when (normalized) {
+                "image/jpeg" -> "jpg"
+                "image/png" -> "png"
+                "image/webp" -> "webp"
+                else -> throw IllegalArgumentException("Choose a JPG, PNG or WebP profile photo.")
+            }
+            normalized to ext
+        } catch (error: Throwable) {
+            runCatching { input.close() }
+            throw error
+        }
+        val existing = try {
+            client.from("profiles")
+                .select { filter { eq("id", userId) } }
+                .decodeList<ProfileDto>()
+                .firstOrNull()
+        } catch (error: Throwable) {
+            runCatching { input.close() }
+            throw error
+        }
+        val path = "$userId/${UUID.randomUUID()}.$extension"
+        val channel = ByteChannel(autoFlush = true)
+        val producer = try {
+            launch(Dispatchers.IO) {
+                try {
+                    input.use { stream ->
+                        val buffer = ByteArray(32 * 1024)
+                        while (true) {
+                            val count = stream.read(buffer)
+                            if (count < 0) break
+                            channel.writeFully(buffer, 0, count)
+                        }
+                    }
+                    channel.close()
+                } catch (error: Throwable) {
+                    channel.close()
+                    throw error
+                }
+            }
+        } catch (error: Throwable) {
+            runCatching { input.close() }
+            channel.close()
+            throw error
+        }
+        try {
+            client.storage.from("hte-avatars").upload(path, UploadData(channel, size)) {
+                contentType = ContentType.parse(normalizedMime)
+                upsert = false
+            }
+            producer.join()
+            try {
+                val updatedAt = java.time.Instant.now().toString()
+                if (existing != null) {
+                    // Do not write stale profile fields captured before the upload.
+                    val updatedRows = client.from("profiles").update({
+                        set("avatar_url", path)
+                        set("updated_at", updatedAt)
+                    }) {
+                        select()
+                        filter { eq("id", userId) }
+                    }.decodeList<ProfileDto>()
+                    check(updatedRows.isNotEmpty()) { "Profile disappeared before the avatar update completed." }
+                } else {
+                    // Insert only avatar fields. If another session creates the row
+                    // concurrently, retry as an avatar-only update instead of upserting
+                    // stale/default profile fields over that session's data.
+                    try {
+                        client.from("profiles").insert(AvatarProfileInsertDto(userId, path, updatedAt))
+                    } catch (insertError: CancellationException) {
+                        throw insertError
+                    } catch (insertError: Exception) {
+                        val isUniqueViolation =
+                            (insertError as? PostgrestRestException)?.code == "23505" ||
+                                insertError.message.orEmpty().contains("23505")
+                        if (!isUniqueViolation) throw insertError
+
+                        // A concurrent session may have inserted the profile after our
+                        // initial read. Retry only for the unique-key conflict and require
+                        // the returning update to prove that the row was actually changed.
+                        val updatedRows = client.from("profiles").update({
+                            set("avatar_url", path)
+                            set("updated_at", updatedAt)
+                        }) {
+                            select()
+                            filter { eq("id", userId) }
+                        }.decodeList<ProfileDto>()
+                        if (updatedRows.isEmpty()) throw insertError
+                    }
+                }
+            } catch (error: Throwable) {
+                // A failed client response does not prove the database write rolled
+                // back. Never delete an object while the profile reference is unknown.
+                if (error !is CancellationException) {
+                    val confirmedUnreferenced = try {
+                        val current = client.from("profiles")
+                            .select { filter { eq("id", userId) } }
+                            .decodeList<ProfileDto>()
+                            .firstOrNull()
+                        current?.avatarUrl != path
+                    } catch (_: Throwable) {
+                        false
+                    }
+                    if (confirmedUnreferenced) {
+                        runCatching { client.storage.from("hte-avatars").delete(path) }
+                    }
+                }
+                throw error
+            }
+            getMyProfile()
+        } catch (error: Throwable) {
+            producer.cancel()
+            channel.close()
+            throw error
         }
     }
 

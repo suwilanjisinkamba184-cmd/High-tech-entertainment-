@@ -1,6 +1,8 @@
 package com.hightechentertainment.app
 
 import androidx.compose.foundation.layout.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.StrokeCap
@@ -21,6 +23,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -44,11 +47,46 @@ import kotlinx.serialization.json.put
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 import java.time.LocalDate
 
-private val MemberGold = Color(0xFFD6B15E)
-private val MemberPanel = Color(0xFF15111B)
-private val MemberMuted = Color(0xFF8B929D)
+private val MemberGold = com.hightechentertainment.app.ui.design.HteColors.Gold
+private val MemberPanel = com.hightechentertainment.app.ui.design.HteColors.Panel
+private val MemberMuted = com.hightechentertainment.app.ui.design.HteColors.Muted
+private const val MAX_PROFILE_IMAGE_BYTES = 5L * 1024L * 1024L
+
+private suspend fun stageProfileImage(context: android.content.Context, uri: android.net.Uri): Pair<File, Long> =
+    withTemporaryFileCleanup { registerFile ->
+        withContext(Dispatchers.IO) {
+            val file = File.createTempFile("hte-profile-", ".upload", context.cacheDir)
+            registerFile(file)
+            try {
+                val input = context.contentResolver.openInputStream(uri)
+                    ?: error("The selected image could not be opened. Choose another image.")
+                var total = 0L
+                input.use { source ->
+                    FileOutputStream(file).use { destination ->
+                        val buffer = ByteArray(16 * 1024)
+                        while (true) {
+                            val count = source.read(buffer)
+                            if (count < 0) break
+                            total += count
+                            require(total <= MAX_PROFILE_IMAGE_BYTES) { "Choose an image file no larger than 5 MB." }
+                            destination.write(buffer, 0, count)
+                        }
+                    }
+                }
+                require(total > 0L) { "The selected image is empty." }
+                file to total
+            } catch (error: Throwable) {
+                file.delete()
+                throw error
+            }
+        }
+    }
 
 private suspend fun <T> captureAccountRequest(request: suspend () -> T): Result<T> = try {
     Result.success(request())
@@ -83,6 +121,7 @@ fun MemberCenter(
     var accountDataLoading by remember { mutableStateOf(false) }
     var accountDataError by remember { mutableStateOf<String?>(null) }
     var accountRefreshKey by remember { mutableIntStateOf(0) }
+    var profileRevision by remember { mutableIntStateOf(0) }
     var showProfileEditor by remember { mutableStateOf(false) }
     var showBookingForm by remember { mutableStateOf(false) }
     var artistVideoUrl by remember { mutableStateOf("") }
@@ -92,6 +131,31 @@ fun MemberCenter(
     var artistVideoSuccess by remember { mutableStateOf(false) }
     var isWorking by remember { mutableStateOf(false) }
     val auth = remember(configured) { if (configured) runCatching { SupabaseClientProvider.client.auth }.getOrNull() else null }
+    val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) scope.launch {
+            isWorking = true
+            try {
+                val mimeType = context.contentResolver.getType(uri).orEmpty()
+                val (stagedFile, measuredSize) = stageProfileImage(context, uri)
+                try {
+                    val updatedProfile = stagedFile.inputStream().use { stream ->
+                        MemberRepository().updateMyAvatar(stream, measuredSize, mimeType)
+                    }
+                    profileRevision++
+                    profile = updatedProfile
+                    statusMessage = "Profile photo updated."
+                } finally {
+                    stagedFile.delete()
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                statusMessage = error.toHteUserMessage("Your profile photo could not be uploaded. Please retry.")
+            } finally {
+                isWorking = false
+            }
+        }
+    }
 
     LaunchedEffect(auth) {
         if (auth != null) {
@@ -106,11 +170,12 @@ fun MemberCenter(
             accountDataError = null
             try {
                 val repo = MemberRepository()
+                val profileRevisionAtStart = profileRevision
                 val profileResult = captureAccountRequest { repo.getMyProfile() }
                 val bookingsResult = captureAccountRequest { repo.getMyBookings() }
                 val notificationsResult = captureAccountRequest { repo.getNotifications() }
                 val roleResult = captureAccountRequest { repo.getCurrentRole() }
-                profileResult.onSuccess { profile = it }
+                profileResult.onSuccess { if (profileRevision == profileRevisionAtStart) profile = it }
                 bookingsResult.onSuccess { bookings = it }
                 notificationsResult.onSuccess { notifications = it }
                 roleResult.onSuccess { role = it }
@@ -133,10 +198,10 @@ fun MemberCenter(
         }
     }
 
-    LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(modifier = Modifier.testTag("member_center_list"), contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MemberPanel), shape = RoundedCornerShape(22.dp)) {
-                Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF3A1746), MemberPanel, Color(0xFF0C1118)))).padding(18.dp)) {
+                Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(com.hightechentertainment.app.ui.design.HteColors.PanelRaised, MemberPanel, com.hightechentertainment.app.ui.design.HteColors.Obsidian))).padding(18.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Outlined.AccountCircle, null, tint = MemberGold, modifier = Modifier.size(34.dp))
@@ -194,7 +259,7 @@ fun MemberCenter(
                 ) {
                     Icon(Icons.Outlined.Mic, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Open Voice Assistant")
+                    Text("Open HTE AI Voice Assistant")
                 }
             }
         }
@@ -397,7 +462,7 @@ fun MemberCenter(
 
     if (showSettings) {
         Dialog(onDismissRequest = { showSettings = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-            Surface(Modifier.fillMaxSize(), color = Color(0xFF08090B)) {
+            Surface(Modifier.fillMaxSize(), color = com.hightechentertainment.app.ui.design.HteColors.Obsidian) {
                 SettingsHub(
                     onClose = { showSettings = false },
                     settingsStore = settingsStore,
@@ -413,16 +478,17 @@ fun MemberCenter(
     }
 
     if (showProfileEditor && auth != null) {
-        ProfileEditorDialog(profile = profile, onDismiss = { showProfileEditor = false }, onSave = { name, bio, phone ->
+        ProfileEditorDialog(profile = profile, accountId = auth.currentUserOrNull()?.id.orEmpty(), onDismiss = { showProfileEditor = false }, onPickAvatar = { avatarPicker.launch("image/*") }, onSave = { name, bio, phone ->
             scope.launch {
                 isWorking = true
                 try {
                     captureAccountRequest { MemberRepository().saveMyProfile(name, bio, phone) }
                         .onSuccess {
+                            profileRevision++
                             statusMessage = "Profile saved."
                             showProfileEditor = false
                             captureAccountRequest { MemberRepository().getMyProfile() }
-                                .onSuccess { profile = it }
+                                .onSuccess { refreshed -> profile = refreshed }
                                 .onFailure { accountDataError = it.toHteUserMessage("Your profile was saved, but the refreshed details could not be loaded.") }
                         }
                         .onFailure { statusMessage = it.toHteUserMessage("Your profile could not be saved. Please retry.") }
@@ -468,7 +534,7 @@ fun MemberCenter(
 
     if (showFounderStudio) {
         Dialog(onDismissRequest = { showFounderStudio = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-            Surface(Modifier.fillMaxSize(), color = Color(0xFF08090B)) {
+            Surface(Modifier.fillMaxSize(), color = com.hightechentertainment.app.ui.design.HteColors.Obsidian) {
                 FounderStudioScreen(onClose = { showFounderStudio = false })
             }
         }
@@ -491,21 +557,35 @@ private fun MemberCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun ProfileEditorDialog(profile: ProfileDto?, onDismiss: () -> Unit, onSave: (String, String, String) -> Unit, isWorking: Boolean) {
-    var name by remember(profile) { mutableStateOf(profile?.displayName.orEmpty()) }
-    var bio by remember(profile) { mutableStateOf(profile?.bio.orEmpty()) }
-    var phone by remember(profile) { mutableStateOf(profile?.phone.orEmpty()) }
+private fun ProfileEditorDialog(profile: ProfileDto?, accountId: String, onDismiss: () -> Unit, onPickAvatar: () -> Unit, onSave: (String, String, String) -> Unit, isWorking: Boolean) {
+    var draft by remember(accountId) {
+        mutableStateOf(
+            ProfileDraftState(
+                name = profile?.displayName.orEmpty(),
+                bio = profile?.bio.orEmpty(),
+                phone = profile?.phone.orEmpty()
+            )
+        )
+    }
+
+    // Hydrate each field independently. Editing one field must never prevent
+    // untouched fields from receiving the asynchronously loaded profile values.
+    LaunchedEffect(accountId, profile?.id, profile?.displayName, profile?.bio, profile?.phone) {
+        if (profile != null) draft = draft.hydrate(profile.displayName, profile.bio, profile.phone)
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit profile") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(name, { name = it }, label = { Text("Display name") }, singleLine = true)
-                OutlinedTextField(phone, { phone = it }, label = { Text("Phone") }, singleLine = true)
-                OutlinedTextField(bio, { bio = it }, label = { Text("Bio") }, minLines = 3)
+                TextButton(onClick = onPickAvatar, enabled = !isWorking) { Text("Change profile photo") }
+                Text("JPG, PNG or WebP · maximum 5 MB", color = MemberMuted, fontSize = 11.sp)
+                OutlinedTextField(draft.name, { draft = draft.editName(it) }, label = { Text("Display name") }, singleLine = true)
+                OutlinedTextField(draft.phone, { draft = draft.editPhone(it) }, label = { Text("Phone") }, singleLine = true)
+                OutlinedTextField(draft.bio, { draft = draft.editBio(it) }, label = { Text("Bio") }, minLines = 3)
             }
         },
-        confirmButton = { TextButton(onClick = { onSave(name, bio, phone) }, enabled = !isWorking && name.isNotBlank()) { Text("Save") } },
+        confirmButton = { TextButton(onClick = { onSave(draft.name, draft.bio, draft.phone) }, enabled = !isWorking && draft.name.isNotBlank()) { Text("Save") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }

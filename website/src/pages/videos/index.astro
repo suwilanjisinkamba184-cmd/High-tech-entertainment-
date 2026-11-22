@@ -1,0 +1,27 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const canonical = 'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/videos/';
+---
+<SiteLayout
+  title="Videos | HTE Universe"
+  description="Watch official visuals and video releases from High-Tech Entertainment."
+  canonical={canonical}
+  loadFonts={true}
+>
+  <main class="video-route">
+    <p class="eyebrow">HTE UNIVERSE · OFFICIAL VISUALS</p>
+    <h1>Video catalogue</h1>
+    <p>Our official video catalogue lives on the HTE Universe homepage. Continue to the video collection.</p>
+    <a class="btn gold" href={`${base}#videos`}>Browse official videos ↗</a>
+  </main>
+  <script is:inline define:vars={{ base }}>
+    window.location.replace(base + '#videos');
+  </script>
+</SiteLayout>
+<style>
+  .video-route{width:min(900px,calc(100% - 36px));min-height:70vh;margin:0 auto;padding:clamp(80px,14vh,150px) 0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center}
+  .video-route h1{font-size:clamp(2.8rem,8vw,5.8rem);letter-spacing:-.06em}
+  .video-route p:not(.eyebrow){max-width:55ch;color:#a6a6a6;margin:18px 0 28px}
+  .video-route .eyebrow{color:#c5a45a;letter-spacing:.18em;font-size:.75rem}
+</style>

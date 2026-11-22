@@ -1,0 +1,1 @@
+-- Consolidated source note: Least-privilege booking grants and status-only updates are included in 20261107070030_native_android_bookings_workflow.sql. This marker preserves the corresponding live migration ledger version for clean replays; no additional DDL is required.
