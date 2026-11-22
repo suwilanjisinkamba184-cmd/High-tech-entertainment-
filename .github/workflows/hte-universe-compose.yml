@@ -48,7 +48,7 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL || 'https://wqrxacjbsldbnoekbkbf.supabase.co' }}
       SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY || vars.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_hB_aRh-dnicpRQq3wiRtWg_JTdhmMda' }}
       # A marked main-branch commit publishes the signed release after all build checks pass.
-      PUBLISH_RELEASE: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_release == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[publish-hte-4.3.1-build55]')) }}
+      PUBLISH_RELEASE: 'false' # PUBLIC RELEASES TEMPORARILY DISABLED — do not publish APKs until recovery sign-off.
       # Do not sign/build a release candidate during routine PR validation. A candidate requires an explicit manual dispatch; production publishing remains separately gated.
       BUILD_SIGNED_CANDIDATE: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_release == false }}
     steps:
