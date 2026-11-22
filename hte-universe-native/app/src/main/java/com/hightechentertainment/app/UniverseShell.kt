@@ -1503,18 +1503,26 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     val previousOrientation = remember(activity) { activity?.requestedOrientation }
     var immersiveVideo by remember(video.id) { mutableStateOf(false) }
 
+    val offlineUri = remember(video.id, video.downloadUrl, video.videoUrl) {
+        val records = OfflineDownloadManager(context).getDownloads()
+        listOfNotNull(video.downloadUrl, video.videoUrl)
+            .distinct()
+            .firstNotNullOfOrNull { source -> resolveDownloadedLocalUri(records, source) }
+    }
     val youtubeId = remember(video.videoUrl, video.youtubeId) { video.youtubeId?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) } ?: extractYouTubeVideoId(video.videoUrl) }
-    if (youtubeId != null) {
+    if (youtubeId != null && offlineUri == null) {
         YouTubeVideoDialog(video, youtubeId, onDismiss)
         return
     }
 
-    val validUrl = remember(video.videoUrl) { isPlayableVideoUrl(video.videoUrl) }
+    val playbackUri = offlineUri ?: Uri.parse(video.videoUrl.trim())
+    val validUrl = remember(video.videoUrl, offlineUri) { offlineUri != null || isPlayableVideoUrl(video.videoUrl) }
     // Register the Media3 listener before preparing the stream so the initial buffering,
     // first-frame and decoder errors cannot be missed on fast connections.
-    val player = remember(video.id, video.videoUrl) {
+    val player = remember(video.id, video.videoUrl, offlineUri) {
         ExoPlayer.Builder(context)
             .setAudioAttributes(AudioAttributes.DEFAULT, true)
+            .setHandleAudioBecomingNoisy(true)
             .build()
     }
     // Video is Activity-scoped, unlike background music: pause it when the app leaves foreground.
@@ -1590,7 +1598,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     }
     LaunchedEffect(player, validUrl, video.videoUrl) {
         if (validUrl) {
-            player.setMediaItem(MediaItem.fromUri(video.videoUrl.trim()))
+            player.setMediaItem(MediaItem.fromUri(playbackUri))
             player.prepare()
             player.playWhenReady = true
         }
@@ -1652,7 +1660,12 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                             Column(Modifier.weight(1f)) {
                                 Text(video.title, color = Color.White, fontWeight = FontWeight.Bold,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 10.sp)
+                                Text(
+                                    if (offlineUri != null) "Downloaded · ${video.artist ?: "High-Tech Entertainment"}"
+                                    else video.artist ?: "High-Tech Entertainment",
+                                    color = if (offlineUri != null) ShellGold else ShellMuted,
+                                    fontSize = 10.sp
+                                )
                             }
                             IconButton(onClick = toggleImmersive) {
                                 Icon(Icons.Outlined.Fullscreen, "Enter fullscreen", tint = ShellGold)
