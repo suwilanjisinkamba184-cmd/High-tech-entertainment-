@@ -53,6 +53,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.util.concurrent.atomic.AtomicReference
 
 private val VoiceGold = com.hightechentertainment.app.ui.design.HteColors.Gold
 private val VoicePanel = com.hightechentertainment.app.ui.design.HteColors.Panel
@@ -154,7 +155,29 @@ fun VoiceAssistantDialog(
         toolContext.onSearchVideos = currentOnSearchVideos
         toolContext.onUserTranscript = { value -> scope.launch { userTranscript = value } }
         toolContext.onAgentResponse = { value -> scope.launch { agentResponse = value } }
-        toolContext.onError = { value -> scope.launch { errorMessage = value; status = "Error" } }
+        toolContext.onError = { value ->
+            scope.launch {
+                errorMessage = value
+                status = "Error"
+                isConnecting = false
+                // Drop a failed SDK session so the user can reconnect instead
+                // of being stuck behind a non-null, disconnected session.
+                session = null
+            }
+        }
+        toolContext.onDisconnected = { reason ->
+            scope.launch {
+                if (session != null) {
+                    session = null
+                    isConnecting = false
+                    status = "Disconnected"
+                    if (errorMessage == null) {
+                        errorMessage = "The voice connection ended. Start a new session to reconnect."
+                    }
+                    Log.w("HTEVoice", "Voice session disconnected: ${reason.take(180)}")
+                }
+            }
+        }
     }
 
     val microphonePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -529,6 +552,8 @@ private fun startVoiceSession(
                 }
             )
 
+            val startupError = AtomicReference<String?>(null)
+            val startupDisconnect = AtomicReference<String?>(null)
             val config = ConversationConfig(
                 conversationToken = token.token,
                 userId = token.userId.ifBlank { user.id },
@@ -536,15 +561,34 @@ private fun startVoiceSession(
                 audioInputSampleRate = 16000,
                 overrides = Overrides(tts = TtsOverrides(voiceId = supportedVoiceId), conversation = ConversationOverrides(textOnly = false)),
                 clientTools = clientTools,
+                onConnect = { conversationId ->
+                    Log.i("HTEVoice", "ElevenLabs voice session connected: ${conversationId.take(16)}")
+                },
+                onDisconnect = { reason ->
+                    val detail = reason.toString()
+                    startupDisconnect.compareAndSet(null, detail)
+                    Log.w("HTEVoice", "ElevenLabs SDK disconnected: ${detail.take(220)}")
+                    toolContext.onDisconnected(detail)
+                },
                 onUserTranscriptEvent = { text, _ -> toolContext.onUserTranscript(text) },
                 onAgentResponseEvent = { text, _ -> toolContext.onAgentResponse(text) },
                 onError = { code, message ->
+                    val details = listOfNotNull(message, "provider error $code").joinToString(" ")
+                    val safeFailure = voiceFailureMessage(details)
+                    startupError.compareAndSet(null, safeFailure)
                     Log.e("HTEVoice", "ElevenLabs SDK session error code=$code: ${message.orEmpty().take(220)}")
-                    toolContext.onError(voiceFailureMessage(listOfNotNull(message, "provider error $code").joinToString(" ")))
+                    toolContext.onError(safeFailure)
                 }
             )
             val active = ConversationClient.startSession(config, context)
-            onSession(active)
+            val startupFailure = startupError.get()
+                ?: startupDisconnect.get()?.let { "The voice connection ended during startup. Please try again." }
+            if (startupFailure != null) {
+                runCatching { active.endSession() }
+                onFailure(startupFailure)
+            } else {
+                onSession(active)
+            }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
