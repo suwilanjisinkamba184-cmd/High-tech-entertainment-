@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 35
     steps:
       - name: Checkout Flutter development branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: feat/hte-flutter-cross-platform-foundation
       - name: Set up Flutter stable
@@ -68,17 +68,28 @@ jobs:
         with:
           ref: fix/critical-video-splash-ai-regressions-20261122
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Install Android SDK packages
+      - name: Set up Android SDK 37
+        uses: premex-ab/setup-android-cli@ec4f446c5fdea3c206fb73b4b3277709e7227e63
+        with:
+          packages: |
+            platform-tools
+            platforms/android-37.0
+            build-tools/37.0.0
+      - name: Validate Android SDK 37 installation
         run: |
-          sdkmanager "platforms;android-37" "build-tools;37.0.0"
+          set -euo pipefail
+          test -d "$ANDROID_HOME/platforms/android-37.0"
+          if [[ ! -e "$ANDROID_HOME/platforms/android-37" ]]; then
+            ln -s "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
+          fi
+          test -x "$ANDROID_HOME/build-tools/37.0.0/apksigner"
+          test -x "$ANDROID_HOME/build-tools/37.0.0/aapt"
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.6.0'
       - name: Run Android unit tests
