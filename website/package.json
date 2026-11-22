@@ -12,7 +12,7 @@
   "dependencies": {
     "@astrojs/react": "^7.1.9",
     "@tailwindcss/vite": "^4.3.5",
-    "astro": "^7.4.13",
+    "astro": "7.4.13",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "@supabase/supabase-js": "2.119.0"
