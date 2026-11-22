@@ -17,4 +17,7 @@ internal object VoiceAssistantVoices {
 
     val default: VoiceAssistantVoice get() = all.first()
     fun find(id: String): VoiceAssistantVoice? = all.firstOrNull { it.id == id }
+
+    /** Repairs stale persisted voice IDs before they are sent as provider overrides. */
+    fun resolveId(id: String): String = find(id)?.id ?: DEFAULT_ID
 }

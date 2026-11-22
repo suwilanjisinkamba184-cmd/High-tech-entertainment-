@@ -403,13 +403,17 @@ private fun startVoiceSession(
 ) {
     scope.launch {
         onConnecting()
+        val supportedVoiceId = VoiceAssistantVoices.resolveId(voiceId)
+        Log.i("HTEVoice", "Starting authenticated voice session with supported voice preset")
         try {
             val user = SupabaseClientProvider.client.auth.currentUserOrNull()
                 ?: error("Sign in to use HTE AI Voice Assistant.")
+            Log.d("HTEVoice", "Requesting conversation token from Supabase Edge Function")
             val response = SupabaseClientProvider.client.functions.invoke("elevenlabs-voice-token")
             val token = voiceJson.decodeFromString<VoiceTokenResponse>(response.bodyAsText())
             check(token.token.isNotBlank()) { "The voice service did not return a conversation token." }
             check(token.userId == user.id) { "The voice service returned a session for a different account. Please sign in again." }
+            Log.d("HTEVoice", "Authenticated token received; initializing ElevenLabs Android SDK session")
 
             val clientTools = mapOf(
                 "control_playback" to object : ClientTool {
@@ -530,7 +534,7 @@ private fun startVoiceSession(
                 userId = token.userId.ifBlank { user.id },
                 textOnly = false,
                 audioInputSampleRate = 16000,
-                overrides = Overrides(tts = TtsOverrides(voiceId = voiceId), conversation = ConversationOverrides(textOnly = false)),
+                overrides = Overrides(tts = TtsOverrides(voiceId = supportedVoiceId), conversation = ConversationOverrides(textOnly = false)),
                 clientTools = clientTools,
                 onUserTranscriptEvent = { text, _ -> toolContext.onUserTranscript(text) },
                 onAgentResponseEvent = { text, _ -> toolContext.onAgentResponse(text) },
