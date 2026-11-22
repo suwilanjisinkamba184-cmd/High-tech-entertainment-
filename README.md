@@ -22,7 +22,7 @@ GitHub Pages is the official and canonical public website host. The `.github/wor
 | Founder Studio | `admin/` | Administrative tools for managing platform content and enquiries |
 | Account pages | `account/` | User account and profile experience |
 | Native Android application | `hte-universe-native/` | Kotlin, Jetpack Compose, AndroidX Media3 and Supabase Kotlin client |
-| Legacy Flutter source | `mobile-app/` | Retained as historical source only; no longer built or released |
+| Flutter cross-platform foundation | `hte-universe-flutter/` | New shared Android/iOS/Windows/web app foundation; not yet feature-complete or released |
 | Supabase setup | Root SQL files and `database/` | Database schema, policies and migrations |
 | GitHub skills | `.github/skills/` | Design and engineering guidance for supported coding agents |
 
@@ -97,9 +97,9 @@ The production Android application is the Kotlin/Jetpack Compose project in `hte
 - **Application ID:** `com.hightechentertainment.app`
 - **Minimum Android version:** Android 8.0 (API 26)
 - **Production build workflow:** `.github/workflows/hte-universe-compose.yml`
-- **Official install source:** [Latest GitHub Release](https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest)
+- **Android downloads:** temporarily paused while HTE Universe recovery and cross-platform migration are in progress. No public APK release is currently available.
 
-The production build uses the existing Android signing identity. The GitHub Actions secrets required for signed candidates and production releases are `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and `ANDROID_STORE_PASSWORD`. Every build also requires `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` so the installed app receives its runtime Supabase configuration.
+The Android production build must preserve the existing signing identity. Public releases and signed candidate distribution are currently disabled during recovery. The GitHub Actions secrets required for signed candidates and production releases are `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and `ANDROID_STORE_PASSWORD`. Every build also requires `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` so the installed app receives its runtime Supabase configuration.
 
 The legacy Flutter source in `mobile-app/` is retained for historical reference only. Its old build, OTA and Appetize workflows have been retired; it is not the production Android application. The current native workflow does not publish debug APKs or long-lived Actions APK artifacts. The signed production APK, SHA-256 manifest and signing-certificate fingerprint are distributed through the GitHub Release.
 
@@ -180,3 +180,10 @@ Keep this README aligned with the actual GitHub Pages deployment, routes, Supaba
 - Developer email: **suwilanjisinkamba184@gmail.com**
 
 The Android app's private Founder Studio includes an on-device developer diagnostics view. Native Android, Compose and uncaught platform errors are retained locally (up to 100 entries); the founder can review and explicitly export a redacted report. Diagnostic reports are not uploaded automatically.
+
+
+## Cross-platform migration status
+
+The Flutter application foundation is in `hte-universe-flutter/`. It currently contains the HTE design tokens, responsive navigation shell, preserved brand mark, safe Supabase configuration bootstrap and initial widget tests. It is **not feature-complete**: live catalogue, authentication, media playback, downloads, AI voice, member account and Founder Studio integrations must be ported and verified before it can replace the native app.
+
+See [CROSS-PLATFORM-ARCHITECTURE.md](CROSS-PLATFORM-ARCHITECTURE.md) for the migration sequence and platform acceptance gates. Android APK distribution remains paused; CI validation must not publish signed APKs or releases.
