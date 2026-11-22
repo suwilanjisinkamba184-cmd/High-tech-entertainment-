@@ -1,0 +1,55 @@
+name: HTE Universe — Flutter foundation validation
+
+on:
+  pull_request:
+    paths:
+      - 'hte-universe-flutter/**'
+      - '.github/workflows/hte-flutter-validation.yml'
+  push:
+    branches:
+      - main
+      - feat/hte-flutter-cross-platform-foundation
+    paths:
+      - 'hte-universe-flutter/**'
+      - '.github/workflows/hte-flutter-validation.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hte-flutter-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-test-web:
+    name: Dart analysis, widget tests and web build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hte-universe-flutter
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate web platform scaffolding
+        run: flutter create --platforms=web .
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze Dart source
+        run: flutter analyze --fatal-infos
+
+      - name: Run widget tests
+        run: flutter test --reporter expanded
+
+      - name: Build web validation target
+        run: flutter build web --release
+
+      # Deliberately no APK signing, artifact upload, GitHub Release or deployment.
