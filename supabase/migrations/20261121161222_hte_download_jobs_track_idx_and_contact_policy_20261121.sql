@@ -7,6 +7,8 @@ DROP POLICY IF EXISTS "HTE administrators can read contact messages"
   ON public.contact_messages;
 DROP POLICY IF EXISTS "Members read own booking requests"
   ON public.contact_messages;
+DROP POLICY IF EXISTS "HTE administrators and members read permitted contact messages"
+  ON public.contact_messages;
 
 CREATE POLICY "HTE administrators and members read permitted contact messages"
   ON public.contact_messages

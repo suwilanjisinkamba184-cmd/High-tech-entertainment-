@@ -141,7 +141,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v6
         with:
-          name: hte-android-emulator-diagnostics
+          name: hte-android-emulator-diagnostics-api-${{ matrix.api-level }}
           if-no-files-found: warn
           retention-days: 7
           path: |
@@ -159,7 +159,7 @@ jobs:
       # Same-repository pull requests may create signed, non-published candidates.
       # Publishing remains restricted to main; feature branches can never publish a public APK.
       - name: Require main branch for production publishing
-        if: env.PUBLISH_RELEASE == 'true'
+        if: matrix.api-level == 35 && env.PUBLISH_RELEASE == 'true'
         run: |
           set -euo pipefail
           if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
@@ -168,7 +168,7 @@ jobs:
           fi
           echo "Production publishing is pinned to main."
       - name: Validate production signing configuration
-        if: env.BUILD_SIGNED_CANDIDATE == 'true' || env.PUBLISH_RELEASE == 'true'
+        if: matrix.api-level == 35 && (env.BUILD_SIGNED_CANDIDATE == 'true' || env.PUBLISH_RELEASE == 'true')
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -181,7 +181,7 @@ jobs:
           test -n "$ANDROID_KEY_PASSWORD"
           test -n "$ANDROID_STORE_PASSWORD"
       - name: Decode production keystore
-        if: env.BUILD_SIGNED_CANDIDATE == 'true' || env.PUBLISH_RELEASE == 'true'
+        if: matrix.api-level == 35 && (env.BUILD_SIGNED_CANDIDATE == 'true' || env.PUBLISH_RELEASE == 'true')
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
@@ -190,14 +190,14 @@ jobs:
           test -s "$RUNNER_TEMP/hte-release.jks"
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/hte-release.jks" >> "$GITHUB_ENV"
       - name: Assemble signed production APK
-        if: env.BUILD_SIGNED_CANDIDATE == 'true' || env.PUBLISH_RELEASE == 'true'
+        if: matrix.api-level == 35 && (env.BUILD_SIGNED_CANDIDATE == 'true' || env.PUBLISH_RELEASE == 'true')
         env:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
         run: gradle --no-daemon :app:assembleRelease --console=plain
       - name: Finalize APK v4 signature
-        if: env.BUILD_SIGNED_CANDIDATE == 'true' || env.PUBLISH_RELEASE == 'true'
+        if: matrix.api-level == 35 && (env.BUILD_SIGNED_CANDIDATE == 'true' || env.PUBLISH_RELEASE == 'true')
         env:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
@@ -220,7 +220,7 @@ jobs:
             "$APK"
           test -s "$APK.idsig"
       - name: Verify production APK identity, version and signer
-        if: env.BUILD_SIGNED_CANDIDATE == 'true' || env.PUBLISH_RELEASE == 'true'
+        if: matrix.api-level == 35 && (env.BUILD_SIGNED_CANDIDATE == 'true' || env.PUBLISH_RELEASE == 'true')
         run: |
           set -euo pipefail
           APK="app/build/outputs/apk/release/app-release.apk"
@@ -234,7 +234,7 @@ jobs:
           printf '%s\n' "$BADGING" | grep -F "package: name='com.hightechentertainment.app' versionCode='54' versionName='4.3.0'"
           sha256sum "$APK" | sed "s|$APK|HTE-Universe-4.3.0.apk|" | tee app/build/outputs/apk/release/SHA256SUMS.txt
       - name: Confirm production certificate continuity
-        if: env.BUILD_SIGNED_CANDIDATE == 'true' || env.PUBLISH_RELEASE == 'true'
+        if: matrix.api-level == 35 && (env.BUILD_SIGNED_CANDIDATE == 'true' || env.PUBLISH_RELEASE == 'true')
         run: |
           set -euo pipefail
           SIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
@@ -245,7 +245,7 @@ jobs:
           test "$RUNTIME_CERT_SHA256" = "$TRUSTED_CERT_SHA256"
           echo "PASS: candidate matches the pinned trusted signing certificate SHA-256."
       - name: Upload signed production candidate for device testing
-        if: env.BUILD_SIGNED_CANDIDATE == 'true'
+        if: matrix.api-level == 35 && env.BUILD_SIGNED_CANDIDATE == 'true'
         uses: actions/upload-artifact@v6
         with:
           name: hte-universe-4.3.0-build54-signed-production-candidate
@@ -256,7 +256,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Prepare production release assets
-        if: env.PUBLISH_RELEASE == 'true'
+        if: matrix.api-level == 35 && env.PUBLISH_RELEASE == 'true'
         run: |
           set -euo pipefail
           mkdir -p ../release-assets
@@ -264,7 +264,7 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk.idsig ../release-assets/HTE-Universe-4.3.0.apk.idsig
           cp app/build/outputs/apk/release/SHA256SUMS.txt ../release-assets/SHA256SUMS.txt
       - name: Publish HTE Universe 4.3.0
-        if: env.PUBLISH_RELEASE == 'true'
+        if: matrix.api-level == 35 && env.PUBLISH_RELEASE == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: native-v4.3.0-build54
@@ -286,7 +286,7 @@ jobs:
           overwrite_files: true
           make_latest: true
       - name: Verify public production release assets
-        if: env.PUBLISH_RELEASE == 'true'
+        if: matrix.api-level == 35 && env.PUBLISH_RELEASE == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: native-v4.3.0-build54
