@@ -51,7 +51,8 @@ jobs:
         run: flutter build web --release
       - name: Record Flutter result
         if: always()
-        run: echo "Flutter foundation validation result: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "Flutter foundation validation result: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
 
   android:
     name: Android native — unit tests and lint
@@ -84,7 +85,8 @@ jobs:
         run: gradle --no-daemon :app:lintDebug :app:lintRelease --console=plain
       - name: Record Android result
         if: always()
-        run: echo "Android native validation result: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "Android native validation result: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
 
   safety:
     name: Verify release lockdown remains intact
