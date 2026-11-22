@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 abstract final class HteColors {
   static const obsidian = Color(0xFF090A0B);
