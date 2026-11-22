@@ -27,7 +27,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(const HteApp(backendConfigured: true));
+      await tester.pumpWidget(const HteApp(backendConfigured: false));
 
       expect(find.byType(NavigationRail), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);
