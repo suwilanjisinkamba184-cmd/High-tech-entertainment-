@@ -45,15 +45,15 @@ rm -f dist/assets/booking-confirmation.aac
 test ! -e dist/assets/booking-confirmation.aac || { echo "Source AAC must not be published" >&2; exit 1; }
 
 cp app-download.html robots.txt sitemap.xml account-deletion.html privacy-policy.html high-tech-logo.svg music-spotlight.html dist/
-node scripts/generate-public-sitemap.mjs
 
-for file in terms-of-service.html; do
-  if [ ! -s "$file" ]; then
-    echo "Required source page is missing: $file" >&2
-    exit 1
-  fi
-  install -D -m 0644 "$file" "dist/$file"
-done
+# Publish Terms before generating the sitemap so it is included automatically.
+if [ ! -s terms-of-service.html ]; then
+  echo "Required source page is missing: terms-of-service.html" >&2
+  exit 1
+fi
+install -D -m 0644 terms-of-service.html dist/terms-of-service.html
+
+node scripts/generate-public-sitemap.mjs
 
 for file in google31fdb4754075f7bd.html googled2aa97c2eb951371.html; do
   if [ -s "$file" ]; then cp "$file" dist/; fi
@@ -100,6 +100,54 @@ if missing_homepage:
     raise SystemExit("Published homepage is missing Astro UI markers: " + ", ".join(missing_homepage))
 
 ET.parse(root / "sitemap.xml")
+from urllib.parse import urlsplit, unquote
+site_base = "https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/"
+sitemap_urls = set()
+for node in ET.parse(root / "sitemap.xml").getroot():
+    if node.tag.rsplit("}", 1)[-1] != "url":
+        continue
+    loc = next((child.text for child in node if child.tag.rsplit("}", 1)[-1] == "loc"), None)
+    if not loc or not loc.startswith(site_base):
+        raise SystemExit(f"Invalid or off-site sitemap URL: {loc}")
+    path = unquote(urlsplit(loc).path)
+    prefix = "/High-tech-entertainment-/"
+    if not path.startswith(prefix):
+        raise SystemExit(f"Sitemap URL is outside the GitHub Pages base path: {loc}")
+    relative = path[len(prefix):]
+    target = root / relative if relative else root / "index.html"
+    if target.is_dir():
+        target = target / "index.html"
+    if not target.is_file():
+        raise SystemExit(f"Sitemap URL has no generated HTML page: {loc} -> {target}")
+    sitemap_urls.add(loc)
+expected_urls = set()
+for page in root.rglob("*.html"):
+    relative = page.relative_to(root).as_posix()
+    if relative == "404.html" or relative.startswith(("admin/", "account/")):
+        continue
+    # Google Search Console verification tokens are required for ownership checks, not search landing pages.
+    if re.fullmatch(r"google[0-9a-f]{16,}\.html", relative, flags=re.I):
+        continue
+    source = page.read_text(encoding="utf-8")
+    robots_tag = re.search(r'<meta\b(?=[^>]*\bname=["\']robots["\'])[^>]*>', source, flags=re.I)
+    if robots_tag and re.search(r"\bnoindex\b", robots_tag.group(0), flags=re.I):
+        continue
+    canonical_tag = re.search(r'<link\b(?=[^>]*\brel=["\']canonical["\'])[^>]*>', source, flags=re.I)
+    canonical_match = re.search(r'href=["\']([^"\']+)["\']', canonical_tag.group(0), flags=re.I) if canonical_tag else None
+    if canonical_match:
+        expected = canonical_match.group(1)
+    elif relative == "index.html":
+        expected = site_base
+    elif relative.endswith("/index.html"):
+        expected = site_base + relative[:-len("index.html")]
+    else:
+        expected = site_base + relative
+    if expected.startswith(site_base):
+        expected_urls.add(expected)
+missing_urls = sorted(expected_urls - sitemap_urls)
+if missing_urls:
+    raise SystemExit("Indexable public pages missing from sitemap: " + ", ".join(missing_urls))
+print(f"Sitemap is valid, every URL resolves, and all {len(expected_urls)} indexable public pages are included.")
 missing = []
 for page in root.rglob("*.html"):
     source = page.read_text(encoding="utf-8")
