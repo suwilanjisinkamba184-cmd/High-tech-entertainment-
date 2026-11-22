@@ -11,6 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_svg: ^2.5.0
+  material_ui: ^1.11.1
   supabase_flutter: ^2.18.3
 
 dev_dependencies:
