@@ -53,18 +53,26 @@
       let visible = 0;
       let loading = false;
       let firstMatch = null;
-
-      targets.forEach(target => {
+      const terms = query.split(/\s+/).filter(Boolean);
+      const sections = targets.map(target => {
         const section = target.container.closest('section');
         const active = category === 'all' || category === target.key;
-        if (section) section.classList.toggle('hte-search-section-hidden', !active);
         const cards = Array.from(target.container.querySelectorAll(':scope > article'));
         const empty = target.container.querySelector('.empty');
         if (active && empty && /loading/i.test(empty.textContent || '')) loading = true;
+        return { target, section, active, entries: cards.map(card => ({
+          card,
+          text: (card.textContent || '').normalize('NFKC').toLocaleLowerCase()
+        })) };
+      });
 
-        cards.forEach(card => {
-          const text = (card.innerText || card.textContent || '').normalize('NFKC').toLocaleLowerCase();
-          const matches = !query || query.split(/\s+/).filter(Boolean).every(term => text.includes(term));
+      // Read every card before changing classes to avoid repeated forced layouts.
+      sections.forEach(({ section, active }) => {
+        if (section) section.classList.toggle('hte-search-section-hidden', !active);
+      });
+      sections.forEach(({ active, entries }) => {
+        entries.forEach(({ card, text }) => {
+          const matches = !terms.length || terms.every(term => text.includes(term));
           const show = active && matches;
           card.classList.toggle('hte-search-card-hidden', !show);
           if (active) {
