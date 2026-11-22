@@ -13,7 +13,7 @@ void main() {
       await tester.pumpWidget(const HteApp(backendConfigured: false));
 
       expect(find.byType(NavigationBar), findsOneWidget);
-      expect(find.text('Music. Beats.\\nProduction. Beyond.'), findsOneWidget);
+      expect(find.text('HTE UNIVERSE'), findsOneWidget);
 
       await tester.tap(find.text('Videos').last);
       await tester.pumpAndSettle();
