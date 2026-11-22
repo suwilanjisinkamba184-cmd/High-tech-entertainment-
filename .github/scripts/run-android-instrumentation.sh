@@ -12,6 +12,8 @@ gradle --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
 bash ../.github/scripts/wait-android-services.sh
 if gradle --no-daemon :app:connectedDebugAndroidTest --stacktrace --console=plain; then
   echo "PASS: Android instrumentation tests completed."
+  # Capture the emulator state and logcat while the emulator is still running.
+  bash ../.github/scripts/capture-android-diagnostics.sh
 else
   bash ../.github/scripts/capture-android-diagnostics.sh || true
   exit 1
