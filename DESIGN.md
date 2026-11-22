@@ -35,3 +35,13 @@ An editorial independent music label: obsidian, brushed gold, and restrained sil
 - Motion is purposeful, brief, and interruptible; never required to understand or operate the interface.
 - Respect prefers-reduced-motion on the website.
 - Maintain visible keyboard focus, semantic headings, accessible labels, adequate contrast, and responsive layouts.
+
+
+## Cross-platform application design
+
+- Keep one HTE visual system across all surfaces: obsidian, brushed gold, warm ivory and restrained silver.
+- Flutter uses adaptive layouts rather than stretching a phone screen: bottom navigation on phones, navigation rail on tablets and Windows, and keyboard/pointer affordances on desktop.
+- Keep the public website editorial, the app task-focused, and Founder Studio operational. Shared branding does not mean identical layouts.
+- Preserve the approved `high-tech-logo.svg`; do not replace it with emoji, text approximations or unrelated marks.
+- Use native media controls and platform conventions where they improve accessibility and reliability. Shared player state and track metadata remain consistent across platforms.
+- Respect reduced motion, safe areas, keyboard focus, text scaling and minimum touch targets.
