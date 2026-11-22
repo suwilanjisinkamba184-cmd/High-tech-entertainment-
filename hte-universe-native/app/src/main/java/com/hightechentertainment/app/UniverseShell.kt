@@ -1223,7 +1223,8 @@ private fun isYouTubeWatchUrl(value: String): Boolean {
 internal fun resolveVideoThumbnailUrl(video: VideoDto): String? {
     val supplied = video.thumbnailUrl?.trim().orEmpty()
     val suppliedUri = runCatching { Uri.parse(supplied) }.getOrNull()
-    if (suppliedUri?.scheme.equals("https", ignoreCase = true) &&
+    if (suppliedUri != null &&
+        suppliedUri.scheme.equals("https", ignoreCase = true) &&
         !suppliedUri.host.isNullOrBlank() && !isYouTubeWatchUrl(supplied)
     ) return supplied
 
