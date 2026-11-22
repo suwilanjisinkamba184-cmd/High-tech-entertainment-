@@ -1,6 +1,5 @@
 package com.hightechentertainment.app
 
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -32,9 +31,9 @@ class HteSplashSmokeTest {
                 composeRule.onAllNodesWithText(HTE_STARTUP_TAGLINE.uppercase())
                     .fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithContentDescription("High-Tech Entertainment official logo").assertExists()
-        composeRule.onNodeWithText("HTE UNIVERSE").assertExists()
-        composeRule.onNodeWithText(HTE_STARTUP_TAGLINE.uppercase()).assertExists()
+        composeRule.onNodeWithContentDescription("High-Tech Entertainment official logo").fetchSemanticsNode()
+        composeRule.onNodeWithText("HTE UNIVERSE").fetchSemanticsNode()
+        composeRule.onNodeWithText(HTE_STARTUP_TAGLINE.uppercase()).fetchSemanticsNode()
     }
 
     @Test
@@ -44,7 +43,7 @@ class HteSplashSmokeTest {
                 .fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithContentDescription("Open HTE AI Voice Assistant").performClick()
-        composeRule.onNodeWithText("HTE AI Voice Assistant").assertExists()
+        composeRule.onNodeWithText("HTE AI Voice Assistant").fetchSemanticsNode()
     }
 
     @Test
@@ -68,10 +67,10 @@ class HteSplashSmokeTest {
         }
         val memberCenter = composeRule.onNodeWithTag("member_center_list")
         memberCenter.performScrollToNode(hasText("HTE Control Centre"))
-        composeRule.onNodeWithText("HTE Control Centre").assertExists()
+        composeRule.onNodeWithText("HTE Control Centre").fetchSemanticsNode()
         memberCenter.performScrollToNode(hasText("Open Settings"))
         composeRule.onNodeWithText("Open Settings").performClick()
-        composeRule.onNodeWithText("Settings").assertExists()
-        composeRule.onNodeWithText("Personalise your universe.").assertExists()
+        composeRule.onNodeWithText("Settings").fetchSemanticsNode()
+        composeRule.onNodeWithText("Personalise your universe.").fetchSemanticsNode()
     }
 }
