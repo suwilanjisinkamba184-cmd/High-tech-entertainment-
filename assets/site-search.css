@@ -1,0 +1,7 @@
+.hte-search-genres{grid-column:2;display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:-10px}
+.hte-search-genres[hidden]{display:none!important}
+.hte-search-genre-label{margin-right:3px;color:#8e8e8e;font:700 .62rem Montserrat,system-ui,sans-serif;letter-spacing:.16em}
+.hte-search-genre{min-height:30px;padding:5px 11px;border:1px solid rgba(197,164,90,.2);border-radius:999px;background:rgba(197,164,90,.045);color:#c5c5c5;font:600 .72rem Inter,system-ui,sans-serif;cursor:pointer}
+.hte-search-genre[aria-pressed="true"]{border-color:#c5a45a;background:rgba(197,164,90,.15);color:#f0d99f}
+@media(max-width:820px){.hte-search-genres{grid-column:1;margin-top:-6px}}
+@media(max-width:560px){.hte-search-genres{flex-wrap:nowrap;overflow-x:auto;padding:2px 0 8px;scrollbar-width:thin}.hte-search-genre{flex:0 0 auto}}
