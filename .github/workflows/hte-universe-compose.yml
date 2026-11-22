@@ -141,6 +141,17 @@ jobs:
         run: gradle --no-daemon :app:lintDebug --console=plain
       - name: Run release lint
         run: gradle --no-daemon :app:lintRelease --console=plain
+      - name: Assemble unsigned release variant (compile-only)
+        if: matrix.api-level == 35
+        run: gradle --no-daemon :app:assembleRelease --console=plain
+      - name: Upload unsigned release compile artifact
+        if: matrix.api-level == 35
+        uses: actions/upload-artifact@v6
+        with:
+          name: hte-android-release-compile-only-unsigned
+          path: hte-universe-native/app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 14
       - name: Generate full Android feature test report
         if: always()
         run: python3 ../.github/scripts/create-android-test-report.py --api-level "${{ matrix.api-level }}"
@@ -161,8 +172,8 @@ jobs:
             hte-universe-native/app/build/outputs/apk/debug/app-debug.apk
             hte-universe-native/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 
-      # Recovery validation uploads debug-only smoke-test APKs and diagnostics.
-      # Production signing, signed-candidate upload, and public release publication remain disabled.
+      # Recovery validation uploads debug smoke-test APKs, diagnostics, and an unsigned release compile artifact.
+      # None is a production install/update candidate. Production signing and public release publication remain disabled.
       # A debug APK uses the .dev application ID suffix and is not an update to the installed production app.
       - name: Require main branch for production publishing
         if: matrix.api-level == 35 && env.PUBLISH_RELEASE == 'true'
