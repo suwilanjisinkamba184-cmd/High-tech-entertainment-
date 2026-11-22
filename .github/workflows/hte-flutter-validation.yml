@@ -40,6 +40,9 @@ jobs:
       - name: Generate web platform scaffolding
         run: flutter create --platforms=web .
 
+      - name: Remove generated Flutter sample test
+        run: rm -f test/widget_test.dart
+
       - name: Resolve dependencies
         run: flutter pub get
 
