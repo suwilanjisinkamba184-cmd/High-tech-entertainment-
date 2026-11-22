@@ -54,6 +54,7 @@
 .admin-page .admin-login-visual{border-radius:4px}
 .admin-page .admin-login-card{border-radius:4px}
 .admin-page input,.admin-page select,.admin-page textarea{border-radius:4px}
+@media(max-width:1050px) and (min-width:901px){.admin-page .admin-workspace{grid-template-columns:238px minmax(0,1fr)}.admin-page .admin-main{padding-inline:22px}}
 @media(max-width:900px){.account-page .account-layout{grid-template-columns:1fr}.account-page .account-aside{position:static}.admin-page .admin-workspace{grid-template-columns:1fr}}
 @media(max-width:560px){.account-page .account-shell{padding-top:30px}.account-page .account-heading{min-height:0}.account-page .account-layout{gap:12px}.account-page .account-aside{display:grid;grid-template-columns:72px 1fr;gap:14px;padding:14px}.account-page .account-aside-brand{aspect-ratio:1}.account-page .account-aside-links{grid-column:1/-1}.admin-page .admin-main{padding:18px 12px 28px}}
 @media(prefers-reduced-motion:reduce){.account-page *, .admin-page *{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
