@@ -87,8 +87,11 @@ abstract final class HteMediaUrlPolicy {
     final id = youtubeVideoId(value);
     if (id == null) return const [];
     return [
-      Uri.https('img.youtube.com', '/vi/$id/maxresdefault.jpg'),
       Uri.https('img.youtube.com', '/vi/$id/hqdefault.jpg'),
+      Uri.https('img.youtube.com', '/vi/$id/sddefault.jpg'),
+      Uri.https('img.youtube.com', '/vi/$id/mqdefault.jpg'),
+      Uri.https('img.youtube.com', '/vi/$id/default.jpg'),
+      Uri.https('img.youtube.com', '/vi/$id/maxresdefault.jpg'),
     ];
   }
 }
