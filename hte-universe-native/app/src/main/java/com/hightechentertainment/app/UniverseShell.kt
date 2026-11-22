@@ -1244,7 +1244,7 @@ internal fun youtubeThumbnailFallbackUrl(video: VideoDto, failedUrl: String): St
 }
 
 @Composable
-private fun VideoPosterImage(video: VideoDto, description: String, modifier: Modifier = Modifier) {
+internal fun VideoPosterImage(video: VideoDto, description: String, modifier: Modifier = Modifier) {
     val key = remember(video.id, video.thumbnailUrl, video.videoUrl, video.youtubeId) { video.id + video.thumbnailUrl.orEmpty() + video.videoUrl + video.youtubeId.orEmpty() }
     var posterUrl by remember(key) { mutableStateOf(resolveVideoThumbnailUrl(video)) }
     var fallbackAttempted by remember(key) { mutableStateOf(false) }
