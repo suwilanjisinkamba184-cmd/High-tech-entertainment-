@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'src/backend/supabase_config.dart';
 import 'src/hte_app.dart';
 
 Future<void> main() async {
@@ -11,17 +12,12 @@ Future<void> main() async {
 
 abstract final class HteBackend {
   static Future<bool> initialize() async {
-    const url = String.fromEnvironment('SUPABASE_URL');
-    const publishableKey = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
-
-    if (url.isEmpty || publishableKey.isEmpty) {
-      return false;
-    }
+    if (!HteSupabaseConfig.isConfigured) return false;
 
     try {
       await Supabase.initialize(
-        url: url,
-        publishableKey: publishableKey,
+        url: HteSupabaseConfig.url,
+        publishableKey: HteSupabaseConfig.publishableKey,
       );
       return true;
     } catch (_) {
