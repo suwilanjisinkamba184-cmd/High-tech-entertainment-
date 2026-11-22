@@ -1,6 +1,10 @@
 name: HTE Universe — daily maintenance checks
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/hte-daily-maintenance.yml'
   schedule:
     - cron: '0 6 * * *' # 08:00 Africa/Lusaka
   workflow_dispatch:
