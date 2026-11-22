@@ -35,7 +35,7 @@ jobs:
         run: python scripts/create_daily_marketing_video.py
 
       - name: Save video and caption as a downloadable artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hte-daily-promo-${{ github.run_id }}
           path: |
