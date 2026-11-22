@@ -1216,14 +1216,15 @@ private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit
 }
 
 private fun isYouTubeWatchUrl(value: String): Boolean {
-    val host = runCatching { Uri.parse(value).host.orEmpty().lowercase() }.getOrDefault("")
+    // java.net.URI is deterministic in local JVM tests; android.net.Uri is a mocked Android stub there.
+    val host = runCatching { java.net.URI(value).host.orEmpty().lowercase() }.getOrDefault("")
     return host == "youtube.com" || host.endsWith(".youtube.com") || host == "youtu.be" || host.endsWith(".youtu.be")
 }
 
 /** Returns a safe HTTPS poster URL, deriving YouTube artwork when catalogue thumbnail metadata is absent or invalid. */
 internal fun resolveVideoThumbnailUrl(video: VideoDto): String? {
     val supplied = video.thumbnailUrl?.trim().orEmpty()
-    val suppliedUri = runCatching { Uri.parse(supplied) }.getOrNull()
+    val suppliedUri = runCatching { java.net.URI(supplied) }.getOrNull()
     if (suppliedUri != null &&
         suppliedUri.scheme.equals("https", ignoreCase = true) &&
         !suppliedUri.host.isNullOrBlank() && !isYouTubeWatchUrl(supplied)
