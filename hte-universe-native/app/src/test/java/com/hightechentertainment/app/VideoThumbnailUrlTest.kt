@@ -71,7 +71,11 @@ class VideoThumbnailUrlTest {
             "https://img.youtube.com/vi/abcdefghijk/sddefault.jpg",
             youtubeThumbnailFallbackUrl(video, "https://img.youtube.com/vi/abcdefghijk/hqdefault.jpg")
         )
-        assertNull(youtubeThumbnailFallbackUrl(video, "https://img.youtube.com/vi/abcdefghijk/default.jpg"))
+        assertEquals(
+            "https://img.youtube.com/vi/abcdefghijk/maxresdefault.jpg",
+            youtubeThumbnailFallbackUrl(video, "https://img.youtube.com/vi/abcdefghijk/default.jpg")
+        )
+        assertNull(youtubeThumbnailFallbackUrl(video, "https://img.youtube.com/vi/abcdefghijk/maxresdefault.jpg"))
     }
 
     @Test
