@@ -699,12 +699,215 @@ class _HtePosterState extends State<_HtePoster> {
 
   List<String> get _candidates {
     final candidates = <String>[];
+    final seenQualities = <String>{};
     final supplied = HteMediaUrlPolicy.parseSecureUri(widget.thumbnailUrl);
-    if (supplied != null && RegExp(r'\.(jpg|jpeg|png|webp)$', caseSensitive: false).hasMatch(supplied.path)) {
-      candidates.add(supplied.toString());
+    if (supplied != null &&
+        RegExp(r'\.(jpg|jpeg|png|webp)
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final candidates = _candidates;
+    if (_index >= candidates.length) {
+      return const SizedBox(
+        width: 72,
+        height: 52,
+        child: Icon(Icons.ondemand_video_outlined, color: HteColors.gold),
+      );
     }
-    candidates.addAll(HteMediaUrlPolicy.youtubeThumbnailCandidates(widget.videoUrl).map((uri) => uri.toString()));
-    return candidates.toSet().toList(growable: false);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: SizedBox(
+        width: 72,
+        height: 52,
+        child: Image.network(
+          candidates[_index],
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            if (!_advancing && _index < candidates.length - 1) {
+              _advancing = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) setState(() => _index += 1);
+                _advancing = false;
+              });
+            } else if (_index == candidates.length - 1 && !_advancing) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) setState(() => _index = candidates.length);
+              });
+            }
+            return const Icon(Icons.ondemand_video_outlined, color: HteColors.gold);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _TrackArtwork extends StatelessWidget {
+  const _TrackArtwork({required this.url});
+
+  final String? url;
+
+  @override
+  Widget build(BuildContext context) {
+    final uri = HteMediaUrlPolicy.parseSecureUri(url);
+    if (uri == null) {
+      return const CircleAvatar(
+        backgroundColor: HteColors.surfaceRaised,
+        child: Icon(Icons.music_note, color: HteColors.gold),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: SizedBox(
+        width: 52,
+        height: 52,
+        child: Image.network(
+          uri.toString(),
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const Icon(Icons.music_note, color: HteColors.gold),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusPanel extends StatelessWidget {
+  const _StatusPanel({
+    required this.icon,
+    required this.title,
+    required this.detail,
+    this.action,
+    this.loading = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String detail;
+  final VoidCallback? action;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: HteColors.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: HteColors.gold),
+                const SizedBox(width: 10),
+                Expanded(child: Text(title, style: Theme.of(context).textTheme.titleLarge)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(detail, style: Theme.of(context).textTheme.bodyMedium),
+            if (loading) ...[
+              const SizedBox(height: 14),
+              const LinearProgressIndicator(),
+            ],
+            if (action != null) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: action,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyPanel extends StatelessWidget {
+  const _EmptyPanel({required this.title, required this.detail});
+
+  final String title;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.search_off, size: 36, color: HteColors.secondaryText),
+              const SizedBox(height: 12),
+              Text(title, style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
+              const SizedBox(height: 8),
+              Text(detail, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.center),
+            ],
+          ),
+        ),
+      );
+}
+
+class _CountPill extends StatelessWidget {
+  const _CountPill({required this.label, required this.count});
+
+  final String label;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) => Chip(
+        label: Text('$label · $count'),
+        avatar: const Icon(Icons.circle, size: 8, color: HteColors.gold),
+        side: const BorderSide(color: HteColors.divider),
+        backgroundColor: HteColors.surfaceRaised,
+      );
+}
+
+class _EditorialRow extends StatelessWidget {
+  const _EditorialRow({
+    required this.icon,
+    required this.title,
+    required this.detail,
+  });
+
+  final IconData icon;
+  final String title;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Row(
+        children: [
+          Icon(icon, color: HteColors.gold, size: 26),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 3),
+                Text(detail, style: Theme.of(context).textTheme.bodyMedium),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+, caseSensitive: false).hasMatch(supplied.path)) {
+      candidates.add(supplied.toString());
+      if (supplied.pathSegments.isNotEmpty) {
+        seenQualities.add(supplied.pathSegments.last);
+      }
+    }
+    for (final uri in HteMediaUrlPolicy.youtubeThumbnailCandidates(widget.videoUrl)) {
+      final quality = uri.pathSegments.isEmpty ? uri.toString() : uri.pathSegments.last;
+      if (seenQualities.add(quality)) candidates.add(uri.toString());
+    }
+    return candidates.toList(growable: false);
   }
 
   @override
