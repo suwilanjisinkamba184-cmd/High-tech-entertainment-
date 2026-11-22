@@ -1,0 +1,98 @@
+name: HTE Universe — daily maintenance checks
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # 08:00 Africa/Lusaka
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hte-daily-maintenance
+  cancel-in-progress: false
+
+jobs:
+  flutter:
+    name: Flutter foundation — analysis, tests, web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout Flutter development branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/hte-flutter-cross-platform-foundation
+      - name: Set up Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate web platform scaffolding
+        working-directory: hte-universe-flutter
+        run: flutter create --platforms=web .
+      - name: Remove generated sample test
+        working-directory: hte-universe-flutter
+        run: rm -f test/widget_test.dart
+      - name: Resolve dependencies
+        working-directory: hte-universe-flutter
+        run: flutter pub get
+      - name: Analyze Dart source
+        working-directory: hte-universe-flutter
+        run: flutter analyze --fatal-infos
+      - name: Run widget tests
+        working-directory: hte-universe-flutter
+        run: flutter test --reporter expanded
+      - name: Build web validation target
+        working-directory: hte-universe-flutter
+        run: flutter build web --release
+      - name: Record Flutter result
+        if: always()
+        run: echo "Flutter foundation validation result: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+
+  android:
+    name: Android native — unit tests and lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout Android recovery branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/critical-video-splash-ai-regressions-20261122
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platforms;android-37" "build-tools;37.0.0"
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+      - name: Run Android unit tests
+        working-directory: hte-universe-native
+        run: gradle --no-daemon :app:testDebugUnitTest --console=plain
+      - name: Run Android debug and release lint
+        working-directory: hte-universe-native
+        run: gradle --no-daemon :app:lintDebug :app:lintRelease --console=plain
+      - name: Record Android result
+        if: always()
+        run: echo "Android native validation result: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+
+  safety:
+    name: Verify release lockdown remains intact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Assert public APK publishing remains disabled
+        run: |
+          set -euo pipefail
+          grep -F "PUBLISH_RELEASE: 'false'" .github/workflows/hte-universe-compose.yml
+          grep -F "BUILD_SIGNED_CANDIDATE: 'false'" .github/workflows/hte-universe-compose.yml
+          echo "Release publishing and signed candidate generation remain disabled." >> "$GITHUB_STEP_SUMMARY"
