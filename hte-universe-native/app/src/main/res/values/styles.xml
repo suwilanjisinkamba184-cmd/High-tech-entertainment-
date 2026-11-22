@@ -2,7 +2,7 @@
 <resources>
     <style name="Theme.HteUniverse.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">#030806</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/hte_splash_transparent</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ht_logo</item>
         <item name="postSplashScreenTheme">@style/Theme.HteUniverse</item>
     </style>
 
