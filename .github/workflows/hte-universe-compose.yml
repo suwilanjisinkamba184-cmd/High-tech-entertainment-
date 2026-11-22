@@ -149,7 +149,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: hte-android-feature-test-report-api-${{ matrix.api-level }}
+          name: hte-android-debug-smoke-api-${{ matrix.api-level }}
           if-no-files-found: warn
           retention-days: 14
           path: |
@@ -158,6 +158,8 @@ jobs:
             hte-universe-native/app/build/reports/tests/testDebugUnitTest/**
             hte-universe-native/app/build/reports/androidTests/connected/**
             hte-universe-native/app/build/outputs/androidTest-results/**
+            hte-universe-native/app/build/outputs/apk/debug/app-debug.apk
+            hte-universe-native/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 
       # Same-repository PRs build a signed production candidate for installation testing.
       # No debug APK is produced or presented as the installable application.
