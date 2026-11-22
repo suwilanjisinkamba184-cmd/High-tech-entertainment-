@@ -37,7 +37,7 @@ for file in files:
     except (ET.ParseError, OSError):
         continue
     for node in tree.iter():
-        if node.tag not in ("testsuite", "testsuites"):
+        if node.tag != "testsuite":
             continue
         for key in ("tests", "failures", "errors", "skipped"):
             try:
@@ -66,8 +66,8 @@ for file in files:
 
 gradle_file = root / "app" / "build.gradle.kts"
 gradle_text = gradle_file.read_text(errors="replace") if gradle_file.exists() else ""
-version_name = re.search(r'versionName\\s*=\\s*"([^"]+)"', gradle_text)
-version_code = re.search(r"versionCode\\s*=\\s*(\\d+)", gradle_text)
+version_name = re.search(r'versionName\s*=\s*"([^"]+)"', gradle_text)
+version_code = re.search(r"versionCode\s*=\s*(\d+)", gradle_text)
 commit = os.environ.get("GITHUB_SHA", "unknown")
 timestamp = dt.datetime.now(dt.timezone.utc).isoformat()
 
@@ -126,13 +126,13 @@ report += [
 ]
 md_path = out_dir / f"android-feature-test-report-api-{args.api_level}.md"
 json_path = out_dir / f"android-feature-test-report-api-{args.api_level}.json"
-md_path.write_text("\\n".join(report) + "\\n")
+md_path.write_text("\n".join(report) + "\n")
 json_path.write_text(json.dumps({
     "generated_utc": timestamp, "commit": commit, "api_level": args.api_level,
     "app_version_name": version_name.group(1) if version_name else None,
     "app_version_code": int(version_code.group(1)) if version_code else None,
     "suite_totals": suite_totals, "cases": cases,
     "feature_status": [{"feature": n, "status": s, "evidence": note} for n, s, note in feature_rows],
-}, indent=2) + "\\n")
+}, indent=2) + "\n")
 print(f"Android feature report written: {md_path}")
 print(f"JUnit cases parsed: {len(cases)}; pass={passed}; fail/error={failed}; skipped={skipped}")
