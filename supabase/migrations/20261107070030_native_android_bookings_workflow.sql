@@ -76,8 +76,8 @@ language sql
 stable
 security invoker
 set search_path = ''
-as $
+as $function$
   select private.hte_has_role(array['owner','admin']);
-$;
+$function$;
 revoke all on function public.is_hte_admin() from public, anon;
 grant execute on function public.is_hte_admin() to authenticated;
