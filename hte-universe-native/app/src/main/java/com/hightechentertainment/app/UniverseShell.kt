@@ -1761,10 +1761,11 @@ fun SpotifyEmbedDialog(url: String, onDismiss: () -> Unit) {
                 }
                 IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, "Close Spotify player", tint = Color.White) }
             }
+            val activeEmbedUrl = embedUrl
             Box(Modifier.fillMaxWidth().weight(1f).padding(top = 12.dp).background(Color(0xFF111318), RoundedCornerShape(18.dp)), contentAlignment = Alignment.Center) {
-                if (loading && embedUrl == null) {
+                if (loading && activeEmbedUrl == null) {
                     CircularProgressIndicator(color = ShellGold, strokeWidth = 2.5.dp)
-                } else if (embedUrl != null && !failed) {
+                } else if (activeEmbedUrl != null && !failed) {
                     key(generation) {
                         AndroidView(
                             factory = { ctx -> WebView(ctx).apply {
@@ -1787,8 +1788,8 @@ fun SpotifyEmbedDialog(url: String, onDismiss: () -> Unit) {
                                     }
                                 }
                                 setBackgroundColor(android.graphics.Color.rgb(17,19,24))
-                                val playerHeight = if (embedUrl.contains("/track/")) "152px" else "352px"
-                                val html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><style>html,body{margin:0;padding:0;width:100%;height:100%;background:#111318;display:flex;align-items:center;justify-content:center}iframe{display:block;width:100%;min-width:280px;height:$playerHeight;border:0;border-radius:12px}</style></head><body><iframe title="Spotify player" src="$embedUrl" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe></body></html>"""
+                                val playerHeight = if (activeEmbedUrl.contains("/track/")) "152px" else "352px"
+                                val html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><style>html,body{margin:0;padding:0;width:100%;height:100%;background:#111318;display:flex;align-items:center;justify-content:center}iframe{display:block;width:100%;min-width:280px;height:$playerHeight;border:0;border-radius:12px}</style></head><body><iframe title="Spotify player" src="$activeEmbedUrl" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe></body></html>"""
                                 loadDataWithBaseURL("https://open.spotify.com", html, "text/html", "UTF-8", null)
                             } },
                             modifier = Modifier.fillMaxSize(),
