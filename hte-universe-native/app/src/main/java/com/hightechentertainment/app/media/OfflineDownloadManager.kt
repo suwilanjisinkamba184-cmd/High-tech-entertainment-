@@ -68,14 +68,14 @@ internal fun buildOfflineDownloadFileName(title: String, url: String, mediaType:
 internal fun resolveDownloadedLocalUri(
     records: List<OfflineDownloadRecord>,
     sourceUrl: String?,
-): Uri? {
+): String? {
     if (sourceUrl.isNullOrBlank()) return null
     val record = records.firstOrNull {
         it.status == "Downloaded" &&
             it.sourceUrl == sourceUrl &&
             !it.localUri.isNullOrBlank()
     } ?: return null
-    return runCatching { Uri.parse(record.localUri) }.getOrNull()
+    return record.localUri
 }
 
 class OfflineDownloadManager(context: Context) {
@@ -137,7 +137,7 @@ class OfflineDownloadManager(context: Context) {
 
     /** Return the app-owned local copy for a successfully completed download. */
     fun findDownloadedUri(sourceUrl: String?): Uri? =
-        resolveDownloadedLocalUri(getDownloads(), sourceUrl)
+        resolveDownloadedLocalUri(getDownloads(), sourceUrl)?.let(Uri::parse)
 
     fun clearAll() {
         val ids = preferences.all.keys.mapNotNull { it.toLongOrNull() }.toLongArray()

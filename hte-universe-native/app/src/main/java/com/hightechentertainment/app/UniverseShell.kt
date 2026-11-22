@@ -1509,6 +1509,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
         listOfNotNull(video.downloadUrl, video.videoUrl)
             .distinct()
             .firstNotNullOfOrNull { source -> resolveDownloadedLocalUri(records, source) }
+            ?.let(Uri::parse)
     }
     val youtubeId = remember(video.videoUrl, video.youtubeId) { video.youtubeId?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) } ?: extractYouTubeVideoId(video.videoUrl) }
     if (youtubeId != null && offlineUri == null) {

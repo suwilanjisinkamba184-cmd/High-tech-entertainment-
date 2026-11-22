@@ -24,7 +24,7 @@ class OfflineDownloadResolutionTest {
 
         assertEquals(
             "content://downloads/my_downloads/1",
-            resolveDownloadedLocalUri(records, "https://cdn.example.com/song.mp3").toString()
+            resolveDownloadedLocalUri(records, "https://cdn.example.com/song.mp3")
         )
         assertNull(resolveDownloadedLocalUri(records, "https://cdn.example.com/video.mp4"))
         assertNull(resolveDownloadedLocalUri(records, "https://cdn.example.com/missing.mp4"))
