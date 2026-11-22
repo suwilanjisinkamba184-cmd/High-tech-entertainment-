@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'src/hte_app.dart';
@@ -21,7 +21,7 @@ abstract final class HteBackend {
     try {
       await Supabase.initialize(
         url: url,
-        anonKey: publishableKey,
+        publishableKey: publishableKey,
       );
       return true;
     } catch (_) {
