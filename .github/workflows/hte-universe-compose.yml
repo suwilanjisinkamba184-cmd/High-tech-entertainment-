@@ -50,7 +50,7 @@ jobs:
       # A marked main-branch commit publishes the signed release after all build checks pass.
       PUBLISH_RELEASE: 'false' # PUBLIC RELEASES TEMPORARILY DISABLED — do not publish APKs until recovery sign-off.
       # Do not sign/build a release candidate during routine PR validation. A candidate requires an explicit manual dispatch; production publishing remains separately gated.
-      BUILD_SIGNED_CANDIDATE: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_release == false }}
+      BUILD_SIGNED_CANDIDATE: 'false' # SIGNED APK CANDIDATES TEMPORARILY DISABLED DURING RECOVERY.
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
