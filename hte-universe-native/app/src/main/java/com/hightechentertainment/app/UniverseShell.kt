@@ -1504,12 +1504,26 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     val previousOrientation = remember(activity) { activity?.requestedOrientation }
     var immersiveVideo by remember(video.id) { mutableStateOf(false) }
 
-    val offlineUri = remember(video.id, video.downloadUrl, video.videoUrl) {
-        val records = OfflineDownloadManager(context).getDownloads()
-        listOfNotNull(video.downloadUrl, video.videoUrl)
-            .distinct()
-            .firstNotNullOfOrNull { source -> resolveDownloadedLocalUri(records, source) }
-            ?.let(Uri::parse)
+    var offlineUri by remember(video.id, video.downloadUrl, video.videoUrl) { mutableStateOf<Uri?>(null) }
+    var offlineLookupComplete by remember(video.id, video.downloadUrl, video.videoUrl) { mutableStateOf(false) }
+    LaunchedEffect(video.id, video.downloadUrl, video.videoUrl) {
+        val resolvedUri = withContext(Dispatchers.IO) {
+            runCatching {
+                val records = OfflineDownloadManager(context).getDownloads()
+                listOfNotNull(video.downloadUrl, video.videoUrl)
+                    .distinct()
+                    .firstNotNullOfOrNull { source -> resolveDownloadedLocalUri(records, source) }
+                    ?.let(Uri::parse)
+            }.getOrNull()
+        }
+        offlineUri = resolvedUri
+        offlineLookupComplete = true
+    }
+    if (!offlineLookupComplete) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = ShellGold)
+        }
+        return
     }
     val youtubeId = remember(video.videoUrl, video.youtubeId) { video.youtubeId?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) } ?: extractYouTubeVideoId(video.videoUrl) }
     if (youtubeId != null && offlineUri == null) {
