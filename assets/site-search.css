@@ -1,0 +1,27 @@
+/* HTE Universe discovery search — scoped, responsive and dependency-free. */
+.hte-search-band{position:relative;z-index:2;padding:24px 0 34px}
+.hte-search-shell{width:min(1180px,calc(100% - 40px));margin:0 auto;padding:clamp(22px,4vw,38px);display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);align-items:center;gap:clamp(20px,4vw,46px);border:1px solid rgba(197,164,90,.28);border-radius:26px;background:linear-gradient(125deg,rgba(24,24,24,.96),rgba(10,10,10,.94));box-shadow:0 24px 70px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.035)}
+.hte-search-kicker{display:block;margin:0 0 10px;color:#c5a45a;font:700 .7rem/1.3 Montserrat,system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase}
+.hte-search-copy h2{margin:0;color:#fff;font:700 clamp(1.45rem,3vw,2.25rem)/1.08 Montserrat,system-ui,sans-serif;letter-spacing:-.035em}
+.hte-search-copy p{margin:10px 0 0;color:#a6a6a6;font-size:.94rem;line-height:1.55}
+.hte-search-form{display:flex;align-items:stretch;gap:9px;min-width:0}
+.hte-search-input-wrap{position:relative;display:flex;align-items:center;flex:1 1 auto;min-width:0}
+.hte-search-icon{position:absolute;left:16px;width:19px;height:19px;color:#c5a45a;pointer-events:none}
+#hte-universe-search{width:100%;min-width:0;min-height:54px;margin:0;padding:13px 16px 13px 46px;border:1px solid rgba(191,195,199,.25);border-radius:15px;background:#080808;color:#fff;font:500 16px/1.4 Inter,system-ui,sans-serif;box-shadow:none}
+#hte-universe-search::placeholder{color:#818181}
+#hte-universe-search:focus{outline:2px solid rgba(197,164,90,.7);outline-offset:2px;border-color:#c5a45a}
+.hte-search-submit,.hte-search-clear{display:inline-flex;align-items:center;justify-content:center;min-height:54px;padding:0 20px;border-radius:15px;font:700 .9rem Inter,system-ui,sans-serif;cursor:pointer;transition:transform .2s,border-color .2s,background .2s}
+.hte-search-submit{border:1px solid #d9bd7d;background:linear-gradient(120deg,#e7d49e,#c5a45a);color:#111}
+.hte-search-clear{border:1px solid rgba(191,195,199,.24);background:rgba(255,255,255,.035);color:#e4e4e4}
+.hte-search-submit:hover,.hte-search-clear:hover{transform:translateY(-1px);border-color:#c5a45a}
+.hte-search-filters{grid-column:2;display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:-12px}
+.hte-search-filter{min-height:34px;padding:6px 13px;border:1px solid rgba(191,195,199,.2);border-radius:999px;background:transparent;color:#a6a6a6;font:600 .78rem Inter,system-ui,sans-serif;cursor:pointer}
+.hte-search-filter[aria-pressed="true"]{border-color:#c5a45a;background:rgba(197,164,90,.13);color:#f0d99f}
+.hte-search-status{grid-column:2;margin:-10px 0 0;color:#929292;font-size:.78rem;line-height:1.5}
+.hte-search-status[data-state="empty"]{color:#e4c77f}
+.hte-search-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.hte-search-card-hidden{display:none!important}
+.hte-search-section-hidden{display:none!important}
+@media(max-width:820px){.hte-search-shell{grid-template-columns:1fr;gap:20px}.hte-search-filters,.hte-search-status{grid-column:1;margin-top:0}.hte-search-filters{margin-top:-8px}.hte-search-status{margin-top:-8px}}
+@media(max-width:560px){.hte-search-band{padding:16px 0 24px}.hte-search-shell{width:calc(100% - 24px);padding:21px 16px;border-radius:20px}.hte-search-form{display:grid;grid-template-columns:1fr auto}.hte-search-input-wrap{grid-column:1/-1}.hte-search-submit,.hte-search-clear{min-height:46px}.hte-search-filters{flex-wrap:nowrap;overflow-x:auto;padding:2px 0 8px;scrollbar-width:thin}.hte-search-filter{flex:0 0 auto}}
+@media(prefers-reduced-motion:reduce){.hte-search-submit,.hte-search-clear{transition:none}}

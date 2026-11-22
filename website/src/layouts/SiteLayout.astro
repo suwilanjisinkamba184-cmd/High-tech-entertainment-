@@ -40,9 +40,11 @@ const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL :
     </>}
     <link rel="stylesheet" href={`${base}assets/emil-interaction-polish.css?v=1`} />
     <link rel="stylesheet" href={`${base}assets/hte-universe-2026.css?v=1`} />
+    <link rel="stylesheet" href={`${base}assets/site-search.css?v=1`} />
     <title>{title}</title>
   </head>
   <body>
     <slot />
+    <script is:inline defer src={`${base}assets/site-search.js?v=1`}></script>
   </body>
 </html>
