@@ -15,6 +15,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebChromeClient
+import android.webkit.JavascriptInterface
 import android.view.View
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -1233,24 +1234,51 @@ internal fun resolveVideoThumbnailUrl(video: VideoDto): String? {
     return youtubeId?.let { "https://img.youtube.com/vi/$it/hqdefault.jpg" }
 }
 
+/** Alternate YouTube poster used when maxresdefault is missing or fails to load. */
+internal fun youtubeThumbnailFallbackUrl(video: VideoDto, failedUrl: String): String? {
+    val youtubeId = video.youtubeId?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) }
+        ?: extractYouTubeVideoId(video.videoUrl)
+    val fallback = youtubeId?.let { "https://img.youtube.com/vi/$it/hqdefault.jpg" }
+    return fallback?.takeIf { it != failedUrl }
+}
+
+@Composable
+private fun VideoPosterImage(video: VideoDto, description: String, modifier: Modifier = Modifier) {
+    val key = remember(video.id, video.thumbnailUrl, video.videoUrl, video.youtubeId) { video.id + video.thumbnailUrl.orEmpty() + video.videoUrl + video.youtubeId.orEmpty() }
+    var posterUrl by remember(key) { mutableStateOf(resolveVideoThumbnailUrl(video)) }
+    var fallbackAttempted by remember(key) { mutableStateOf(false) }
+    var imageFailed by remember(key) { mutableStateOf(false) }
+    Box(modifier, contentAlignment = Alignment.Center) {
+        if (posterUrl != null && !imageFailed) {
+            AsyncImage(
+                model = posterUrl,
+                contentDescription = description,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                onError = {
+                    val fallback = if (!fallbackAttempted) youtubeThumbnailFallbackUrl(video, posterUrl.orEmpty()) else null
+                    if (fallback != null) {
+                        fallbackAttempted = true
+                        posterUrl = fallback
+                    } else {
+                        imageFailed = true
+                    }
+                }
+            )
+        } else {
+            Icon(Icons.Outlined.VideoLibrary, null, tint = ShellGold.copy(alpha = .72f), modifier = Modifier.size(52.dp))
+        }
+    }
+}
+
 @Composable
 private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: (() -> Unit)?) {
-    val posterUrl = resolveVideoThumbnailUrl(video)
     Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.fillMaxWidth().height(164.dp).clip(RoundedCornerShape(13.dp)).background(
                 androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF392D1D), Color(0xFF171B22), Color(0xFF0D1117)))
             ), contentAlignment = Alignment.Center) {
-                if (posterUrl != null) {
-                    AsyncImage(
-                        model = posterUrl,
-                        contentDescription = "Thumbnail for ${video.title}",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Icon(Icons.Outlined.VideoLibrary, null, tint = ShellGold.copy(alpha = .72f), modifier = Modifier.size(52.dp))
-                }
+                VideoPosterImage(video, "Thumbnail for ${video.title}", Modifier.fillMaxSize())
                 Box(Modifier.align(Alignment.Center).size(48.dp).background(Color.Black.copy(alpha = .62f), RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
                     Icon(Icons.Outlined.PlayArrow, "Play ${video.title}", tint = Color.White, modifier = Modifier.size(30.dp))
                 }
@@ -1639,14 +1667,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                                 // Keep the video surface visually intentional before the first frame,
                                 // while paused, and during rebuffering instead of exposing an empty black canvas.
                                 if (!firstFrameRendered) {
-                                    resolveVideoThumbnailUrl(video)?.let { posterUrl ->
-                                        AsyncImage(
-                                            model = posterUrl,
-                                            contentDescription = "Preview image for ${video.title}",
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                    }
+                                    VideoPosterImage(video, "Preview image for ${video.title}", Modifier.fillMaxSize())
                                 }
                                 Box(
                                     Modifier.fillMaxSize().background(
@@ -1753,6 +1774,8 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
     var embeddedWebView by remember(video.id) { mutableStateOf<WebView?>(null) }
     var webViewLoading by remember(video.id) { mutableStateOf(true) }
     var webViewError by remember(video.id) { mutableStateOf(false) }
+    var webViewErrorCode by remember(video.id) { mutableIntStateOf(0) }
+    val videoContext = LocalContext.current
     var webViewGeneration by remember(video.id) { mutableIntStateOf(0) }
     DisposableEffect(lifecycleOwner, embeddedWebView) {
         val observer = LifecycleEventObserver { _, event ->
@@ -1798,6 +1821,7 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
                                 override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                                     webViewLoading = true
                                     webViewError = false
+                                    webViewErrorCode = 0
                                 }
                                 override fun onPageFinished(view: WebView?, url: String?) {
                                     webViewLoading = false
@@ -1824,6 +1848,20 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
                                 }
                             }
                             setBackgroundColor(android.graphics.Color.BLACK)
+                            val targetWebView = this
+                            addJavascriptInterface(object {
+                                @JavascriptInterface
+                                fun onPlayerReady() { targetWebView.post { webViewLoading = false } }
+
+                                @JavascriptInterface
+                                fun onPlayerError(code: Int) {
+                                    targetWebView.post {
+                                        webViewLoading = false
+                                        webViewError = true
+                                        webViewErrorCode = code
+                                    }
+                                }
+                            }, "HTEVideoBridge")
                             // YouTube requires an HTTP Referer (or equivalent app identity) for
                             // embedded players in app WebViews. Loading a wrapper with a stable HTTPS
                             // base URL supplies that identity; a direct loadUrl(embedUrl) can trigger
@@ -1832,9 +1870,7 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
                             // A made-up package-name host is not a valid HTTP referrer for YouTube.
                             val appOrigin = "https://suwilanjisinkamba184-cmd.github.io"
                             val appBaseUrl = "$appOrigin/High-tech-entertainment-/"
-                            val embed = "https://www.youtube-nocookie.com/embed/$youtubeId?autoplay=1&playsinline=1&rel=0&controls=1&enablejsapi=1&origin=$appOrigin"
-                            val safeTitle = video.title.replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;").replace(">", "&gt;")
-                            val html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><meta name="referrer" content="strict-origin-when-cross-origin"><style>html,body{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden}iframe{display:block;width:100%;height:100%;border:0}</style></head><body><iframe src="$embed" title="$safeTitle" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></body></html>"""
+                            val html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><meta name="referrer" content="strict-origin-when-cross-origin"><style>html,body,#player{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden}</style></head><body><div id="player" title="HTE video"></div><script>var player;function onYouTubeIframeAPIReady(){player=new YT.Player('player',{videoId:'$youtubeId',playerVars:{autoplay:1,playsinline:1,rel:0,controls:1,origin:'$appOrigin'},events:{onReady:function(){HTEVideoBridge.onPlayerReady();},onError:function(e){HTEVideoBridge.onPlayerError(e.data);}}});}var tag=document.createElement('script');tag.src='https://www.youtube.com/iframe_api';document.head.appendChild(tag);</script></body></html>"""
                             loadDataWithBaseURL(appBaseUrl, html, "text/html", "UTF-8", null)
                         }
                     },
@@ -1854,20 +1890,38 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
                 }
                 if (webViewError) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("This YouTube video could not be loaded.", color = ShellSilver, fontSize = 12.sp)
+                        Text(
+                            if (webViewErrorCode > 0) "YouTube player error $webViewErrorCode. Open this video in YouTube."
+                            else "This YouTube video could not be loaded. Open it in YouTube.",
+                            color = ShellSilver, fontSize = 12.sp
+                        )
                         Button(
                             onClick = {
                                 webViewError = false
+                                webViewErrorCode = 0
                                 webViewLoading = true
                                 webViewGeneration += 1
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = ShellGold, contentColor = Color.Black)
                         ) { Text("Retry video", fontWeight = FontWeight.Bold) }
+                        OutlinedButton(onClick = { openYouTubeVideo(videoContext, youtubeId) }) {
+                            Text("Open in YouTube", color = ShellGold, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
             Text("Streaming from YouTube • Downloads are available only for HTE original files.", color = ShellMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 8.dp))
         }
+    }
+}
+
+private fun openYouTubeVideo(context: Context, youtubeId: String) {
+    val url = "https://www.youtube.com/watch?v=$youtubeId"
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(context, "No browser or YouTube app is available to open this video.", Toast.LENGTH_LONG).show()
     }
 }
 

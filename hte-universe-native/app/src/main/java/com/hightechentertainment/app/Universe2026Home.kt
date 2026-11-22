@@ -518,7 +518,6 @@ private fun U26TrendingRow(index: Int, track: TrackDto, onPlay: () -> Unit, onDo
 
 @Composable
 private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onDownload: (() -> Unit)?) {
-    val posterUrl = resolveVideoThumbnailUrl(video)
     Column(Modifier.width(if (wide) 238.dp else 194.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Box(
             Modifier.fillMaxWidth().height(if (wide) 140.dp else 112.dp).clip(RoundedCornerShape(16.dp))
@@ -526,16 +525,7 @@ private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onD
                 .clickable(onClick = onPlay),
             contentAlignment = Alignment.Center
         ) {
-            if (posterUrl != null) {
-                AsyncImage(
-                    model = posterUrl,
-                    contentDescription = "Thumbnail for ${video.title}",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Icon(Icons.Outlined.VideoLibrary, null, tint = U26Gold.copy(alpha = .45f), modifier = Modifier.size(62.dp))
-            }
+            VideoPosterImage(video, "Thumbnail for ${video.title}", Modifier.fillMaxSize())
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .52f)))))
             Surface(Modifier.align(Alignment.Center), color = Color.Black.copy(alpha = .68f), shape = RoundedCornerShape(50)) {
                 Icon(Icons.Outlined.PlayArrow, "Watch ${video.title}", tint = Color.White, modifier = Modifier.padding(8.dp).size(24.dp))

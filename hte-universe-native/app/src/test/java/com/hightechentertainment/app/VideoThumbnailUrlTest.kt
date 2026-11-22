@@ -41,4 +41,25 @@ class VideoThumbnailUrlTest {
         )
         assertNull(resolveVideoThumbnailUrl(video))
     }
+    @Test
+    fun maxResolutionYoutubePosterFallsBackToHqDefaultAfterLoadFailure() {
+        val video = VideoDto(
+            id = "v5", title = "Test", videoUrl = "https://www.youtube.com/watch?v=abcdefghijk",
+            youtubeId = "abcdefghijk", thumbnailUrl = "https://i.ytimg.com/vi/abcdefghijk/maxresdefault.jpg"
+        )
+        assertEquals(
+            "https://img.youtube.com/vi/abcdefghijk/hqdefault.jpg",
+            youtubeThumbnailFallbackUrl(video, "https://i.ytimg.com/vi/abcdefghijk/maxresdefault.jpg")
+        )
+    }
+
+    @Test
+    fun doesNotRetrySameFallbackPoster() {
+        val video = VideoDto(
+            id = "v6", title = "Test", videoUrl = "https://youtu.be/abcdefghijk",
+            youtubeId = "abcdefghijk"
+        )
+        assertNull(youtubeThumbnailFallbackUrl(video, "https://img.youtube.com/vi/abcdefghijk/hqdefault.jpg"))
+    }
+
 }
