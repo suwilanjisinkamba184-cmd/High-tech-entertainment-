@@ -71,14 +71,24 @@ version_code = re.search(r"versionCode\s*=\s*(\d+)", gradle_text)
 commit = os.environ.get("GITHUB_SHA", "unknown")
 timestamp = dt.datetime.now(dt.timezone.utc).isoformat()
 
-def matched(*needles: str) -> bool:
-    return any(any(needle.lower() in c["name"].lower() or needle.lower() in c["class"].lower() for needle in needles) and c["outcome"] == "PASS" for c in cases)
+def status_for(pass_label: str, *needles: str) -> str:
+    hits = [
+        c for c in cases
+        if any(needle.lower() in c["name"].lower() or needle.lower() in c["class"].lower() for needle in needles)
+    ]
+    if not hits:
+        return "NOT VERIFIED"
+    if any(c["outcome"] in ("FAIL", "ERROR") for c in hits):
+        return "FAIL"
+    if not any(c["outcome"] == "PASS" for c in hits):
+        return "NOT VERIFIED"
+    return pass_label
 
 feature_rows = [
-    ("Splash branding", "PASS" if matched("startupDisplaysApprovedBrandingWithoutRemovedLogo") else "NOT VERIFIED", "Checks approved splash text and confirms the removed logo is absent."),
-    ("AI assistant", "PARTIAL" if matched("homeVoiceEntryOpensCompactAssistant") else "NOT VERIFIED", "UI entry and voice preset logic only; no live microphone/WebSocket/provider conversation test."),
-    ("Account and Settings navigation", "PARTIAL" if matched("accountTabAndSettingsHubRemainReachable") else "NOT VERIFIED", "Navigation reachability only; no live sign-in/profile/avatar integration test."),
-    ("Video poster URL/fallback logic", "PASS (UNIT LOGIC)" if matched("VideoThumbnailUrlTest") else "NOT VERIFIED", "Validates URL selection and fallback logic; does not prove remote image loading or playback."),
+    ("Splash branding", status_for("PASS", "startupDisplaysApprovedBrandingWithoutRemovedLogo"), "Checks approved splash text and confirms the removed logo is absent."),
+    ("AI assistant", status_for("PARTIAL", "homeVoiceEntryOpensCompactAssistant"), "UI entry and voice preset logic only; no live microphone/WebSocket/provider conversation test."),
+    ("Account and Settings navigation", status_for("PARTIAL", "accountTabAndSettingsHubRemainReachable"), "Navigation reachability only; no live sign-in/profile/avatar integration test."),
+    ("Video poster URL/fallback logic", status_for("PASS (UNIT LOGIC)", "VideoThumbnailUrlTest"), "Validates URL selection and fallback logic; does not prove remote image loading or playback."),
     ("Music playback", "NOT TESTED", "No end-to-end play/pause/seek/background playback test in this suite."),
     ("Video playback/fullscreen", "NOT TESTED", "No end-to-end embedded player, fullscreen, rotation or provider-error test."),
     ("Audio/video downloads", "NOT TESTED", "No end-to-end download, file-integrity or offline-open test."),
@@ -113,7 +123,8 @@ if cases:
     report += ["| Test | Result | Source |", "|---|---|---|"]
     for case in cases:
         test_name = f"{case['class']}.{case['name']}".strip(".")
-        report.append(f"| {test_name} | {case['outcome']}{(': ' + case['detail']) if case['detail'] else ''} | {case['source']} |")
+        detail_cell = " ".join(case["detail"].replace("\\r", " ").replace("\\n", " ").split()).replace("|", "\\\\|")
+        report.append(f"| {test_name} | {case['outcome']}{(': ' + detail_cell) if detail_cell else ''} | {case['source']} |")
 else:
     report.append("**NO JUNIT TEST CASES WERE FOUND.** Inspect the workflow logs; this report must not be interpreted as a pass.")
 report += [
