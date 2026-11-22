@@ -35,14 +35,17 @@ void main() {
       );
     });
 
-    test('extracts YouTube IDs and returns a fallback poster sequence', () {
+    test('extracts YouTube IDs and returns resilient poster candidates', () {
       const videoUrl = 'https://youtu.be/abcdefghijk';
       expect(HteMediaUrlPolicy.youtubeVideoId(videoUrl), 'abcdefghijk');
       expect(
         HteMediaUrlPolicy.youtubeThumbnailCandidates(videoUrl).map((uri) => uri.path),
         [
-          '/vi/abcdefghijk/maxresdefault.jpg',
           '/vi/abcdefghijk/hqdefault.jpg',
+          '/vi/abcdefghijk/sddefault.jpg',
+          '/vi/abcdefghijk/mqdefault.jpg',
+          '/vi/abcdefghijk/default.jpg',
+          '/vi/abcdefghijk/maxresdefault.jpg',
         ],
       );
     });
