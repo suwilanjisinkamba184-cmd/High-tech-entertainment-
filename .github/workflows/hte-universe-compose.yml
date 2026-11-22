@@ -161,11 +161,9 @@ jobs:
             hte-universe-native/app/build/outputs/apk/debug/app-debug.apk
             hte-universe-native/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 
-      # Same-repository PRs build a signed production candidate for installation testing.
-      # No debug APK is produced or presented as the installable application.
-
-      # Same-repository pull requests may create signed, non-published candidates.
-      # Publishing remains restricted to main; feature branches can never publish a public APK.
+      # Recovery validation uploads debug-only smoke-test APKs and diagnostics.
+      # Production signing, signed-candidate upload, and public release publication remain disabled.
+      # A debug APK uses the .dev application ID suffix and is not an update to the installed production app.
       - name: Require main branch for production publishing
         if: matrix.api-level == 35 && env.PUBLISH_RELEASE == 'true'
         run: |
