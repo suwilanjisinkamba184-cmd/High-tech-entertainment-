@@ -1508,13 +1508,17 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     var offlineLookupComplete by remember(video.id, video.downloadUrl, video.videoUrl) { mutableStateOf(false) }
     LaunchedEffect(video.id, video.downloadUrl, video.videoUrl) {
         val resolvedUri = withContext(Dispatchers.IO) {
-            runCatching {
+            try {
                 val records = OfflineDownloadManager(context).getDownloads()
                 listOfNotNull(video.downloadUrl, video.videoUrl)
                     .distinct()
                     .firstNotNullOfOrNull { source -> resolveDownloadedLocalUri(records, source) }
                     ?.let(Uri::parse)
-            }.getOrNull()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                null
+            }
         }
         offlineUri = resolvedUri
         offlineLookupComplete = true
