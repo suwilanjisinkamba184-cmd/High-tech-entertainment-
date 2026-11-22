@@ -302,6 +302,31 @@ class _HomePage extends StatelessWidget {
                     'Published music, releases and videos are read from Supabase. Artist visibility follows the existing row-level security policy.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
+                  if (catalogue.releases.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    Text('Latest releases', style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 8),
+                    for (final release in catalogue.releases.take(3))
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: _TrackArtwork(url: release.coverUrl),
+                        title: Text(release.title),
+                        subtitle: Text(release.releaseDate ?? 'High-Tech Entertainment'),
+                      ),
+                  ],
+                  if (catalogue.artists.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    Text('HTE artists', style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final artist in catalogue.artists.take(8))
+                          Chip(label: Text(artist.name)),
+                      ],
+                    ),
+                  ],
                 ],
               );
             },
