@@ -64,7 +64,7 @@ abstract final class HteMediaUrlPolicy {
 
     String? id;
     if (host == 'youtu.be') {
-      id = parts.firstOrNull;
+      id = parts.isEmpty ? null : parts.first;
     } else if (host == 'youtube.com' ||
         host == 'm.youtube.com' ||
         host == 'music.youtube.com' ||
