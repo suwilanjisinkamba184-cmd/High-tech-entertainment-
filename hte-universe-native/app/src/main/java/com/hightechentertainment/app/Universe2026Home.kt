@@ -525,9 +525,9 @@ private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onD
                 .clickable(onClick = onPlay),
             contentAlignment = Alignment.Center
         ) {
-            if (!video.thumbnailUrl.isNullOrBlank()) {
+            if (posterUrl != null) {
                 AsyncImage(
-                    model = video.thumbnailUrl,
+                    model = posterUrl,
                     contentDescription = "Thumbnail for ${video.title}",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop

@@ -1,5 +1,7 @@
 package com.hightechentertainment.app
 
+import android.util.Log
+
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -532,7 +534,10 @@ private fun startVoiceSession(
                 clientTools = clientTools,
                 onUserTranscriptEvent = { text, _ -> toolContext.onUserTranscript(text) },
                 onAgentResponseEvent = { text, _ -> toolContext.onAgentResponse(text) },
-                onError = { code, message -> toolContext.onError(voiceFailureMessage(listOfNotNull(message, "provider error $code").joinToString(" "))) }
+                onError = { code, message ->
+                    Log.e("HTEVoice", "ElevenLabs SDK session error code=$code: ${message.orEmpty().take(220)}")
+                    toolContext.onError(voiceFailureMessage(listOfNotNull(message, "provider error $code").joinToString(" ")))
+                }
             )
             val active = ConversationClient.startSession(config, context)
             onSession(active)
@@ -545,7 +550,9 @@ private fun startVoiceSession(
                 error.message,
                 error.toHteUserMessage("HTE AI Voice Assistant could not connect. Please try again.")
             ).joinToString(" ")
-            onFailure(voiceFailureMessage(details))
+            val safeFailure = voiceFailureMessage(details)
+            Log.e("HTEVoice", "Conversation session startup failed (${error.javaClass.simpleName}): $safeFailure")
+            onFailure(safeFailure)
         }
     }
 }

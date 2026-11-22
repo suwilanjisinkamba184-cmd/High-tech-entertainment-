@@ -1219,16 +1219,30 @@ private fun isYouTubeWatchUrl(value: String): Boolean {
     return host == "youtube.com" || host.endsWith(".youtube.com") || host == "youtu.be" || host.endsWith(".youtu.be")
 }
 
+/** Returns a safe HTTPS poster URL, deriving YouTube artwork when catalogue thumbnail metadata is absent or invalid. */
+internal fun resolveVideoThumbnailUrl(video: VideoDto): String? {
+    val supplied = video.thumbnailUrl?.trim().orEmpty()
+    val suppliedUri = runCatching { Uri.parse(supplied) }.getOrNull()
+    if (suppliedUri?.scheme.equals("https", ignoreCase = true) &&
+        !suppliedUri.host.isNullOrBlank() && !isYouTubeWatchUrl(supplied)
+    ) return supplied
+
+    val youtubeId = video.youtubeId?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) }
+        ?: extractYouTubeVideoId(video.videoUrl)
+    return youtubeId?.let { "https://img.youtube.com/vi/$it/hqdefault.jpg" }
+}
+
 @Composable
 private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: (() -> Unit)?) {
+    val posterUrl = resolveVideoThumbnailUrl(video)
     Card(colors = CardDefaults.cardColors(containerColor = ShellPanel), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.fillMaxWidth().height(164.dp).clip(RoundedCornerShape(13.dp)).background(
                 androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF392D1D), Color(0xFF171B22), Color(0xFF0D1117)))
             ), contentAlignment = Alignment.Center) {
-                if (!video.thumbnailUrl.isNullOrBlank() && !isYouTubeWatchUrl(video.thumbnailUrl)) {
+                if (posterUrl != null) {
                     AsyncImage(
-                        model = video.thumbnailUrl,
+                        model = posterUrl,
                         contentDescription = "Thumbnail for ${video.title}",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
@@ -1624,7 +1638,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                                 // Keep the video surface visually intentional before the first frame,
                                 // while paused, and during rebuffering instead of exposing an empty black canvas.
                                 if (!firstFrameRendered) {
-                                    video.thumbnailUrl?.takeIf(String::isNotBlank)?.let { posterUrl ->
+                                    resolveVideoThumbnailUrl(video)?.let { posterUrl ->
                                         AsyncImage(
                                             model = posterUrl,
                                             contentDescription = "Preview image for ${video.title}",

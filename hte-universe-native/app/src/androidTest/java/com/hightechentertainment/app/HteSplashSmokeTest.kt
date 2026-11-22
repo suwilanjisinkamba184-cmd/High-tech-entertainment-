@@ -11,6 +11,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -20,20 +21,22 @@ class HteSplashSmokeTest {
     val composeRule = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun startupDisplaysOfficialLogoAndApprovedBranding() {
+    fun startupDisplaysApprovedBrandingWithoutRemovedLogo() {
         // Wait for the final animated branding element so assertions are not
         // racing the splash's staged subtitle/tagline reveal.
         composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule.onAllNodesWithContentDescription("High-Tech Entertainment official logo")
-                .fetchSemanticsNodes().isNotEmpty() &&
-                composeRule.onAllNodesWithText("HTE UNIVERSE")
+            composeRule.onAllNodesWithText("HTE UNIVERSE")
                     .fetchSemanticsNodes().isNotEmpty() &&
                 composeRule.onAllNodesWithText(HTE_STARTUP_TAGLINE.uppercase())
                     .fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithContentDescription("High-Tech Entertainment official logo").fetchSemanticsNode()
         composeRule.onNodeWithText("HTE UNIVERSE").fetchSemanticsNode()
         composeRule.onNodeWithText(HTE_STARTUP_TAGLINE.uppercase()).fetchSemanticsNode()
+        assertTrue(
+            "The removed HTE logo must not appear on the splash screen",
+            composeRule.onAllNodesWithContentDescription("High-Tech Entertainment official logo")
+                .fetchSemanticsNodes().isEmpty()
+        )
     }
 
     @Test
