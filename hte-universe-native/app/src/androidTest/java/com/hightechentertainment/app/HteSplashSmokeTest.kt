@@ -62,10 +62,8 @@ class HteSplashSmokeTest {
         // signed-out "Welcome back" form. Verify the shared account controls,
         // which must remain available in either configuration.
         composeRule.waitUntil(timeoutMillis = 12_000) {
-            composeRule.onAllNodesWithTag("member_center_list")
-                .fetchSemanticsNodes().isNotEmpty() &&
-                composeRule.onAllNodesWithText("HTE Control Centre")
-                    .fetchSemanticsNodes().isNotEmpty()
+            composeRule.onAllNodesWithText("HTE Control Centre")
+                .fetchSemanticsNodes().isNotEmpty()
         }
         val memberCenter = composeRule.onNodeWithTag("member_center_list")
         memberCenter.performScrollToNode(hasText("HTE Control Centre"))
