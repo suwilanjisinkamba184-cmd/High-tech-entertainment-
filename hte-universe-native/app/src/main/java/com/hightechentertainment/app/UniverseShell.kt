@@ -1234,12 +1234,16 @@ internal fun resolveVideoThumbnailCandidates(video: VideoDto): List<String> {
 
     val youtubeId = video.youtubeId?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) }
         ?: extractYouTubeVideoId(video.videoUrl)
+    val suppliedPath = validSupplied?.let { runCatching { java.net.URI(it).path }.getOrNull() }
     val youtubeCandidates = youtubeId?.let { id ->
         // hqdefault is the most consistently available non-placeholder poster.
         // Try lower-resolution variants before maxres, which YouTube often
         // serves as a tiny placeholder when the high-resolution image is absent.
         listOf("hqdefault", "sddefault", "mqdefault", "default", "maxresdefault")
             .map { quality -> "https://img.youtube.com/vi/$id/$quality.jpg" }
+            .filterNot { candidate ->
+                suppliedPath != null && runCatching { java.net.URI(candidate).path == suppliedPath }.getOrDefault(false)
+            }
     }.orEmpty()
 
     return (listOfNotNull(validSupplied) + youtubeCandidates).distinct()
@@ -1248,8 +1252,11 @@ internal fun resolveVideoThumbnailCandidates(video: VideoDto): List<String> {
 internal fun resolveVideoThumbnailUrl(video: VideoDto): String? =
     resolveVideoThumbnailCandidates(video).firstOrNull()
 
-internal fun youtubeThumbnailFallbackUrl(video: VideoDto, failedUrl: String): String? =
-    resolveVideoThumbnailCandidates(video).firstOrNull { it != failedUrl }
+internal fun youtubeThumbnailFallbackUrl(video: VideoDto, failedUrl: String): String? {
+    val candidates = resolveVideoThumbnailCandidates(video)
+    val failedIndex = candidates.indexOf(failedUrl)
+    return if (failedIndex >= 0) candidates.getOrNull(failedIndex + 1) else candidates.firstOrNull()
+}
 
 @Composable
 internal fun VideoPosterImage(video: VideoDto, description: String, modifier: Modifier = Modifier) {
