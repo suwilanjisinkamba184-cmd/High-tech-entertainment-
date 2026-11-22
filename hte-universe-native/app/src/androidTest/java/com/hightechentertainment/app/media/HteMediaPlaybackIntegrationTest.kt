@@ -42,7 +42,8 @@ class HteMediaPlaybackIntegrationTest {
 
         try {
             writeTestWav(testAudio, durationSeconds = 4)
-            controller = connection.get(10, TimeUnit.SECONDS)
+            val connectedController = connection.get(10, TimeUnit.SECONDS)
+            controller = connectedController
 
             val started = CountDownLatch(1)
             val ended = CountDownLatch(1)
@@ -64,34 +65,30 @@ class HteMediaPlaybackIntegrationTest {
             }
 
             instrumentation.runOnMainSync {
-                controller.addListener(listener)
-                controller.setMediaItem(MediaItem.fromUri(Uri.fromFile(testAudio)))
-                controller.prepare()
-                controller.play()
+                connectedController.addListener(listener)
+                connectedController.setMediaItem(MediaItem.fromUri(Uri.fromFile(testAudio)))
+                connectedController.prepare()
+                connectedController.play()
             }
 
             assertTrue("Media3 service never entered playing state.", started.await(10, TimeUnit.SECONDS))
             assertNull("Media3 reported a playback error.", playbackError.get())
 
-            // MainActivity and UniverseShell both honor the default-enabled
-            // backgroundPlayback preference. Moving the activity to CREATED
-            // simulates leaving the foreground without terminating the service.
             assertTrue("Background playback preference should default to enabled.", AppSettingsStore(targetContext).backgroundPlayback)
             scenario.moveToState(Lifecycle.State.CREATED)
             Thread.sleep(900)
 
             val stillPlaying = AtomicBoolean(false)
-            instrumentation.runOnMainSync { stillPlaying.set(controller.isPlaying) }
+            instrumentation.runOnMainSync { stillPlaying.set(connectedController.isPlaying) }
             assertTrue("Audio playback stopped when the activity entered the background.", stillPlaying.get())
 
             assertTrue("Local test audio did not reach STATE_ENDED.", ended.await(10, TimeUnit.SECONDS))
             assertNull("Media3 failed while playing the test audio.", playbackError.get())
+
+            instrumentation.runOnMainSync { connectedController.removeListener(listener) }
         } finally {
             instrumentation.runOnMainSync {
-                controller?.let {
-                    runCatching { it.stop() }
-                    runCatching { it.release() }
-                }
+                controller?.let { runCatching { it.stop() } }
             }
             runCatching { MediaController.releaseFuture(connection) }
             scenario.close()
@@ -109,11 +106,11 @@ class HteMediaPlaybackIntegrationTest {
             output.writeBytes("WAVE")
             output.writeBytes("fmt ")
             output.writeLittleEndianInt(16)
-            output.writeLittleEndianShort(1) // PCM
-            output.writeLittleEndianShort(1) // mono
+            output.writeLittleEndianShort(1)
+            output.writeLittleEndianShort(1)
             output.writeLittleEndianInt(sampleRate)
             output.writeLittleEndianInt(sampleRate * 2)
-            output.writeLittleEndianShort(2) // block alignment
+            output.writeLittleEndianShort(2)
             output.writeLittleEndianShort(16)
             output.writeBytes("data")
             output.writeLittleEndianInt(dataBytes)
