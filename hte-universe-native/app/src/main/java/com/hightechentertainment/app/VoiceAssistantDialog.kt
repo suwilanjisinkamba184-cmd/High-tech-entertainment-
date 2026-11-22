@@ -68,10 +68,10 @@ internal fun voiceFailureMessage(details: String): String {
     return when {
         listOf("timeout", "network", "connection", "offline", "unreachable").any(normalized::contains) ->
             "HTE AI Voice Assistant could not connect. Check your internet connection and try again."
+        listOf("convai_write", "missing permission", "forbidden", "403", "credentials", "api key", "not configured", "conversation token").any(normalized::contains) ->
+            "HTE AI Voice Assistant was rejected by the voice provider. The project owner needs to check the agent permissions and server-side API credentials."
         listOf("sign in", "session expired", "401").any(normalized::contains) ->
             "Your HTE session may have expired. Sign in again, then reopen HTE AI Voice Assistant."
-        listOf("convai_write", "missing permission", "forbidden", "credentials", "api key", "not configured", "conversation token").any(normalized::contains) ->
-            "HTE AI Voice Assistant is not fully configured yet. The HTE project owner needs to correct the server-side voice API credentials and permissions."
         else -> "Voice Companion is temporarily unavailable. Please try again."
     }
 }
@@ -516,14 +516,20 @@ private fun startVoiceSession(
                 clientTools = clientTools,
                 onUserTranscriptEvent = { text, _ -> toolContext.onUserTranscript(text) },
                 onAgentResponseEvent = { text, _ -> toolContext.onAgentResponse(text) },
-                onError = { _, _ -> toolContext.onError("Voice Companion could not complete that request. Please try again.") }
+                onError = { code, message -> toolContext.onError(voiceFailureMessage(listOfNotNull(message, "provider error $code").joinToString(" "))) }
             )
             val active = ConversationClient.startSession(config, context)
             onSession(active)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            onFailure(error.toHteUserMessage("HTE AI Voice Assistant could not connect. Please try again."))
+            // Include both the transport/provider detail and the app's safe fallback
+            // so token-endpoint failures use the same actionable guidance as SDK errors.
+            val details = listOfNotNull(
+                error.message,
+                error.toHteUserMessage("HTE AI Voice Assistant could not connect. Please try again.")
+            ).joinToString(" ")
+            onFailure(voiceFailureMessage(details))
         }
     }
 }

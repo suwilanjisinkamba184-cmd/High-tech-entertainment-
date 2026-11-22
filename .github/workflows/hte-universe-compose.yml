@@ -108,6 +108,43 @@ jobs:
           PY
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest --console=plain
+      - name: Compile Android instrumentation APKs before emulator startup
+        run: gradle --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest --console=plain
+      - name: Run Android instrumentation tests on API 35 emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        env:
+          ANDROID_I_WANT_MY_TCG: "yes"
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            ready=false
+            for attempt in $(seq 1 90); do
+              state="$(adb get-state 2>/dev/null || true)"
+              boot="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+              package_service="$(adb shell service check package 2>/dev/null || true)"
+              activity_service="$(adb shell service check activity 2>/dev/null || true)"
+              package_list="$(adb shell pm list packages 2>/dev/null || true)"
+              current_user="$(adb shell am get-current-user 2>/dev/null || true)"
+              if [[ "$state" == "device" && "$boot" == "1" && -n "$package_list" && "$current_user" =~ ^[0-9]+$ && "$package_service" == *"found"* && "$activity_service" == *"found"* ]]; then
+                ready=true
+                break
+              fi
+              sleep 2
+            done
+            if [[ "$ready" != "true" ]]; then
+              adb devices -l || true
+              adb shell service check package || true
+              adb shell service check activity || true
+              adb shell pm list packages || true
+              echo "::error::Android emulator did not expose working package/activity services after 180 seconds."
+              exit 1
+            fi
+            cd hte-universe-native
+            gradle --no-daemon :app:connectedDebugAndroidTest --console=plain
       - name: Run debug lint
         run: gradle --no-daemon :app:lintDebug --console=plain
       - name: Run release lint
