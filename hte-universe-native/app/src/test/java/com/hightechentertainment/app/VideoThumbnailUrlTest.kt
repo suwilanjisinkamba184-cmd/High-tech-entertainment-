@@ -3,6 +3,7 @@ package com.hightechentertainment.app
 import com.hightechentertainment.app.data.VideoDto
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VideoThumbnailUrlTest {
@@ -41,25 +42,46 @@ class VideoThumbnailUrlTest {
         )
         assertNull(resolveVideoThumbnailUrl(video))
     }
+
     @Test
-    fun maxResolutionYoutubePosterFallsBackToHqDefaultAfterLoadFailure() {
+    fun missingYoutubePosterUsesOrderedFallbackVariants() {
         val video = VideoDto(
             id = "v5", title = "Test", videoUrl = "https://www.youtube.com/watch?v=abcdefghijk",
             youtubeId = "abcdefghijk", thumbnailUrl = "https://i.ytimg.com/vi/abcdefghijk/maxresdefault.jpg"
         )
         assertEquals(
-            "https://img.youtube.com/vi/abcdefghijk/hqdefault.jpg",
-            youtubeThumbnailFallbackUrl(video, "https://i.ytimg.com/vi/abcdefghijk/maxresdefault.jpg")
+            listOf(
+                "https://i.ytimg.com/vi/abcdefghijk/maxresdefault.jpg",
+                "https://img.youtube.com/vi/abcdefghijk/hqdefault.jpg",
+                "https://img.youtube.com/vi/abcdefghijk/sddefault.jpg",
+                "https://img.youtube.com/vi/abcdefghijk/mqdefault.jpg",
+                "https://img.youtube.com/vi/abcdefghijk/default.jpg"
+            ),
+            resolveVideoThumbnailCandidates(video)
         )
     }
 
     @Test
-    fun doesNotRetrySameFallbackPoster() {
+    fun fallbackMovesToNextDistinctCandidate() {
         val video = VideoDto(
             id = "v6", title = "Test", videoUrl = "https://youtu.be/abcdefghijk",
             youtubeId = "abcdefghijk"
         )
-        assertNull(youtubeThumbnailFallbackUrl(video, "https://img.youtube.com/vi/abcdefghijk/hqdefault.jpg"))
+        assertEquals(
+            "https://img.youtube.com/vi/abcdefghijk/sddefault.jpg",
+            youtubeThumbnailFallbackUrl(video, "https://img.youtube.com/vi/abcdefghijk/hqdefault.jpg")
+        )
+        assertNull(youtubeThumbnailFallbackUrl(video, "https://img.youtube.com/vi/abcdefghijk/default.jpg"))
     }
 
+    @Test
+    fun candidatesAreUniqueAndHttpsOnly() {
+        val video = VideoDto(
+            id = "v7", title = "Test", videoUrl = "https://www.youtube.com/watch?v=abcdefghijk",
+            youtubeId = "abcdefghijk", thumbnailUrl = "https://img.youtube.com/vi/abcdefghijk/hqdefault.jpg"
+        )
+        val candidates = resolveVideoThumbnailCandidates(video)
+        assertEquals(candidates.size, candidates.toSet().size)
+        assertTrue(candidates.all { it.startsWith("https://") })
+    }
 }

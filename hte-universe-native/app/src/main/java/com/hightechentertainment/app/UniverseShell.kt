@@ -1222,33 +1222,45 @@ private fun isYouTubeWatchUrl(value: String): Boolean {
 }
 
 /** Returns a safe HTTPS poster URL, deriving YouTube artwork when catalogue thumbnail metadata is absent or invalid. */
-internal fun resolveVideoThumbnailUrl(video: VideoDto): String? {
+internal fun resolveVideoThumbnailCandidates(video: VideoDto): List<String> {
     val supplied = video.thumbnailUrl?.trim().orEmpty()
     val suppliedUri = runCatching { java.net.URI(supplied) }.getOrNull()
-    if (suppliedUri != null &&
-        suppliedUri.scheme.equals("https", ignoreCase = true) &&
-        !suppliedUri.host.isNullOrBlank() && !isYouTubeWatchUrl(supplied)
-    ) return supplied
+    val validSupplied = supplied.takeIf {
+        suppliedUri != null &&
+            suppliedUri.scheme.equals("https", ignoreCase = true) &&
+            !suppliedUri.host.isNullOrBlank() &&
+            !isYouTubeWatchUrl(it)
+    }
 
     val youtubeId = video.youtubeId?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) }
         ?: extractYouTubeVideoId(video.videoUrl)
-    return youtubeId?.let { "https://img.youtube.com/vi/$it/hqdefault.jpg" }
+    val youtubeCandidates = youtubeId?.let { id ->
+        // hqdefault is the most consistently available non-placeholder poster.
+        // Try lower-resolution variants before maxres, which YouTube often
+        // serves as a tiny placeholder when the high-resolution image is absent.
+        listOf("hqdefault", "sddefault", "mqdefault", "default", "maxresdefault")
+            .map { quality -> "https://img.youtube.com/vi/$id/$quality.jpg" }
+    }.orEmpty()
+
+    return (listOfNotNull(validSupplied) + youtubeCandidates).distinct()
 }
 
-/** Alternate YouTube poster used when maxresdefault is missing or fails to load. */
-internal fun youtubeThumbnailFallbackUrl(video: VideoDto, failedUrl: String): String? {
-    val youtubeId = video.youtubeId?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) }
-        ?: extractYouTubeVideoId(video.videoUrl)
-    val fallback = youtubeId?.let { "https://img.youtube.com/vi/$it/hqdefault.jpg" }
-    return fallback?.takeIf { it != failedUrl }
-}
+internal fun resolveVideoThumbnailUrl(video: VideoDto): String? =
+    resolveVideoThumbnailCandidates(video).firstOrNull()
+
+internal fun youtubeThumbnailFallbackUrl(video: VideoDto, failedUrl: String): String? =
+    resolveVideoThumbnailCandidates(video).firstOrNull { it != failedUrl }
 
 @Composable
 internal fun VideoPosterImage(video: VideoDto, description: String, modifier: Modifier = Modifier) {
-    val key = remember(video.id, video.thumbnailUrl, video.videoUrl, video.youtubeId) { video.id + video.thumbnailUrl.orEmpty() + video.videoUrl + video.youtubeId.orEmpty() }
-    var posterUrl by remember(key) { mutableStateOf(resolveVideoThumbnailUrl(video)) }
-    var fallbackAttempted by remember(key) { mutableStateOf(false) }
+    val key = remember(video.id, video.thumbnailUrl, video.videoUrl, video.youtubeId) {
+        video.id + video.thumbnailUrl.orEmpty() + video.videoUrl + video.youtubeId.orEmpty()
+    }
+    val candidates = remember(key) { resolveVideoThumbnailCandidates(video) }
+    var candidateIndex by remember(key) { mutableIntStateOf(0) }
     var imageFailed by remember(key) { mutableStateOf(false) }
+    val posterUrl = candidates.getOrNull(candidateIndex)
+
     Box(modifier, contentAlignment = Alignment.Center) {
         if (posterUrl != null && !imageFailed) {
             AsyncImage(
@@ -1257,17 +1269,20 @@ internal fun VideoPosterImage(video: VideoDto, description: String, modifier: Mo
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
                 onError = {
-                    val fallback = if (!fallbackAttempted) youtubeThumbnailFallbackUrl(video, posterUrl.orEmpty()) else null
-                    if (fallback != null) {
-                        fallbackAttempted = true
-                        posterUrl = fallback
+                    if (candidateIndex < candidates.lastIndex) {
+                        candidateIndex += 1
                     } else {
                         imageFailed = true
                     }
                 }
             )
         } else {
-            Icon(Icons.Outlined.VideoLibrary, null, tint = ShellGold.copy(alpha = .72f), modifier = Modifier.size(52.dp))
+            Icon(
+                Icons.Outlined.VideoLibrary,
+                null,
+                tint = ShellGold.copy(alpha = .72f),
+                modifier = Modifier.size(52.dp)
+            )
         }
     }
 }
