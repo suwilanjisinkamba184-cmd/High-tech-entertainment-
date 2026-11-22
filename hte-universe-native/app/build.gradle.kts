@@ -88,7 +88,7 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:storage-kt")
     implementation("io.github.jan-tennert.supabase:functions-kt")
     // Supabase 3.9.0 is current for the other modules; Maven Central currently exposes Realtime 3.9.0-beta-1, not 3.9.0.
-    implementation("io.github.jan-tennert.supabase:realtime-kt:3.9.0-beta-1")
+    implementation("io.github.jan-tennert.supabase:realtime-kt:3.9.0")
     implementation("io.ktor:ktor-client-android:3.6.1")
     val media3Version = "1.11.1"
     implementation("androidx.media3:media3-exoplayer:$media3Version")
