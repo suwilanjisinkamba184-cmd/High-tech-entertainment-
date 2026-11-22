@@ -146,7 +146,8 @@ class _HteShellState extends State<HteShell> {
                         selectedIcon: Icon(destination.selectedIcon),
                         label: Text(destination.label),
                       ),
-                ],
+                  ],
+                ),
                 const VerticalDivider(width: 1, thickness: 1),
                 Expanded(
                   child: Align(
@@ -450,7 +451,7 @@ class _CataloguePageState extends State<_CataloguePage> {
                       return ListView.separated(
                         padding: const EdgeInsets.fromLTRB(22, 4, 22, 28),
                         itemCount: videos.length,
-                        separatorBuilder: (_, __) => const Divider(height: 20),
+                        separatorBuilder: (_, _) => const Divider(height: 20),
                         itemBuilder: (context, index) {
                           final video = videos[index];
                           return ListTile(
@@ -480,7 +481,7 @@ class _CataloguePageState extends State<_CataloguePage> {
                     return ListView.separated(
                       padding: const EdgeInsets.fromLTRB(22, 4, 22, 28),
                       itemCount: tracks.length,
-                      separatorBuilder: (_, __) => const Divider(height: 20),
+                      separatorBuilder: (_, _) => const Divider(height: 20),
                       itemBuilder: (context, index) {
                         final track = tracks[index];
                         return ListTile(
@@ -802,7 +803,7 @@ class _TrackArtwork extends StatelessWidget {
         child: Image.network(
           uri.toString(),
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const Icon(Icons.music_note, color: HteColors.gold),
+          errorBuilder: (_, _, _) => const Icon(Icons.music_note, color: HteColors.gold),
         ),
       ),
     );
