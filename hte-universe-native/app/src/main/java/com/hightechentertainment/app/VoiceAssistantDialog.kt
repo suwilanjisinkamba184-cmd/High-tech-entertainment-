@@ -413,6 +413,7 @@ private class VoiceToolContext {
     var onUserTranscript: (String) -> Unit = {}
     var onAgentResponse: (String) -> Unit = {}
     var onError: (String) -> Unit = {}
+    var onDisconnected: (String) -> Unit = {}
 }
 
 private fun startVoiceSession(
