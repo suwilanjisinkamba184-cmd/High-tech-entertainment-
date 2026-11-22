@@ -188,7 +188,7 @@ fun VoiceAssistantDialog(
         if (granted) startVoiceSession(scope, context, toolContext, selectedVoiceId,
             onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
             onSession = { active -> session = active; isConnecting = false },
-            onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = voiceFailureMessage(error) }
+            onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = error }
         ) else errorMessage = "Microphone permission is required for HTE AI Voice Assistant."
     }
 
@@ -200,7 +200,7 @@ fun VoiceAssistantDialog(
             startVoiceSession(scope, context, toolContext, selectedVoiceId,
                 onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
                 onSession = { active -> session = active; isConnecting = false },
-                onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = voiceFailureMessage(error) }
+                onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = error }
             )
         }
     }
