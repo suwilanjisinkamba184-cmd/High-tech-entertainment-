@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:hte_universe/src/hte_app.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   group('HTE responsive shell', () {
@@ -13,7 +13,7 @@ void main() {
       await tester.pumpWidget(const HteApp(backendConfigured: false));
 
       expect(find.byType(NavigationBar), findsOneWidget);
-      expect(find.text('Music. Beats.\nProduction. Beyond.'), findsOneWidget);
+      expect(find.text('Music. Beats.\\nProduction. Beyond.'), findsOneWidget);
 
       await tester.tap(find.text('Videos').last);
       await tester.pumpAndSettle();
