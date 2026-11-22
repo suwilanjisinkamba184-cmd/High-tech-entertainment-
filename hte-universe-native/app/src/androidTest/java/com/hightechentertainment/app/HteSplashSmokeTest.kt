@@ -5,8 +5,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onAllNodes
-import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performClick
@@ -64,8 +62,9 @@ class HteSplashSmokeTest {
         // it before asserting its text. Waiting for off-screen text first will
         // always time out because that item has not been composed yet.
         composeRule.waitUntil(timeoutMillis = 12_000) {
-            composeRule.onAllNodes(hasTestTag("member_center_list"))
-                .fetchSemanticsNodes().isNotEmpty()
+            runCatching {
+                composeRule.onNodeWithTag("member_center_list").fetchSemanticsNode()
+            }.isSuccess
         }
         val memberCenter = composeRule.onNodeWithTag("member_center_list")
         memberCenter.performScrollToNode(hasText("HTE Control Centre"))
