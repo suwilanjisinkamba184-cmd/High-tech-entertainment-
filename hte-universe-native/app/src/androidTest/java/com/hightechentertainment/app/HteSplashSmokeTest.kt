@@ -57,12 +57,12 @@ class HteSplashSmokeTest {
         }
         composeRule.onNodeWithText("Account").performClick()
 
-        // CI may intentionally build without Supabase credentials. In that case
-        // the account page shows a secure-connection notice rather than the
-        // signed-out "Welcome back" form. Verify the shared account controls,
-        // which must remain available in either configuration.
+        // The control-centre card is below the fold in this LazyColumn. Wait for
+        // the list itself, then scroll to the target item so LazyColumn composes
+        // it before asserting its text. Waiting for off-screen text first will
+        // always time out because that item has not been composed yet.
         composeRule.waitUntil(timeoutMillis = 12_000) {
-            composeRule.onAllNodesWithText("HTE Control Centre")
+            composeRule.onAllNodesWithTag("member_center_list")
                 .fetchSemanticsNodes().isNotEmpty()
         }
         val memberCenter = composeRule.onNodeWithTag("member_center_list")
