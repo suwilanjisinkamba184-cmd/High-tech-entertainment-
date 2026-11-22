@@ -8,6 +8,12 @@ class VoiceAssistantErrorMessageTest {
         assertTrue(voiceFailureMessage("network timeout").contains("internet connection"))
     }
 
+    @Test fun realtimeInitializationCodeGivesRetryGuidance() {
+        val message = voiceFailureMessage("provider error 3000")
+        assertTrue(message.contains("real-time voice connection"))
+        assertTrue(message.contains("retry"))
+    }
+
     @Test fun missingElevenLabsPermissionExplainsOwnerConfiguration() {
         val message = voiceFailureMessage("missing convai_write permission")
         assertTrue(message.contains("project owner"))

@@ -68,6 +68,7 @@ private data class VoiceTokenResponse(
 
 private val voiceHttp401Pattern = Regex("""(?<![A-Za-z0-9_])401(?![A-Za-z0-9_])""")
 private val voiceHttp403Pattern = Regex("""(?<![A-Za-z0-9_])403(?![A-Za-z0-9_])""")
+private val voiceRealtimeInitializationPattern = Regex("""(?<![A-Za-z0-9_])3000(?![A-Za-z0-9_])""")
 
 internal fun voiceFailureMessage(details: String): String {
     val normalized = details.lowercase()
@@ -84,6 +85,9 @@ internal fun voiceFailureMessage(details: String): String {
             "HTE AI Voice Assistant was rejected by the voice provider. The project owner needs to check the agent permissions and server-side API credentials."
         isSessionFailure ->
             "Your HTE session may have expired. Sign in again, then reopen HTE AI Voice Assistant."
+        voiceRealtimeInitializationPattern.containsMatchIn(details) ||
+            listOf("livekit", "webrtc", "rtc initialization").any(normalized::contains) ->
+            "HTE AI Voice Assistant could not initialize its real-time voice connection. Check your internet connection and retry."
         listOf("timeout", "network", "connection", "offline", "unreachable").any(normalized::contains) ->
             "HTE AI Voice Assistant could not connect. Check your internet connection and try again."
         else -> "HTE AI Voice Assistant is temporarily unavailable. Please try again."
