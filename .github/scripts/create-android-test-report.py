@@ -89,7 +89,7 @@ feature_rows = [
     ("AI assistant", status_for("PARTIAL", "homeVoiceEntryOpensCompactAssistant"), "UI entry and voice preset logic only; no live microphone/WebSocket/provider conversation test."),
     ("Account and Settings navigation", status_for("PARTIAL", "accountTabAndSettingsHubRemainReachable"), "Navigation reachability only; no live sign-in/profile/avatar integration test."),
     ("Video poster URL/fallback logic", status_for("PASS (UNIT LOGIC)", "VideoThumbnailUrlTest"), "Validates URL selection and fallback logic; does not prove remote image loading or playback."),
-    ("Music playback", "NOT TESTED", "No end-to-end play/pause/seek/background playback test in this suite."),
+    ("Music playback", status_for("PARTIAL", "mediaSessionPlaysLocalAudioAndContinuesWhenActivityStops"), "Instrumented MediaSessionService local-audio playback and Activity background transition; remote catalogue streaming, audio focus/interruption recovery and physical-device battery/memory behavior remain unverified."),
     ("Video playback/fullscreen", "NOT TESTED", "No end-to-end embedded player, fullscreen, rotation or provider-error test."),
     ("Audio/video downloads", "NOT TESTED", "No end-to-end download, file-integrity or offline-open test."),
     ("Google authentication/session restore", "NOT TESTED", "No end-to-end OAuth or persisted-session test."),

@@ -20,6 +20,8 @@ class HtePlaybackService : MediaSessionService() {
         super.onCreate()
         val audioPlayer = ExoPlayer.Builder(this)
             .setAudioAttributes(AudioAttributes.DEFAULT, true)
+            // Pause promptly when headphones or another external audio route disconnects.
+            .setHandleAudioBecomingNoisy(true)
             // Keep the CPU awake during foreground music playback when the screen is off.
             .setWakeMode(C.WAKE_MODE_LOCAL)
             .build()
