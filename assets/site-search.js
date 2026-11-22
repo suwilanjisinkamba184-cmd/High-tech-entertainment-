@@ -37,6 +37,7 @@
           <button class="hte-search-filter" type="button" data-category="releases" aria-pressed="false">Releases</button>
           <button class="hte-search-filter" type="button" data-category="videos" aria-pressed="false">Videos</button>
         </div>
+        <div class="hte-search-genres" role="group" aria-label="Filter music genre" hidden></div>
         <p class="hte-search-status" role="status" aria-live="polite">Search across the HTE public catalogue.</p>
       </div>`;
     hero.insertAdjacentElement('afterend', panel);
@@ -45,8 +46,48 @@
     const input = panel.querySelector('#hte-universe-search');
     const status = panel.querySelector('.hte-search-status');
     const filters = Array.from(panel.querySelectorAll('[data-category]'));
+    const genreBar = panel.querySelector('.hte-search-genres');
     let category = 'all';
     let query = '';
+    let selectedGenre = '';
+
+    const refreshGenres = () => {
+      const music = targets.find(item => item.key === 'music');
+      const values = new Map();
+      if (music) {
+        music.container.querySelectorAll(':scope > article .pill').forEach(pill => {
+          const label = (pill.textContent || '').trim();
+          if (label) values.set(label.toLocaleLowerCase(), label);
+        });
+      }
+      genreBar.replaceChildren();
+      if (!values.size) {
+        genreBar.hidden = true;
+        selectedGenre = '';
+        return;
+      }
+      const label = document.createElement('span');
+      label.className = 'hte-search-genre-label';
+      label.textContent = 'GENRE';
+      genreBar.append(label);
+      const addButton = (value, text) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'hte-search-genre';
+        button.dataset.genre = value;
+        button.textContent = text;
+        button.setAttribute('aria-pressed', String(selectedGenre === value));
+        button.addEventListener('click', () => {
+          selectedGenre = value;
+          refreshGenres();
+          apply();
+        });
+        genreBar.append(button);
+      };
+      addButton('', 'All genres');
+      values.forEach((name, key) => addButton(key, name));
+      genreBar.hidden = category !== 'music';
+    };
 
     const apply = () => {
       let total = 0;
@@ -62,7 +103,8 @@
         if (active && empty && /loading/i.test(empty.textContent || '')) loading = true;
         return { target, section, active, entries: cards.map(card => ({
           card,
-          text: (card.textContent || '').normalize('NFKC').toLocaleLowerCase()
+          text: (card.textContent || '').normalize('NFKC').toLocaleLowerCase(),
+          genre: (card.querySelector('.pill')?.textContent || '').trim().toLocaleLowerCase()
         })) };
       });
 
@@ -70,14 +112,15 @@
       sections.forEach(({ section, active }) => {
         if (section) section.classList.toggle('hte-search-section-hidden', !active);
       });
-      sections.forEach(({ active, entries }) => {
-        entries.forEach(({ card, text }) => {
+      sections.forEach(({ target, active, entries }) => {
+        entries.forEach(({ card, text, genre }) => {
           const matches = !terms.length || terms.every(term => text.includes(term));
-          const show = active && matches;
+          const genreMatches = target.key !== 'music' || !selectedGenre || genre === selectedGenre;
+          const show = active && matches && genreMatches;
           card.classList.toggle('hte-search-card-hidden', !show);
           if (active) {
             total += 1;
-            if (matches) {
+            if (matches && genreMatches) {
               visible += 1;
               if (!firstMatch) firstMatch = card;
             }
@@ -85,7 +128,7 @@
         });
       });
 
-      if (!query) {
+      if (!query && !selectedGenre) {
         status.textContent = category === 'all'
           ? 'Search across tracks, artists, releases and official videos.'
           : 'Browsing ' + targets.find(item => item.key === category).label + '. Enter a search to narrow the results.';
@@ -97,7 +140,8 @@
         status.textContent = 'No matches found. Try another title, artist or genre.';
         status.dataset.state = 'empty';
       } else {
-        status.textContent = visible + ' result' + (visible === 1 ? '' : 's') + ' found' + (total > visible ? ' from ' + total + ' items' : '') + '.';
+        const filtersApplied = [query ? 'search' : '', selectedGenre ? selectedGenre : ''].filter(Boolean).join(' · ');
+        status.textContent = visible + ' result' + (visible === 1 ? '' : 's') + ' found' + (total > visible ? ' from ' + total + ' items' : '') + (filtersApplied ? ' for ' + filtersApplied : '') + '.';
         status.dataset.state = 'results';
       }
       return { visible, firstMatch };
@@ -105,7 +149,9 @@
 
     const setCategory = next => {
       category = next;
+      if (category !== 'music') selectedGenre = '';
       filters.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.category === category)));
+      refreshGenres();
       apply();
     };
 
@@ -136,9 +182,13 @@
     });
 
     targets.forEach(target => {
-      const observer = new MutationObserver(apply);
+      const observer = new MutationObserver(() => {
+        refreshGenres();
+        apply();
+      });
       observer.observe(target.container, { childList: true, subtree: true });
     });
+    refreshGenres();
     apply();
   };
 
