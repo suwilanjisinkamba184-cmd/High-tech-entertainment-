@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -198,9 +199,10 @@ fun HteSplashScreen(
                     }
                 }
                 Image(
-                    painter = painterResource(id = R.drawable.ic_hte_launcher),
+                    painter = painterResource(id = R.drawable.ht_logo),
                     contentDescription = "High-Tech Entertainment official logo",
-                    modifier = Modifier.size(96.dp)
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(142.dp)
                 )
             }
             Spacer(Modifier.height(20.dp))

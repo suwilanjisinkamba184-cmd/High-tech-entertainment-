@@ -62,8 +62,13 @@ fun MusicHomeScreen(
     onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit, onSettings: () -> Unit, onArtistClick: (ArtistDto) -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
-    favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
+    favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit,
+    recommendationsRevision: Int = 0
 ) {
+    val settingsContext = LocalContext.current
+    val recommendationsEnabled = remember(settingsContext, recommendationsRevision) {
+        AppSettingsStore(settingsContext).personalisedRecommendations
+    }
     var selectedCategory by remember { mutableStateOf("All") }
     val genres = tracks.mapNotNull { it.genre?.takeIf(String::isNotBlank) }.distinct().sorted()
     val categories = listOf("All", "Favourites") + genres
@@ -75,7 +80,6 @@ fun MusicHomeScreen(
     val favouriteTracks = tracks.filter { it.id in favouriteTrackIds }
     val preferredGenreCounts = favouriteTracks.mapNotNull { it.genre?.trim()?.takeIf(String::isNotBlank) }
         .groupingBy { it.lowercase() }.eachCount()
-    val recommendationsEnabled = AppSettingsStore(LocalContext.current).personalisedRecommendations
     val usePersonalisedRecommendations = recommendationsEnabled && preferredGenreCounts.isNotEmpty()
     val recommendationCandidates = if (usePersonalisedRecommendations) tracks.filterNot { it.id in favouriteTrackIds } else tracks
     val recommendationOrder = rankGenreIndexesByPreference(recommendationCandidates.map { it.genre }, preferredGenreCounts)
@@ -613,10 +617,12 @@ fun Universe2026Home(
     onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit, onSettings: () -> Unit, onArtistClick: (ArtistDto) -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
-    favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
+    favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit,
+    recommendationsRevision: Int = 0
 ) = MusicHomeScreen(
     tracks, artists, releases, videos, playlists, playlistTracks, profileName, profileAvatarUrl, isLoading,
     onExplore, onLibrary, onVideos, onVoice, onProfile, onSettings, onArtistClick,
-    onPlayTrack, onPlayPlaylist, onPlayVideo, onDownloadTrack, onDownloadVideo, favouriteTrackIds, onToggleFavourite, onRefresh
+    onPlayTrack, onPlayPlaylist, onPlayVideo, onDownloadTrack, onDownloadVideo, favouriteTrackIds, onToggleFavourite, onRefresh,
+    recommendationsRevision
 )
 

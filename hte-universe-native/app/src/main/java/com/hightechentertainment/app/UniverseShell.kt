@@ -638,7 +638,8 @@ fun UniverseShell() {
                     onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed, track.rightsStatus) },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     onDownloadVideo = { startDownload(it.downloadUrl, it.title, "video") },
-                    onRefresh = ::refreshCatalogue
+                    onRefresh = ::refreshCatalogue,
+                    recommendationsRevision = settingsRevision
                 )
                 UniverseTab.DISCOVER -> DiscoverScreen(
                     tracks = tracks, artists = artists, isLoading = isLoading, error = catalogueError,
@@ -908,7 +909,8 @@ private fun HomeScreen(
     onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit, onSettings: () -> Unit, onArtistClick: (ArtistDto) -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
-    favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
+    favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit,
+    recommendationsRevision: Int
 ) {
     MusicHomeScreen(
         tracks = tracks, artists = artists, releases = releases, videos = videos, playlists = playlists, playlistTracks = playlistTracks,
@@ -917,7 +919,8 @@ private fun HomeScreen(
         onPlayTrack = onPlayTrack, onPlayPlaylist = onPlayPlaylist, onPlayVideo = onPlayVideo,
         onDownloadTrack = onDownloadTrack, onDownloadVideo = onDownloadVideo,
         favouriteTrackIds = favouriteTrackIds, onToggleFavourite = onToggleFavourite,
-        onRefresh = onRefresh
+        onRefresh = onRefresh,
+        recommendationsRevision = recommendationsRevision
     )
 }
 
@@ -1524,8 +1527,16 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
         offlineLookupComplete = true
     }
     if (!offlineLookupComplete) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = ShellGold)
+        Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                Modifier.fillMaxSize().background(Color(0xFF050506)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = ShellGold)
+            }
         }
         return
     }
