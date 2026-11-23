@@ -92,7 +92,7 @@ feature_rows = [
     ("Music playback", status_for("PARTIAL", "mediaSessionPlaysLocalAudioAndContinuesWhenActivityStops"), "Instrumented MediaSessionService local-audio playback and Activity background transition; remote catalogue streaming, audio focus/interruption recovery and physical-device battery/memory behavior remain unverified."),
     ("Video playback/fullscreen", status_for("PARTIAL", "exoplayerRendersFirstFrameFromLocalMp4"), "Instrumented Media3 local MP4 first-frame render and decoder error check; remote catalogue streaming, embedded YouTube playback, fullscreen, rotation and provider-error recovery remain unverified."),
     ("Offline local URI resolution", status_for("PASS (UNIT LOGIC)", "OfflineDownloadResolutionTest"), "Verifies exact-source lookup only for completed DownloadManager records; actual download completion, file integrity and offline playback remain unverified."),
-    ("Audio/video downloads", "NOT TESTED", "No end-to-end download, file-integrity or offline-open test.")
+    ("Audio/video downloads", "NOT TESTED", "No end-to-end download, file-integrity or offline-open test."),
     ("Google authentication/session restore", "NOT TESTED", "No end-to-end OAuth or persisted-session test."),
     ("Founder Studio upload/publishing", "NOT TESTED", "No end-to-end Founder authorization, upload or publishing test."),
     ("Live Supabase data/network behavior", "NOT TESTED", "Build configuration is validated; live catalogue and failure/retry journeys are not exercised here."),
