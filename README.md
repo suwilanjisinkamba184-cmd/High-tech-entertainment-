@@ -1,68 +1,41 @@
-# HTE Universe — clean Android rebuild
+# HTE Voice Companion token service
 
-Standalone Android application built from a new Kotlin + Jetpack Compose source tree. It does not import or depend on the legacy Flutter/native application source.
+This Supabase Edge Function is deployed as `elevenlabs-voice-token`. The signed-in Android app calls it before starting the private ElevenLabs WebRTC conversation.
 
-- Application ID: `com.hightechentertainment.app`
-- UI: Kotlin 2.4.21, Jetpack Compose, Material 3
-- Android build: AGP 9.3.1, Gradle 9.6.0, JDK 17, compile SDK 37 / target SDK 36
-- Visual direction: black / metallic gold / silver; crown, orbiting stars, rotating headphones and video-camera motifs
-- Brand: **HTE Universe — The Pride of Africa**
-- Supporting line: **Music. Creativity. Connection.**
+## Runtime API flow
 
-## Build
+1. Android calls `POST /functions/v1/elevenlabs-voice-token` with the current Supabase user access token in `Authorization: Bearer <user-access-token>` and the project's publishable key in `apikey`.
+2. The Edge Function validates the user with Supabase Auth. Anonymous or invalid sessions are rejected.
+3. The function requests a short-lived ElevenLabs conversation token from `GET https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=agent_2601m6tt0dszfqaa7ec4jefe96ww` using the server-side `xi-api-key` header.
+4. Android receives only `{ "token": "...", "user_id": "..." }` and starts the official ElevenLabs Android SDK session with registered client tools.
 
-Requires JDK 17, Android SDK 37 and Gradle 9.6.0:
+## Required server-side secret
 
-```sh
-gradle --no-daemon :app:assembleDebug
-gradle --no-daemon :app:testDebugUnitTest
-```
+- `ELEVENLABS_API_KEY` is the canonical Supabase Edge Function secret name. The current function also temporarily supports the legacy `ELEVENLABS_API_KEY,` name (trailing comma) so existing deployments continue to work. Migrate to the canonical name in Supabase Dashboard → Edge Functions → Secrets, then remove the legacy alias. Never put the key in Android, Gradle, GitHub source, app settings, or chat.
+- Supabase supplies the project URL and publishable/legacy anon key to the runtime.
 
-## Core dependency baseline
+## Agent configuration
 
-- Compose BOM 2026.06.01 (API 37 build baseline)
-- AndroidX Activity Compose 1.13.0
-- AndroidX Lifecycle 2.11.0 (API 37)
-- AndroidX Core KTX 1.19.1 (API 37)
-- Media3 1.11.1
-- Supabase Kotlin 3.9.0
-- Ktor 3.6.1
-- ElevenLabs Android 0.13.1
+- Agent: `agent_2601m6tt0dszfqaa7ec4jefe96ww`
+- LLM: Gemini 2.5 Flash
+- ASR: Scribe Realtime
+- Conversational TTS: `eleven_v4_turbo`
+- Default voice: Eric — Smooth & Trustworthy
+- Selectable voices: Eric, Sarah — Warm & Professional, and Roger — Relaxed & Casual
+- Authentication: enabled
+- HTE knowledge document: `HTE Universe — Official Voice Companion Guide`
+- Android client tools: `control_playback`, `navigate_app`, `search_catalogue`
 
-AndroidX Core 1.19.x and Lifecycle 2.11.x are aligned with API 37 and AGP 9.1+. The project now compiles against API 37 while target SDK remains 36, avoiding opt-in to newer runtime behavior until compatibility testing is complete. AGP 9.3.1 is paired with Gradle 9.6.0; Kotlin 2.4.21 is retained with the documented temporary AGP built-in Kotlin/new DSL opt-outs.
+A separate Text-to-Speech request is not required for live Voice Companion conversations. Conversational AI handles recognition, turn-taking, tool calls and spoken output. The Android app passes the selected approved voice ID through the SDK's per-session TTS override.
 
-## Backend configuration
+## Security contract
 
-The Android build reads only the Supabase project URL and **publishable** key from Gradle properties or environment variables:
+- Supabase Edge Function JWT verification remains enabled (`verify_jwt = true`).
+- Only signed-in users receive conversation tokens.
+- The ElevenLabs API key is used only inside the Edge Function.
+- Responses include `Cache-Control: no-store`.
+- The Android app receives a short-lived conversation token and authenticated user ID, never the provider API key.
 
-- `SUPABASE_URL`
-- `SUPABASE_PUBLISHABLE_KEY`
+## Verification
 
-For GitHub Actions, configure these as repository Actions secrets with those exact names. Do not commit `local.properties`, secret keys, service-role keys, signing files or passwords. The client deliberately rejects missing runtime configuration instead of silently connecting to an unintended backend.
-
-The first integration layer includes the Supabase Kotlin client, PKCE auth configuration, email/password member auth operations, and a read-only published-track repository. Founder authorization must be enforced by trusted server-side app metadata and database RLS; a UI-only role check is not security.
-
-## Signing and release safety
-
-Production signing continues to read the existing `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and `ANDROID_STORE_PASSWORD` GitHub Actions secrets. The workflow decodes the keystore only into the runner's temporary directory, checks the APK signer against the existing public release, and removes the temporary keystore even if a later step fails. Never commit or rotate these secrets as part of a dependency update.
-
-## Security boundary
-
-Only approved credentials/configuration may be migrated from the previous project. Never copy legacy source files, UI, layouts, assets or application modules. Keep keystore material and API secrets in GitHub Actions secrets / secure local storage; never commit secret values.
-
-## Current milestone
-
-- Clean Compose project foundation and branded startup prototype.
-- Supabase client/auth/catalogue data layer; SDK 37 toolchain aligned with AGP 9.3.1, Gradle 9.6.0 and Kotlin 2.4.21.
-- Media3 1.11.1 playback, HLS and DASH libraries included as the native media foundation.
-- CI uses current Node 24 GitHub Actions releases and verifies the original production signing certificate.
-- The source tree now includes the Media3 playback service and UI, 15-second branded splash, offline download manager, Founder Studio, member account/profile flows and native video playback. These paths still require complete end-to-end and physical-device acceptance; CI smoke tests are not a substitute for device testing.
-
-
-## Native release and update strategy
-
-The Kotlin/Jetpack Compose application uses signed, versioned APK releases. The in-app updater checks the latest GitHub Release, downloads over HTTPS, resumes interrupted downloads, verifies the published SHA-256 digest when supplied, and hands the APK to Android's package installer. Android enforces that an in-place update is signed by the same application certificate. Publish a full native APK for Kotlin, Compose, manifest, dependency, or other native-code security fixes.
-
-The existing Shorebird OTA workflow is retained for the legacy Flutter application only. Shorebird patches Dart code in that Flutter runtime; it cannot patch this native Kotlin/Compose application. Do not label a Shorebird patch as an update to the native app. Catalogue and remote configuration changes can continue to arrive through the Supabase backend without replacing the APK.
-
-Native release tags use `native-v` plus the Gradle `versionName` (for example, `native-v4.0.1`). The native updater filters only this tag namespace, so it cannot offer a legacy Flutter/Shorebird APK as a native Compose update. The Android release workflow verifies the production signing certificate against the established release certificate before publishing the APK asset.
+A complete end-to-end test requires a signed-in app session, a valid server-side secret, microphone permission, network access and a real Android SDK conversation. Anonymous smoke tests should be rejected with HTTP 401. A successful source build alone does not prove a live voice session works.

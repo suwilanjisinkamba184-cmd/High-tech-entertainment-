@@ -1,0 +1,1 @@
+-- Consolidated into the reconstructed 20261027232300 baseline. The baseline includes the current catalog schema and storage setup; this marker preserves the live migration ledger version.

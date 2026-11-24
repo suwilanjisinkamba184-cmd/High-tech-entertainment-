@@ -1,0 +1,42 @@
+---
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#090909">
+  <meta name="robots" content="noindex,nofollow">
+  <title>HTE Branded Download | High-Tech Entertainment</title>
+  <style>
+    :root{color-scheme:dark;--gold:#d8b65c;--silver:#c4cad2;--panel:#15151b;--muted:#a5a5ad}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(70% 45% at 50% 0,rgba(216,182,92,.13),transparent 75%),#090909;color:#f7f7f7;font:16px/1.6 system-ui,sans-serif;display:grid;place-items:center;padding:24px}
+    main{width:min(620px,100%);border:1px solid rgba(216,182,92,.25);border-radius:24px;background:var(--panel);padding:clamp(24px,6vw,42px);box-shadow:0 24px 90px #0008}
+    .brand{color:var(--gold);font-size:12px;font-weight:800;letter-spacing:.2em;text-transform:uppercase}
+    h1{font-size:clamp(27px,6vw,40px);line-height:1.12;margin:12px 0}
+    p{color:var(--muted)}.track{margin:24px 0;padding:18px;border-radius:16px;background:#0d0d12;border:1px solid #ffffff12}
+    .track strong{display:block;color:#fff;font-size:19px}.track span{color:var(--muted);font-size:14px}
+    button,.download-link{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:52px;border:0;border-radius:14px;background:linear-gradient(110deg,#e2c56e,#b99a48);color:#111;font-weight:800;font-size:15px;text-decoration:none;padding:12px 18px;cursor:pointer}
+    button:disabled{opacity:.5;cursor:not-allowed}.status{min-height:28px;margin:16px 0 0;font-size:14px;color:var(--silver)}.status.error{color:#ff9b9b}.status.success{color:#9ed5a6}
+    .progress{height:5px;border-radius:8px;background:#292832;overflow:hidden;margin-top:14px}.progress>span{display:block;width:0;height:100%;background:var(--gold);transition:width .2s}
+    .fine{font-size:12px;margin-top:18px}.fine a{color:var(--gold)}
+  </style>
+  <script is:inline src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
+  <script is:inline src={`${base}supabase-config.js`}></script>
+  <script is:inline src={`${base}assets/app.js?v=23`}></script>
+  <script is:inline src={`${base}assets/branded-download.js?v=3`} defer></script>
+</head>
+<body>
+  <main>
+    <div class="brand">High-Tech Entertainment</div>
+    <h1>Your music.<br>Delivered securely.</h1>
+    <p>HTE prepares a private temporary copy of authorised audio in Supabase, then streams it to your device through a short-lived download link. The temporary copy is automatically removed after its retention period.</p>
+    <div class="track"><strong id="track-title">Loading track…</strong><span id="track-artist">Please wait</span></div>
+    <button id="create-download" type="button" disabled>Prepare secure download</button>
+    <div class="progress" aria-hidden="true"><span id="download-progress"></span></div>
+    <p id="download-status" class="status" role="status" aria-live="polite">Checking track and download permissions…</p>
+    <p class="fine">Downloads are available only for HTE-owned or appropriately licensed audio. YouTube and Spotify links remain on their original platforms and are never copied or re-uploaded by HTE. <a href={`${base}privacy-policy.html`}>Privacy policy</a></p>
+  </main>
+</body>
+</html>

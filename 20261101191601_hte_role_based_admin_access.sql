@@ -1,0 +1,1 @@
+-- Consolidated source note: role assignment schema and server-verified helper RPCs are established in 20261101121639_revoke_anon_personal_app_data_access.sql so earlier Founder policies can depend on them. This marker preserves the live ledger version.

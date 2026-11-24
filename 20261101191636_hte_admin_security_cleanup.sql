@@ -1,0 +1,1 @@
+-- Consolidated source note: role-helper execution grants and private role-table access are hardened in the preceding 20261101191601_hte_role_based_admin_access.sql migration. This marker preserves the live ledger version.

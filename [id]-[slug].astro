@@ -1,0 +1,25 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import rawSeo from '../../data/public-seo.json';
+import { slugify } from '../../lib/slugify';
+type ArtistRecord = {id:string;name:string;bio?:string;image_url?:string};
+type ReleaseRecord = {id:string;title:string;release_date?:string;cover_url?:string;spotify_url?:string};
+const site='https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/';
+const base=import.meta.env.BASE_URL.endsWith('/')?import.meta.env.BASE_URL:`${import.meta.env.BASE_URL}/`;
+export function getStaticPaths(){
+  const publicSeo = rawSeo as unknown as {artists:ArtistRecord[];releases:ReleaseRecord[]};
+  return publicSeo.artists.filter(item=>item?.id&&item?.name&&/^[A-Za-z0-9_-]{1,80}$/.test(String(item.id))).map(artist=>({params:{id:String(artist.id),slug:slugify(artist.name, 'artist')},props:{artist}}));
+}
+const {artist}=Astro.props;
+const canonical=site+'artists/'+encodeURIComponent(String(artist.id))+'-'+slugify(artist.name)+'/';
+const image=typeof artist.image_url==='string'&&artist.image_url.startsWith('https://')?artist.image_url:site+'images/brand/high-tech-hero.svg';
+const description=String(artist.bio||('Discover '+artist.name+' on HTE Universe. Explore music, releases and official updates from High-Tech Entertainment.')).replace(/\s+/g,' ').slice(0,300);
+const schema={'@context':'https://schema.org','@type':'MusicGroup','name':artist.name,'description':description,'image':image,'url':canonical};
+---
+<SiteLayout title={artist.name+' | HTE Universe Artist'} description={description} canonical={canonical} image={image} imageAlt={artist.name + " artist portrait"}>
+  <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+  <main class="profile"><header><a href={base}>← HTE Universe</a><a href={base+'#artists'}>All artists</a></header><section class="hero"><img src={image} alt={artist.name+' artist profile'} loading="eager" /><div><p class="eyebrow">HTE UNIVERSE · ARTIST PROFILE</p><h1>{artist.name}</h1><p>{description}</p><a class="button" href={base+'#music'}>Explore HTE music ↗</a></div></section><section class="more"><h2>Discover the music</h2><p>Explore the public HTE catalogue for music, videos and releases. New public updates appear as they are published by High-Tech Entertainment.</p><a href={base+'#music'}>Open music catalogue ↗</a></section><footer>© {new Date().getFullYear()} High-Tech Entertainment · <a href={base+'privacy-policy.html'}>Privacy</a></footer></main>
+</SiteLayout>
+<style>
+.profile{min-height:100vh;background:#090909;color:#f8f6ef;padding:0 clamp(20px,7vw,100px);font-family:Inter,system-ui,sans-serif}.profile header{height:76px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #c5a45a38;color:#d4b56f;font-size:.8rem}.hero{display:grid;grid-template-columns:minmax(220px,380px) 1fr;gap:clamp(28px,6vw,80px);align-items:center;padding:clamp(50px,9vw,110px) 0}.hero img{width:100%;aspect-ratio:1;object-fit:cover;border:1px solid #c5a45a70;background:#171717}.eyebrow{color:#d4b56f;font-size:.68rem;letter-spacing:.18em;font-weight:800}.hero h1{font-size:clamp(2.8rem,7vw,6rem);letter-spacing:-.06em;margin:16px 0}.hero p:not(.eyebrow){max-width:650px;color:#aaa79f;line-height:1.8}.button{display:inline-flex;margin-top:18px;padding:14px 20px;background:linear-gradient(110deg,#c5a45a,#cfd0d1);color:#111;font-weight:800;font-size:.78rem}.more{max-width:800px;border-top:1px solid #ffffff1b;padding:35px 0 70px}.more p{color:#aaa79f;line-height:1.8}.more a{color:#d4b56f;font-weight:700}footer{border-top:1px solid #ffffff1b;padding:24px 0;color:#888;font-size:.75rem}footer a{color:#d4b56f}@media(max-width:680px){.hero{grid-template-columns:1fr}.hero img{max-width:280px}}
+</style>

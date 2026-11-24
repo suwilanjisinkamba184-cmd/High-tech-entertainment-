@@ -1,0 +1,1 @@
+-- Consolidated source note: the hte-videos bucket and administrator object policies are created by the preceding 20261105020850_app_notifications_and_video_storage.sql migration. This marker preserves the live ledger version for clean replays; no additional DDL is required.
