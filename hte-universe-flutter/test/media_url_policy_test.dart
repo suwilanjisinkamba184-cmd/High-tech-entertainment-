@@ -35,6 +35,27 @@ void main() {
       );
     });
 
+    test('accepts canonical YouTube host variants only', () {
+      expect(
+        HteMediaUrlPolicy.youtubeVideoId(
+          'https://www.youtube.com/watch?v=abcdefghijk',
+        ),
+        'abcdefghijk',
+      );
+      expect(
+        HteMediaUrlPolicy.youtubeVideoId(
+          'https://youtube.www.com/watch?v=abcdefghijk',
+        ),
+        isNull,
+      );
+      expect(
+        HteMediaUrlPolicy.youtubeVideoId(
+          'https://notyoutube.com/watch?v=abcdefghijk',
+        ),
+        isNull,
+      );
+    });
+
     test('extracts YouTube IDs and returns resilient poster candidates', () {
       const videoUrl = 'https://youtu.be/abcdefghijk';
       expect(HteMediaUrlPolicy.youtubeVideoId(videoUrl), 'abcdefghijk');

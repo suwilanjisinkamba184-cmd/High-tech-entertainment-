@@ -58,7 +58,8 @@ abstract final class HteMediaUrlPolicy {
     final uri = parseSecureUri(value);
     if (uri == null) return null;
 
-    final host = uri.host.toLowerCase().replaceFirst('www.', '');
+    final rawHost = uri.host.toLowerCase();
+    final host = rawHost.startsWith('www.') ? rawHost.substring(4) : rawHost;
     final segments = uri.pathSegments.where((segment) => segment.isNotEmpty);
     final parts = segments.toList(growable: false);
 
