@@ -1,182 +1,68 @@
-# High-Tech Entertainment
+# HTE Universe — clean Android rebuild
 
-**Music. Beats. Production. Beyond.**
+Standalone Android application built from a new Kotlin + Jetpack Compose source tree. It does not import or depend on the legacy Flutter/native application source.
 
-[![OpenRepos](https://img.shields.io/endpoint?url=https://openrepos.org/status/high-tech-entertainment.openrepos.org.json&style=flat-square)](https://high-tech-entertainment.openrepos.org/)
+- Application ID: `com.hightechentertainment.app`
+- UI: Kotlin 2.4.21, Jetpack Compose, Material 3
+- Android build: AGP 9.3.1, Gradle 9.6.0, JDK 17, compile SDK 37 / target SDK 36
+- Visual direction: black / metallic gold / silver; crown, orbiting stars, rotating headphones and video-camera motifs
+- Brand: **HTE Universe — The Pride of Africa**
+- Supporting line: **Music. Creativity. Connection.**
 
-High-Tech Entertainment is a focused music and artist platform for discovering releases, featured music, viewing artists and videos, and contacting or booking the team. The project includes a public website, a founder administration area, a shared member account, and a native Android application.
+## Build
 
-## Production addresses
+Requires JDK 17, Android SDK 37 and Gradle 9.6.0:
 
-- **Official public website (GitHub Pages):** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/
-- **Founder Studio:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/admin/
-- **Account:** https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account/
-
-GitHub Pages is the official and canonical public website host. The `.github/workflows/publish-github-pages.yml` workflow installs Node.js, builds the Astro site in `website/`, assembles shared account and Founder Studio routes into `dist/` with `scripts/build-website.sh`, and deploys it to GitHub Pages on pushes to `main`. Supabase provides authentication, database, media storage and serverless functions.
-
-## Project components
-
-| Component | Location | Purpose |
-|---|---|---|
-| Public website | `website/` | Astro + React + TypeScript + Tailwind public music experience |
-| Founder Studio | `admin/` | Administrative tools for managing platform content and enquiries |
-| Account pages | `account/` | User account and profile experience |
-| Native Android application | `hte-universe-native/` | Kotlin, Jetpack Compose, AndroidX Media3 and Supabase Kotlin client |
-| Legacy Flutter source | `mobile-app/` | Retained as historical source only; no longer built or released |
-| Supabase setup | Root SQL files and `database/` | Database schema, policies and migrations |
-| GitHub skills | `.github/skills/` | Design and engineering guidance for supported coding agents |
-
-### Music platform features
-
-- Public streaming catalogue with title/artist/genre search and genre filtering.
-- Device playlist and favourites for guests; authenticated favourites and the personal playlist sync through Supabase.
-- Listening activity is recorded to the signed-in user’s private listening history.
-- The account page and Android member library read shared favourites, playlists, recent listening history, booking requests and notifications from Supabase.
-- Founder Studio includes track metadata editing and live counts for unpublished tracks, videos and enquiries.
-- Track edits, publishing and uploads remain protected by Supabase Row Level Security; no service-role key is shipped to the browser.
-
-## Technology
-
-- HTML, CSS and browser JavaScript for the website.
-- Kotlin, Jetpack Compose, AndroidX Media3 and Android platform services for the native application.
-- Supabase Auth, PostgreSQL, Row Level Security (RLS), and Storage.
-- GitHub Actions and GitHub Pages for website publishing, validation and application builds/releases.
-
-## Supabase configuration
-
-The website's `supabase-config.js` contains the Supabase project URL and a browser-safe publishable key. A publishable key is intended for client-side use; it does **not** replace database security. Protect data with correct RLS policies and Storage policies.
-
-**Never commit or expose** a Supabase `service_role` key, an `sb_secret_` key, database passwords, signing passwords, or a keystore file. Keep private credentials in the relevant secure service settings or GitHub Actions secrets.
-
-Founder-only actions must be enforced by database RLS and server-side authorization. Hiding admin controls in the browser is not a security boundary.
-
-### Authentication URL settings
-
-In Supabase Dashboard → Authentication → URL Configuration:
-
-Set the production Site URL to:
-
-```
-https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/
+```sh
+gradle --no-daemon :app:assembleDebug
+gradle --no-daemon :app:testDebugUnitTest
 ```
 
-Add the production GitHub Pages routes used by the application to the allowed redirect URLs:
+## Core dependency baseline
 
-```
-https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/
-https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/admin/
-https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/account/
-```
+- Compose BOM 2026.06.01 (API 37 build baseline)
+- AndroidX Activity Compose 1.13.0
+- AndroidX Lifecycle 2.11.0 (API 37)
+- AndroidX Core KTX 1.19.1 (API 37)
+- Media3 1.11.1
+- Supabase Kotlin 3.9.0
+- Ktor 3.6.1
+- ElevenLabs Android 0.13.1
 
-Add any additional callback URLs only when they are actually used by the website or mobile authentication flow. Do not use localhost as the production Site URL.
+AndroidX Core 1.19.x and Lifecycle 2.11.x are aligned with API 37 and AGP 9.1+. The project now compiles against API 37 while target SDK remains 36, avoiding opt-in to newer runtime behavior until compatibility testing is complete. AGP 9.3.1 is paired with Gradle 9.6.0; Kotlin 2.4.21 is retained with the documented temporary AGP built-in Kotlin/new DSL opt-outs.
 
-## Database and Storage
+## Backend configuration
 
-Database setup and migration files currently include:
+The Android build reads only the Supabase project URL and **publishable** key from Gradle properties or environment variables:
 
-- `supabase-setup.sql` — baseline database and storage setup.
-- `supabase-admin-policies.sql` — founder/admin access policies.
-- `SUPABASE-REDESIGN-MIGRATION.sql` — profile and avatar-related migration.
-- `database/changes/` — subsequent database changes.
-- `supabase/migrations/20261120_member_booking_history.sql` — members can read only their own authenticated booking requests.
+- `SUPABASE_URL`
+- `SUPABASE_PUBLISHABLE_KEY`
 
-The website upload code expects these exact Supabase Storage bucket IDs:
+For GitHub Actions, configure these as repository Actions secrets with those exact names. Do not commit `local.properties`, secret keys, service-role keys, signing files or passwords. The client deliberately rejects missing runtime configuration instead of silently connecting to an unintended backend.
 
-| Bucket ID | Intended content | Access configuration |
-|---|---|---|
-| `hte-audio` | Published audio tracks | Public reads; uploads/deletes controlled by policies |
-| `hte-avatars` | User profile avatars | Private; access controlled by policies or signed URLs |
-| `hte-video` | Music videos | Confirm intended public/private access and policies before use |
+The first integration layer includes the Supabase Kotlin client, PKCE auth configuration, email/password member auth operations, and a read-only published-track repository. Founder authorization must be enforced by trusted server-side app metadata and database RLS; a UI-only role check is not security.
 
-Bucket **IDs** are not necessarily the same as their display names. Verify bucket IDs, size limits, MIME restrictions and policies in Supabase Dashboard → Storage before enabling uploads. Do not make private profile images public merely to make them display.
+## Signing and release safety
 
-## Native Android application
+Production signing continues to read the existing `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and `ANDROID_STORE_PASSWORD` GitHub Actions secrets. The workflow decodes the keystore only into the runner's temporary directory, checks the APK signer against the existing public release, and removes the temporary keystore even if a later step fails. Never commit or rotate these secrets as part of a dependency update.
 
-The production Android application is the Kotlin/Jetpack Compose project in `hte-universe-native/`.
+## Security boundary
 
-- **Application ID:** `com.hightechentertainment.app`
-- **Minimum Android version:** Android 8.0 (API 26)
-- **Production build workflow:** `.github/workflows/hte-universe-compose.yml`
-- **Official install source:** [Latest GitHub Release](https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest)
+Only approved credentials/configuration may be migrated from the previous project. Never copy legacy source files, UI, layouts, assets or application modules. Keep keystore material and API secrets in GitHub Actions secrets / secure local storage; never commit secret values.
 
-The production build uses the existing Android signing identity. The GitHub Actions secrets required for signed candidates and production releases are `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and `ANDROID_STORE_PASSWORD`. Every build also requires `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` so the installed app receives its runtime Supabase configuration.
+## Current milestone
 
-The legacy Flutter source in `mobile-app/` is retained for historical reference only. Its old build, OTA and Appetize workflows have been retired; it is not the production Android application. The current native workflow does not publish debug APKs or long-lived Actions APK artifacts. The signed production APK, SHA-256 manifest and signing-certificate fingerprint are distributed through the GitHub Release.
-
-## GitHub Actions
-
-- `.github/workflows/publish-github-pages.yml` — assembles and publishes the official public website to GitHub Pages on every push to `main`.
-- `.github/workflows/deploy-pages.yml` — validation only: checks required website files, JavaScript syntax, package JSON and sitemap XML.
-- `.github/workflows/hte-universe-compose.yml` — tests, signs and publishes the native Android application when the explicit production-release condition is met.
-- `.github/workflows/deploy-remaining-edge-functions.yml` — deploys booking and ElevenLabs Edge Functions with the official GitHub Pages CORS origin.
-- `.github/workflows/deploy-artist-video-submission.yml` — deploys the founder-authorized YouTube video submission function.
-- `.github/workflows/deploy-supabase-youtube-function.yml` — deploys the YouTube channel synchronization function.
-
-Open the repository's **Actions** tab to inspect workflow runs. The official installable APK is published through GitHub Releases; Actions artifacts are not the application distribution channel. A successful validation run does not, by itself, prove that the live website, Supabase authentication, uploads or media playback work.
-
-## Design and coding-agent guidance
-
-- `.github/skills/` contains the project's installed design and engineering skills.
-- `.github/copilot-instructions.md` contains repository-specific development guidance.
-
-Use these resources when working on interface design, animation, mobile behavior, accessibility, performance and code review. Review changes and run the relevant checks before merging them into `main`.
-
-## GitHub coding-agent skills
-
-The repository includes reusable agent skills under `.github/skills/`:
-
-- **Impeccable** — primary design director for UX critique, accessibility, responsive layout, typography, polish and hardening.
-- **Emil Kowalski design engineering** — interaction detail, component craft and purposeful motion.
-- **Break UI** — stress-testing unusual content, empty states, overflow and edge cases.
-- **Mobile Native** — touch-first responsive behavior and mobile-browser quality.
-- **Apple Design** — gesture, motion and interface feedback principles.
-- **Animation Performance / Animate** — reduced-motion-aware animation and performance.
-- **Pick UI Library** — dependency evaluation before adding UI libraries.
-- **Prototype** — comparing materially different interface directions.
-
-Start with `PRODUCT.md`, `DESIGN.md` and `.github/copilot-instructions.md`. The checked-in Impeccable skill and references are available to compatible coding agents. Its optional CLI and automatic hooks are installed separately with `npx impeccable install`; they are not assumed active merely because the skill files are present.
-
-## Local development
-
-Run a local HTTP server from the repository root. For example, with Python installed:
-
-```bash
-python -m http.server 8000
-```
-
-Then open:
-
-```
-http://localhost:8000/
-```
-
-Do not rely on opening the HTML files directly with `file://`; browser authentication redirects and some web APIs require an HTTP origin.
-
-## Pre-release verification checklist
-
-Before calling a release production-ready, verify each item in the actual environment:
-
-- [ ] Public website loads over HTTPS at the configured GitHub Pages URL.
-- [ ] Supabase email/password and any enabled OAuth sign-in flows complete and return to the correct page.
-- [ ] Founder/admin authorization is enforced by RLS and server-side checks.
-- [ ] Admin create, edit and delete operations work for tracks, artists, releases and videos.
-- [ ] Storage bucket IDs, privacy settings, file limits and upload policies match the application.
-- [ ] Audio and video playback work in supported desktop and mobile browsers.
-- [ ] Booking, contact and support forms deliver submissions to the intended destination.
-- [ ] Android APK installs and runs on a physical device; background playback and authentication are tested.
-- [ ] Release signing and update compatibility are verified before distributing an Android update.
-
-## Support and maintenance
-
-Keep this README aligned with the actual GitHub Pages deployment, routes, Supabase schema, bucket IDs and workflow behavior. Update it whenever deployment architecture or application build requirements change.
+- Clean Compose project foundation and branded startup prototype.
+- Supabase client/auth/catalogue data layer; SDK 37 toolchain aligned with AGP 9.3.1, Gradle 9.6.0 and Kotlin 2.4.21.
+- Media3 1.11.1 playback, HLS and DASH libraries included as the native media foundation.
+- CI uses current Node 24 GitHub Actions releases and verifies the original production signing certificate.
+- The source tree now includes the Media3 playback service and UI, 15-second branded splash, offline download manager, Founder Studio, member account/profile flows and native video playback. These paths still require complete end-to-end and physical-device acceptance; CI smoke tests are not a substitute for device testing.
 
 
-## Legal documents and developer contact
+## Native release and update strategy
 
-- Privacy policy: [privacy-policy.html](privacy-policy.html)
-- Terms of use: [terms-of-use.html](terms-of-use.html)
-- Account deletion: [account-deletion.html](account-deletion.html)
-- Developer / founder: **Simon Suwilanji Sinkamba**
-- Developer email: **suwilanjisinkamba184@gmail.com**
+The Kotlin/Jetpack Compose application uses signed, versioned APK releases. The in-app updater checks the latest GitHub Release, downloads over HTTPS, resumes interrupted downloads, verifies the published SHA-256 digest when supplied, and hands the APK to Android's package installer. Android enforces that an in-place update is signed by the same application certificate. Publish a full native APK for Kotlin, Compose, manifest, dependency, or other native-code security fixes.
 
-The Android app's private Founder Studio includes an on-device developer diagnostics view. Native Android, Compose and uncaught platform errors are retained locally (up to 100 entries); the founder can review and explicitly export a redacted report. Diagnostic reports are not uploaded automatically.
+The existing Shorebird OTA workflow is retained for the legacy Flutter application only. Shorebird patches Dart code in that Flutter runtime; it cannot patch this native Kotlin/Compose application. Do not label a Shorebird patch as an update to the native app. Catalogue and remote configuration changes can continue to arrive through the Supabase backend without replacing the APK.
+
+Native release tags use `native-v` plus the Gradle `versionName` (for example, `native-v4.0.1`). The native updater filters only this tag namespace, so it cannot offer a legacy Flutter/Shorebird APK as a native Compose update. The Android release workflow verifies the production signing certificate against the established release certificate before publishing the APK asset.

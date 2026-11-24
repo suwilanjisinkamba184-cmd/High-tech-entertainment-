@@ -1,0 +1,26 @@
+/* Zambian music discovery and accessible YouTube embeds. */
+#videos .section-head{display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap}
+#videos .section-head>div{min-width:0;flex:1}
+#videos .section-head>.btn{flex:0 0 auto}
+#public-videos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start}
+.video-card{min-width:0;overflow:hidden;border:1px solid rgba(212,179,109,.22);border-radius:3px;background:linear-gradient(145deg,#171716,#101112);padding:0 0 18px}
+.video-card h3{margin:14px 16px 6px;font-family:Georgia,'Times New Roman',serif;font-size:1.25rem;font-weight:500;line-height:1.2}
+.video-card p{margin:0 16px;color:#aaa69d;font-size:.82rem;line-height:1.65}
+.video-embed{display:block;width:100%;aspect-ratio:16/9;height:auto;border:0;background:#050505}
+.video-card-kicker{display:inline-block;margin:13px 16px 0;color:#f5e7bf;font-size:.61rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+.video-card.is-featured .video-card-kicker+.video-embed{margin-top:10px}
+.video-discovery-card{display:flex;flex-direction:column;min-height:100%;padding-bottom:16px}
+.video-discovery-art{min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:radial-gradient(circle at 50% 40%,rgba(212,179,109,.2),transparent 45%),linear-gradient(145deg,#211d15,#101112);border-bottom:1px solid rgba(212,179,109,.18)}
+.video-discovery-art span{font-size:2.2rem;filter:drop-shadow(0 6px 14px #0008)}
+.video-discovery-art small{color:#f5e7bf;font-size:.58rem;font-weight:800;letter-spacing:.2em}
+.video-discovery-card .video-card-copy{display:flex;flex-direction:column;align-items:flex-start;flex:1}
+.video-discovery-card .video-card-copy .video-card-kicker{margin-top:14px}
+.video-discovery-card .video-card-copy h3{margin-top:7px}
+.video-discovery-card .video-card-copy p{flex:1;margin-bottom:16px}
+.video-discovery-card .video-card-copy .btn{margin:0 16px;font-size:.65rem}
+.video-source-note{margin:16px 0 0;color:#8e8b83;font-size:.75rem;line-height:1.6}
+@media(max-width:900px){#public-videos{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){#videos .section-head{align-items:flex-start}#videos .section-head>.btn{width:100%}#public-videos{grid-template-columns:1fr;gap:14px}.video-card h3{font-size:1.2rem}.video-discovery-art{min-height:130px}}
+@media(prefers-reduced-motion:reduce){.video-card{transition:none!important}}
+
+.video-open-youtube{display:inline-block;margin:10px 16px 0;color:#f5e7bf;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-decoration:none}.video-open-youtube:hover{text-decoration:underline}

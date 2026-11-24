@@ -1,0 +1,13 @@
+/* High-Tech Entertainment — motion and discovery polish */
+:root{--hte-motion-ease:cubic-bezier(.2,.75,.25,1)}
+html{scroll-behavior:smooth}
+.hero-art,.feature-band,.account-main-card,.account-login-card,.account-security{transition:transform .35s var(--hte-motion-ease),border-color .35s var(--hte-motion-ease),box-shadow .35s var(--hte-motion-ease)}
+.hero-art:hover,.feature-band:hover{transform:translateY(-4px);border-color:rgba(217,185,110,.48);box-shadow:0 24px 70px rgba(0,0,0,.34),0 0 34px rgba(217,185,110,.09)}
+.music-card,.artist-card,.release-card{transition:transform .28s var(--hte-motion-ease),border-color .28s var(--hte-motion-ease),box-shadow .28s var(--hte-motion-ease)}
+.music-card:hover,.artist-card:hover,.release-card:hover{transform:translateY(-5px);border-color:rgba(217,185,110,.48);box-shadow:0 18px 42px rgba(0,0,0,.28)}
+.hero .gold-text,.account-heading .gold-text{text-shadow:0 0 28px rgba(217,185,110,.24)}
+.btn.gold{transition:transform .2s var(--hte-motion-ease),box-shadow .2s var(--hte-motion-ease),filter .2s}
+.btn.gold:hover{transform:translateY(-2px);box-shadow:0 9px 26px rgba(217,185,110,.22);filter:brightness(1.08)}
+.hero-artwork{animation:hte-artwork-float 7s ease-in-out infinite}
+@keyframes hte-artwork-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.hero-artwork{animation:none!important}*,*::before,*::after{transition:none!important}}

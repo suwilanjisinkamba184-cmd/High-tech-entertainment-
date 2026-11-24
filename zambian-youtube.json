@@ -1,0 +1,39 @@
+{
+  "_comment": "Controls scripts/youtube_zambian_sync.py. Edit freely; no code changes needed.",
+
+  "supabase_url": "https://wqrxacjbsldbnoekbkbf.supabase.co",
+
+  "publish_immediately": true,
+  "max_posts_per_run": 8,
+  "lookback_days": 21,
+  "region_code": "ZM",
+
+  "min_duration_seconds": 60,
+  "max_duration_seconds": 900,
+
+  "per_channel_results": 10,
+  "per_query_results": 10,
+
+  "_channels_comment": "Channel handles (@name) or raw UC... ids. VERIFY these before relying on them - a wrong handle is skipped with a warning, it will not break the run. Add your favourite Zambian artists and labels here.",
+  "channels": [
+    "@YoMaps",
+    "@Chef187Official",
+    "@Macky2Official",
+    "@SlapdeeOfficial",
+    "@ChileOneMrZambia",
+    "@RobertoZambia",
+    "@Kupakontra",
+    "@simpledealer-s3z",
+    "@spoonmwaba",
+    "@vinchenzombale",
+    "@dopeboyszambia7995"
+  ],
+
+  "_queries_comment": "Keyword discovery. Each query costs 100 of the 10,000 daily quota units, so keep this list to about 5 or fewer.",
+  "queries": [
+    "Zambian music official video",
+    "Zambia new song official audio",
+    "Zed music new release",
+    "Zambian artist official music video"
+  ]
+}

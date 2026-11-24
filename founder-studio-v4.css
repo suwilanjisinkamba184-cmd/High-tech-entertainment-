@@ -1,0 +1,34 @@
+/* Founder Studio v4 — small accessibility and touch additions on top of v2.
+   Keeps the existing --studio-* tokens; no layout or colour changes. */
+
+/* Visually hidden but read by screen readers (table captions). */
+.admin-page .sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Phones: controls at least 44px tall so they are easy to tap. */
+@media (max-width: 680px) {
+  .admin-page .btn,
+  .admin-page .admin-nav-item,
+  .admin-page .admin-menu-toggle,
+  .admin-page input:not([type="checkbox"]):not([type="file"]),
+  .admin-page select,
+  .admin-page textarea {
+    min-height: 44px;
+  }
+}
+
+/* Sign-in hero: keep copy inside its frame on phones. */
+@media (max-width: 680px) {
+  .admin-page .admin-login-visual {
+    padding: 1.4rem 1.25rem;
+  }
+}

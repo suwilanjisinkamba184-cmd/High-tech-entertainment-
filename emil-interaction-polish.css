@@ -1,0 +1,186 @@
+/* HTE Universe interaction polish
+   Inspired by Emil Kowalski's restraint-first motion principles.
+   Motion is feedback, never decoration. Keep interactions quick and interruptible. */
+:root {
+  --hte-motion-fast: 140ms;
+  --hte-motion-ui: 190ms;
+  --hte-motion-ease: cubic-bezier(.2,.8,.2,1);
+  --hte-focus-ring: 0 0 0 3px rgba(197,164,90,.22);
+}
+
+/* Avoid scroll-reveal delays: all content remains immediately readable and crawlable. */
+.reveal,
+.reveal.in {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+/* Stop decorative gradient text from continuously moving behind readable content. */
+.grad,
+.gold-text {
+  animation: none !important;
+  background-position: 0 50%;
+}
+
+/* Short, specific transitions — never transition every property. */
+.btn,
+.button,
+.menu-toggle,
+.navlinks a,
+.main-nav a,
+.account-link,
+.footer-links a,
+.text-link,
+.catalogue-tools button,
+.catalogue-save-button,
+.account-aside-links a,
+.media-card,
+.cards > *,
+.experience-card,
+.b,
+.service-card,
+.team-card,
+.step,
+.panel,
+.account-main-card,
+.account-login-card,
+.account-security,
+.faq details,
+.toast {
+  transition:
+    color var(--hte-motion-fast) var(--hte-motion-ease),
+    background-color var(--hte-motion-fast) var(--hte-motion-ease),
+    border-color var(--hte-motion-fast) var(--hte-motion-ease),
+    box-shadow var(--hte-motion-ui) var(--hte-motion-ease),
+    opacity var(--hte-motion-fast) var(--hte-motion-ease),
+    transform var(--hte-motion-fast) var(--hte-motion-ease);
+}
+
+/* Pointer hover is subtle; touch users do not get hover-only movement. */
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover,
+  .button:hover {
+    transform: translateY(-1px);
+  }
+
+  .media-card:hover,
+  .cards > *:hover,
+  .b:hover,
+  .service-card:hover,
+  .team-card:hover,
+  .step:hover,
+  .account-main-card:hover,
+  .account-security:hover {
+    transform: translateY(-2px);
+  }
+
+  .experience-card:hover {
+    transform: translateY(-3px);
+  }
+}
+
+/* Immediate tactile feedback on press; no bounce or long easing tail. */
+.btn:active,
+.button:active,
+.menu-toggle:active,
+.catalogue-tools button:active,
+.catalogue-save-button:active,
+.account-aside-links a:active {
+  transform: scale(.98);
+  transition-duration: 90ms;
+}
+
+button,
+a,
+input,
+select,
+textarea,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+.button,
+.btn,
+.menu-toggle,
+.catalogue-tools button,
+.catalogue-save-button {
+  touch-action: manipulation;
+}
+
+:where(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--gold, #c5a45a);
+  outline-offset: 3px;
+  box-shadow: var(--hte-focus-ring);
+}
+
+:where(input, select, textarea) {
+  transition:
+    border-color var(--hte-motion-fast) var(--hte-motion-ease),
+    box-shadow var(--hte-motion-fast) var(--hte-motion-ease),
+    background-color var(--hte-motion-fast) var(--hte-motion-ease);
+}
+
+:where(input, select, textarea):focus {
+  border-color: var(--gold, #c5a45a);
+  box-shadow: var(--hte-focus-ring);
+}
+
+/* Keep status feedback readable and spatially consistent. */
+.toast,
+.booking-status,
+.status,
+[role="status"],
+[role="alert"] {
+  overflow-wrap: anywhere;
+}
+
+.toast:not(:empty) {
+  animation: hte-status-enter 160ms var(--hte-motion-ease) both;
+}
+
+@keyframes hte-status-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Native disclosure controls provide predictable, keyboard-accessible FAQ behavior. */
+.faq summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+@media (max-width: 760px) {
+  .btn,
+  .button,
+  .menu-toggle,
+  .catalogue-tools button,
+  .catalogue-save-button {
+    min-height: 44px;
+  }
+
+  .main-nav a,
+  .navlinks a,
+  .mobile-menu a,
+  .account-aside-links a {
+    min-height: 44px;
+  }
+}
+
+/* Accessibility: remove non-essential movement when requested by the device. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}

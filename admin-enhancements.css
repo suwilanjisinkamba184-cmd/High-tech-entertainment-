@@ -1,0 +1,16 @@
+/* HTE Founder Studio operational metrics and metadata editor */
+.hte-ops-metrics{margin:22px 0 30px;padding:20px;border:1px solid rgba(217,185,110,.2);border-radius:18px;background:linear-gradient(120deg,#151512,#101214);box-shadow:0 16px 38px #0004}
+.hte-ops-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.hte-ops-heading h3{margin:4px 0 0;font-size:1.25rem}
+.hte-ops-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.hte-ops-grid article{padding:16px;border:1px solid rgba(217,185,110,.14);border-radius:13px;background:#0b0d0f}
+.hte-ops-grid small{display:block;color:#c6b27f;font-size:.65rem;letter-spacing:.1em}
+.hte-ops-grid strong{display:block;margin-top:9px;font-size:1.9rem;color:#f2d99c}
+.hte-edit-dialog{width:min(520px,calc(100% - 24px));max-width:none;padding:0;border:1px solid rgba(217,185,110,.35);border-radius:20px;background:#101214;color:#f6f3ec;box-shadow:0 30px 100px #000b}
+.hte-edit-dialog::backdrop{background:#000b;backdrop-filter:blur(5px)}
+.hte-edit-card{padding:24px;display:grid;gap:13px}
+.hte-edit-card h2{margin:0}.hte-edit-card .field{display:grid;gap:6px}.hte-edit-card input:not([type=checkbox]){width:100%;min-height:44px;padding:10px;border:1px solid #4b4434;border-radius:10px;background:#08090b;color:#fff}
+.hte-edit-publish{display:flex;align-items:center;gap:10px}.hte-edit-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.hte-cloud-state{font-size:.75rem;color:#d9b96e}.hte-playlist-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.hte-playlist-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.hte-playlist-row>div{display:flex;gap:6px}
+@media(max-width:560px){.hte-ops-grid{grid-template-columns:1fr}.hte-ops-heading{align-items:flex-start}.hte-edit-card{padding:18px}.hte-cloud-state{width:100%}}

@@ -1,0 +1,16 @@
+(()=>{'use strict';
+const body=document.body;
+const toggle=document.getElementById('admin-menu-toggle');
+const sidebar=document.getElementById('admin-sidebar');
+const backdrop=document.querySelector('[data-admin-nav-close]');
+if(!toggle||!sidebar||!backdrop)return;
+const isMobile=()=>window.matchMedia('(max-width:900px)').matches;
+const focusables=()=>[...sidebar.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(el=>el.getClientRects().length);
+const close=restore=>{body.classList.remove('admin-nav-open');toggle.setAttribute('aria-expanded','false');toggle.setAttribute('aria-label','Open studio navigation');if(restore&&isMobile())toggle.focus()};
+const open=()=>{if(!isMobile())return;body.classList.add('admin-nav-open');toggle.setAttribute('aria-expanded','true');toggle.setAttribute('aria-label','Close studio navigation');const first=focusables()[0];if(first)first.focus()};
+toggle.addEventListener('click',()=>body.classList.contains('admin-nav-open')?close(false):open());
+backdrop.addEventListener('click',()=>close(true));
+sidebar.addEventListener('click',event=>{const item=event.target.closest('.admin-nav-item[data-tab]');if(item){sidebar.querySelectorAll('.admin-nav-item[data-tab]').forEach(node=>{node.removeAttribute('aria-current')});item.setAttribute('aria-current','page');if(isMobile())close(false)}else if(event.target.closest('a[href]')&&isMobile())close(false)});
+document.addEventListener('keydown',event=>{if(!body.classList.contains('admin-nav-open'))return;if(event.key==='Escape'){event.preventDefault();close(true);return}if(event.key==='Tab'){const items=focusables();if(!items.length)return;const first=items[0],last=items[items.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}}});
+window.addEventListener('resize',()=>{if(!isMobile())close(false)},{passive:true});
+})();
