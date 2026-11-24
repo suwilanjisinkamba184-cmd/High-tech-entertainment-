@@ -1,68 +1,95 @@
-# HTE Universe — clean Android rebuild
+# HTE Universe — native Android application
 
-Standalone Android application built from a new Kotlin + Jetpack Compose source tree. It does not import or depend on the legacy Flutter/native application source.
+This directory is the production Android application source. The app is implemented in Kotlin and Jetpack Compose, with AndroidX Media3 for native playback and the existing Supabase project for authentication and application data. The legacy Flutter tree in `mobile-app/` is retained for historical reference and is not the production Android build.
 
-- Application ID: `com.hightechentertainment.app`
-- UI: Kotlin 2.4.21, Jetpack Compose, Material 3
-- Android build: AGP 9.3.1, Gradle 9.6.0, JDK 17, compile SDK 37 / target SDK 36
-- Visual direction: black / metallic gold / silver; crown, orbiting stars, rotating headphones and video-camera motifs
-- Brand: **HTE Universe — The Pride of Africa**
-- Supporting line: **Music. Creativity. Connection.**
+## Verified build identity
 
-## Build
+The Gradle application module is the source of truth for build identity. Values below were checked against `app/build.gradle.kts` on 24 November 2026.
 
-Requires JDK 17, Android SDK 37 and Gradle 9.6.0:
+| Setting | Current value |
+|---|---|
+| Application ID / namespace | `com.hightechentertainment.app` |
+| Version name | `4.3.1` |
+| Version code | `55` |
+| Minimum SDK | `26` (Android 8.0) |
+| Compile SDK | `37` |
+| Target SDK | `37` |
+| JDK / JVM target | `17` |
+| Android Gradle Plugin | `9.3.1` |
+| Gradle | `9.6.0` |
+| Kotlin | `2.4.21` |
+| Compose BOM | `2026.09.00` |
+| AndroidX Media3 | `1.11.1` |
+| Supabase Kotlin BOM | `3.9.0` |
+| Ktor | `3.6.1` |
+| ElevenLabs Android SDK | `0.13.1` |
+
+Do not copy these values into release scripts as independent constants. Read or validate them against the Gradle application configuration so that documentation and release metadata cannot silently drift.
+
+## Build and test
+
+Required local tooling: JDK 17, Android SDK platform/build tools 37, and Gradle 9.6.0.
+
+From this directory:
 
 ```sh
 gradle --no-daemon :app:assembleDebug
 gradle --no-daemon :app:testDebugUnitTest
 ```
 
-## Core dependency baseline
-
-- Compose BOM 2026.06.01 (API 37 build baseline)
-- AndroidX Activity Compose 1.13.0
-- AndroidX Lifecycle 2.11.0 (API 37)
-- AndroidX Core KTX 1.19.1 (API 37)
-- Media3 1.11.1
-- Supabase Kotlin 3.9.0
-- Ktor 3.6.1
-- ElevenLabs Android 0.13.1
-
-AndroidX Core 1.19.x and Lifecycle 2.11.x are aligned with API 37 and AGP 9.1+. The project now compiles against API 37 while target SDK remains 36, avoiding opt-in to newer runtime behavior until compatibility testing is complete. AGP 9.3.1 is paired with Gradle 9.6.0; Kotlin 2.4.21 is retained with the documented temporary AGP built-in Kotlin/new DSL opt-outs.
+Run the repository's Android GitHub Actions workflow for the complete CI path. A successful compile or unit-test run does not prove device-level behavior, backend authorization, release signing continuity, or successful installation over an existing build.
 
 ## Backend configuration
 
-The Android build reads only the Supabase project URL and **publishable** key from Gradle properties or environment variables:
+The app receives only the Supabase project URL and browser/mobile-safe publishable key through Gradle properties or environment variables:
 
 - `SUPABASE_URL`
 - `SUPABASE_PUBLISHABLE_KEY`
+- `GOOGLE_WEB_CLIENT_ID` (when Google sign-in is enabled)
 
-For GitHub Actions, configure these as repository Actions secrets with those exact names. Do not commit `local.properties`, secret keys, service-role keys, signing files or passwords. The client deliberately rejects missing runtime configuration instead of silently connecting to an unintended backend.
+Never commit a service-role key, secret API key, database password, keystore, or signing password. Founder authorization must be enforced by trusted server-side authorization and Supabase Row Level Security (RLS); hiding a screen or button is not a security boundary.
 
-The first integration layer includes the Supabase Kotlin client, PKCE auth configuration, email/password member auth operations, and a read-only published-track repository. Founder authorization must be enforced by trusted server-side app metadata and database RLS; a UI-only role check is not security.
+The existing Supabase project and its production data are not to be reset, recreated, or bulk-rewritten as part of a client repair. Any schema change must be additive, reviewed, tested, and separately approved.
 
-## Signing and release safety
+## Signing and releases
 
-Production signing continues to read the existing `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and `ANDROID_STORE_PASSWORD` GitHub Actions secrets. The workflow decodes the keystore only into the runner's temporary directory, checks the APK signer against the existing public release, and removes the temporary keystore even if a later step fails. Never commit or rotate these secrets as part of a dependency update.
+The native release workflow uses the existing signing configuration through GitHub Actions secrets:
 
-## Security boundary
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+- `ANDROID_STORE_PASSWORD`
 
-Only approved credentials/configuration may be migrated from the previous project. Never copy legacy source files, UI, layouts, assets or application modules. Keep keystore material and API secrets in GitHub Actions secrets / secure local storage; never commit secret values.
+The workflow must verify the APK signer against the established production signing certificate before publication. Never rotate or replace the signing identity as part of routine code or dependency work.
 
-## Current milestone
+Native Kotlin/Compose changes require a full signed APK release. Shorebird applies Dart patches to the legacy Flutter runtime; it cannot patch Kotlin, Compose, the Android manifest, or native dependencies. Do not describe a Shorebird patch as an update to this native app.
 
-- Clean Compose project foundation and branded startup prototype.
-- Supabase client/auth/catalogue data layer; SDK 37 toolchain aligned with AGP 9.3.1, Gradle 9.6.0 and Kotlin 2.4.21.
-- Media3 1.11.1 playback, HLS and DASH libraries included as the native media foundation.
-- CI uses current Node 24 GitHub Actions releases and verifies the original production signing certificate.
-- The source tree now includes the Media3 playback service and UI, 15-second branded splash, offline download manager, Founder Studio, member account/profile flows and native video playback. These paths still require complete end-to-end and physical-device acceptance; CI smoke tests are not a substitute for device testing.
+The official distribution channel is the repository's GitHub Releases page:
+https://github.com/suwilanjisinkamba184-cmd/High-tech-entertainment-/releases/latest
 
+## Architecture and integration boundaries
 
-## Native release and update strategy
+- Kotlin / Jetpack Compose owns the Android UI and navigation.
+- AndroidX Media3 owns native audio/video playback and Android media-session integration.
+- Supabase Auth, PostgreSQL, RLS, Storage, and approved Edge Functions provide shared backend services.
+- The website is built from `website/` using Astro; its public homepage is not the legacy root `index.html`.
+- Member account and Founder Studio web routes use the shared account/admin assets documented in the root README and `website/README.md`.
+- Public catalogue visibility and Founder permissions are controlled by backend publication fields and RLS, not by client-side assumptions.
 
-The Kotlin/Jetpack Compose application uses signed, versioned APK releases. The in-app updater checks the latest GitHub Release, downloads over HTTPS, resumes interrupted downloads, verifies the published SHA-256 digest when supplied, and hands the APK to Android's package installer. Android enforces that an in-place update is signed by the same application certificate. Publish a full native APK for Kotlin, Compose, manifest, dependency, or other native-code security fixes.
+## Acceptance checklist
 
-The existing Shorebird OTA workflow is retained for the legacy Flutter application only. Shorebird patches Dart code in that Flutter runtime; it cannot patch this native Kotlin/Compose application. Do not label a Shorebird patch as an update to the native app. Catalogue and remote configuration changes can continue to arrive through the Supabase backend without replacing the APK.
+Do not mark a candidate production-ready until evidence is recorded for all applicable items:
 
-Native release tags use `native-v` plus the Gradle `versionName` (for example, `native-v4.0.1`). The native updater filters only this tag namespace, so it cannot offer a legacy Flutter/Shorebird APK as a native Compose update. The Android release workflow verifies the production signing certificate against the established release certificate before publishing the APK asset.
+- [ ] Android unit tests and lint pass on the exact candidate commit.
+- [ ] Debug and signed release APKs assemble successfully.
+- [ ] Package ID, version code/name, and signer fingerprint match the intended upgrade path.
+- [ ] APK installs cleanly and updates an existing installation without losing user data.
+- [ ] Email/password and enabled Google authentication flows work on a physical device.
+- [ ] Published catalogue, audio playback, background playback, media controls, video playback, and retry states work on a physical device.
+- [ ] Offline downloads, storage-full behavior, and recovery are tested.
+- [ ] Founder-only operations are rejected for ordinary accounts by backend authorization/RLS.
+- [ ] Android Go memory pressure, app process recreation, API 26+, accessibility, font scaling, and reduced-motion behavior are checked.
+- [ ] Website and Android app resolve the same intended published catalogue and backend project.
+- [ ] Release checksum, signing certificate, install-over test, and rollback procedure are recorded.
+
+Keep this file synchronized with `app/build.gradle.kts` and the actual workflow implementation. If any value differs, update this document in the same reviewed change.
