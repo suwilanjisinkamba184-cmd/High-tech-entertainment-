@@ -1,43 +1,42 @@
 # High-Tech Entertainment AI Marketing Agent
 
-## Goal
-Add a Founder Studio marketing workspace shared by the GitHub Pages website and Android app, backed by the existing Supabase project. The agent prepares daily branded campaigns, stores media and copy, and distributes approved-format content through official platform APIs after the founder connects the relevant accounts.
+## Product intent
+Provide a Founder Studio marketing workspace that helps prepare branded campaign assets and copy using approved HTE brand assets and published catalogue information. The existing Supabase project remains the system of record; do not replace Auth, profiles, catalogue, bookings or Founder Studio.
 
-## Existing infrastructure confirmed
-- Existing Supabase project remains the system of record; do not replace Auth, profiles, catalogue, bookings, or Founder Studio.
-- Existing `elevenlabs-ad-studio` Edge Function (version 14 at inspection) generates voice advertisements and saves drafts to `audio_ads` / `hte-audio`.
-- Public website is hosted from the existing GitHub Pages repository.
-- No social publishing connections were present in the inspected Supabase Edge Function list.
+## Current integration boundary
+The repository contains an `elevenlabs-ad-studio` Edge Function and related marketing schema/migration sources. Their presence does not prove that every AI provider, social account or publishing destination is connected. Verify deployed function state, provider credentials, OAuth grants and a successful live test before marking any integration as active.
 
-## Supported publishing plan
-| Platform | Planned path | Requirements / limitations |
+The marketing workflow must remain separate from the normal music catalogue and member account permissions. Founder-only campaign operations require server-side role checks and RLS.
+
+## Publishing readiness
+| Destination | Integration path | Required verification |
 |---|---|---|
-| Instagram | Meta Graph API publishing | Professional account, Meta app, account/page linkage, publishing permissions and app review where required. Reels need a publicly fetchable video asset in a supported format. |
-| Facebook | Meta Graph API Page publishing | Facebook Page, Page token and relevant permissions/app review. |
-| TikTok | Content Posting API | TikTok developer app, creator OAuth, scopes and audit; unaudited direct posts may be restricted to private visibility. |
-| YouTube | YouTube Data API video upload | Google OAuth, YouTube channel and API project/quota; uploads may be subject to unverified-project restrictions. |
-| X | X API v2 create-post/media upload | OAuth and paid/usage-based API access may be required; not assumed free. |
-| WhatsApp Business | WhatsApp Business Platform Cloud API | Business phone number, Meta app, approved templates/opt-in for business-initiated marketing messages; message delivery may incur fees. |
-| WhatsApp Status | Assisted share workflow only | No supported public API for ordinary WhatsApp Status publishing was verified. Generate the vertical media and caption, then open the native WhatsApp share flow for the founder to post manually. Do not automate WhatsApp Web or use unofficial clients. |
+| Instagram | Meta Graph API | Professional account, Meta app, account linkage, approved permissions and media-format validation |
+| Facebook Page | Meta Graph API | Page ownership, Page token, publishing permission and live test post |
+| TikTok | Content Posting API | Developer app, creator OAuth, required scopes, audit and visibility restrictions |
+| YouTube | YouTube Data API | Google OAuth, channel authorization, quota and upload restrictions |
+| X | X API | OAuth, media permissions and current usage/price limits |
+| WhatsApp Business | WhatsApp Business Platform | Business number, templates/opt-in, permissions and message-cost controls |
+| WhatsApp Status | Manual native share | Generate the approved asset and let the founder share it; do not automate WhatsApp Web or unofficial clients |
 
-## Security rules
-- Never put provider access tokens, app secrets, refresh tokens, or service-role keys in browser code, GitHub, or ordinary database rows.
-- Keep provider secrets in Supabase Edge Function secrets / Vault. Store only account IDs, labels, scopes, connection state and non-sensitive metadata in `hte_social_connections`.
-- All campaign, connection, and job tables are founder-admin-only via `public.hte_is_admin()` and RLS.
-- Automatic publishing must only send founder-authorized campaigns and WhatsApp messages to opted-in recipients. Respect platform limits, templates, rate limits, and user opt-outs.
-- Provide per-platform enable/disable switches, idempotency, retry limits, audit logs, and a global pause switch.
-- No platform should be marked connected until OAuth succeeds and a test call confirms the granted scopes.
+No destination is considered connected until OAuth succeeds, the granted scopes are checked and a harmless test call succeeds.
 
-## Daily campaign workflow
-1. Generate a campaign pack (Reel script/storyboard, poster copy, captions, hashtags, CTA, WhatsApp share variant) using available approved brand assets and published catalogue data.
-2. Save draft and generated media to Supabase Storage.
-3. Validate each platform's media format, caption limits, account connection, consent and publishing permissions.
-4. Queue one publish job per enabled destination, with idempotency and retry limits.
-5. Publish only through official APIs. Route WhatsApp Status to manual native share.
-6. Record provider post IDs, timestamps, errors and engagement metrics where available.
+## Campaign workflow
+1. Prepare a campaign brief, vertical-video script/storyboard, poster copy, captions, hashtags and call to action.
+2. Use only approved brand assets and content HTE is authorized to promote.
+3. Save drafts and generated media to the intended private or public Storage location according to its access requirements.
+4. Validate destination media formats, caption limits, account permissions, consent and publication settings.
+5. Require founder approval before a publish job is queued.
+6. Publish only through official provider APIs; use manual native sharing where no supported API exists.
+7. Record provider IDs, timestamps, outcomes and errors. Use idempotency and bounded retries.
 
-## Free-first policy
-Use free/test tiers for development, local generation and test accounts where possible. Do not promise fully free production publishing: X API usage, WhatsApp message delivery, AI generation, video rendering, storage and hosting can incur charges. Require explicit budget configuration before any paid API usage.
+## Security and cost controls
+- Keep API keys, OAuth tokens, refresh tokens and service-role credentials in server-side secrets/Vault.
+- Store only necessary non-secret connection metadata in the database.
+- Enforce founder-only access with RLS and server-side checks.
+- Provide per-platform disable switches, audit logs, rate limits and a global pause.
+- Require an explicit budget limit before paid AI, video rendering, messaging or social API usage.
+- Do not promise fully free production publishing. Provider access, storage, AI generation and message delivery can incur charges.
 
-## Not yet connected
-This foundation does not connect any social accounts by itself. The founder must complete provider OAuth / app setup and configure Edge Function secrets before live publishing can be enabled.
+## Acceptance
+Test draft creation, media access, approval, publish authorization, duplicate-job protection, provider failure, retry behavior and global pause. Until these tests and provider connections are verified, describe social publishing as planned or partially integrated—not live.

@@ -1,31 +1,21 @@
 # Daily High-Tech Entertainment video workflow
 
-This workflow creates one original 10-second vertical motion-graphics promotional video every day at 09:00 Zambia time (07:00 UTC), and can also be run manually from GitHub Actions.
+## Workflow
+The repository workflow is `.github/workflows/daily-marketing-video.yml`. It can run on its configured schedule and through GitHub Actions manual dispatch. Check the workflow file for the exact schedule and inputs; scheduled GitHub Actions runs can be delayed and are not an exact-time guarantee.
 
-## What it does
+## Output and dependencies
+The workflow creates an original short vertical motion-graphics promotion using the approved `high-tech-logo.svg` and HTE black/gold/silver visual identity. It uses the rendering dependencies declared by the workflow (FFmpeg, Pillow and CairoSVG where installed) and saves the generated media/caption as a workflow artifact.
 
-- Uses the official `high-tech-logo.svg` and the existing black / metallic-gold / silver brand palette.
-- Produces a fresh daily variation of the HTE brand message using original animated graphics.
-- The initial MP4 is silent: it does not yet add narration or a music track.
-- Uses FFmpeg, Pillow and CairoSVG; no paid AI-video API, HeyGen API key or ElevenLabs API key is required.
-- Saves the MP4 and caption as a GitHub Actions artifact for 30 days.
-- Publishes to the Facebook Page automatically when both Page secrets are configured.
+The current template-driven renderer is not a generative text-to-video service. Do not describe it as Google Flow/Veo or claim that it creates photorealistic AI scenes or generated narration unless a separate provider integration is configured and tested.
 
-## Important limitation
+## Audio and publishing
+The rendered video is silent unless the workflow source explicitly adds an audio stage. Facebook Page publishing is conditional on the required Meta Page credentials being configured. If the credentials are absent, rendering should still complete and publishing should be skipped safely.
 
-This is a free, template-driven motion-graphics video maker, not text-to-video AI like Google Flow or Veo. It does not create new photorealistic AI scenes or generated narration. Those services do not provide an unlimited free unattended API.
+Required publishing secrets, when enabled:
+- `META_PAGE_ACCESS_TOKEN` — a valid Page Access Token with the required publishing permission.
+- `META_PAGE_ID` — the intended HTE Facebook Page ID.
 
-## Enable Facebook auto-publishing
+Never put either value in source control, workflow logs or chat. This workflow publishes organic Page content; it is not a paid advertising campaign manager.
 
-In GitHub, open the repository Settings → Secrets and variables → Actions and add:
-
-- `META_PAGE_ACCESS_TOKEN`: a valid Facebook **Page Access Token** with permission to publish Page content.
-- `META_PAGE_ID`: the ID of the **High-Tech Entertainment** Facebook Page.
-
-Never put either value in source code, a commit, or a chat message. Do not use a User Access Token in place of a Page Access Token.
-
-If either secret is absent, the workflow still creates the video artifact but safely skips publishing. This workflow publishes organic Page video posts; it does not create paid Meta Ads campaigns.
-
-## Monitoring
-
-Open the repository Actions tab and select **Daily High-Tech cinematic promo**. A successful run must show the render step and, once configured, the Facebook publishing step. GitHub scheduled runs can be delayed and are not a guaranteed exact-time scheduler.
+## Verification
+Inspect the latest Actions run and confirm the render and optional publish steps separately. A successful artifact build does not prove that the social account is connected or that a post was published. Check the actual Page post before reporting publication success.

@@ -1,38 +1,24 @@
 # High-Tech Entertainment — YouTube automation
 
-## Official HTE channel sync
+## Workflows
+The repository contains two separate automation paths:
+- `.github/workflows/sync-official-youtube-channel.yml` and the `sync-youtube-channel` Edge Function for the configured official HTE channel.
+- `.github/workflows/youtube-zambian-sync.yml` and the `sync-zambian-music` Edge Function for the approved Zambian artist discovery configuration.
 
-The GitHub Actions workflow `.github/workflows/youtube-zambian-sync.yml` invokes the Supabase Edge Function `sync-youtube-channel` every 30 minutes. It reads the official channel's public uploads playlist and adds new public videos to the same `public.videos` catalogue used by the website and Android app.
+Read the workflow YAML before changing schedules, page limits or dispatch inputs. A configured workflow is not proof that the schedule ran or that a new video was imported; inspect the Actions run and the resulting catalogue row.
 
-Configure the public GitHub Actions repository variable `HTE_YOUTUBE_CHANNEL_ID` with one of these values:
+## Configuration and credentials
+The official-channel workflow uses the repository variable `HTE_YOUTUBE_CHANNEL_ID` when configured. Use the exact accepted value documented in the workflow (channel ID or supported handle/URL format). The Zambian discovery path reads its approved channel configuration from `config/zambian-youtube.json`.
 
-- The official YouTube channel URL (for example, `https://www.youtube.com/@yourhandle`)
-- The channel ID beginning with `UC`
-- The exact `@handle`
+- `YOUTUBE_API_KEY` belongs in Supabase project secrets.
+- `SUPABASE_SERVICE_ROLE_KEY` belongs only in the Supabase server environment.
+- `SUPABASE_ACCESS_TOKEN` is a management/deployment credential used by the relevant GitHub workflow; it is not a client runtime key.
+- Never put the service-role key or YouTube API key in GitHub client code, the website or Android app.
 
-The workflow safely skips syncing until that variable is configured. Manual workflow dispatch supports `max_pages` from 1 to 50 (50 uploads per page); the scheduled run scans 20 pages by default.
+## Catalogue and rights
+The synchronization functions write metadata into the shared Supabase video catalogue. YouTube-hosted videos should use official YouTube playback; a YouTube watch URL is not a downloadable MP4. Do not create an HTE download URL for third-party media unless HTE has the original file and distribution rights.
 
-## Credential boundary
+For HTE-owned uploads, use the approved Storage upload path and the bucket ID confirmed by current application configuration and Supabase. Do not infer bucket names from old documentation.
 
-- `YOUTUBE_API_KEY` stays in Supabase project secrets.
-- `SUPABASE_SERVICE_ROLE_KEY` stays in Supabase's server environment and is used only by the Edge Function to write catalogue rows.
-- GitHub Actions uses the existing `SUPABASE_ACCESS_TOKEN` secret to authenticate with the Supabase Management API. The Edge Function verifies that token can access this exact Supabase project before proceeding.
-- The service-role key is not stored in GitHub Actions, the website, or the Android app.
-
-## Catalogue and playback rules
-
-Each imported video is stored with `youtube_id`, `youtube_channel_id`, `source_platform = 'youtube'`, `published_at`, and its YouTube watch URL. A unique index on `youtube_id` prevents duplicate imports. The website and Android app read the same Supabase rows. The Android app embeds YouTube videos in its in-app player; native Media3 remains reserved for HTE-hosted original files.
-
-YouTube Data API does not provide an authorized MP4 download for arbitrary videos. YouTube-only rows therefore have `download_url = NULL`. Founder Studio uploads place the original in the `hte-video` Storage bucket and set `download_url` to that HTE-hosted file, which is the only case where the website/app show an original-download action.
-
-## Zambian artist discovery
-
-The workflow `.github/workflows/sync-zambian-music-discovery.yml` runs every six hours and can also be started manually. It reads the approved artist handles from `config/zambian-youtube.json` and calls the Supabase Edge Function `sync-zambian-music`.
-
-- GitHub Actions authenticates with the existing `SUPABASE_ACCESS_TOKEN` secret and the public publishable key from `supabase-config.js`.
-- The Edge Function validates that Management API token against this exact Supabase project.
-- `YOUTUBE_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` remain inside Supabase project secrets; neither is sent to GitHub.
-- The function reads recent public uploads from the configured channels' uploads playlists, filters unsuitable titles and durations, checks existing `youtube_id` values, and inserts new YouTube links into `public.videos`.
-- Only official YouTube links are embedded. The function never downloads or rehosts third-party media.
-
-The legacy `scripts/youtube_zambian_sync.py` remains available for controlled manual use; the scheduled workflow does not require a GitHub service-role key.
+## Verification
+Check the workflow run, Edge Function response and resulting `public.videos` row. Confirm duplicate handling, visibility, channel identity and playback behavior. Report imports only after the row is present and the video can be opened through the intended player.

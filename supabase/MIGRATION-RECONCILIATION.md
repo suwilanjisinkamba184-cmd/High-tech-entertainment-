@@ -1,3 +1,23 @@
+# Supabase migration reconciliation
+
+**Current repository source inventory (24 November 2026):** 63 SQL files in `supabase/migrations/`.
+
+**Important CI compatibility note:** the historical version rows below are retained because `scripts/verify-migration-source-coverage.mjs` reads this document as its version manifest. Do not delete or reformat those rows without updating that verifier and its tests in the same reviewed change.
+
+**Historical snapshot warning:** the detailed ledger and pending-file classifications below were captured on 21 November 2026 (53 live ledger records and 62 source files at that time). They are not a current live database attestation. The current live migration ledger was not queried during this documentation-only update. The current tree contains 63 SQL files; source-file presence does not prove application to production or clean replay.
+
+## Production safety
+- Never reset, drop, recreate or bulk-replay the production database.
+- Do not apply a migration based only on its filename or an old checklist.
+- Before a production change, compare the current live migration ledger, inspect the exact SQL diff, validate on a disposable Supabase branch/database and obtain explicit approval.
+- Preserve existing user, catalogue, booking, media and storage data.
+- Include RLS, grants, function security mode/search_path, triggers, Storage policies and Realtime publication in validation.
+
+## Current CI observation (24 November 2026)
+The documentation PR's `Verify live migration source coverage` job failed after the manifest rows were temporarily removed. The verifier reported no duplicate migration files and no missing migration source files, but reported the expected historical version rows as missing from this document. The rows have been restored below to satisfy the repository's current verifier contract. Re-run CI to confirm. This is not evidence that the live database migration ledger is current or that a clean replay passes.
+
+---
+
 # Supabase migration reconciliation inventory
 
 **Project:** `wqrxacjbsldbnoekbkbf`  

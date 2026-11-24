@@ -1,16 +1,16 @@
 # Artist video submissions
 
-The `submit-public-video` Supabase Edge Function lets any signed-in HTE user submit a public YouTube video, including a video hosted on a channel that is not owned by High-Tech Entertainment.
+## Endpoint
+The repository's `submit-public-video` Supabase Edge Function is the source of truth for the request contract. Before using or changing it, inspect `supabase/functions/submit-public-video/index.ts` and the corresponding deployment workflow.
 
-## Request
+The documented request shape is:
 
-`POST /functions/v1/submit-public-video`
+```http
+POST /functions/v1/submit-public-video
+Authorization: Bearer <signed-in-user-access-token>
+Content-Type: application/json
+```
 
-Headers:
-- `Authorization: Bearer <signed-in-user-access-token>`
-- `Content-Type: application/json`
-
-Body:
 ```json
 {
   "url": "https://www.youtube.com/watch?v=VIDEO_ID",
@@ -18,12 +18,15 @@ Body:
 }
 ```
 
-The submitter must confirm that they own the content or are authorized to submit and share it. The function verifies the user's Supabase session, validates the YouTube URL, retrieves public metadata through the YouTube Data API, rejects private/upcoming videos, and writes metadata into the shared `public.videos` table.
+The client must use the current signed-in user's access token and the public publishable key. Never expose the service-role key or YouTube API key in a browser or Android client.
 
-Submitted videos are immediately published in the shared catalogue. The original audiovisual file is never copied from YouTube, and `download_url` remains null. An HTE download link must only be added separately for an original file HTE is authorized to distribute.
+## Rights and catalogue handling
+A submitter must confirm that they own the content or are authorized to submit and share it. The Edge Function is responsible for session validation, URL validation, metadata retrieval and database writes. Confirm the current implementation's moderation/publication behavior before describing a submission as immediately public or approved.
 
-Duplicate submissions return HTTP 409. The endpoint is JWT-protected; anonymous requests are rejected.
+YouTube's watch URL is for official YouTube playback. Do not copy, scrape, rehost or offer a third-party YouTube video as an HTE downloadable file. An HTE download action is appropriate only for an original file HTE is authorized to distribute.
 
-## Client integration
+## Client behavior
+On success, show a clear confirmation and refresh the shared video catalogue. Handle duplicate, invalid URL, private/unavailable video, authorization and provider errors with actionable user-facing messages. Never display raw stack traces or secret values.
 
-The website and Android client should call this endpoint with the current user's Supabase access token. After a successful response, refresh the shared `videos` query. Do not expose the service-role key or YouTube API key in either client.
+## Verification
+Test anonymous rejection, a valid signed-in submission, duplicate submission, an invalid URL, a private/unavailable video and the resulting catalogue visibility. Confirm the actual deployed Edge Function before reporting that submissions are live.

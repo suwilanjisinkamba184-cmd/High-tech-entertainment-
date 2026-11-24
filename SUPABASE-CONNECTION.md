@@ -1,43 +1,46 @@
-# Supabase connection and launch checklist
+# Supabase connection and operational safety
 
-The frontend is configured for the Supabase project already present in `public/supabase-config.js`. That file contains only the project URL and a browser-safe publishable key.
+## Existing project
+The repository is configured for the existing Supabase project `wqrxacjbsldbnoekbkbf`. The website's browser configuration is copied from the root `supabase-config.js` by `scripts/build-website.sh`; the Android app receives its runtime URL and publishable key through Gradle configuration and `BuildConfig`.
 
-## Current project status
-The connected Supabase project already has the `artists`, `releases`, `tracks`, and `contact_messages` tables with row-level security enabled, and the `hte-audio` public bucket now exists. Admin upload, update, and delete policies are configured for `suwilanjisinkamba184@gmail.com`. The website config targets that existing project.
+Do not create a replacement project, reset the existing database, recreate tables, or bulk-rewrite production records as part of routine application work.
 
-## Setup only if recreating or repairing a project
-1. Run `supabase-setup.sql` only in a new/empty project or after reviewing its effects. It creates the tables, baseline RLS policies, and `hte-audio` bucket.
-2. Run `supabase-admin-policies.sql` to install or refresh admin policies and the required SQL grants. It is safe to rerun.
-3. In Authentication, ensure the administrator user exists with this exact email and can sign in. Disable public sign-ups if this is a single-admin site.
-4. In Storage, confirm the bucket ID `hte-audio` exists. The additional bucket called `HT Storage` can remain, but this website does not use it. The code and SQL deliberately use the stable ID `hte-audio`.
-5. Open the site over HTTPS. Test public music loading, admin login, audio upload, playback, and the contact form.
+## Client configuration
+Browser and Android clients may use only:
+- Supabase project URL.
+- Supabase publishable key (or the legacy anon JWT where the project still requires it).
 
-## Security
-Never put a Supabase `service_role` or `sb_secret_` key in browser files. The `sb_publishable_` key in `public/supabase-config.js` is intended for browser use; row-level security policies are essential. Do not share passwords or secret keys in chat.
+These values are public client configuration. They do not grant privileged access. RLS and Storage policies must enforce every read/write boundary.
 
+Never place a service-role key, `sb_secret_` key, provider API key, database password, signing password or keystore in browser files, mobile source, documentation examples, commits or chat. Provider secrets belong in the corresponding server-side secret store.
 
-## Booking workflows
+## Authentication and authorization
+- Configure the production GitHub Pages origin in Supabase Authentication URL settings.
+- Add callback URLs only when they are used by an implemented authentication flow.
+- Do not assume Google, Facebook, X or another OAuth provider is enabled just because a button or logo exists. Verify provider configuration, redirect URI, consent and a live sign-in round trip.
+- Founder-only operations must be authorized by database RLS and trusted server-side checks. UI visibility is not a security boundary.
+- Test member and founder roles separately. A signed-in user is not automatically a founder.
 
-The live project now has two separate booking paths:
+## Booking and contact flows
+The repository contains distinct guest and authenticated booking paths and server-side notification functions. Before changing them, inspect the current website components, Edge Function source and `supabase/config.toml`. In particular, a function configured with `verify_jwt = false` must perform its own validation appropriate to its public or signed-request contract. Do not add a service-role key to a client to work around authorization.
 
-- **New guest booking:** the redesigned Astro homepage calls the `public-booking-request` Edge Function. JWT verification is disabled intentionally because guests do not sign in. The function validates fields, checks the website-origin allowlist, uses a honeypot, applies a per-IP limit of 5 requests per 15 minutes, writes the request server-side, and sends the email notification server-side.
-- **Member booking:** signed-in members use the `submit_booking_request` RPC. It binds the booking to `auth.uid()`. The `booking-notification` Edge Function validates the member JWT internally and checks that the booking belongs to that user before sending an email.
-- **Legacy guest compatibility:** the older static homepage still calls `submit_booking_request` followed by `booking-notification`. The RPC is a narrowly scoped, insert-only `SECURITY DEFINER` function with an empty search path: guests receive `user_id = NULL`, members are bound to `auth.uid()`, and callers cannot read messages or supply another user's ID. The notification function accepts guest rows only when `user_id` is NULL, the request is recent, the origin is an allowed website, and the IP rate limit passes. This compatibility path prevents the current live homepage from losing guest bookings before the redesign is merged.
-- **Public contact:** the contact form remains separate and can create a contact message with no user ID. Anonymous users cannot read the contact inbox or invoke admin RPCs.
+Do not rely on old screenshots or earlier deployment notes to infer which booking path is currently live. Confirm the workflow, deployed function version, allowed origins, rate limits and end-to-end delivery before claiming the flow is operational.
 
-The service-role key and Resend key must remain in Supabase Edge Function secrets. Never add them to `supabase-config.js`, website source, or GitHub.
+## Database migrations
+- Treat `supabase/migrations/` as versioned source history, not permission to replay SQL against production.
+- Read [supabase/MIGRATION-RECONCILIATION.md](supabase/MIGRATION-RECONCILIATION.md) before proposing schema changes.
+- Test new migrations on a disposable development branch/database, inspect RLS/grants/functions/triggers and run the repository SQL tests.
+- Compare the migration ledger before applying anything to production. Never reset production or replay already-applied versions.
 
+## Storage
+Bucket IDs, public/private status, MIME restrictions, size limits and policies must be read from the current application and Supabase project configuration before making changes. Do not infer a bucket's ID from its display name. Do not make private avatars, user files or restricted media public merely to fix image loading.
 
-### Reviewed Supabase Advisor findings
-
-- The duplicate permissive INSERT policies on `contact_messages` were consolidated into one policy. Anonymous inserts are limited to rows with `user_id IS NULL`; authenticated booking rows must use the caller's own `auth.uid()` and a booking subject.
-- The public Founder Studio RPCs (`hte_admin_get_analytics` and `hte_admin_list_users`) are now `SECURITY INVOKER` wrappers. Their `SECURITY DEFINER` implementations live in the non-exposed `private` schema and enforce the owner/admin role guard. The public `submit_booking_request` RPC is also an invoker wrapper; its private helper is insert-only, uses an empty search path, validates booking fields, derives `user_id` from `auth.uid()`, and returns only the newly created ID. The private schema is not exposed through the Data API. These changes removed the public SECURITY DEFINER warnings from Supabase Advisor.
-- The only remaining Supabase Security Advisor warning is disabled leaked-password protection. Enable it in **Authentication → Settings → Password Security** if available for the project plan.
-- Unused-index notices are informational. Keep the indexes until production query usage shows that they are genuinely unnecessary.
-
-## Current deployment state
-
-The booking database migration and both Edge Functions have been applied to the linked Supabase project. The website redesign is still under pull request review and has not been merged or deployed to the live website. Complete the GitHub Actions checks and test guest booking, member booking, contact submission, catalogue playback, downloads, and Founder Studio on the Pages preview before merging.
-
-## Launch status
-The booking migration and Edge Functions are already applied to the linked Supabase project. The website PR still requires final automated checks and real-device/browser verification; a successful build alone does not prove every frontend workflow works.
+## Operational checklist
+1. Confirm the intended project ID and environment.
+2. Verify only publishable configuration is present in client builds.
+3. Inspect current Auth redirect/provider settings.
+4. Inspect RLS, grants, Storage policies and Edge Function JWT configuration.
+5. Test anonymous, member and founder paths independently.
+6. Verify guest/member booking and contact delivery where relevant.
+7. Validate proposed SQL on a disposable development branch.
+8. Record the exact tests and environment used; label unverified behavior accurately.
