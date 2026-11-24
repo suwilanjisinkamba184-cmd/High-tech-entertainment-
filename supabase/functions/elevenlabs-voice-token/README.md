@@ -1,41 +1,31 @@
 # HTE Voice Companion token service
 
-This Supabase Edge Function is deployed as `elevenlabs-voice-token`. The signed-in Android app calls it before starting the private ElevenLabs WebRTC conversation.
+## Purpose
+The `elevenlabs-voice-token` Supabase Edge Function issues a short-lived ElevenLabs conversation token to an authenticated HTE app session. The function is configured with JWT verification enabled in `supabase/config.toml`.
 
-## Runtime API flow
+## Request flow
+1. The Android app sends a request to `POST /functions/v1/elevenlabs-voice-token` with the current Supabase user access token in the Authorization header and the project's publishable key in `apikey`.
+2. The Edge Function validates the user session with Supabase Auth.
+3. The function requests a short-lived conversation token from the configured ElevenLabs agent using the server-side provider API key.
+4. The client receives only the short-lived conversation token and the authenticated user identifier required by the app. It must never receive the provider API key.
 
-1. Android calls `POST /functions/v1/elevenlabs-voice-token` with the current Supabase user access token in `Authorization: Bearer <user-access-token>` and the project's publishable key in `apikey`.
-2. The Edge Function validates the user with Supabase Auth. Anonymous or invalid sessions are rejected.
-3. The function requests a short-lived ElevenLabs conversation token from `GET https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=agent_2601m6tt0dszfqaa7ec4jefe96ww` using the server-side `xi-api-key` header.
-4. Android receives only `{ "token": "...", "user_id": "..." }` and starts the official ElevenLabs Android SDK session with registered client tools.
+The exact request/response fields, agent identifier and provider endpoint are defined by `index.ts`; keep this document aligned with that source when it changes.
 
-## Required server-side secret
+## Secrets
+The ElevenLabs API key must remain in Supabase Edge Function secrets. Never place it in Android source, Gradle properties committed to Git, GitHub source, website code, app settings or chat. Do not print the value in logs.
 
-- `ELEVENLABS_API_KEY` is the canonical Supabase Edge Function secret name. The current function also temporarily supports the legacy `ELEVENLABS_API_KEY,` name (trailing comma) so existing deployments continue to work. Migrate to the canonical name in Supabase Dashboard → Edge Functions → Secrets, then remove the legacy alias. Never put the key in Android, Gradle, GitHub source, app settings, or chat.
-- Supabase supplies the project URL and publishable/legacy anon key to the runtime.
+Use the canonical secret name expected by the current function source. If a legacy secret alias is still supported for migration, remove it only after the deployed function and secret configuration have been verified.
+
+## Security
+- Keep `verify_jwt = true` for this function.
+- Reject anonymous or invalid sessions.
+- Return short-lived tokens only to the authenticated caller.
+- Use `Cache-Control: no-store` for token responses.
+- Keep provider credentials server-side.
+- Bind the returned user identifier to the authenticated session in the Android client before starting a voice session.
 
 ## Agent configuration
-
-- Agent: `agent_2601m6tt0dszfqaa7ec4jefe96ww`
-- LLM: Gemini 2.5 Flash
-- ASR: Scribe Realtime
-- Conversational TTS: `eleven_v4_turbo`
-- Default voice: Eric — Smooth & Trustworthy
-- Selectable voices: Eric, Sarah — Warm & Professional, and Roger — Relaxed & Casual
-- Authentication: enabled
-- HTE knowledge document: `HTE Universe — Official Voice Companion Guide`
-- Android client tools: `control_playback`, `navigate_app`, `search_catalogue`
-
-A separate Text-to-Speech request is not required for live Voice Companion conversations. Conversational AI handles recognition, turn-taking, tool calls and spoken output. The Android app passes the selected approved voice ID through the SDK's per-session TTS override.
-
-## Security contract
-
-- Supabase Edge Function JWT verification remains enabled (`verify_jwt = true`).
-- Only signed-in users receive conversation tokens.
-- The ElevenLabs API key is used only inside the Edge Function.
-- Responses include `Cache-Control: no-store`.
-- The Android app receives a short-lived conversation token and authenticated user ID, never the provider API key.
+Agent model, voice, knowledge base, available client tools and provider settings are managed in the ElevenLabs agent configuration and the checked-in function source. They can change independently of this README. Verify the live agent configuration and a successful authenticated session before documenting a voice/model as available.
 
 ## Verification
-
-A complete end-to-end test requires a signed-in app session, a valid server-side secret, microphone permission, network access and a real Android SDK conversation. Anonymous smoke tests should be rejected with HTTP 401. A successful source build alone does not prove a live voice session works.
+A complete end-to-end test requires a valid signed-in app session, configured server-side secret, microphone permission, network access and a real SDK conversation. Test anonymous rejection, token issuance, user/session binding, microphone denial, provider outage and session termination. A successful source build does not prove the live Voice Companion works.

@@ -1,26 +1,29 @@
 # Product brief — High-Tech Entertainment
 
-## Product and audience
-High-Tech Entertainment (HTE) is an independent music-production and artist platform based in Zambia. Its audience includes music listeners, artists, producers, prospective studio clients, collaborators, and people discovering HTE releases.
+## Product
+High-Tech Entertainment (HTE) is an independent music-production and artist platform based in Zambia. It serves listeners, artists, producers, studio clients and collaborators.
 
-## Primary user goals
-- Discover and listen to officially released music.
-- Explore artists, releases, and official videos.
-- Learn about music production, beats, recording, mixing, mastering, and promotion services.
-- Contact HTE or submit a booking enquiry.
-- In the Android app, browse the published catalogue and listen to released tracks, including official Spotify embeds.
+## User outcomes
+- Discover official HTE artists, releases, tracks and videos.
+- Listen to published music and use supported player experiences.
+- Learn about production, beats, recording, mixing, mastering and promotion services.
+- Contact HTE and submit booking enquiries.
+- Manage a member profile, favourites, playlists, listening activity and bookings where supported.
+- Give authorized founders a secure workspace to manage catalogue content and platform operations.
 
-## Brand personality
-Confident, independent, musically literate, ambitious, polished, and welcoming. The brand should feel like a credible independent label and production house—not a generic software dashboard, template storefront, or childish music player.
-
-## Surface modes
-- Public website: Persuade and Experience. It should read as an editorial music-label website with a strong visual identity, meaningful whitespace, a clear story, and obvious discovery and contact paths.
-- Android app: Operate and Experience. It should be a focused listening product with familiar native navigation, reliable playback, clear track information, and consistent HTE branding.
-- Founder Studio/admin: Operate. Prioritize clarity, control, security, and efficient content management over decorative effects.
+## Product surfaces
+- **Public website:** Astro application in `website/`, published through GitHub Pages. It is the public discovery, brand, services and contact surface.
+- **Member account:** `account/` with shared browser logic in `assets/`. It provides authentication and member-specific features.
+- **Founder Studio:** `admin/` with server/database-enforced authorization. Only authorized roles may perform privileged operations.
+- **Android:** Kotlin + Jetpack Compose application in `hte-universe-native/`. The legacy Flutter tree in `mobile-app/` is retained for reference and is not the production Android implementation.
 
 ## Product constraints
-- Supabase is the source of truth for catalogue publication and media metadata.
-- Only tracks explicitly marked is_published = true belong in the public mobile listening catalogue. Draft tracks stay hidden; an optional release association does not hide a published track.
-- Spotify URLs must be handled through Spotify's official embed/player experience; never treat a Spotify page URL as a raw audio stream.
-- Direct audio URLs must use HTTPS.
-- Keep secrets and service-role credentials out of browser and mobile source code.
+- Supabase is the shared backend. Do not replace the production project or treat local mock data as production data.
+- Publication and visibility rules are defined by the current database policies and application queries. Never assume a draft is public or private without checking both.
+- Spotify URLs use the official Spotify embed/player flow. Never pass a Spotify page URL to a raw audio player.
+- Direct media delivery must use HTTPS and respect the media's rights and access policy.
+- Keep provider secrets, service-role credentials and signing material out of browser and mobile code.
+- A feature is not “live” merely because UI or source code exists. Verify its backend, provider connection, deployment and user flow.
+
+## Product quality
+Prioritize reliable playback, understandable errors, safe authentication, responsive layouts, accessible controls, low-memory Android performance, and recoverable network failures. Keep the public brand editorial and the Founder Studio operationally clear.

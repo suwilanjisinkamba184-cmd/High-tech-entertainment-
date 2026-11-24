@@ -1,37 +1,31 @@
 # Design system — High-Tech Entertainment
 
-## Visual direction
-An editorial independent music label: obsidian, brushed gold, and restrained silver. Use generous whitespace, strong typography, confident photography/artwork, and restrained transitions. The public site is a website first—not an app shell or dashboard.
+## Brand direction
+An editorial independent music and production label: obsidian, brushed gold and restrained silver. The website should feel like a credible music brand, not a generic SaaS dashboard. The Android app should retain the same identity while using native Android interaction patterns.
 
-## Palette
-- Obsidian background: #090A0B
-- Deep surface: #111214
-- Primary text: #F3EFE6
-- Secondary text: #AAA69D
-- Brushed gold: #D4B36D
-- Warm gold highlight: #F5E7BF
-- Fine divider: rgba(212, 179, 109, 0.22)
-- Silver accent: #B9B7B1
+## Core palette
+- Obsidian: `#090A0B`
+- Deep surface: `#111214`
+- Primary text: `#F3EFE6`
+- Secondary text: `#AAA69D`
+- Brushed gold: `#D4B36D`
+- Warm highlight: `#F5E7BF`
+- Silver accent: `#B9B7B1`
+- Fine divider: `rgba(212, 179, 109, 0.22)`
 
-## Typography
-- Display/headlines: Playfair Display, with Georgia fallback.
-- Interface/body: DM Sans, with Arial/system fallback.
-- Headlines use expressive scale and restrained tracking; body copy remains readable and calm.
+Use semantic tokens rather than scattering literal colors. Maintain contrast in every state, including disabled, hover, focus, selected and error states.
 
-## Website principles
-- Editorial hierarchy, generous section spacing, asymmetric hero layout, concise navigation, and meaningful content.
-- Prefer square or subtly rounded surfaces; avoid excessive pill shapes, nested cards, glassmorphism, neon gradients, and dashboard-like density.
-- Use real release artwork and artist photography when available; do not fabricate artist portraits or release covers.
-- Buttons should be clear, restrained, and accessible.
-- Preserve the existing functional Supabase catalogue, booking, account, and admin flows.
+## Typography and composition
+Use expressive display typography with a reliable system fallback and a highly readable interface/body face. Establish hierarchy through scale, weight, spacing and alignment. Prefer generous whitespace, clear content grouping and purposeful asymmetry. Avoid excessive pill shapes, nested cards, glass effects and decorative gradients.
 
-## Android app principles
-- Reuse the HTE monogram SVG and shared gold/obsidian/silver palette.
-- Use native Android navigation, clear touch targets, readable text, and predictable playback feedback.
-- Keep the app more functional and compact than the website, but not childish or overly decorative.
-- Spotify catalogue entries open the official Spotify embedded player in an in-app WebView; direct HTTPS audio uses the native audio engine.
+## Surface-specific rules
+- **Public website:** Astro source lives in `website/`. Prioritize editorial storytelling, music discovery, artist/release content, service information and clear contact/booking paths.
+- **Member account:** `account/` and shared assets provide authentication, profile, library and booking experiences. Prioritize clarity, legibility and predictable form feedback.
+- **Founder Studio:** `admin/` and shared assets provide privileged content operations. Optimize for accurate status, safe actions, clear validation and role-aware access—not decoration.
+- **Android:** `hte-universe-native/` is the production Kotlin/Compose app. Use native navigation, accessible touch targets, system-bar behavior and clear playback states. Reuse the HTE palette and approved logo assets.
+
+## Media and playback
+Use genuine approved artist photography and release artwork. Do not fabricate artist portraits or represent placeholder art as official content. Spotify links must use Spotify's official embed/player experience; a Spotify page URL is not a raw audio stream. Direct audio URLs must use HTTPS. Preserve separate lifecycle and authorization boundaries for music playback and video playback.
 
 ## Motion and accessibility
-- Motion is purposeful, brief, and interruptible; never required to understand or operate the interface.
-- Respect prefers-reduced-motion on the website.
-- Maintain visible keyboard focus, semantic headings, accessible labels, adequate contrast, and responsive layouts.
+Motion must communicate state or support orientation. Keep it brief, interruptible and nonessential to task completion. Respect reduced-motion preferences. Provide visible focus, semantic structure, accessible names, sufficient contrast, scalable text and responsive layouts.

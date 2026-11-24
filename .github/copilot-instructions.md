@@ -1,37 +1,42 @@
-# High-Tech Entertainment — Copilot instructions
+# High-Tech Entertainment — repository instructions
 
-## Project context
-- This repository contains the public music website, founder/admin dashboard, account pages, Supabase integration, and a Flutter Android application under `mobile-app/`.
-- The public website is a static HTML/CSS/JavaScript site deployed through GitHub Pages (`.github/workflows/publish-github-pages.yml`). The Node.js server is for supported local/server workflows; do not silently change the production deployment target.
-- Supabase provides authentication, Postgres data, and Storage. The browser configuration must contain only the project URL and publishable/anon key.
+## Canonical architecture
+- The public website is an Astro application in `website/`. Its production build is assembled by `scripts/build-website.sh` and deployed to GitHub Pages by `.github/workflows/publish-github-pages.yml`.
+- The public site, member account (`account/`), and Founder Studio (`admin/`) are separate source surfaces assembled into the same GitHub Pages deployment. Shared browser behavior and styles live in `assets/`.
+- The production Android application is Kotlin + Jetpack Compose in `hte-universe-native/`, using AndroidX Media3 and the Supabase Kotlin client.
+- `mobile-app/` is legacy Flutter source retained for reference. Do not describe it as the current production app or add it to the native build.
+- Supabase is the shared backend for Auth, Postgres, Storage and Edge Functions. Preserve the existing project and data.
+
+## Source of truth
+Before changing a documented value, inspect the corresponding source:
+- Android package, SDK levels, version and dependencies: `hte-universe-native/app/build.gradle.kts`.
+- Android workflow and release gates: `.github/workflows/hte-universe-compose.yml`.
+- Website commands and dependencies: `website/package.json`.
+- Website output and route assembly: `scripts/build-website.sh`.
+- Production website publishing: `.github/workflows/publish-github-pages.yml`.
+- Supabase function JWT settings: `supabase/config.toml`.
+- Download Worker settings: `cloudflare/workers/hte-download-gateway/wrangler.toml`.
+- Cross-platform architecture and release rules: `docs/PLATFORM-SOURCE-OF-TRUTH.md`.
+
+Never infer that a feature is production-ready from a README, a source file, or a successful compile alone. Distinguish implemented, CI-tested, deployed, and physically verified states.
 
 ## Required working practices
-- Inspect the existing implementation and repository structure before changing files. Preserve existing behavior and deployment configuration unless the task explicitly requests a change.
-- Never add Supabase service-role keys, secret API keys, signing keystores, passwords, or private credentials to tracked files, logs, or client-side code.
-- Treat Supabase Row Level Security as the security boundary; do not rely on hiding admin UI controls for authorization.
-- Keep the public website, admin dashboard, and Flutter application consistent with the existing brand and responsive design.
-- Test relevant behavior after changes. Report what was actually tested and distinguish verified results from recommendations.
-- Prefer accessible controls, keyboard support, reduced-motion support, responsive layouts, and efficient animations. Do not add motion merely for decoration.
-- Avoid introducing new dependencies when the existing stack can solve the problem.
+- Inspect the existing implementation and repository structure before changing files. Preserve working behavior and deployment configuration unless explicitly requested.
+- Do not reset, recreate, or bulk-rewrite the Supabase project. Do not apply migrations to production without an explicit reviewed change and approval.
+- Never commit Supabase service-role/secret keys, provider API keys, passwords, signing passwords, keystores, access tokens or private user data.
+- Treat Supabase RLS and server-side authorization as the security boundary. Hiding Founder Studio controls is not authorization.
+- Keep public media visibility intentional. Do not make private avatars, user data or private media public to fix rendering.
+- Preserve `com.hightechentertainment.app`, the existing signing identity and backend unless an approved migration explicitly changes them.
+- Do not publish an APK or release tag while the Android workflow's recovery gate disables publication. Never call an APK ready without verifying artifact, package, version, signature and install compatibility.
+- Do not publish the website directly from a feature branch. Use the reviewed GitHub Pages workflow on `main`.
+- Do not describe social publishing, AI generation, OAuth providers or third-party integrations as connected until their credentials, permissions and live test calls have been verified.
 
-## Emil Kowalski design-engineering skills
-Use the project skills in `.github/skills/` when relevant:
-- `emil-design-eng` for overall UI craft and interaction quality.
-- `animate`, `review-animations`, `improve-animations`, and `animation-performance` for motion implementation, audits, and performance.
-- `mobile-native` for mobile-browser usability and touch behavior on the website.
-- `break-ui` for edge-case and stress testing of UI components.
-- `prototype` for comparing distinct UI directions when requested.
-- `apple-design` for gesture, typography, accessibility, and motion principles.
-- `pick-ui-library` when selecting a frontend component library.
+## Validation and reporting
+- Run the narrowest relevant checks, then the complete required workflow when practical.
+- For website work, run `npm --prefix website run check`, `npm --prefix website run build`, and `bash scripts/build-website.sh` when the change affects the published output.
+- For Android work, run unit tests, instrumentation tests, debug/release lint and the configured CI workflow. Physical-device checks are still required for device-specific behavior.
+- For Supabase work, inspect migration ordering, RLS, grants, function search paths and Storage policies. Validate SQL on a disposable development branch before any production application.
+- Report exactly what was run and its result. Label unrun checks and device tests as not verified.
 
-For the Flutter app, translate applicable design principles into Flutter-native patterns; do not apply React Native or Expo-specific implementation advice to Flutter code.
-
-## Impeccable and frontend quality skills
-- Use `.github/skills/impeccable/SKILL.md` as the primary design director for website, admin, account, and native app interface work. Its command references are in `.github/skills/impeccable/reference/`.
-- For website redesigns and polish, follow Impeccable's Persuade/Experience mode, use `PRODUCT.md` and `DESIGN.md`, and apply `craft-floor.md`, `critique.md`, `audit.md`, `polish.md`, `harden.md`, `adapt.md`, and `typeset.md` as relevant.
-- Use `emil-design-eng` for high-fidelity visual craft; `break-ui` for long titles, missing covers, empty catalogues, unusual text, and small-screen stress cases.
-- Use `mobile-native` for the responsive website on real phones; use `mobile-native` principles only where applicable and use Flutter-native patterns for the Flutter app.
-- Use `apple-design`, `animate`, `improve-animations`, `review-animations`, and `animation-performance` for purposeful motion, reduced-motion behavior, and frame-budget decisions.
-- Use `pick-ui-library` before introducing new frontend component dependencies; prefer the existing vanilla HTML/CSS/JS and Flutter stacks when they are sufficient.
-- Use `prototype` when materially different visual directions need comparison. Do not install libraries or add dependencies just to imitate a visual style.
-- Preserve a single shared HTE brand identity across website and app, while allowing each surface to use the interaction patterns appropriate to its purpose.
+## Interface quality
+Use the checked-in skills under `.github/skills/` when relevant. Prefer accessible controls, keyboard support, reduced-motion behavior, responsive layouts, readable typography and efficient animation. Preserve the HTE obsidian, gold and silver identity while using platform-appropriate interaction patterns. Avoid unnecessary dependencies and do not copy entire modules from legacy projects without compatibility review.
