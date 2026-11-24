@@ -76,3 +76,81 @@
  .admin-page .admin-footer{font-size:.62rem}
 }
 @media(prefers-reduced-motion:reduce){.admin-page .admin-sidebar,.admin-page .admin-nav-backdrop,.admin-page .admin-nav-item{transition:none!important}.admin-page .admin-nav-item:hover{transform:none}}
+
+/* Founder Studio layout stabilization — final cascade layer */
+.admin-page,.admin-page *,.admin-page *::before,.admin-page *::after{box-sizing:border-box}
+.admin-page{overflow-x:clip}
+.admin-page .admin-workspace{width:100%;grid-template-columns:264px minmax(0,1fr);max-width:1720px}
+.admin-page .admin-main{width:100%;min-width:0;max-width:none}
+.admin-page .admin-view{width:100%;min-width:0}
+.admin-page .admin-main-top{align-items:flex-start;flex-wrap:wrap}
+.admin-page .admin-main-top>div:first-child{min-width:0;flex:1 1 280px}
+.admin-page .admin-main-actions{min-width:0;max-width:100%;justify-content:flex-end}
+.admin-page .admin-user-chip{display:flex;align-items:center;gap:9px;min-width:0}
+.admin-page .admin-user-chip>span:last-child{min-width:0}
+.admin-page .admin-user-chip strong,.admin-page .admin-user-chip small{overflow-wrap:anywhere}
+.admin-page .admin-section-label{align-items:flex-start;flex-wrap:wrap}
+.admin-page .admin-section-label>div{min-width:0;flex:1 1 240px}
+.admin-page .admin-section-label p{max-width:100%;line-height:1.55}
+.admin-page .admin-stat-grid{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
+.admin-page .admin-quick-grid{grid-template-columns:repeat(4,minmax(0,1fr));align-items:stretch}
+.admin-page .admin-stat-card,.admin-page .admin-quick-card,.admin-page .panel,.admin-page .admin-info-card{min-width:0}
+.admin-page .admin-stat-card .value{font-variant-numeric:tabular-nums}
+.admin-page .admin-quick-card{width:100%;min-height:156px}
+.admin-page .admin-content-grid,.admin-page .admin-settings-grid,.admin-page .hte-social-grid{min-width:0}
+.admin-page .admin-form-panel,.admin-page .admin-side-info{min-width:0}
+.admin-page .form-grid{align-items:start}
+.admin-page .field{min-width:0}
+.admin-page .field input:not([type=checkbox]):not([type=radio]),.admin-page .field select,.admin-page .field textarea{display:block;width:100%;max-width:100%;min-width:0}
+.admin-page .field textarea{resize:vertical}
+.admin-page .admin-table-wrap,.admin-page .table-wrap,.admin-page [data-table-wrap]{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+.admin-page table{max-width:100%}
+.admin-page .admin-welcome-banner{width:100%;min-width:0}
+.admin-page .admin-welcome-banner>div:first-child{min-width:0}
+.admin-page .admin-banner-art{max-width:100%}
+.admin-page .admin-footer{align-items:center}
+.admin-page .admin-login-wrap{width:min(1160px,calc(100% - 40px));margin:clamp(28px,6vh,72px) auto;display:grid;grid-template-columns:minmax(0,1.12fr) minmax(320px,.88fr);align-items:stretch;gap:clamp(18px,3vw,34px)}
+.admin-page .admin-login-visual,.admin-page .admin-login-card{min-width:0;min-height:100%;border-radius:24px}
+.admin-page .admin-login-visual{padding:clamp(24px,4vw,48px);overflow:hidden}
+.admin-page .admin-login-card{padding:clamp(22px,3vw,36px);align-self:center}
+.admin-page .admin-login-actions{display:grid;grid-template-columns:1fr;gap:10px}
+.admin-page .admin-login-actions .btn{width:100%;justify-content:center}
+.admin-page .admin-secure-note{line-height:1.55}
+.admin-page .admin-nav-item{flex:0 0 auto}
+@media(max-width:1180px){
+ .admin-page .admin-workspace{grid-template-columns:244px minmax(0,1fr)}
+ .admin-page .admin-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .admin-page .admin-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .admin-page .admin-main-actions{justify-content:flex-start}
+}
+@media(max-width:900px){
+ .admin-page .admin-workspace{display:block;width:100%}
+ .admin-page .admin-main-top{display:flex}
+ .admin-page .admin-main-actions{justify-content:flex-start}
+ .admin-page .admin-login-wrap{grid-template-columns:1fr;width:min(680px,calc(100% - 32px));margin:24px auto;gap:16px}
+ .admin-page .admin-login-visual{min-height:260px}
+ .admin-page .admin-login-card{min-height:0}
+}
+@media(max-width:600px){
+ .admin-page .admin-stat-grid,.admin-page .admin-quick-grid{grid-template-columns:minmax(0,1fr)}
+ .admin-page .admin-stat-card{padding:17px}
+ .admin-page .admin-quick-card{min-height:140px}
+ .admin-page .admin-welcome-banner{display:block;padding:23px 20px}
+ .admin-page .admin-banner-art{width:100%;height:150px;margin-top:8px}
+ .admin-page .admin-banner-ring{width:138px;height:138px}
+ .admin-page .admin-banner-art strong{font-size:4.4rem}
+ .admin-page .admin-main-top{display:block}
+ .admin-page .admin-main-actions{display:flex;flex-wrap:wrap;align-items:center}
+ .admin-page .admin-user-chip{flex:1 1 145px}
+ .admin-page .admin-main-actions #refresh-admin{flex:0 0 auto}
+ .admin-page .admin-login-wrap{width:calc(100% - 24px);margin:14px auto;gap:12px}
+ .admin-page .admin-login-visual,.admin-page .admin-login-card{border-radius:18px}
+ .admin-page .admin-login-visual{min-height:220px;padding:22px}
+ .admin-page .admin-login-copy h1{font-size:clamp(2rem,9vw,3rem)}
+ .admin-page .admin-login-card{padding:20px}
+ .admin-page .admin-top-actions .admin-live{display:none}
+ .admin-page .admin-top-actions{justify-content:flex-end}
+}
+@media(prefers-reduced-motion:reduce){
+ .admin-page .admin-view{animation:none}
+}
