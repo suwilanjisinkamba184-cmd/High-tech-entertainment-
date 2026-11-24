@@ -4,7 +4,16 @@
   "private": true,
   "description": "Music upload and catalog backend for High Tech Entertainment",
   "main": "server.js",
-  "scripts": {"start":"node server.js"},
-  "engines": {"node": ">=18"},
-  "dependencies": {"express":"^5.1.0","multer":"^2.0.2"}
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test cloudflare/workers/hte-download-gateway/src/index.test.js",
+    "test:download-gateway": "node --test cloudflare/workers/hte-download-gateway/src/index.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "multer": "^2.0.2"
+  }
 }
