@@ -54,6 +54,16 @@ jobs:
           test -s assets/app.js
           test -s assets/site.css
           test -s assets/videos.js
+          test -s assets/hte-player.js
+          test -s assets/hte-player.css
+          test -s assets/hte-universe-full-ui.css
+          test -s assets/founder-studio-full-ui.css
+          test -s assets/account-full-ui.css
+          test -s assets/founder-media-preview.js
+          grep -q 'assets/hte-player.js' website/src/layouts/SiteLayout.astro
+          grep -q 'assets/hte-player.js' account/index.html
+          grep -q 'assets/founder-media-preview.js' admin/index.html
+          grep -q 'id="hte-search-input"' website/src/pages/index.astro
           node --check assets/app.js
           node --check assets/videos.js
           test -s assets/booking-confirmation.aac
