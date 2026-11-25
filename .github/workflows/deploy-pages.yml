@@ -60,6 +60,10 @@ jobs:
           test -s assets/founder-studio-full-ui.css
           test -s assets/account-full-ui.css
           test -s assets/founder-media-preview.js
+          test -s assets/founder-studio-operations.js
+          test -s assets/founder-studio-operations.css
+          grep -q 'assets/founder-studio-operations.js' admin/index.html
+          grep -q 'assets/founder-studio-operations.css' admin/index.html
           grep -q 'assets/hte-player.js' website/src/layouts/SiteLayout.astro
           grep -q 'assets/hte-player.js' account/index.html
           grep -q 'assets/founder-media-preview.js' admin/index.html
