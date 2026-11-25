@@ -1,0 +1,9 @@
+.admin-page .hte-table-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding:12px;border:1px solid var(--studio-line,rgba(191,195,199,.13));border-radius:14px;background:rgba(255,255,255,.025)}
+.admin-page .hte-table-search{flex:1 1 220px;min-width:0;min-height:42px;padding:10px 13px;border:1px solid var(--studio-line,rgba(191,195,199,.13));border-radius:11px;background:#0b0f15;color:#f7f8fa;font:500 .88rem Inter,system-ui,sans-serif}
+.admin-page .hte-table-search::placeholder{color:#8994a1}
+.admin-page .hte-table-count{color:var(--studio-muted,#98a2af);font-size:.76rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.admin-page .hte-table-export{min-height:40px;padding:8px 13px;border:1px solid rgba(197,164,90,.3);border-radius:11px;background:rgba(197,164,90,.1);color:#f1d99e;font:700 .78rem Inter,system-ui,sans-serif;cursor:pointer}
+.admin-page .hte-table-export:hover{background:rgba(197,164,90,.18);border-color:rgba(197,164,90,.55)}
+.admin-page .admin-table-wrap tr[hidden]{display:none!important}
+@media(max-width:560px){.admin-page .hte-table-tools{gap:8px;padding:9px}.admin-page .hte-table-search{flex-basis:100%;width:100%}.admin-page .hte-table-count{flex:1}}
+@media(prefers-reduced-motion:reduce){.admin-page .hte-table-export{transition:none}}
