@@ -72,9 +72,11 @@ button,a,input,select,textarea{touch-action:manipulation}
  .hte-search-status{grid-column:1}
  .hero{padding-top:62px}
  .hero-art{min-height:280px}
- .hte-now-playing{grid-template-columns:minmax(0,1fr) 42px;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
- .hte-np-progress{grid-column:1/-1;grid-row:2}
- .hte-np-close{grid-column:2;grid-row:1;padding:0 9px}
+ .hte-now-playing{grid-template-columns:44px minmax(0,1fr) auto;grid-template-areas:"toggle info close" "progress progress progress";gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+ .hte-np-toggle{grid-area:toggle}
+ .hte-np-info{grid-area:info;min-width:0}
+ .hte-np-progress{grid-area:progress;min-width:0}
+ .hte-np-close{grid-area:close;padding:0 9px}
 }
 @media(max-width:520px){
  .section{padding-block:42px}
