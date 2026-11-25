@@ -142,7 +142,7 @@
     if (!button) return;
     var audio = wrapper.querySelector('audio');
     var name = audio ? trackName(audio) : 'track';
-    var playing = state === 'playing';
+    var playing = audio ? (!audio.paused && !audio.ended) : state === 'playing';
     button.setAttribute('aria-label', (playing ? 'Pause ' : 'Play ') + name);
     button.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false');
   }
