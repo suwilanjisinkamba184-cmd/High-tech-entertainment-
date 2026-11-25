@@ -9,7 +9,7 @@ function attach(config){
  const title=document.createElement('strong');title.textContent=config.label;
  const detail=document.createElement('span');detail.textContent='Select a file to preview it before upload.';
  meta.append(title,detail);panel.append(meta);
- const media=document.createElement(config.kind);media.controls=true;media.preload='metadata';media.className='hte-upload-preview-media';panel.append(media);
+ const media=config.kind==='audio'?document.createElement('audio'):document.createElement('video');media.controls=true;media.preload='metadata';media.className='hte-upload-preview-media';panel.append(media);
  const clear=document.createElement('button');clear.type='button';clear.className='hte-upload-preview-clear';clear.textContent='Clear preview';panel.append(clear);
  input.insertAdjacentElement('afterend',panel);
  let objectUrl='';
