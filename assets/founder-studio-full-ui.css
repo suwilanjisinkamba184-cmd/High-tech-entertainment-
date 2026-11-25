@@ -1,0 +1,30 @@
+/* Founder Studio full UI system */
+.admin-page{--studio-bg:#07090d;--studio-panel:#10151c;--studio-panel-2:#171e27;--studio-line:rgba(197,203,210,.14);--studio-gold:#d9b96e;--studio-gold-soft:#f3dfa9;--studio-cyan:#8bdcff;--studio-muted:#9aa5b2;background:radial-gradient(ellipse at 85% -15%,rgba(217,185,110,.14),transparent 38%),radial-gradient(ellipse at 0 45%,rgba(93,177,215,.08),transparent 34%),#07090d}
+.admin-page .admin-topbar{background:rgba(7,9,13,.94);border-color:var(--studio-line);backdrop-filter:blur(20px)}
+.admin-page .admin-workspace{max-width:1720px}
+.admin-page .admin-sidebar{background:linear-gradient(180deg,#10151c,#090d13);border-color:var(--studio-line)}
+.admin-page .admin-nav-item{min-height:50px;border-radius:13px}
+.admin-page .admin-nav-item.active{background:linear-gradient(100deg,rgba(217,185,110,.17),rgba(139,220,255,.055));border-color:rgba(217,185,110,.3);box-shadow:inset 3px 0 0 var(--studio-gold)}
+.admin-page .admin-nav-icon{border-radius:11px;background:rgba(255,255,255,.04);color:var(--studio-silver)}
+.admin-page .admin-main{padding-top:clamp(22px,3vw,42px)}
+.admin-page .admin-welcome-banner,.admin-page .admin-stat-card,.admin-page .admin-quick-card,.admin-page .admin-form-panel,.admin-page .admin-setting-card,.admin-page .admin-info-card,.admin-page #admin-inbox .panel{border-color:var(--studio-line);border-radius:19px;background:linear-gradient(145deg,rgba(23,30,39,.97),rgba(11,15,21,.99));box-shadow:0 18px 46px rgba(0,0,0,.23)}
+.admin-page .admin-welcome-banner{background:radial-gradient(ellipse at 78% 35%,rgba(217,185,110,.17),transparent 36%),radial-gradient(ellipse at 10% 100%,rgba(139,220,255,.08),transparent 38%),linear-gradient(120deg,#171e27,#0b1017)}
+.admin-page .admin-stat-card .value{color:var(--studio-gold-soft)}
+.admin-page .admin-quick-card:hover{border-color:rgba(217,185,110,.48)}
+.admin-page .admin-main .btn,.admin-page .admin-top-actions .btn{min-height:43px;border-radius:12px}
+.admin-page .admin-main .btn.gold,.admin-page .admin-login-card .btn.gold{background:linear-gradient(120deg,#f0d99e,#bd974d);color:#15130e;border-color:transparent}
+.admin-page .admin-form-panel .field input,.admin-page .admin-form-panel .field textarea,.admin-page .admin-form-panel .field select,.admin-page .admin-table-search,.admin-page .hte-table-search{background:#080c12;border-color:#34404d;color:#f5f7fa;border-radius:12px}
+.admin-page .admin-table-wrap,.admin-page .table-wrap{border-color:var(--studio-line);border-radius:15px;background:#0b1017}
+.admin-page .admin-table-wrap .data-table th{background:#151d27}
+.admin-page .admin-table-wrap .data-table td{border-color:rgba(197,203,210,.09)}
+.admin-page .hte-table-tools{border-color:var(--studio-line);border-radius:14px;background:rgba(255,255,255,.025)}
+.admin-page .hte-table-export{border-radius:11px;background:rgba(217,185,110,.12);color:var(--studio-gold-soft)}
+.admin-page .admin-login-wrap{background:radial-gradient(ellipse at 25% 30%,rgba(139,220,255,.1),transparent 40%),radial-gradient(ellipse at 85% 10%,rgba(217,185,110,.13),transparent 40%)}
+.admin-page .admin-login-visual{border-radius:24px;border:1px solid var(--studio-line);background:linear-gradient(135deg,#171e27,#0b1017)}
+.admin-page .admin-login-card{border:1px solid var(--studio-line);border-radius:22px;background:linear-gradient(145deg,#171e27,#0c1118);box-shadow:0 24px 70px rgba(0,0,0,.35)}
+.admin-page .admin-login-card input{background:#080c12;border-color:#34404d;border-radius:12px}
+.admin-page .admin-live{color:var(--studio-gold-soft)}
+.admin-page .admin-global-status .status{border-radius:12px}
+@media(max-width:900px){.admin-page .admin-sidebar{background:#0b1017}}
+@media(max-width:560px){.admin-page .admin-topbar-inner{width:calc(100% - 24px)}.admin-page .admin-login-wrap{padding-inline:13px}.admin-page .admin-main{padding-inline:12px}.admin-page .admin-welcome-banner{min-height:0}.admin-page .admin-banner-art{width:130px;height:120px;flex-basis:130px}.admin-page .admin-banner-art strong{font-size:3.5rem}.admin-page .admin-banner-ring{width:110px;height:110px}}
+@media(prefers-reduced-motion:reduce){.admin-page *{animation:none!important;transition:none!important}}
