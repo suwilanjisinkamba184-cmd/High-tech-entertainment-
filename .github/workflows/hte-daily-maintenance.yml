@@ -64,7 +64,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout Android recovery branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: fix/critical-video-splash-ai-regressions-20261122
       - name: Set up Java
@@ -108,7 +108,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
       - name: Assert public APK publishing remains disabled
