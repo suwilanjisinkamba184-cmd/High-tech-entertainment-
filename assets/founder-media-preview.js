@@ -17,7 +17,10 @@ function attach(config){
  input.addEventListener('change',()=>{
   reset();const file=input.files?.[0];if(!file)return;
   const expected=config.kind==='audio'?'audio/':'video/';
-  if(file.type&&!file.type.startsWith(expected)){detail.textContent='The selected file does not appear to be '+config.kind+'.';panel.hidden=false;media.hidden=true;return}
+  const ext=(file.name.split('.').pop()||'').toLowerCase();
+  const supported=config.kind==='audio'?['mp3','m4a','mp4','aac','wav','ogg','flac','webm']:['mp4','m4v','webm','mov'];
+  const genericMime=!file.type||file.type==='application/octet-stream';
+  if(!supported.includes(ext)||(!genericMime&&!file.type.startsWith(expected))){detail.textContent='Choose a supported '+config.kind+' file ('+supported.join(', ').toUpperCase()+').';panel.hidden=false;media.hidden=true;return}
   if(file.size>100*1024*1024){detail.textContent='File exceeds the 100 MB upload limit.';panel.hidden=false;media.hidden=true;return}
   objectUrl=URL.createObjectURL(file);media.hidden=false;media.src=objectUrl;detail.replaceChildren(document.createTextNode(file.name+' · '+formatSize(file.size)));panel.hidden=false;
  });
