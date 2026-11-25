@@ -85,6 +85,7 @@ document.addEventListener('submit',async function(event){
     }),15000,'Track details could not be saved before the request timed out.')
     if(dbError)throw dbError;
     recordSaved=true;
+    if(window.HTEFounderStudioAudit)await window.HTEFounderStudioAudit('catalogue.track_uploaded','track',String(data.get('title')||'').trim(),{published:data.get('is_published')==='on',source_platform:sourcePlatform});
     form.reset();
     say('Success! Your track has been saved to Supabase. The website and app will sync the published entry automatically.','success');
     setTimeout(()=>location.reload(),1200);

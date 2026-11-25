@@ -1,0 +1,38 @@
+name: Founder Studio checks
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "admin/**"
+      - "assets/founder-command-centre.*"
+      - "supabase/migrations/**"
+      - "supabase/functions/meta-publish/**"
+      - "supabase/functions/meta-connection-check/**"
+      - "scripts/check-founder-studio.mjs"
+      - ".github/workflows/founder-studio-checks.yml"
+  push:
+    branches: ["feat/founder-studio-command-centre"]
+jobs:
+  founder-studio:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Check Founder Studio browser script syntax
+        run: |
+          node --check assets/founder-command-centre.js
+          node --check assets/app.js
+          node --check assets/admin-upload.js
+          node --check assets/admin-video.js
+          node --check assets/admin-enhancements.js
+          node --check assets/ai-ad-studio.js
+          node --check assets/ai-marketing-agent.js
+      - name: Check edge function types
+        run: deno check --node-modules-dir=auto supabase/functions/meta-publish/index.ts supabase/functions/meta-connection-check/index.ts
+      - name: Check Founder Studio architecture invariants
+        run: node scripts/check-founder-studio.mjs
