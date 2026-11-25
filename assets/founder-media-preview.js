@@ -22,7 +22,7 @@ function attach(config){
   const genericMime=!file.type||file.type==='application/octet-stream';
   if(!supported.includes(ext)||(!genericMime&&!file.type.startsWith(expected))){detail.textContent='Choose a supported '+config.kind+' file ('+supported.join(', ').toUpperCase()+').';panel.hidden=false;media.hidden=true;return}
   if(file.size>100*1024*1024){detail.textContent='File exceeds the 100 MB upload limit.';panel.hidden=false;media.hidden=true;return}
-  objectUrl=URL.createObjectURL(file);media.hidden=false;media.src=objectUrl;detail.replaceChildren(document.createTextNode(file.name+' · '+formatSize(file.size)));panel.hidden=false;
+  objectUrl=URL.createObjectURL(file);media.hidden=false;media.src=objectUrl;detail.textContent='Selected '+config.kind+' · '+formatSize(file.size);panel.hidden=false;
  });
  clear.addEventListener('click',()=>{reset();input.value=''});
  form.addEventListener('reset',reset);
