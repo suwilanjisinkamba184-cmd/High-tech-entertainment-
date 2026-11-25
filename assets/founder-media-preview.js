@@ -1,6 +1,5 @@
 (()=>{'use strict';
 const selectors=[{form:'#track-form',field:'audio',kind:'audio',label:'Audio preview'},{form:'#video-form',field:'video',kind:'video',label:'Video preview'}];
-const formatSize=n=>n<1024*1024?(n/1024).toFixed(0)+' KB':(n/1024/1024).toFixed(1)+' MB';
 function attach(config){
  const form=document.querySelector(config.form),input=form?.querySelector('input[name="'+config.field+'"]');if(!input||input.dataset.htePreview==='ready')return;
  input.dataset.htePreview='ready';
@@ -25,7 +24,7 @@ function attach(config){
   if(file.size>100*1024*1024){detail.textContent='File exceeds the 100 MB upload limit.';panel.hidden=false;media.hidden=true;return}
   const candidateUrl=URL.createObjectURL(file);const parsedUrl=new URL(candidateUrl,window.location.href);
   if(parsedUrl.protocol!=='blob:'||parsedUrl.origin!==window.location.origin){URL.revokeObjectURL(candidateUrl);detail.textContent='This browser could not create a safe local preview.';panel.hidden=false;media.hidden=true;return}
-  objectUrl=parsedUrl.href;media.hidden=false;media.src=objectUrl;panel.hidden=false;
+  objectUrl=parsedUrl.href;media.hidden=false;media.src=objectUrl;detail.textContent=config.kind==='audio'?'Audio file ready to preview.':'Video file ready to preview.';panel.hidden=false;
  });
  clear.addEventListener('click',()=>{reset();input.value=''});
  form.addEventListener('reset',reset);
