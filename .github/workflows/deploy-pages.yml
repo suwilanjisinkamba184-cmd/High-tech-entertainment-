@@ -64,7 +64,7 @@ jobs:
           test -s assets/founder-studio-operations.css
           grep -q 'assets/founder-studio-operations.js' admin/index.html
           grep -q 'assets/founder-studio-operations.css' admin/index.html
-          grep -q "detail.textContent='Preview ready.'" assets/founder-media-preview.js
+          grep -q 'URL.createObjectURL(file)' assets/founder-media-preview.js
           grep -q 'application/octet-stream' assets/founder-media-preview.js
           grep -q 'video/mp4' assets/founder-media-preview.js
           grep -q '!audio.paused && !audio.ended' assets/hte-player.js
