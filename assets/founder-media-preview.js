@@ -23,7 +23,9 @@ function attach(config){
   const containerAudioMime=config.kind==='audio'&&['mp4','webm'].includes(ext)&&['video/mp4','video/webm'].includes(file.type);
   if(!supported.includes(ext)||(!genericMime&&!file.type.startsWith(expected)&&!containerAudioMime)){detail.textContent='Choose a supported '+config.kind+' file ('+supported.join(', ').toUpperCase()+').';panel.hidden=false;media.hidden=true;return}
   if(file.size>100*1024*1024){detail.textContent='File exceeds the 100 MB upload limit.';panel.hidden=false;media.hidden=true;return}
-  objectUrl=URL.createObjectURL(file);media.hidden=false;media.src=objectUrl;panel.hidden=false;
+  const candidateUrl=URL.createObjectURL(file);const parsedUrl=new URL(candidateUrl,window.location.href);
+  if(parsedUrl.protocol!=='blob:'||parsedUrl.origin!==window.location.origin){URL.revokeObjectURL(candidateUrl);detail.textContent='This browser could not create a safe local preview.';panel.hidden=false;media.hidden=true;return}
+  objectUrl=parsedUrl.href;media.hidden=false;media.src=objectUrl;panel.hidden=false;
  });
  clear.addEventListener('click',()=>{reset();input.value=''});
  form.addEventListener('reset',reset);
