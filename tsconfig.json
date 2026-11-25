@@ -1,11 +1,14 @@
 {
-  "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "react",
     "allowJs": true,
     "baseUrl": "."
   },
-  "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"]
+  "include": ["website/**/*.ts", "website/**/*.tsx", "website/**/*.astro"],
+  "exclude": ["node_modules", "dist", "website/dist"]
 }
