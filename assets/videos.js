@@ -33,7 +33,7 @@ function videoCard(video){
   let poster='';
   if(embed.includes('youtube-nocookie.com/embed/')){const match=embed.match(/\/embed\/([A-Za-z0-9_-]{11})/);if(match)poster='https://i.ytimg.com/vi/'+match[1]+'/hqdefault.jpg'}
   else{const candidate=safeHttps(video.thumbnail_url);if(candidate&&!/youtube|youtu\.be/i.test(new URL(candidate).hostname))poster=candidate}
-  player='<button class="video-preview" type="button" data-video-play data-embed="'+esc(embed)+'" data-title="'+title+'" aria-label="Play '+title+'">'+(poster?'<img src="'+esc(poster)+'" alt="" loading="lazy">':'')+'<span class="video-preview-play" aria-hidden="true">▶</span><span class="sr-only">Play video</span></button>';
+  player='<button class="video-preview" type="button" data-video-play data-embed="'+esc(embed)+'" data-source="'+esc(src)+'" data-title="'+title+'" aria-label="Play '+title+'">'+(poster?'<img src="'+esc(poster)+'" alt="" loading="lazy">':'')+'<span class="video-preview-play" aria-hidden="true">▶</span><span class="sr-only">Play video</span></button>';
  }else if(direct){const poster=videoPoster(video.thumbnail_url);player='<video controls preload="none" data-hte-video'+(poster?' poster="'+esc(poster)+'"':'')+' src="'+esc(src)+'"></video>'}
  else{player='<a class="video-external" href="'+esc(src)+'" target="_blank" rel="noopener noreferrer">Watch video ↗</a>'}
  let download='';
@@ -124,7 +124,7 @@ el.addEventListener('click',event=>{
  const frame=document.createElement('iframe');frame.className='video-embed';
  frame.title=button.dataset.title||'High-Tech Entertainment video';frame.src=url.href;
  frame.loading='eager';frame.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
- frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';button.replaceWith(frame)
+ frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';button.replaceWith(frame);const fallback=document.createElement('a');fallback.className='video-external';fallback.href=safeHttps(button.dataset.source);fallback.target='_blank';fallback.rel='noopener noreferrer';fallback.textContent='If playback is unavailable, open the official video ↗';if(fallback.href)frame.insertAdjacentElement('afterend',fallback)
 });
 let videoCatalogueChannel=null;
 if(db){
