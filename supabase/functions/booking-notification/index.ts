@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const OFFICIAL_ORIGIN = "https://suwilanjisinkamba184-cmd.github.io";
