@@ -65,6 +65,8 @@ jobs:
           grep -q 'assets/founder-studio-operations.js' admin/index.html
           grep -q 'assets/founder-studio-operations.css' admin/index.html
           grep -q 'URL.createObjectURL(file)' assets/founder-media-preview.js
+          grep -q "document.createElement('audio')" assets/founder-media-preview.js
+          grep -q "document.createElement('video')" assets/founder-media-preview.js
           grep -q 'application/octet-stream' assets/founder-media-preview.js
           grep -q 'video/mp4' assets/founder-media-preview.js
           grep -q '!audio.paused && !audio.ended' assets/hte-player.js
