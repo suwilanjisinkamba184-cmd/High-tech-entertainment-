@@ -117,6 +117,7 @@
   /* ---------- Playback ---------- */
 
   function playAudio(audio) {
+    if (audio.error) audio.load();
     var attempt = audio.play();
     if (attempt && typeof attempt.catch === 'function') {
       attempt.catch(function (error) {
@@ -219,12 +220,19 @@
     video.addEventListener('error', function () {
       var note = video.parentNode.querySelector('.hte-media-error');
       if (!note) {
-        note = document.createElement('p');
+        note = document.createElement('div');
         note.className = 'hte-media-error';
         note.setAttribute('role', 'alert');
+        note.innerHTML = '<span></span> <button type="button" class="hte-media-retry">Retry video</button>';
         video.parentNode.insertBefore(note, video.nextSibling);
+        note.querySelector('button').addEventListener('click', function () {
+          note.hidden = true;
+          video.hidden = false;
+          video.load();
+        });
       }
-      note.textContent = VIDEO_ERROR_TEXT;
+      note.querySelector('span').textContent = VIDEO_ERROR_TEXT;
+      note.hidden = false;
       video.hidden = true;
     });
   }
