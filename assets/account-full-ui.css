@@ -1,0 +1,12 @@
+/* HTE member area full UI refresh */
+.account-page{--hte-gold:#d9b96e;--hte-silver:#c5cbd2;--hte-line:rgba(197,203,210,.15);background:radial-gradient(ellipse at 82% 0,rgba(217,185,110,.13),transparent 38%),#07090d}
+.account-page .account-topbar{background:rgba(7,9,13,.92);border-color:var(--hte-line);backdrop-filter:blur(20px)}
+.account-page .account-shell{padding-top:clamp(34px,6vw,70px)}
+.account-page .account-layout{gap:clamp(18px,3vw,34px)}
+.account-page .account-aside,.account-page .account-login-card,.account-page .account-main-card,.account-page .account-booking-card,.account-page .account-downloads-card,.account-page .account-activity-card{border:1px solid var(--hte-line);border-radius:20px;background:linear-gradient(145deg,#171e27,#0d1219);box-shadow:0 18px 48px rgba(0,0,0,.22)}
+.account-page .account-login-card,.account-page .account-main-card,.account-page .account-booking-card,.account-page .account-downloads-card,.account-page .account-activity-card{padding:clamp(18px,3vw,28px)}
+.account-page .field input,.account-page .field textarea,.account-page .field select{border-color:#35404d;border-radius:12px;background:#080c12;color:#f6f7f8}
+.account-page .btn{min-height:44px;border-radius:12px}
+.account-page .btn.gold{background:linear-gradient(120deg,#f0d99e,#bd974d);color:#15130e;border-color:transparent}
+.account-page .account-profile-avatar{border-color:var(--hte-gold)}
+@media(max-width:680px){.account-page .account-layout{grid-template-columns:1fr}.account-page .account-aside{order:2}.account-page .account-main-card{padding:17px}}

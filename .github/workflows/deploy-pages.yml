@@ -54,6 +54,28 @@ jobs:
           test -s assets/app.js
           test -s assets/site.css
           test -s assets/videos.js
+          test -s assets/hte-player.js
+          test -s assets/hte-player.css
+          test -s assets/hte-universe-full-ui.css
+          test -s assets/founder-studio-full-ui.css
+          test -s assets/account-full-ui.css
+          test -s assets/founder-media-preview.js
+          test -s assets/founder-studio-operations.js
+          test -s assets/founder-studio-operations.css
+          grep -q 'assets/founder-studio-operations.js' admin/index.html
+          grep -q 'assets/founder-studio-operations.css' admin/index.html
+          grep -q 'URL.createObjectURL(file)' assets/founder-media-preview.js
+          grep -q "parsedUrl.protocol!=='blob:'" assets/founder-media-preview.js
+          grep -q "document.createElement('audio')" assets/founder-media-preview.js
+          grep -q "document.createElement('video')" assets/founder-media-preview.js
+          grep -q 'application/octet-stream' assets/founder-media-preview.js
+          grep -q 'video/mp4' assets/founder-media-preview.js
+          grep -q '!audio.paused && !audio.ended' assets/hte-player.js
+          grep -q 'grid-template-areas:"toggle info close" "progress progress progress"' assets/hte-universe-full-ui.css
+          grep -q 'assets/hte-player.js' website/src/layouts/SiteLayout.astro
+          grep -q 'assets/hte-player.js' account/index.html
+          grep -q 'assets/founder-media-preview.js' admin/index.html
+          grep -q 'id="hte-search-input"' website/src/pages/index.astro
           node --check assets/app.js
           node --check assets/videos.js
           test -s assets/booking-confirmation.aac
