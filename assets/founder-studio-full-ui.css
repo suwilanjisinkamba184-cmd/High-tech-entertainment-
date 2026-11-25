@@ -28,3 +28,11 @@
 @media(max-width:900px){.admin-page .admin-sidebar{background:#0b1017}}
 @media(max-width:560px){.admin-page .admin-topbar-inner{width:calc(100% - 24px)}.admin-page .admin-login-wrap{padding-inline:13px}.admin-page .admin-main{padding-inline:12px}.admin-page .admin-welcome-banner{min-height:0}.admin-page .admin-banner-art{width:130px;height:120px;flex-basis:130px}.admin-page .admin-banner-art strong{font-size:3.5rem}.admin-page .admin-banner-ring{width:110px;height:110px}}
 @media(prefers-reduced-motion:reduce){.admin-page *{animation:none!important;transition:none!important}}
+
+.admin-page .hte-upload-preview{display:grid;gap:12px;margin-top:12px;padding:13px;border:1px solid rgba(217,185,110,.25);border-radius:15px;background:linear-gradient(145deg,rgba(217,185,110,.07),rgba(255,255,255,.02))}
+.admin-page .hte-upload-preview[hidden]{display:none!important}
+.admin-page .hte-upload-preview-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.admin-page .hte-upload-preview-meta strong{color:#f2dfb0;font-size:.82rem}
+.admin-page .hte-upload-preview-meta span{color:var(--studio-muted,#98a2af);font-size:.74rem;overflow-wrap:anywhere}
+.admin-page .hte-upload-preview-media{display:block;width:100%;max-height:260px;border-radius:11px;background:#05080c}
+.admin-page .hte-upload-preview-clear{justify-self:start;min-height:34px;padding:0 11px;border:1px solid var(--studio-line);border-radius:9px;background:rgba(255,255,255,.04);color:#cbd2da;font-size:.74rem;font-weight:700;cursor:pointer}
