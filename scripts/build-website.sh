@@ -47,6 +47,13 @@ test ! -e dist/assets/booking-confirmation.aac || { echo "Source AAC must not be
 cp app-download.html robots.txt sitemap.xml account-deletion.html privacy-policy.html high-tech-logo.svg music-spotlight.html dist/
 node scripts/generate-public-sitemap.mjs
 
+# Verify the homepage includes visible search controls, year archive filters, and a no-JavaScript video fallback.
+grep -Fq 'id="hte-catalogue-search"' website/src/pages/index.astro || { echo "Homepage search controls are missing." >&2; exit 1; }
+grep -Fq 'id="hte-video-years"' website/src/pages/index.astro || { echo "Video archive filters are missing." >&2; exit 1; }
+grep -Fq 'class="video-card" data-video-year="2026"' website/src/pages/index.astro || { echo "Static video fallback cards are missing." >&2; exit 1; }
+test -s assets/catalogue-experience.js || { echo "Catalogue search and archive controller is missing." >&2; exit 1; }
+test -s assets/catalogue-experience.css || { echo "Catalogue search and archive styles are missing." >&2; exit 1; }
+
 # Ensure the public video catalogue retains recent YouTube posts and older HTE uploads with real download links.
 grep -Fq "eq('source_platform','upload')" assets/videos.js || { echo "Public video catalogue must include uploaded HTE videos outside the recent-feed window." >&2; exit 1; }
 grep -Fq "video-download-original" assets/videos.js || { echo "Public uploaded-video download control is missing." >&2; exit 1; }
