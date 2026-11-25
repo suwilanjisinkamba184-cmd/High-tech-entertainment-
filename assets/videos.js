@@ -38,6 +38,7 @@ function videoCard(video){
  else{player='<a class="video-external" href="'+esc(src)+'" target="_blank" rel="noopener noreferrer">Watch video ↗</a>'}
  let download='';
  const original=safeHttps(video.download_url);
+ if(embed&&embed.includes('youtube-nocookie.com/embed/'))download='<a class=\"btn ghost video-download-youtube\" href=\"'+esc(src)+'\" target=\"_blank\" rel=\"noopener noreferrer\" aria-label=\"Open YouTube download options for '+title+'\">YouTube download options ↗</a>'; 
  if(original&&cfg.url){try{const origin=new URL(cfg.url).origin,downloadUrl=new URL(original);if(downloadUrl.origin===origin&&(/^\/storage\/v1\/object\/public\/hte-videos?\//).test(downloadUrl.pathname)){const href=original+(original.includes('?')?'&':'?')+'download';download='<a class="btn ghost video-download-original" href="'+esc(href)+'" download rel="noopener noreferrer">Download original ↓</a>'}}catch{}}
  return '<article class="video-card'+(video.featured?' is-featured':'')+'">'+(video.featured?'<span class="video-card-kicker">Featured Zambian release</span>':'')+player+'<h3>'+title+'</h3><p>'+artist+description+'</p>'+download+'</article>';
 }
@@ -46,9 +47,9 @@ async function load(){
  let own=[],sourceError=false,timeoutId;
  if(db){
   try{
-   const columns='id,title,artist,description,video_url,thumbnail_url,download_url,created_at,source_platform';
+   const columns='id,title,artist,description,video_url,thumbnail_url,download_url,created_at,published_at,source_platform';
    const request=Promise.all([
-    db.from('videos').select(columns).eq('is_published',true).order('created_at',{ascending:false}).limit(60),
+    db.from('videos').select(columns).eq('is_published',true).order('created_at',{ascending:false}).limit(200),
     db.from('videos').select(columns).eq('is_published',true).eq('source_platform','upload').order('created_at',{ascending:false}).limit(200)
    ]);
    const [recentResult,uploadedResult]=await Promise.race([
