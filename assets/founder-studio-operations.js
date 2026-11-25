@@ -5,7 +5,7 @@ const configs=[
  {id:'admin-artists',label:'Artist directory',file:'hte-artists.csv'},
  {id:'admin-releases',label:'Release catalogue',file:'hte-releases.csv'}
 ];
-const escapeCsv=value=>{let text=String(value??'').replace(/\r?\n/g,' ');if(/^[\\s\\u0000-\\u001f]*[=+\\-@]/.test(text))text="'"+text;return '"'+text.replace(/"/g,'""')+'"'};
+const escapeCsv=value=>{let text=String(value??'').replace(/\r?\n/g,' ');if(/^[=+@-]/.test(text.trimStart()))text="'"+text;return '"'+text.replace(/"/g,'""')+'"'};
 function init(tableBody){
  const table=tableBody.closest('table');if(!table||table.dataset.hteTools==='ready')return;
  table.dataset.hteTools='ready';
