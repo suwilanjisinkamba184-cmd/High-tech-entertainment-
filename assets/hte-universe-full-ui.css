@@ -85,3 +85,5 @@ button,a,input,select,textarea{touch-action:manipulation}
  .hero h1{font-size:clamp(2.8rem,14vw,4.5rem)}
 }
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+.hte-media-retry{min-height:34px;margin-left:8px;padding:0 12px;border:1px solid rgba(217,185,110,.35);border-radius:9px;background:#161e27;color:var(--hte-gold-hi);font-weight:750;cursor:pointer}
