@@ -64,6 +64,10 @@ jobs:
           test -s assets/founder-studio-operations.css
           grep -q 'assets/founder-studio-operations.js' admin/index.html
           grep -q 'assets/founder-studio-operations.css' admin/index.html
+          grep -q 'document.createTextNode(file.name' assets/founder-media-preview.js
+          grep -q 'application/octet-stream' assets/founder-media-preview.js
+          grep -q '!audio.paused && !audio.ended' assets/hte-player.js
+          grep -q 'grid-template-areas:"toggle info close" "progress progress progress"' assets/hte-universe-full-ui.css
           grep -q 'assets/hte-player.js' website/src/layouts/SiteLayout.astro
           grep -q 'assets/hte-player.js' account/index.html
           grep -q 'assets/founder-media-preview.js' admin/index.html
