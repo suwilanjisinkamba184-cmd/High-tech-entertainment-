@@ -54,6 +54,7 @@ test -s website/src/pages/videos/index.astro || { echo "Dedicated video catalogu
 grep -Fq 'id="video-catalogue"' website/src/pages/videos/index.astro || { echo "Dedicated video catalogue container is missing." >&2; exit 1; }
 grep -Fq 'id="public-videos"' website/src/pages/videos/index.astro || { echo "Dedicated video catalogue list is missing." >&2; exit 1; }
 grep -Fq 'assets/videos.js?v=10' website/src/pages/videos/index.astro || { echo "Dedicated video catalogue controller is not loaded." >&2; exit 1; }
+grep -Fq 'View full video catalogue' website/src/pages/index.astro || { echo "Homepage is missing its dedicated video catalogue link." >&2; exit 1; }
 grep -Fq 'class="video-card" data-video-year="2026"' website/src/pages/index.astro || { echo "Static video fallback cards are missing." >&2; exit 1; }
 test -s assets/catalogue-experience.js || { echo "Catalogue search and archive controller is missing." >&2; exit 1; }
 test -s assets/catalogue-experience.css || { echo "Catalogue search and archive styles are missing." >&2; exit 1; }
