@@ -139,7 +139,7 @@ jobs:
           script: bash .github/scripts/run-android-instrumentation.sh
       - name: Upload Android emulator diagnostics
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: hte-android-emulator-diagnostics-api-${{ matrix.api-level }}
           if-no-files-found: warn
@@ -246,7 +246,7 @@ jobs:
           echo "PASS: candidate matches the pinned trusted signing certificate SHA-256."
       - name: Upload signed production candidate for device testing
         if: matrix.api-level == 35 && env.BUILD_SIGNED_CANDIDATE == 'true'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: hte-universe-4.3.1-build55-signed-production-candidate
           path: |
