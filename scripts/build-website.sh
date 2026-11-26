@@ -50,6 +50,12 @@ node scripts/generate-public-sitemap.mjs
 # Verify the homepage includes visible search controls, year archive filters, and a no-JavaScript video fallback.
 grep -Fq 'id="hte-catalogue-search"' website/src/pages/index.astro || { echo "Homepage search controls are missing." >&2; exit 1; }
 grep -Fq 'id="hte-video-years"' website/src/pages/index.astro || { echo "Video archive filters are missing." >&2; exit 1; }
+test -s website/src/pages/videos/index.astro || { echo "Dedicated video catalogue source page is missing." >&2; exit 1; }
+grep -Fq 'id="video-catalogue"' website/src/pages/videos/index.astro || { echo "Dedicated video catalogue container is missing." >&2; exit 1; }
+grep -Fq 'id="public-videos"' website/src/pages/videos/index.astro || { echo "Dedicated video catalogue list is missing." >&2; exit 1; }
+grep -Fq 'assets/videos.js?v=10' website/src/pages/videos/index.astro || { echo "Dedicated video catalogue controller is not loaded." >&2; exit 1; }
+grep -Fq 'View full video catalogue' website/src/pages/index.astro || { echo "Homepage is missing its dedicated video catalogue link." >&2; exit 1; }
+grep -Fq 'let shown=0,shownVideos=0' assets/catalogue-experience.js || { echo "Video year filter must count video cards separately from other catalogue types." >&2; exit 1; }
 grep -Fq 'class="video-card" data-video-year="2026"' website/src/pages/index.astro || { echo "Static video fallback cards are missing." >&2; exit 1; }
 test -s assets/catalogue-experience.js || { echo "Catalogue search and archive controller is missing." >&2; exit 1; }
 test -s assets/catalogue-experience.css || { echo "Catalogue search and archive styles are missing." >&2; exit 1; }
@@ -85,6 +91,17 @@ if [ ! -s dist/assets/booking-confirmation.mp3 ]; then
   exit 1
 fi
 test -s dist/images/brand/high-tech-hero.svg || { echo "Missing published HTE hero artwork." >&2; exit 1; }
+
+# Audit guard: verify the complete public search/player and Founder Studio UX layer
+# is present in the actual dist artifact, not just in the source tree.
+for file in assets/catalogue-experience.js assets/catalogue-experience.css assets/hte-player.js assets/hte-player.css assets/founder-studio-full-ui.css assets/founder-media-preview.js assets/founder-studio-operations.js assets/founder-studio-operations.css assets/account-full-ui.css; do
+  test -s "dist/$file" || { echo "Missing required UX asset in dist: $file" >&2; exit 1; }
+done
+grep -Fq 'assets/catalogue-experience.js?v=3' dist/index.html || { echo "Published homepage is missing the current catalogue/search controller." >&2; exit 1; }
+grep -Fq 'assets/catalogue-experience.css?v=3' dist/index.html || { echo "Published homepage is missing the current catalogue/search styles." >&2; exit 1; }
+grep -Fq 'founder-studio-full-ui.css?v=20261126-ux1' dist/admin/index.html || { echo "Published Founder Studio is missing the current UI/icon fix." >&2; exit 1; }
+grep -Fq 'assets/founder-media-preview.js' dist/admin/index.html || { echo "Founder Studio local media preview is not wired into the published page." >&2; exit 1; }
+grep -Fq 'assets/founder-studio-operations.js' dist/admin/index.html || { echo "Founder Studio table operations are not wired into the published page." >&2; exit 1; }
 
 # Catch "UI regenerated but nothing changed": the published artifact must
 # contain the Astro homepage, not the legacy root HTML.

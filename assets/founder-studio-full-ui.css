@@ -1,5 +1,5 @@
 /* Founder Studio full UI system */
-.admin-page{--studio-bg:#07090d;--studio-panel:#10151c;--studio-panel-2:#171e27;--studio-line:rgba(197,203,210,.14);--studio-gold:#d9b96e;--studio-gold-soft:#f3dfa9;--studio-cyan:#8bdcff;--studio-muted:#9aa5b2;background:radial-gradient(ellipse at 85% -15%,rgba(217,185,110,.14),transparent 38%),radial-gradient(ellipse at 0 45%,rgba(93,177,215,.08),transparent 34%),#07090d}
+.admin-page{--studio-bg:#07090d;--studio-panel:#10151c;--studio-panel-2:#171e27;--studio-line:rgba(197,203,210,.14);--studio-gold:#d9b96e;--studio-gold-soft:#f3dfa9;--studio-silver:#c4c8ce;--studio-cyan:#8bdcff;--studio-muted:#9aa5b2;background:radial-gradient(ellipse at 85% -15%,rgba(217,185,110,.14),transparent 38%),radial-gradient(ellipse at 0 45%,rgba(93,177,215,.08),transparent 34%),#07090d}
 .admin-page .admin-topbar{background:rgba(7,9,13,.94);border-color:var(--studio-line);backdrop-filter:blur(20px)}
 .admin-page .admin-workspace{max-width:1720px}
 .admin-page .admin-sidebar{background:linear-gradient(180deg,#10151c,#090d13);border-color:var(--studio-line)}
@@ -36,3 +36,13 @@
 .admin-page .hte-upload-preview-meta span{color:var(--studio-muted,#98a2af);font-size:.74rem;overflow-wrap:anywhere}
 .admin-page .hte-upload-preview-media{display:block;width:100%;max-height:260px;border-radius:11px;background:#05080c}
 .admin-page .hte-upload-preview-clear{justify-self:start;min-height:34px;padding:0 11px;border:1px solid var(--studio-line);border-radius:9px;background:rgba(255,255,255,.04);color:#cbd2da;font-size:.74rem;font-weight:700;cursor:pointer}
+
+/* UX audit fix: the inline navigation SVGs previously had no stroke/fill rules,
+   so their default black fills blended into the dark navigation surface. */
+.admin-page .admin-nav-icon{color:var(--studio-silver,#c4c8ce);flex:0 0 25px}
+.admin-page .admin-nav-icon svg{display:block;width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.admin-page .admin-nav-icon svg *{vector-effect:non-scaling-stroke}
+.admin-page .admin-nav-item{min-height:48px}
+.admin-page .admin-nav-item:focus-visible{outline:3px solid var(--studio-gold-soft);outline-offset:2px}
+.admin-page .admin-main .btn,.admin-page .admin-top-actions .btn{min-height:44px}
+@media(max-width:900px){.admin-page .admin-nav-icon{flex-basis:23px}.admin-page .admin-nav-icon svg{width:18px;height:18px}}

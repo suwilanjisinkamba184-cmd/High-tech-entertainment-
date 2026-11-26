@@ -4,24 +4,71 @@ const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL :
 const canonical = 'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/videos/';
 ---
 <SiteLayout
-  title="Videos | HTE Universe"
-  description="Watch official visuals and video releases from High-Tech Entertainment."
+  title="Official Video Catalogue | HTE Universe"
+  description="Watch official music videos, visuals and video releases from High-Tech Entertainment and the HTE Universe."
   canonical={canonical}
+  needsSupabase={true}
   loadFonts={true}
 >
-  <main class="video-route">
-    <p class="eyebrow">HTE UNIVERSE · OFFICIAL VISUALS</p>
-    <h1>Video catalogue</h1>
-    <p>Our official video catalogue lives on the HTE Universe homepage. Continue to the video collection.</p>
-    <a class="btn gold" href={`${base}#videos`}>Browse official videos ↗</a>
+  <main id="video-catalogue" class="video-catalogue-page">
+    <section class="section" id="videos">
+      <div class="wrap">
+        <nav class="video-breadcrumb" aria-label="Breadcrumb">
+          <a href={base}>HTE Universe</a><span aria-hidden="true">/</span><span aria-current="page">Video catalogue</span>
+        </nav>
+        <header class="video-catalogue-hero">
+          <p class="eyebrow">HTE Universe · Official visuals</p>
+          <h1>Watch the <span class="gold-text">sound.</span></h1>
+          <p>Music videos, official visuals and featured releases from Zambia and the HTE creative community.</p>
+          <div class="video-catalogue-actions">
+            <a class="btn gold" href={`${base}#music`}>Listen to HTE</a>
+            <a class="btn ghost" href={`${base}#booking`}>Create with HTE</a>
+          </div>
+        </header>
+        <div id="hte-catalogue-search" class="hte-catalogue-search">
+          <div class="hte-search-copy"><span class="hte-search-kicker">HTE UNIVERSE SEARCH</span><strong>Find a video.</strong><span>Search titles, artists and video descriptions.</span></div>
+          <form id="hte-search-form" role="search">
+            <label class="sr-only" for="hte-search-input">Search official videos</label><span class="hte-search-icon" aria-hidden="true">⌕</span>
+            <input id="hte-search-input" type="search" autocomplete="off" placeholder="Search video titles or artists…" maxlength="120">
+            <button type="button" id="hte-search-clear" aria-label="Clear search" hidden>×</button><button type="submit" class="hte-search-submit">Search</button>
+          </form>
+          <p id="hte-search-status" class="hte-search-status" aria-live="polite">Search the HTE video archive.</p>
+        </div>
+        <div class="section-head video-catalogue-heading">
+          <div><div class="eyebrow">The visual archive</div><h2>Official video catalogue</h2><p>Choose a year or search titles and artists.</p></div>
+        </div>
+        <div id="hte-video-years" class="hte-video-years" aria-label="Filter videos by release year">
+          <span>ARCHIVE</span>
+          <button type="button" class="is-active" data-video-filter="all" aria-pressed="true">All years</button>
+          <button type="button" data-video-filter="2026" aria-pressed="false">2026</button>
+          <button type="button" data-video-filter="2025" aria-pressed="false">2025</button>
+          <button type="button" data-video-filter="2024" aria-pressed="false">2024</button>
+          <button type="button" data-video-filter="2023" aria-pressed="false">2023</button>
+          <button type="button" data-video-filter="older" aria-pressed="false">Earlier</button>
+        </div>
+        <div id="public-videos" class="cards">
+          <article class="video-card" data-video-year="2026"><h3>Bitter Truth — Yo Maps</h3><p>Featured Zambian release · 2026</p><a class="btn ghost" href="https://www.youtube.com/watch?v=DINvroKkqn0" target="_blank" rel="noopener noreferrer">Watch on YouTube ↗</a></article>
+          <article class="video-card" data-video-year="2026"><h3>Nkankala Free — Way Dee ft. Xaven</h3><p>Featured Zambian release · 2026</p><a class="btn ghost" href="https://www.youtube.com/watch?v=bvbTTtQKCsI" target="_blank" rel="noopener noreferrer">Watch on YouTube ↗</a></article>
+          <article class="video-card" data-video-year="2026"><h3>International Baby — 76 Drums ft. Blood Kid YVOK</h3><p>Featured Zambian release · 2026</p><a class="btn ghost" href="https://www.youtube.com/watch?v=V0wBwSPHYvE" target="_blank" rel="noopener noreferrer">Watch on YouTube ↗</a></article>
+          <article class="video-card" data-video-year="2026"><h3>Dear Mutima — Frank Ro ft. Kell Kay</h3><p>Featured Zambian release · 2026</p><a class="btn ghost" href="https://www.youtube.com/watch?v=8HAJA43fta8" target="_blank" rel="noopener noreferrer">Watch on YouTube ↗</a></article>
+        </div>
+        <p class="video-catalogue-note">Videos are hosted by their respective publishers or stored in HTE media storage. Availability and playback may depend on the original provider.</p>
+      </div>
+    </section>
   </main>
-  <script is:inline define:vars={{ base }}>
-    window.location.replace(base + '#videos');
-  </script>
+  <script is:inline defer src={`${base}assets/videos.js?v=10`}></script>
 </SiteLayout>
 <style>
-  .video-route{width:min(900px,calc(100% - 36px));min-height:70vh;margin:0 auto;padding:clamp(80px,14vh,150px) 0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center}
-  .video-route h1{font-size:clamp(2.8rem,8vw,5.8rem);letter-spacing:-.06em}
-  .video-route p:not(.eyebrow){max-width:55ch;color:#a6a6a6;margin:18px 0 28px}
-  .video-route .eyebrow{color:#c5a45a;letter-spacing:.18em;font-size:.75rem}
+  .video-catalogue-page{min-height:100vh;background:radial-gradient(ellipse at 82% 0,rgba(197,164,90,.10),transparent 40%),#090909}
+  .video-catalogue-page .section{padding-top:clamp(34px,6vw,78px)}
+  .video-breadcrumb{display:flex;align-items:center;gap:10px;color:#9c9c9c;font-size:.82rem;margin-bottom:28px}
+  .video-breadcrumb a{color:#d8b96e}
+  .video-catalogue-hero{padding:clamp(28px,5vw,58px) 0 clamp(42px,7vw,84px);max-width:900px}
+  .video-catalogue-hero h1{font-size:clamp(3rem,9vw,6.8rem);letter-spacing:-.07em;line-height:.98}
+  .video-catalogue-hero>p:not(.eyebrow){max-width:58ch;color:#a6a6a6;font-size:clamp(1rem,2vw,1.18rem);margin:22px 0}
+  .video-catalogue-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+  .video-catalogue-actions .btn{min-height:46px}
+  .video-catalogue-heading{margin-top:12px}
+  .video-catalogue-note{margin:28px 0 0;color:#8f969f;font-size:.82rem;line-height:1.7}
+  @media(max-width:600px){.video-catalogue-page .wrap{width:calc(100% - 28px)}.video-catalogue-hero{padding-top:24px}.video-catalogue-actions{display:grid;grid-template-columns:1fr 1fr}.video-catalogue-actions .btn{width:100%;padding-inline:10px}}
 </style>
