@@ -76,6 +76,18 @@ jobs:
           grep -q 'assets/hte-player.js' account/index.html
           grep -q 'assets/founder-media-preview.js' admin/index.html
           grep -q 'id="hte-search-input"' website/src/pages/index.astro
+          test -s website/src/pages/videos/index.astro
+          grep -q 'id="video-search-input"' website/src/pages/videos/index.astro
+          grep -q 'data-video-source-filter="hte"' website/src/pages/videos/index.astro
+          grep -q 'assets/videos.js?v=11' website/src/pages/videos/index.astro
+          grep -q 'Browse all videos' website/src/pages/index.astro
+          grep -q 'href={base + "videos/"}' website/src/pages/index.astro
+          grep -q 'data-video-source' assets/videos.js
+          grep -q "siteBasePath=window.location.pathname.startsWith('/High-tech-entertainment-/')" assets/videos.js
+          grep -q "el.dataset.hteVideoLoaded='true'" assets/videos.js
+          grep -q 'aria-live' assets/admin-upload.js
+          grep -q 'aria-live' assets/admin-video.js
+          grep -q 'hte-channel-fieldset' admin/index.html
           node --check assets/app.js
           node --check assets/videos.js
           test -s assets/booking-confirmation.aac
@@ -116,7 +128,7 @@ jobs:
           grep -q 'id="primary-navigation"' website/src/pages/index.astro
           grep -q 'class="menu-toggle"' website/src/pages/index.astro
           grep -Eq 'assets/app.js\?v=[0-9]+' admin/index.html
-          grep -q 'assets/admin-upload.js?v=20261116-catalogue1' admin/index.html
+          grep -Eq 'assets/admin-upload.js\\?v=[0-9]+' admin/index.html
           grep -q 'authNext' website/src/pages/index.astro
           grep -q 'callbackParams.delete' website/src/pages/index.astro
           grep -q 'loadAccountDownloads' assets/app.js
