@@ -1,5 +1,7 @@
 package com.hightechentertainment.app
 
+import android.util.Log
+
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -51,6 +53,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.util.concurrent.atomic.AtomicReference
 
 private val VoiceGold = com.hightechentertainment.app.ui.design.HteColors.Gold
 private val VoicePanel = com.hightechentertainment.app.ui.design.HteColors.Panel
@@ -65,6 +68,7 @@ private data class VoiceTokenResponse(
 
 private val voiceHttp401Pattern = Regex("""(?<![A-Za-z0-9_])401(?![A-Za-z0-9_])""")
 private val voiceHttp403Pattern = Regex("""(?<![A-Za-z0-9_])403(?![A-Za-z0-9_])""")
+private val voiceRealtimeInitializationPattern = Regex("""(?<![A-Za-z0-9_])3000(?![A-Za-z0-9_])""")
 
 internal fun voiceFailureMessage(details: String): String {
     val normalized = details.lowercase()
@@ -81,6 +85,9 @@ internal fun voiceFailureMessage(details: String): String {
             "HTE AI Voice Assistant was rejected by the voice provider. The project owner needs to check the agent permissions and server-side API credentials."
         isSessionFailure ->
             "Your HTE session may have expired. Sign in again, then reopen HTE AI Voice Assistant."
+        voiceRealtimeInitializationPattern.containsMatchIn(details) ||
+            listOf("livekit", "webrtc", "rtc initialization").any(normalized::contains) ->
+            "HTE AI Voice Assistant could not initialize its real-time voice connection. Check your internet connection and retry."
         listOf("timeout", "network", "connection", "offline", "unreachable").any(normalized::contains) ->
             "HTE AI Voice Assistant could not connect. Check your internet connection and try again."
         else -> "HTE AI Voice Assistant is temporarily unavailable. Please try again."
@@ -152,14 +159,36 @@ fun VoiceAssistantDialog(
         toolContext.onSearchVideos = currentOnSearchVideos
         toolContext.onUserTranscript = { value -> scope.launch { userTranscript = value } }
         toolContext.onAgentResponse = { value -> scope.launch { agentResponse = value } }
-        toolContext.onError = { value -> scope.launch { errorMessage = value; status = "Error" } }
+        toolContext.onError = { value ->
+            scope.launch {
+                errorMessage = value
+                status = "Error"
+                isConnecting = false
+                // Drop a failed SDK session so the user can reconnect instead
+                // of being stuck behind a non-null, disconnected session.
+                session = null
+            }
+        }
+        toolContext.onDisconnected = { reason ->
+            scope.launch {
+                if (session != null) {
+                    session = null
+                    isConnecting = false
+                    status = "Disconnected"
+                    if (errorMessage == null) {
+                        errorMessage = "The voice connection ended. Start a new session to reconnect."
+                    }
+                    Log.w("HTEVoice", "Voice session disconnected: ${reason.take(180)}")
+                }
+            }
+        }
     }
 
     val microphonePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) startVoiceSession(scope, context, toolContext, selectedVoiceId,
             onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
             onSession = { active -> session = active; isConnecting = false },
-            onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = voiceFailureMessage(error) }
+            onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = error }
         ) else errorMessage = "Microphone permission is required for HTE AI Voice Assistant."
     }
 
@@ -171,7 +200,7 @@ fun VoiceAssistantDialog(
             startVoiceSession(scope, context, toolContext, selectedVoiceId,
                 onConnecting = { isConnecting = true; status = "Connecting"; errorMessage = null },
                 onSession = { active -> session = active; isConnecting = false },
-                onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = voiceFailureMessage(error) }
+                onFailure = { error -> isConnecting = false; status = "Disconnected"; errorMessage = error }
             )
         }
     }
@@ -388,6 +417,7 @@ private class VoiceToolContext {
     var onUserTranscript: (String) -> Unit = {}
     var onAgentResponse: (String) -> Unit = {}
     var onError: (String) -> Unit = {}
+    var onDisconnected: (String) -> Unit = {}
 }
 
 private fun startVoiceSession(
@@ -401,13 +431,17 @@ private fun startVoiceSession(
 ) {
     scope.launch {
         onConnecting()
+        val supportedVoiceId = VoiceAssistantVoices.resolveId(voiceId)
+        Log.i("HTEVoice", "Starting authenticated voice session with supported voice preset")
         try {
             val user = SupabaseClientProvider.client.auth.currentUserOrNull()
                 ?: error("Sign in to use HTE AI Voice Assistant.")
+            Log.d("HTEVoice", "Requesting conversation token from Supabase Edge Function")
             val response = SupabaseClientProvider.client.functions.invoke("elevenlabs-voice-token")
             val token = voiceJson.decodeFromString<VoiceTokenResponse>(response.bodyAsText())
             check(token.token.isNotBlank()) { "The voice service did not return a conversation token." }
             check(token.userId == user.id) { "The voice service returned a session for a different account. Please sign in again." }
+            Log.d("HTEVoice", "Authenticated token received; initializing ElevenLabs Android SDK session")
 
             val clientTools = mapOf(
                 "control_playback" to object : ClientTool {
@@ -523,19 +557,43 @@ private fun startVoiceSession(
                 }
             )
 
+            val startupError = AtomicReference<String?>(null)
+            val startupDisconnect = AtomicReference<String?>(null)
             val config = ConversationConfig(
                 conversationToken = token.token,
                 userId = token.userId.ifBlank { user.id },
                 textOnly = false,
                 audioInputSampleRate = 16000,
-                overrides = Overrides(tts = TtsOverrides(voiceId = voiceId), conversation = ConversationOverrides(textOnly = false)),
+                overrides = Overrides(tts = TtsOverrides(voiceId = supportedVoiceId), conversation = ConversationOverrides(textOnly = false)),
                 clientTools = clientTools,
+                onConnect = { conversationId ->
+                    Log.i("HTEVoice", "ElevenLabs voice session connected: ${conversationId.take(16)}")
+                },
+                onDisconnect = { reason ->
+                    val detail = reason.toString()
+                    startupDisconnect.compareAndSet(null, detail)
+                    Log.w("HTEVoice", "ElevenLabs SDK disconnected: ${detail.take(220)}")
+                    toolContext.onDisconnected(detail)
+                },
                 onUserTranscriptEvent = { text, _ -> toolContext.onUserTranscript(text) },
                 onAgentResponseEvent = { text, _ -> toolContext.onAgentResponse(text) },
-                onError = { code, message -> toolContext.onError(voiceFailureMessage(listOfNotNull(message, "provider error $code").joinToString(" "))) }
+                onError = { code, message ->
+                    val details = listOfNotNull(message, "provider error $code").joinToString(" ")
+                    val safeFailure = voiceFailureMessage(details)
+                    startupError.compareAndSet(null, safeFailure)
+                    Log.e("HTEVoice", "ElevenLabs SDK session error code=$code: ${message.orEmpty().take(220)}")
+                    toolContext.onError(safeFailure)
+                }
             )
             val active = ConversationClient.startSession(config, context)
-            onSession(active)
+            val startupFailure = startupError.get()
+                ?: startupDisconnect.get()?.let { "The voice connection ended during startup. Please try again." }
+            if (startupFailure != null) {
+                runCatching { active.endSession() }
+                onFailure(startupFailure)
+            } else {
+                onSession(active)
+            }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
@@ -545,7 +603,9 @@ private fun startVoiceSession(
                 error.message,
                 error.toHteUserMessage("HTE AI Voice Assistant could not connect. Please try again.")
             ).joinToString(" ")
-            onFailure(voiceFailureMessage(details))
+            val safeFailure = voiceFailureMessage(details)
+            Log.e("HTEVoice", "Conversation session startup failed (${error.javaClass.simpleName}): $safeFailure")
+            onFailure(safeFailure)
         }
     }
 }

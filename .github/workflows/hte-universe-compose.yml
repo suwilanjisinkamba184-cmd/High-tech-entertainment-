@@ -137,27 +137,44 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
           script: bash .github/scripts/run-android-instrumentation.sh
-      - name: Upload Android emulator diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v6
-        with:
-          name: hte-android-emulator-diagnostics-api-${{ matrix.api-level }}
-          if-no-files-found: warn
-          retention-days: 7
-          path: |
-            hte-universe-native/build/diagnostics/**
-            hte-universe-native/app/build/reports/androidTests/connected/**
-            hte-universe-native/app/build/outputs/androidTest-results/**
       - name: Run debug lint
         run: gradle --no-daemon :app:lintDebug --console=plain
       - name: Run release lint
         run: gradle --no-daemon :app:lintRelease --console=plain
+      - name: Assemble unsigned release variant (compile-only)
+        if: matrix.api-level == 35
+        run: gradle --no-daemon :app:assembleRelease --console=plain
+      - name: Upload unsigned release compile artifact
+        if: matrix.api-level == 35
+        uses: actions/upload-artifact@v6
+        with:
+          name: hte-android-release-compile-only-unsigned
+          path: hte-universe-native/app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Generate full Android feature test report
+        if: always()
+        run: python3 ../.github/scripts/create-android-test-report.py --api-level "${{ matrix.api-level }}"
 
-      # Same-repository PRs build a signed production candidate for installation testing.
-      # No debug APK is produced or presented as the installable application.
+      - name: Upload Android feature test report and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: hte-android-debug-smoke-api-${{ matrix.api-level }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            hte-universe-native/build/diagnostics/**
+            hte-universe-native/app/build/test-results/testDebugUnitTest/**
+            hte-universe-native/app/build/reports/tests/testDebugUnitTest/**
+            hte-universe-native/app/build/reports/androidTests/connected/**
+            hte-universe-native/app/build/outputs/androidTest-results/**
+            hte-universe-native/app/build/outputs/apk/debug/app-debug.apk
+            hte-universe-native/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 
-      # Same-repository pull requests may create signed, non-published candidates.
-      # Publishing remains restricted to main; feature branches can never publish a public APK.
+      # Recovery validation uploads debug smoke-test APKs, diagnostics, and an unsigned release compile artifact.
+      # None is a production install/update candidate. Production signing and public release publication remain disabled.
+      # A debug APK uses the .dev application ID suffix and is not an update to the installed production app.
       - name: Require main branch for production publishing
         if: matrix.api-level == 35 && env.PUBLISH_RELEASE == 'true'
         run: |

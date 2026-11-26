@@ -62,8 +62,13 @@ fun MusicHomeScreen(
     onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit, onSettings: () -> Unit, onArtistClick: (ArtistDto) -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
-    favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
+    favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit,
+    recommendationsRevision: Int = 0
 ) {
+    val settingsContext = LocalContext.current
+    val recommendationsEnabled = remember(settingsContext, recommendationsRevision) {
+        AppSettingsStore(settingsContext).personalisedRecommendations
+    }
     var selectedCategory by remember { mutableStateOf("All") }
     val genres = tracks.mapNotNull { it.genre?.takeIf(String::isNotBlank) }.distinct().sorted()
     val categories = listOf("All", "Favourites") + genres
@@ -75,7 +80,6 @@ fun MusicHomeScreen(
     val favouriteTracks = tracks.filter { it.id in favouriteTrackIds }
     val preferredGenreCounts = favouriteTracks.mapNotNull { it.genre?.trim()?.takeIf(String::isNotBlank) }
         .groupingBy { it.lowercase() }.eachCount()
-    val recommendationsEnabled = AppSettingsStore(LocalContext.current).personalisedRecommendations
     val usePersonalisedRecommendations = recommendationsEnabled && preferredGenreCounts.isNotEmpty()
     val recommendationCandidates = if (usePersonalisedRecommendations) tracks.filterNot { it.id in favouriteTrackIds } else tracks
     val recommendationOrder = rankGenreIndexesByPreference(recommendationCandidates.map { it.genre }, preferredGenreCounts)
@@ -525,16 +529,7 @@ private fun U26VideoCard(video: VideoDto, wide: Boolean, onPlay: () -> Unit, onD
                 .clickable(onClick = onPlay),
             contentAlignment = Alignment.Center
         ) {
-            if (!video.thumbnailUrl.isNullOrBlank()) {
-                AsyncImage(
-                    model = video.thumbnailUrl,
-                    contentDescription = "Thumbnail for ${video.title}",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Icon(Icons.Outlined.VideoLibrary, null, tint = U26Gold.copy(alpha = .45f), modifier = Modifier.size(62.dp))
-            }
+            VideoPosterImage(video, "Thumbnail for ${video.title}", Modifier.fillMaxSize())
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .52f)))))
             Surface(Modifier.align(Alignment.Center), color = Color.Black.copy(alpha = .68f), shape = RoundedCornerShape(50)) {
                 Icon(Icons.Outlined.PlayArrow, "Watch ${video.title}", tint = Color.White, modifier = Modifier.padding(8.dp).size(24.dp))
@@ -622,10 +617,12 @@ fun Universe2026Home(
     onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit, onSettings: () -> Unit, onArtistClick: (ArtistDto) -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
-    favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
+    favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit,
+    recommendationsRevision: Int = 0
 ) = MusicHomeScreen(
     tracks, artists, releases, videos, playlists, playlistTracks, profileName, profileAvatarUrl, isLoading,
     onExplore, onLibrary, onVideos, onVoice, onProfile, onSettings, onArtistClick,
-    onPlayTrack, onPlayPlaylist, onPlayVideo, onDownloadTrack, onDownloadVideo, favouriteTrackIds, onToggleFavourite, onRefresh
+    onPlayTrack, onPlayPlaylist, onPlayVideo, onDownloadTrack, onDownloadVideo, favouriteTrackIds, onToggleFavourite, onRefresh,
+    recommendationsRevision
 )
 

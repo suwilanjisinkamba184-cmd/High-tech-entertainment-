@@ -65,6 +65,19 @@ internal fun buildOfflineDownloadFileName(title: String, url: String, mediaType:
     return "$safeName-$fingerprint.$extension"
 }
 
+internal fun resolveDownloadedLocalUri(
+    records: List<OfflineDownloadRecord>,
+    sourceUrl: String?,
+): String? {
+    if (sourceUrl.isNullOrBlank()) return null
+    val record = records.firstOrNull {
+        it.status == "Downloaded" &&
+            it.sourceUrl == sourceUrl &&
+            !it.localUri.isNullOrBlank()
+    } ?: return null
+    return record.localUri
+}
+
 class OfflineDownloadManager(context: Context) {
     private val appContext = context.applicationContext
     private val manager = appContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
@@ -121,6 +134,10 @@ class OfflineDownloadManager(context: Context) {
             OfflineDownloadRecord(id, title, mediaType, status, localUri, downloadedBytes, totalBytes, reason, sourceUrl)
         }
     }.sortedByDescending { it.id }
+
+    /** Return the app-owned local copy for a successfully completed download. */
+    fun findDownloadedUri(sourceUrl: String?): Uri? =
+        resolveDownloadedLocalUri(getDownloads(), sourceUrl)?.let(Uri::parse)
 
     fun clearAll() {
         val ids = preferences.all.keys.mapNotNull { it.toLongOrNull() }.toLongArray()

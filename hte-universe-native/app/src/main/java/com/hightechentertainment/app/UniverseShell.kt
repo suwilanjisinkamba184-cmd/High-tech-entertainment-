@@ -15,6 +15,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebChromeClient
+import android.webkit.JavascriptInterface
 import android.view.View
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -90,6 +91,7 @@ import com.hightechentertainment.app.media.spotifyAppUri
 import com.hightechentertainment.app.media.isPlayableInAppAudioUrl
 import com.hightechentertainment.app.media.isPlayableVideoUrl
 import com.hightechentertainment.app.media.OfflineDownloadManager
+import com.hightechentertainment.app.media.resolveDownloadedLocalUri
 import com.hightechentertainment.app.media.OfflineDownloadRecord
 import com.hightechentertainment.app.media.temporaryAudioDownloadPage
 import com.hightechentertainment.app.ui.design.HteIcons
@@ -636,7 +638,8 @@ fun UniverseShell() {
                     onDownloadTrack = { track -> startDownload(if (track.downloadAllowed && track.downloadBrandingStatus == "ready") track.brandedAudioUrl else null, track.title, "audio", track.id, track.sourcePlatform, track.sourceUrl ?: track.audioUrl, track.downloadAllowed, track.rightsStatus) },
                     favouriteTrackIds = favouriteTrackIds, onToggleFavourite = ::toggleFavourite,
                     onDownloadVideo = { startDownload(it.downloadUrl, it.title, "video") },
-                    onRefresh = ::refreshCatalogue
+                    onRefresh = ::refreshCatalogue,
+                    recommendationsRevision = settingsRevision
                 )
                 UniverseTab.DISCOVER -> DiscoverScreen(
                     tracks = tracks, artists = artists, isLoading = isLoading, error = catalogueError,
@@ -906,7 +909,8 @@ private fun HomeScreen(
     onExplore: () -> Unit, onLibrary: () -> Unit, onVideos: () -> Unit, onVoice: () -> Unit, onProfile: () -> Unit, onSettings: () -> Unit, onArtistClick: (ArtistDto) -> Unit,
     onPlayTrack: (TrackDto) -> Unit, onPlayPlaylist: (PlaylistDto) -> Unit, onPlayVideo: (VideoDto) -> Unit,
     onDownloadTrack: (TrackDto) -> Unit, onDownloadVideo: (VideoDto) -> Unit,
-    favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit
+    favouriteTrackIds: Set<String>, onToggleFavourite: (TrackDto) -> Unit, onRefresh: () -> Unit,
+    recommendationsRevision: Int
 ) {
     MusicHomeScreen(
         tracks = tracks, artists = artists, releases = releases, videos = videos, playlists = playlists, playlistTracks = playlistTracks,
@@ -915,7 +919,8 @@ private fun HomeScreen(
         onPlayTrack = onPlayTrack, onPlayPlaylist = onPlayPlaylist, onPlayVideo = onPlayVideo,
         onDownloadTrack = onDownloadTrack, onDownloadVideo = onDownloadVideo,
         favouriteTrackIds = favouriteTrackIds, onToggleFavourite = onToggleFavourite,
-        onRefresh = onRefresh
+        onRefresh = onRefresh,
+        recommendationsRevision = recommendationsRevision
     )
 }
 
@@ -1215,8 +1220,82 @@ private fun TrackRow(track: TrackDto, onPlay: () -> Unit, onDownload: () -> Unit
 }
 
 private fun isYouTubeWatchUrl(value: String): Boolean {
-    val host = runCatching { Uri.parse(value).host.orEmpty().lowercase() }.getOrDefault("")
+    // java.net.URI is deterministic in local JVM tests; android.net.Uri is a mocked Android stub there.
+    val host = runCatching { java.net.URI(value).host.orEmpty().lowercase() }.getOrDefault("")
     return host == "youtube.com" || host.endsWith(".youtube.com") || host == "youtu.be" || host.endsWith(".youtu.be")
+}
+
+/** Returns a safe HTTPS poster URL, deriving YouTube artwork when catalogue thumbnail metadata is absent or invalid. */
+internal fun resolveVideoThumbnailCandidates(video: VideoDto): List<String> {
+    val supplied = video.thumbnailUrl?.trim().orEmpty()
+    val suppliedUri = runCatching { java.net.URI(supplied) }.getOrNull()
+    val validSupplied = supplied.takeIf {
+        suppliedUri != null &&
+            suppliedUri.scheme.equals("https", ignoreCase = true) &&
+            !suppliedUri.host.isNullOrBlank() &&
+            !isYouTubeWatchUrl(it)
+    }
+
+    val youtubeId = video.youtubeId?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) }
+        ?: extractYouTubeVideoId(video.videoUrl)
+    val suppliedPath = validSupplied?.let { runCatching { java.net.URI(it).path }.getOrNull() }
+    val youtubeCandidates = youtubeId?.let { id ->
+        // hqdefault is the most consistently available non-placeholder poster.
+        // Try lower-resolution variants before maxres, which YouTube often
+        // serves as a tiny placeholder when the high-resolution image is absent.
+        listOf("hqdefault", "sddefault", "mqdefault", "default", "maxresdefault")
+            .map { quality -> "https://img.youtube.com/vi/$id/$quality.jpg" }
+            .filterNot { candidate ->
+                suppliedPath != null && runCatching { java.net.URI(candidate).path == suppliedPath }.getOrDefault(false)
+            }
+    }.orEmpty()
+
+    return (listOfNotNull(validSupplied) + youtubeCandidates).distinct()
+}
+
+internal fun resolveVideoThumbnailUrl(video: VideoDto): String? =
+    resolveVideoThumbnailCandidates(video).firstOrNull()
+
+internal fun youtubeThumbnailFallbackUrl(video: VideoDto, failedUrl: String): String? {
+    val candidates = resolveVideoThumbnailCandidates(video)
+    val failedIndex = candidates.indexOf(failedUrl)
+    return if (failedIndex >= 0) candidates.getOrNull(failedIndex + 1) else candidates.firstOrNull()
+}
+
+@Composable
+internal fun VideoPosterImage(video: VideoDto, description: String, modifier: Modifier = Modifier) {
+    val key = remember(video.id, video.thumbnailUrl, video.videoUrl, video.youtubeId) {
+        video.id + video.thumbnailUrl.orEmpty() + video.videoUrl + video.youtubeId.orEmpty()
+    }
+    val candidates = remember(key) { resolveVideoThumbnailCandidates(video) }
+    var candidateIndex by remember(key) { mutableIntStateOf(0) }
+    var imageFailed by remember(key) { mutableStateOf(false) }
+    val posterUrl = candidates.getOrNull(candidateIndex)
+
+    Box(modifier, contentAlignment = Alignment.Center) {
+        if (posterUrl != null && !imageFailed) {
+            AsyncImage(
+                model = posterUrl,
+                contentDescription = description,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                onError = {
+                    if (candidateIndex < candidates.lastIndex) {
+                        candidateIndex += 1
+                    } else {
+                        imageFailed = true
+                    }
+                }
+            )
+        } else {
+            Icon(
+                Icons.Outlined.VideoLibrary,
+                null,
+                tint = ShellGold.copy(alpha = .72f),
+                modifier = Modifier.size(52.dp)
+            )
+        }
+    }
 }
 
 @Composable
@@ -1226,16 +1305,7 @@ private fun VideoRow(video: VideoDto, onPlay: () -> Unit, onDownload: (() -> Uni
             Box(Modifier.fillMaxWidth().height(164.dp).clip(RoundedCornerShape(13.dp)).background(
                 androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF392D1D), Color(0xFF171B22), Color(0xFF0D1117)))
             ), contentAlignment = Alignment.Center) {
-                if (!video.thumbnailUrl.isNullOrBlank() && !isYouTubeWatchUrl(video.thumbnailUrl)) {
-                    AsyncImage(
-                        model = video.thumbnailUrl,
-                        contentDescription = "Thumbnail for ${video.title}",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Icon(Icons.Outlined.VideoLibrary, null, tint = ShellGold.copy(alpha = .72f), modifier = Modifier.size(52.dp))
-                }
+                VideoPosterImage(video, "Thumbnail for ${video.title}", Modifier.fillMaxSize())
                 Box(Modifier.align(Alignment.Center).size(48.dp).background(Color.Black.copy(alpha = .62f), RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
                     Icon(Icons.Outlined.PlayArrow, "Play ${video.title}", tint = Color.White, modifier = Modifier.size(30.dp))
                 }
@@ -1437,18 +1507,53 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     val previousOrientation = remember(activity) { activity?.requestedOrientation }
     var immersiveVideo by remember(video.id) { mutableStateOf(false) }
 
+    var offlineUri by remember(video.id, video.downloadUrl, video.videoUrl) { mutableStateOf<Uri?>(null) }
+    var offlineLookupComplete by remember(video.id, video.downloadUrl, video.videoUrl) { mutableStateOf(false) }
+    LaunchedEffect(video.id, video.downloadUrl, video.videoUrl) {
+        val resolvedUri = withContext(Dispatchers.IO) {
+            try {
+                val records = OfflineDownloadManager(context).getDownloads()
+                listOfNotNull(video.downloadUrl, video.videoUrl)
+                    .distinct()
+                    .firstNotNullOfOrNull { source -> resolveDownloadedLocalUri(records, source) }
+                    ?.let(Uri::parse)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                null
+            }
+        }
+        offlineUri = resolvedUri
+        offlineLookupComplete = true
+    }
+    if (!offlineLookupComplete) {
+        Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                Modifier.fillMaxSize().background(Color(0xFF050506)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = ShellGold)
+            }
+        }
+        return
+    }
     val youtubeId = remember(video.videoUrl, video.youtubeId) { video.youtubeId?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) } ?: extractYouTubeVideoId(video.videoUrl) }
-    if (youtubeId != null) {
+    if (youtubeId != null && offlineUri == null) {
         YouTubeVideoDialog(video, youtubeId, onDismiss)
         return
     }
 
-    val validUrl = remember(video.videoUrl) { isPlayableVideoUrl(video.videoUrl) }
+    val playbackUri = offlineUri ?: Uri.parse(video.videoUrl.trim())
+    val validUrl = remember(video.videoUrl, offlineUri) { offlineUri != null || isPlayableVideoUrl(video.videoUrl) }
     // Register the Media3 listener before preparing the stream so the initial buffering,
     // first-frame and decoder errors cannot be missed on fast connections.
-    val player = remember(video.id, video.videoUrl) {
+    val player = remember(video.id, video.videoUrl, offlineUri) {
         ExoPlayer.Builder(context)
             .setAudioAttributes(AudioAttributes.DEFAULT, true)
+            .setHandleAudioBecomingNoisy(true)
             .build()
     }
     // Video is Activity-scoped, unlike background music: pause it when the app leaves foreground.
@@ -1524,7 +1629,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
     }
     LaunchedEffect(player, validUrl, video.videoUrl) {
         if (validUrl) {
-            player.setMediaItem(MediaItem.fromUri(video.videoUrl.trim()))
+            player.setMediaItem(MediaItem.fromUri(playbackUri))
             player.prepare()
             player.playWhenReady = true
         }
@@ -1586,7 +1691,12 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                             Column(Modifier.weight(1f)) {
                                 Text(video.title, color = Color.White, fontWeight = FontWeight.Bold,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(video.artist ?: "High-Tech Entertainment", color = ShellMuted, fontSize = 10.sp)
+                                Text(
+                                    if (offlineUri != null) "Downloaded · ${video.artist ?: "High-Tech Entertainment"}"
+                                    else video.artist ?: "High-Tech Entertainment",
+                                    color = if (offlineUri != null) ShellGold else ShellMuted,
+                                    fontSize = 10.sp
+                                )
                             }
                             IconButton(onClick = toggleImmersive) {
                                 Icon(Icons.Outlined.Fullscreen, "Enter fullscreen", tint = ShellGold)
@@ -1624,14 +1734,7 @@ private fun VideoPlayerDialog(video: VideoDto, quality: String, onDismiss: () ->
                                 // Keep the video surface visually intentional before the first frame,
                                 // while paused, and during rebuffering instead of exposing an empty black canvas.
                                 if (!firstFrameRendered) {
-                                    video.thumbnailUrl?.takeIf(String::isNotBlank)?.let { posterUrl ->
-                                        AsyncImage(
-                                            model = posterUrl,
-                                            contentDescription = "Preview image for ${video.title}",
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                    }
+                                    VideoPosterImage(video, "Preview image for ${video.title}", Modifier.fillMaxSize())
                                 }
                                 Box(
                                     Modifier.fillMaxSize().background(
@@ -1738,6 +1841,8 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
     var embeddedWebView by remember(video.id) { mutableStateOf<WebView?>(null) }
     var webViewLoading by remember(video.id) { mutableStateOf(true) }
     var webViewError by remember(video.id) { mutableStateOf(false) }
+    var webViewErrorCode by remember(video.id) { mutableIntStateOf(0) }
+    val videoContext = LocalContext.current
     var webViewGeneration by remember(video.id) { mutableIntStateOf(0) }
     DisposableEffect(lifecycleOwner, embeddedWebView) {
         val observer = LifecycleEventObserver { _, event ->
@@ -1783,6 +1888,7 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
                                 override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                                     webViewLoading = true
                                     webViewError = false
+                                    webViewErrorCode = 0
                                 }
                                 override fun onPageFinished(view: WebView?, url: String?) {
                                     webViewLoading = false
@@ -1809,6 +1915,20 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
                                 }
                             }
                             setBackgroundColor(android.graphics.Color.BLACK)
+                            val targetWebView = this
+                            addJavascriptInterface(object {
+                                @JavascriptInterface
+                                fun onPlayerReady() { targetWebView.post { webViewLoading = false } }
+
+                                @JavascriptInterface
+                                fun onPlayerError(code: Int) {
+                                    targetWebView.post {
+                                        webViewLoading = false
+                                        webViewError = true
+                                        webViewErrorCode = code
+                                    }
+                                }
+                            }, "HTEVideoBridge")
                             // YouTube requires an HTTP Referer (or equivalent app identity) for
                             // embedded players in app WebViews. Loading a wrapper with a stable HTTPS
                             // base URL supplies that identity; a direct loadUrl(embedUrl) can trigger
@@ -1817,9 +1937,7 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
                             // A made-up package-name host is not a valid HTTP referrer for YouTube.
                             val appOrigin = "https://suwilanjisinkamba184-cmd.github.io"
                             val appBaseUrl = "$appOrigin/High-tech-entertainment-/"
-                            val embed = "https://www.youtube-nocookie.com/embed/$youtubeId?autoplay=1&playsinline=1&rel=0&controls=1&enablejsapi=1&origin=$appOrigin"
-                            val safeTitle = video.title.replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;").replace(">", "&gt;")
-                            val html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><meta name="referrer" content="strict-origin-when-cross-origin"><style>html,body{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden}iframe{display:block;width:100%;height:100%;border:0}</style></head><body><iframe src="$embed" title="$safeTitle" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></body></html>"""
+                            val html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><meta name="referrer" content="strict-origin-when-cross-origin"><style>html,body,#player{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden}</style></head><body><div id="player" title="HTE video"></div><script>var player;function onYouTubeIframeAPIReady(){player=new YT.Player('player',{videoId:'$youtubeId',playerVars:{autoplay:1,playsinline:1,rel:0,controls:1,origin:'$appOrigin'},events:{onReady:function(){HTEVideoBridge.onPlayerReady();},onError:function(e){HTEVideoBridge.onPlayerError(e.data);}}});}var tag=document.createElement('script');tag.src='https://www.youtube.com/iframe_api';document.head.appendChild(tag);</script></body></html>"""
                             loadDataWithBaseURL(appBaseUrl, html, "text/html", "UTF-8", null)
                         }
                     },
@@ -1839,20 +1957,38 @@ private fun YouTubeVideoDialog(video: VideoDto, youtubeId: String, onDismiss: ()
                 }
                 if (webViewError) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("This YouTube video could not be loaded.", color = ShellSilver, fontSize = 12.sp)
+                        Text(
+                            if (webViewErrorCode > 0) "YouTube player error $webViewErrorCode. Open this video in YouTube."
+                            else "This YouTube video could not be loaded. Open it in YouTube.",
+                            color = ShellSilver, fontSize = 12.sp
+                        )
                         Button(
                             onClick = {
                                 webViewError = false
+                                webViewErrorCode = 0
                                 webViewLoading = true
                                 webViewGeneration += 1
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = ShellGold, contentColor = Color.Black)
                         ) { Text("Retry video", fontWeight = FontWeight.Bold) }
+                        OutlinedButton(onClick = { openYouTubeVideo(videoContext, youtubeId) }) {
+                            Text("Open in YouTube", color = ShellGold, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
             Text("Streaming from YouTube • Downloads are available only for HTE original files.", color = ShellMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 8.dp))
         }
+    }
+}
+
+private fun openYouTubeVideo(context: Context, youtubeId: String) {
+    val url = "https://www.youtube.com/watch?v=$youtubeId"
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(context, "No browser or YouTube app is available to open this video.", Toast.LENGTH_LONG).show()
     }
 }
 

@@ -18,4 +18,14 @@ class VoiceAssistantVoicesTest {
         assertEquals(3, VoiceAssistantVoices.all.map { it.id }.distinct().size)
         assertTrue(VoiceAssistantVoices.all.all { it.label.isNotBlank() && it.description.isNotBlank() })
     }
+
+    @Test
+    fun preservesSupportedVoicePreset() {
+        assertEquals(VoiceAssistantVoices.DEFAULT_ID, VoiceAssistantVoices.resolveId(VoiceAssistantVoices.DEFAULT_ID))
+    }
+
+    @Test
+    fun repairsStaleStoredVoiceIdToCurrentDefault() {
+        assertEquals(VoiceAssistantVoices.DEFAULT_ID, VoiceAssistantVoices.resolveId("deleted_or_old_voice_id"))
+    }
 }
