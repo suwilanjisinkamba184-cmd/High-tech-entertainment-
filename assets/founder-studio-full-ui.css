@@ -45,3 +45,7 @@
 .admin-page .status[role=alert]{padding:10px 12px;border:1px solid rgba(255,140,130,.35);border-radius:10px;background:rgba(130,38,35,.13);color:#ffc1bb}
 .admin-page .status.success{padding:10px 12px;border:1px solid rgba(145,217,174,.28);border-radius:10px;background:rgba(54,130,82,.1);color:#b8f0cb}
 @media(max-width:560px){.admin-page .admin-main-actions{width:100%;justify-content:flex-start}.admin-page .admin-main-actions .btn{flex:1 1 auto}.admin-page .admin-form-panel{padding:16px}.admin-page .admin-form-panel .field input[type=file]{font-size:.78rem}}
+
+/* Accessible grouping for the campaign channel selector. */
+.admin-page .hte-channel-fieldset{border:0;min-width:0;margin:0;padding:0}
+.admin-page .hte-channel-fieldset legend{margin:0 0 10px;color:#cbd2da;font-size:.82rem;font-weight:700}
