@@ -50,6 +50,10 @@ node scripts/generate-public-sitemap.mjs
 # Verify the homepage includes visible search controls, year archive filters, and a no-JavaScript video fallback.
 grep -Fq 'id="hte-catalogue-search"' website/src/pages/index.astro || { echo "Homepage search controls are missing." >&2; exit 1; }
 grep -Fq 'id="hte-video-years"' website/src/pages/index.astro || { echo "Video archive filters are missing." >&2; exit 1; }
+test -s website/src/pages/videos/index.astro || { echo "Dedicated video catalogue source page is missing." >&2; exit 1; }
+grep -Fq 'id="video-catalogue"' website/src/pages/videos/index.astro || { echo "Dedicated video catalogue container is missing." >&2; exit 1; }
+grep -Fq 'id="public-videos"' website/src/pages/videos/index.astro || { echo "Dedicated video catalogue list is missing." >&2; exit 1; }
+grep -Fq 'assets/videos.js?v=10' website/src/pages/videos/index.astro || { echo "Dedicated video catalogue controller is not loaded." >&2; exit 1; }
 grep -Fq 'class="video-card" data-video-year="2026"' website/src/pages/index.astro || { echo "Static video fallback cards are missing." >&2; exit 1; }
 test -s assets/catalogue-experience.js || { echo "Catalogue search and archive controller is missing." >&2; exit 1; }
 test -s assets/catalogue-experience.css || { echo "Catalogue search and archive styles are missing." >&2; exit 1; }

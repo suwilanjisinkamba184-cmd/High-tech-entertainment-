@@ -1,8 +1,8 @@
 (()=>{'use strict';
 const start=()=>{
- const music=document.getElementById('music'),videos=document.getElementById('public-videos');if(!music||!videos)return;
+ const catalogue=document.getElementById('music')||document.getElementById('video-catalogue'),videos=document.getElementById('public-videos');if(!catalogue||!videos)return;
  if(document.documentElement.dataset.hteCatalogueReady==='true')return;
- const wrap=music.querySelector('.wrap');if(!wrap)return;
+ const wrap=catalogue.querySelector('.wrap');if(!wrap)return;
  document.documentElement.dataset.hteCatalogueReady='true';
  if(!document.getElementById('hte-catalogue-search')){
   const panel=document.createElement('div');panel.id='hte-catalogue-search';panel.className='hte-catalogue-search';
@@ -54,7 +54,7 @@ const start=()=>{
  }
  input.addEventListener('input',()=>{apply();syncQuery(input.value);});
  input.addEventListener('search',()=>{apply();syncQuery(input.value);});
- form.addEventListener('submit',event=>{event.preventDefault();apply();syncQuery(input.value);if(input.value.trim())music.scrollIntoView({behavior:'smooth',block:'start'});});
+ form.addEventListener('submit',event=>{event.preventDefault();apply();syncQuery(input.value);if(input.value.trim())catalogue.scrollIntoView({behavior:'smooth',block:'start'});});
  clear.addEventListener('click',()=>{input.value='';apply();syncQuery('');input.focus();});
  window.addEventListener('popstate',()=>{input.value=new URLSearchParams(window.location.search).get('q')||'';input.value=input.value.slice(0,120);apply();});
  const filters=document.getElementById('hte-video-years');
