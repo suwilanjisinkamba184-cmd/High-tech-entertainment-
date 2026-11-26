@@ -1,27 +1,94 @@
 ---
 import SiteLayout from '../../layouts/SiteLayout.astro';
-const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + '/';
 const canonical = 'https://suwilanjisinkamba184-cmd.github.io/High-tech-entertainment-/videos/';
 ---
 <SiteLayout
   title="Videos | HTE Universe"
-  description="Watch official visuals and video releases from High-Tech Entertainment."
+  description="Browse and watch official music videos and visual releases from High-Tech Entertainment."
   canonical={canonical}
+  needsSupabase={true}
   loadFonts={true}
 >
-  <main class="video-route">
-    <p class="eyebrow">HTE UNIVERSE · OFFICIAL VISUALS</p>
-    <h1>Video catalogue</h1>
-    <p>Our official video catalogue lives on the HTE Universe homepage. Continue to the video collection.</p>
-    <a class="btn gold" href={`${base}#videos`}>Browse official videos ↗</a>
+  <main class="video-route" id="video-library">
+    <div class="video-route-hero">
+      <p class="eyebrow">HTE UNIVERSE · OFFICIAL VISUALS</p>
+      <h1 id="video-page-title">The visual <span class="video-gold">universe.</span></h1>
+      <p class="video-route-lead">Music videos, artist visuals and official HTE releases—collected in one place.</p>
+      <form id="video-search-form" class="video-search" role="search">
+        <label for="video-search-input">Search videos</label>
+        <div class="video-search-controls">
+          <input id="video-search-input" name="q" type="search" autocomplete="off" maxlength="120" placeholder="Search titles, artists or descriptions…" />
+          <button id="video-search-clear" type="button" aria-label="Clear video search" hidden>Clear</button>
+        </div>
+      </form>
+      <div class="video-source-filters" role="group" aria-label="Filter video source">
+        <button type="button" class="is-active" data-video-source-filter="all" aria-pressed="true">All videos</button>
+        <button type="button" data-video-source-filter="hte" aria-pressed="false">HTE uploads</button>
+        <button type="button" data-video-source-filter="youtube" aria-pressed="false">YouTube</button>
+      </div>
+      <p id="video-search-status" class="video-search-status" role="status" aria-live="polite">Loading the video catalogue…</p>
+    </div>
+    <section class="video-library-grid" aria-labelledby="video-page-title">
+      <div id="public-videos" class="cards">
+        <div class="empty" role="status">Loading official videos…</div>
+      </div>
+      <div id="video-no-results" class="empty video-no-results" role="status" hidden>No videos match this search. Clear the search or choose another filter.</div>
+    </section>
+    <div class="video-route-footer"><a class="btn ghost" href={base + '#videos'}>← Back to HTE Universe</a><a class="btn gold" href={base + 'account/'}>My Account ↗</a></div>
   </main>
-  <script is:inline define:vars={{ base }}>
-    window.location.replace(base + '#videos');
+  <script is:inline defer src={base + 'assets/videos.js?v=11'}></script>
+  <script is:inline>
+    (() => {
+      const root=document.getElementById('video-library'),form=document.getElementById('video-search-form'),input=document.getElementById('video-search-input'),clear=document.getElementById('video-search-clear'),status=document.getElementById('video-search-status'),list=document.getElementById('public-videos'),empty=document.getElementById('video-no-results'),filters=document.querySelector('.video-source-filters');
+      if(!root||!form||!input||!list||!status)return;
+      let source='all';
+      const norm=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+      const apply=()=>{const terms=norm(input.value).split(' ').filter(Boolean),cards=[...list.querySelectorAll('.video-card')];let visible=0;cards.forEach(card=>{const sourceMatch=source==='all'||card.dataset.videoSource===source;const textMatch=terms.every(term=>norm(card.innerText||'').includes(term));card.hidden=!(sourceMatch&&textMatch);if(!card.hidden)visible++;});const loaded=list.dataset.hteVideoLoaded==='true';empty.hidden=!loaded||cards.length===0||visible>0;clear.hidden=!input.value;status.textContent=!loaded?'Loading the video catalogue…':cards.length===0?'No videos are published yet. Check back soon.':terms.length||source!=='all'?visible+' of '+cards.length+' videos shown.':cards.length+' videos available. Use search or filters to narrow the collection.';};
+      form.addEventListener('submit',event=>{event.preventDefault();apply();});
+      input.addEventListener('input',apply);
+      clear.addEventListener('click',()=>{input.value='';apply();input.focus();});
+      filters?.addEventListener('click',event=>{const button=event.target.closest('[data-video-source-filter]');if(!button)return;source=button.dataset.videoSourceFilter;filters.querySelectorAll('button').forEach(item=>{const active=item===button;item.classList.toggle('is-active',active);item.setAttribute('aria-pressed',String(active));});apply();});
+      const initial=new URLSearchParams(location.search).get('q');if(initial)input.value=initial.slice(0,120);
+      new MutationObserver(apply).observe(list,{childList:true,subtree:true});
+      apply();
+    })();
   </script>
 </SiteLayout>
 <style>
-  .video-route{width:min(900px,calc(100% - 36px));min-height:70vh;margin:0 auto;padding:clamp(80px,14vh,150px) 0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center}
-  .video-route h1{font-size:clamp(2.8rem,8vw,5.8rem);letter-spacing:-.06em}
-  .video-route p:not(.eyebrow){max-width:55ch;color:#a6a6a6;margin:18px 0 28px}
-  .video-route .eyebrow{color:#c5a45a;letter-spacing:.18em;font-size:.75rem}
+  .video-route{width:min(1180px,calc(100% - 36px));min-height:72vh;margin:0 auto;padding:clamp(44px,8vw,104px) 0 calc(54px + env(safe-area-inset-bottom,0px));}
+  .video-route-hero{max-width:850px;margin:0 auto 34px;}
+  .video-route h1{font-size:clamp(2.8rem,8vw,6.2rem);letter-spacing:-.07em;line-height:.98;}
+  .video-gold{background:linear-gradient(120deg,#f0d99e,#bfc3c7);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .video-route-lead{max-width:58ch;color:#a6a6a6;font-size:1.08rem;margin:18px 0 30px;}
+  .video-search{display:grid;gap:8px;margin:0 0 16px;}
+  .video-search label{font-size:.82rem;font-weight:700;color:#d8d2c5;}
+  .video-search-controls{display:flex;gap:10px;}
+  .video-search input{flex:1;min-width:0;min-height:48px;padding:12px 15px;border:1px solid rgba(197,164,90,.28);border-radius:13px;background:#101114;color:#fff;}
+  .video-search button,.video-source-filters button{min-height:44px;padding:9px 15px;border:1px solid rgba(197,164,90,.22);border-radius:999px;background:#151518;color:#e8e5de;font-weight:700;cursor:pointer;}
+  .video-search button:hover,.video-source-filters button:hover{border-color:#c5a45a;}
+  .video-search-status{min-height:24px;color:#9f9d98;font-size:.84rem;margin:12px 0 0;}
+  .video-source-filters{display:flex;gap:8px;flex-wrap:wrap;}
+  .video-source-filters button.is-active{background:#d6b46a;color:#15120b;border-color:#d6b46a;}
+  .video-library-grid{display:grid;gap:16px;}
+  #public-videos{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));align-items:start;}
+  #public-videos .video-card{min-width:0;}
+  #public-videos .video-card[hidden]{display:none!important;}
+  .video-card{padding:16px;border:1px solid rgba(197,164,90,.18);border-radius:18px;background:rgba(255,255,255,.035);overflow:hidden;}
+  .video-preview{display:block;position:relative;width:100%;padding:0;border:0;border-radius:12px;overflow:hidden;background:#07090d;aspect-ratio:16/9;cursor:pointer;}
+  .video-preview img{display:block;width:100%;height:100%;object-fit:cover;}
+  .video-preview-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:rgba(214,180,106,.95);color:#111;font-size:1.35rem;padding-left:4px;box-shadow:0 6px 24px #0008;}
+  .video-embed,.video-card video{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:12px;background:#05070a;}
+  .video-card h3{margin:14px 0 5px;font:700 1.05rem/1.25 Montserrat,system-ui,sans-serif;}
+  .video-card p{margin:0 0 12px;color:#a6a6a6;font-size:.88rem;}
+  .video-card-kicker{display:block;margin:0 0 10px;color:#d6b46a;font-size:.68rem;font-weight:800;letter-spacing:.13em;text-transform:uppercase;}
+  .video-external{display:inline-flex;margin:8px 0;color:#e0c27d;font-weight:700;font-size:.86rem;}
+  .video-card .btn{margin:6px 6px 0 0;}
+  .video-discovery-art{display:grid;place-items:center;gap:5px;aspect-ratio:16/9;border-radius:12px;background:linear-gradient(145deg,#242018,#0c1016);color:#e0c27d;}
+  .video-discovery-art span{font-size:2rem;}
+  .video-discovery-art small{font-size:.65rem;letter-spacing:.14em;}
+  .video-no-results[hidden]{display:none!important;}
+  .video-route-footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:32px;}
+  @media(max-width:560px){.video-route{width:calc(100% - 24px);padding-top:38px}.video-search-controls{align-items:stretch}.video-search button{padding-inline:12px}.video-route-footer .btn{flex:1}}
+  @media(prefers-reduced-motion:reduce){.video-route *{scroll-behavior:auto;transition:none!important;animation:none!important}}
 </style>

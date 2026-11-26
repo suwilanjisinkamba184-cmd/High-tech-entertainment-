@@ -36,3 +36,16 @@
 .admin-page .hte-upload-preview-meta span{color:var(--studio-muted,#98a2af);font-size:.74rem;overflow-wrap:anywhere}
 .admin-page .hte-upload-preview-media{display:block;width:100%;max-height:260px;border-radius:11px;background:#05080c}
 .admin-page .hte-upload-preview-clear{justify-self:start;min-height:34px;padding:0 11px;border:1px solid var(--studio-line);border-radius:9px;background:rgba(255,255,255,.04);color:#cbd2da;font-size:.74rem;font-weight:700;cursor:pointer}
+
+/* Accessibility and form feedback polish from the HTE UX audit. */
+.admin-page .admin-form-panel .field label{display:inline-flex;align-items:center;gap:6px;line-height:1.45;cursor:pointer}
+.admin-page .admin-form-panel .field input:not([type=checkbox]):not([type=radio]),.admin-page .admin-form-panel .field select,.admin-page .admin-form-panel .field textarea{min-height:44px}
+.admin-page .admin-form-panel .field input[type=file]{min-height:44px;max-width:100%;padding:9px;border:1px dashed var(--studio-line);border-radius:12px;background:rgba(255,255,255,.025);color:#d6dce4}
+.admin-page .admin-form-panel .field input:focus-visible,.admin-page .admin-form-panel .field select:focus-visible,.admin-page .admin-form-panel .field textarea:focus-visible{outline:2px solid var(--studio-gold-soft);outline-offset:3px;border-color:var(--studio-gold)}
+.admin-page .status[role=alert]{padding:10px 12px;border:1px solid rgba(255,140,130,.35);border-radius:10px;background:rgba(130,38,35,.13);color:#ffc1bb}
+.admin-page .status.success{padding:10px 12px;border:1px solid rgba(145,217,174,.28);border-radius:10px;background:rgba(54,130,82,.1);color:#b8f0cb}
+@media(max-width:560px){.admin-page .admin-main-actions{width:100%;justify-content:flex-start}.admin-page .admin-main-actions .btn{flex:1 1 auto}.admin-page .admin-form-panel{padding:16px}.admin-page .admin-form-panel .field input[type=file]{font-size:.78rem}}
+
+/* Accessible grouping for the campaign channel selector. */
+.admin-page .hte-channel-fieldset{border:0;min-width:0;margin:0;padding:0}
+.admin-page .hte-channel-fieldset legend{margin:0 0 10px;color:#cbd2da;font-size:.82rem;font-weight:700}
