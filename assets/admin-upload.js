@@ -8,7 +8,7 @@ document.addEventListener('submit',async function(event){
   event.stopImmediatePropagation();
   const button=form.querySelector('button[type="submit"],button:not([type])');
   const status=document.getElementById('track-status');
-  const say=(message,type='')=>{if(status){status.textContent=message;status.className='status '+type;}};
+  const say=(message,type='')=>{if(status){status.textContent=message;status.className='status '+type;const isError=type==='error';status.setAttribute('role',isError?'alert':'status');status.setAttribute('aria-live',isError?'assertive':'polite');status.setAttribute('aria-atomic','true');}};
   if(button)button.disabled=true;
   let uploadedPath=null,recordSaved=false;
   try{
