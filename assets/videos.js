@@ -29,7 +29,7 @@ function videoCard(video){
  const src=safeHttps(video.video_url),embed=videoEmbed(src),title=esc(video.title||'High-Tech Entertainment video'),artist=video.artist?esc(video.artist)+' · ':'',description=esc(video.description||'Official video from High-Tech Entertainment');
  if(video.search_url){const href=safeHttps(video.search_url);if(!href)return '';return '<article class="video-card video-discovery-card" data-video-source="external"><div class="video-discovery-art" aria-hidden="true"><span>🇿🇲</span><small>NEW ZAMBIAN MUSIC</small></div><div class="video-card-copy"><span class="video-card-kicker">Fresh release</span><h3>'+title+'</h3><p>'+artist+description+'</p><a class="btn ghost" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">Find official upload ↗</a></div></article>'}
  if(!src)return '';
- const path=new URL(src).pathname.toLowerCase(),direct=path.includes('/storage/v1/object/')||/\.(mp4|webm|mov|m4v)$/i.test(path);let player='';const videoSource=video.source_platform==='upload'||path.includes('/storage/v1/object/')?'hte':(embed&&/youtube/i.test(new URL(src).hostname))?'youtube':'external';
+ const path=new URL(src).pathname.toLowerCase(),direct=path.includes('/storage/v1/object/')||/\.(mp4|webm|mov|m4v)$/i.test(path);let player='';const videoSource=video.source_platform==='upload'||path.includes('/storage/v1/object/')?'hte':(embed&&/(youtube|youtu\.be)/i.test(new URL(src).hostname))?'youtube':'external';
  if(embed){
   let poster='';
   if(embed.includes('youtube-nocookie.com/embed/')){const match=embed.match(/\/embed\/([A-Za-z0-9_-]{11})/);if(match)poster='https://i.ytimg.com/vi/'+match[1]+'/hqdefault.jpg'}
