@@ -161,11 +161,11 @@ jobs:
           python - <<'PY'
           import re
           html = open('admin/index.html', encoding='utf-8').read()
-          ids = [a or b for a,b in re.findall(r"\bid=(?:\"([^\"]+)\"|'([^']+)')", html)
+          ids = [a or b for a,b in re.findall(r"\bid=(?:\"([^\"]+)\"|'([^']+)')", html)]
           if len(ids) != len(set(ids)):
               raise SystemExit('Founder Studio contains duplicate control IDs')
           id_set = set(ids)
-          refs = [a or b for a,b in re.findall(r"<label\b[^>]*\bfor=(?:\"([^\"]+)\"|'([^']+)')", html, re.I)
+          refs = [a or b for a,b in re.findall(r"<label\b[^>]*\bfor=(?:\"([^\"]+)\"|'([^']+)')", html, re.I)]
           missing = [ref for ref in refs if ref not in id_set]
           if missing:
               raise SystemExit('Founder Studio labels reference missing controls: ' + ', '.join(missing))
