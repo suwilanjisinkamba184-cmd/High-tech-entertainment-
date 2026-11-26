@@ -30,12 +30,12 @@ const start=()=>{
  }
  function apply(){
   const raw=input.value.trim(),words=norm(raw).split(' ').filter(Boolean),cards=document.querySelectorAll('#public-tracks .music-card,#public-releases .release-card,#public-artists .artist-card,#public-videos .video-card');
-  let shown=0;
+  let shown=0,shownVideos=0;
   cards.forEach(card=>{
    const year=card.dataset.videoYear||'',isVideo=card.classList.contains('video-card');
    const yearMatch=!isVideo||activeYear==='all'||(activeYear==='older'?!!year&&Number(year)<2023:year===activeYear);
    const matches=words.every(word=>norm(card.innerText||'').includes(word));
-   card.hidden=!(yearMatch&&matches);if(!card.hidden)shown++;
+   card.hidden=!(yearMatch&&matches);if(!card.hidden){shown++;if(isVideo)shownVideos++;}
   });
   clear.hidden=!raw;
   if(words.length&&!shown){
@@ -46,7 +46,7 @@ const start=()=>{
    status.textContent=shown+' matching catalogue item'+(shown===1?'':'s')+' across music, artists, releases and videos.';
   }else if(activeYear!=='all'){
    status.dataset.state='results';
-   status.textContent='Showing '+shown+' catalogue item'+(shown===1?'':'s')+' for '+(activeYear==='older'?'earlier years':activeYear)+'.';
+   status.textContent='Showing '+shownVideos+' video'+(shownVideos===1?'':'s')+' from '+(activeYear==='older'?'earlier years':activeYear)+'. Music, artist and release cards are unchanged.
   }else{
    status.dataset.state='ready';
    status.textContent='Search across the HTE catalogue or choose a video year below.';
