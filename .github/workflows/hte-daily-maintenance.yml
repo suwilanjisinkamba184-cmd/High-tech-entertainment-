@@ -73,7 +73,7 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: Set up Android SDK 37
-        uses: premex-ab/setup-android-cli@ec4f446c5fdea3c206fb73b4b3277709e7227e63
+        uses: premex-ab/setup-android-cli@35c853708c8a6981651bb0060a17e01fac0143b1
         with:
           packages: |
             platform-tools
