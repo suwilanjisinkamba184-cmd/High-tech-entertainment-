@@ -83,6 +83,7 @@ jobs:
           grep -q 'Browse all videos' website/src/pages/index.astro
           grep -q 'href={base + "videos/"}' website/src/pages/index.astro
           grep -q 'data-video-source' assets/videos.js
+          grep -q 'aria-label="Play video:' assets/videos.js
           grep -q 'youtu\.be' assets/videos.js
           grep -q 'display:grid;grid-template-columns' website/src/pages/videos/index.astro
           grep -q "siteBasePath=window.location.pathname.startsWith('/High-tech-entertainment-/')" assets/videos.js
