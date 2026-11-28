@@ -62,5 +62,14 @@ void main() {
         isEmpty,
       );
     });
+    test('does not accept a misleading www host inside the hostname', () {
+      expect(
+        HteMediaUrlPolicy.youtubeVideoId(
+          'https://youtube.www.com/watch?v=abcdefghijk',
+        ),
+        isNull,
+      );
+    });
+
   });
 }
