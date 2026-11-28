@@ -18,7 +18,8 @@ void main() {
       await tester.tap(find.text('Videos').last);
       await tester.pumpAndSettle();
 
-      expect(find.text('Official videos'), findsWidgets);
+      expect(find.text('Discover official videos'), findsOneWidget);
+      expect(find.text('Music. Beats.\\nProduction. Beyond.'), findsNothing);
     });
 
     testWidgets('wide layout uses navigation rail', (tester) async {
