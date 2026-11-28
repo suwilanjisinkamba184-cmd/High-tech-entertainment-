@@ -18,7 +18,8 @@ void main() {
       await tester.tap(find.text('Videos').last);
       await tester.pumpAndSettle();
 
-      expect(find.text('Discover official videos'), findsOneWidget);
+      final videoSearch = tester.widget<TextField>(find.byType(TextField));
+      expect(videoSearch.decoration?.hintText, 'Search official videos');
       expect(find.text('Music. Beats.\\nProduction. Beyond.'), findsNothing);
     });
 
